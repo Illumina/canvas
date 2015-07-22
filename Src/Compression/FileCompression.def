@@ -1,0 +1,33 @@
+LIBRARY
+; file compression library
+
+EXPORTS
+	CompressBlock
+	UncompressBlock
+	crc32
+	deflate
+	deflateInit2_
+	deflateEnd
+	deflateSetHeader
+	gzclose
+	gzeof
+	gzgetc
+	gzgets
+	gzopen
+	gzdopen
+	gzopen64
+	gzprintf
+	gzread
+	gzreadOffset
+	gzrewind
+	gzseek64
+	gzungetc
+	gzwrite
+	gzwriteOffset
+	inflate
+	inflateInit2_
+	inflateEnd
+	inflateReset
+	zError
+	gzerror
+	compressBound

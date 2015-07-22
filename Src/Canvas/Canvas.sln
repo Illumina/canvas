@@ -1,0 +1,123 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 2013
+VisualStudioVersion = 12.0.30501.0
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CanvasCommon", "CanvasCommon\CanvasCommon.csproj", "{EC8755F1-74BD-4A1F-9B82-5133D2F6A93B}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CanvasClean", "CanvasClean\CanvasClean.csproj", "{3EA57084-D8FD-4978-8CF9-0EF97CFA47D0}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CanvasPartition", "CanvasPartition\CanvasPartition.csproj", "{A1660795-CD4A-4FBC-9BF6-DF2A420AA3CA}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CanvasDiploidCaller", "CanvasDiploidCaller\CanvasDiploidCaller.csproj", "{FFD9D459-C697-4E50-9E61-0B192A064211}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "FileCompression", "..\Compression\FileCompression.vcxproj", "{C53658BC-5826-4520-958E-FE57C1D01738}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ILMNcommon", "..\ILMNcommon\ILMNcommon.csproj", "{6848DA28-BACA-4E4D-9E1D-BAD1E7CB9CDE}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SequencingFiles", "..\SequencingFiles\SequencingFiles.csproj", "{3EAE6805-E445-4102-87C1-F57E20677778}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CanvasBin", "CanvasBin\CanvasBin.csproj", "{4FE7DC26-BB44-4A6E-B02B-785328C41260}"
+	ProjectSection(ProjectDependencies) = postProject
+		{C53658BC-5826-4520-958E-FE57C1D01738} = {C53658BC-5826-4520-958E-FE57C1D01738}
+	EndProjectSection
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CanvasNormalize", "CanvasNormalize\CanvasNormalize.csproj", "{2A31EE7C-45E1-447C-B05F-9B4AC8B7733E}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SampleSheet", "..\SampleSheet\SampleSheet.csproj", "{F310B4EF-80CA-4486-93A3-7E028EDCD8B3}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NumericalAnalysis", "..\NumericalAnalysis\NumericalAnalysis.csproj", "{6ACF1C27-77B9-490A-BE22-D1A576DD7D56}"
+EndProject
+Global
+	GlobalSection(TeamFoundationVersionControl) = preSolution
+		SccNumberOfProjects = 12
+		SccEnterpriseProvider = {4CA58AB2-18FA-4F8D-95D4-32DDF27D184C}
+		SccTeamFoundationServer = http://ussd-prd-tfsa01:8080/tfs
+		SccLocalPath0 = .
+		SccProjectUniqueName1 = CanvasCommon\\CanvasCommon.csproj
+		SccProjectName1 = CanvasCommon
+		SccLocalPath1 = CanvasCommon
+		SccProjectUniqueName2 = CanvasClean\\CanvasClean.csproj
+		SccProjectName2 = CanvasClean
+		SccLocalPath2 = CanvasClean
+		SccProjectUniqueName3 = CanvasPartition\\CanvasPartition.csproj
+		SccProjectName3 = CanvasPartition
+		SccLocalPath3 = CanvasPartition
+		SccProjectUniqueName4 = CanvasDiploidCaller\\CanvasDiploidCaller.csproj
+		SccProjectName4 = CanvasDiploidCaller
+		SccLocalPath4 = CanvasDiploidCaller
+		SccProjectUniqueName5 = CanvasBin\\CanvasBin.csproj
+		SccProjectName5 = CanvasBin
+		SccLocalPath5 = CanvasBin
+		SccProjectUniqueName6 = ..\\ILMNcommon\\ILMNcommon.csproj
+		SccProjectName6 = ../ILMNcommon
+		SccLocalPath6 = ..\\ILMNcommon
+		SccProjectUniqueName7 = ..\\SequencingFiles\\SequencingFiles.csproj
+		SccProjectName7 = ../SequencingFiles
+		SccLocalPath7 = ..\\SequencingFiles
+		SccProjectUniqueName8 = ..\\Compression\\FileCompression.vcxproj
+		SccProjectName8 = ../Compression
+		SccLocalPath8 = ..\\Compression
+		SccProjectUniqueName9 = CanvasNormalize\\CanvasNormalize.csproj
+		SccProjectName9 = CanvasNormalize
+		SccLocalPath9 = CanvasNormalize
+		SccProjectUniqueName10 = ..\\SampleSheet\\SampleSheet.csproj
+		SccProjectName10 = ../SampleSheet
+		SccLocalPath10 = ..\\SampleSheet
+		SccProjectUniqueName11 = ..\\NumericalAnalysis\\NumericalAnalysis.csproj
+		SccProjectName11 = ../NumericalAnalysis
+		SccLocalPath11 = ..\\NumericalAnalysis
+	EndGlobalSection
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|x64 = Debug|x64
+		Release|x64 = Release|x64
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{EC8755F1-74BD-4A1F-9B82-5133D2F6A93B}.Debug|x64.ActiveCfg = Debug|x64
+		{EC8755F1-74BD-4A1F-9B82-5133D2F6A93B}.Debug|x64.Build.0 = Debug|x64
+		{EC8755F1-74BD-4A1F-9B82-5133D2F6A93B}.Release|x64.ActiveCfg = Release|x64
+		{EC8755F1-74BD-4A1F-9B82-5133D2F6A93B}.Release|x64.Build.0 = Release|x64
+		{3EA57084-D8FD-4978-8CF9-0EF97CFA47D0}.Debug|x64.ActiveCfg = Debug|x64
+		{3EA57084-D8FD-4978-8CF9-0EF97CFA47D0}.Debug|x64.Build.0 = Debug|x64
+		{3EA57084-D8FD-4978-8CF9-0EF97CFA47D0}.Release|x64.ActiveCfg = Release|x64
+		{3EA57084-D8FD-4978-8CF9-0EF97CFA47D0}.Release|x64.Build.0 = Release|x64
+		{A1660795-CD4A-4FBC-9BF6-DF2A420AA3CA}.Debug|x64.ActiveCfg = Debug|x64
+		{A1660795-CD4A-4FBC-9BF6-DF2A420AA3CA}.Debug|x64.Build.0 = Debug|x64
+		{A1660795-CD4A-4FBC-9BF6-DF2A420AA3CA}.Release|x64.ActiveCfg = Release|x64
+		{A1660795-CD4A-4FBC-9BF6-DF2A420AA3CA}.Release|x64.Build.0 = Release|x64
+		{FFD9D459-C697-4E50-9E61-0B192A064211}.Debug|x64.ActiveCfg = Debug|x64
+		{FFD9D459-C697-4E50-9E61-0B192A064211}.Debug|x64.Build.0 = Debug|x64
+		{FFD9D459-C697-4E50-9E61-0B192A064211}.Release|x64.ActiveCfg = Release|x64
+		{FFD9D459-C697-4E50-9E61-0B192A064211}.Release|x64.Build.0 = Release|x64
+		{C53658BC-5826-4520-958E-FE57C1D01738}.Debug|x64.ActiveCfg = Debug|x64
+		{C53658BC-5826-4520-958E-FE57C1D01738}.Debug|x64.Build.0 = Debug|x64
+		{C53658BC-5826-4520-958E-FE57C1D01738}.Release|x64.ActiveCfg = Release|x64
+		{C53658BC-5826-4520-958E-FE57C1D01738}.Release|x64.Build.0 = Release|x64
+		{6848DA28-BACA-4E4D-9E1D-BAD1E7CB9CDE}.Debug|x64.ActiveCfg = Debug|x64
+		{6848DA28-BACA-4E4D-9E1D-BAD1E7CB9CDE}.Debug|x64.Build.0 = Debug|x64
+		{6848DA28-BACA-4E4D-9E1D-BAD1E7CB9CDE}.Release|x64.ActiveCfg = Release|x64
+		{6848DA28-BACA-4E4D-9E1D-BAD1E7CB9CDE}.Release|x64.Build.0 = Release|x64
+		{3EAE6805-E445-4102-87C1-F57E20677778}.Debug|x64.ActiveCfg = Debug|x64
+		{3EAE6805-E445-4102-87C1-F57E20677778}.Debug|x64.Build.0 = Debug|x64
+		{3EAE6805-E445-4102-87C1-F57E20677778}.Release|x64.ActiveCfg = Release|x64
+		{3EAE6805-E445-4102-87C1-F57E20677778}.Release|x64.Build.0 = Release|x64
+		{4FE7DC26-BB44-4A6E-B02B-785328C41260}.Debug|x64.ActiveCfg = Debug|x64
+		{4FE7DC26-BB44-4A6E-B02B-785328C41260}.Debug|x64.Build.0 = Debug|x64
+		{4FE7DC26-BB44-4A6E-B02B-785328C41260}.Release|x64.ActiveCfg = Release|x64
+		{4FE7DC26-BB44-4A6E-B02B-785328C41260}.Release|x64.Build.0 = Release|x64
+		{2A31EE7C-45E1-447C-B05F-9B4AC8B7733E}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{2A31EE7C-45E1-447C-B05F-9B4AC8B7733E}.Release|x64.ActiveCfg = Release|x64
+		{2A31EE7C-45E1-447C-B05F-9B4AC8B7733E}.Release|x64.Build.0 = Release|x64
+		{F310B4EF-80CA-4486-93A3-7E028EDCD8B3}.Debug|x64.ActiveCfg = Debug|x64
+		{F310B4EF-80CA-4486-93A3-7E028EDCD8B3}.Debug|x64.Build.0 = Debug|x64
+		{F310B4EF-80CA-4486-93A3-7E028EDCD8B3}.Release|x64.ActiveCfg = Release|x64
+		{F310B4EF-80CA-4486-93A3-7E028EDCD8B3}.Release|x64.Build.0 = Release|x64
+		{6ACF1C27-77B9-490A-BE22-D1A576DD7D56}.Debug|x64.ActiveCfg = Debug|x64
+		{6ACF1C27-77B9-490A-BE22-D1A576DD7D56}.Debug|x64.Build.0 = Debug|x64
+		{6ACF1C27-77B9-490A-BE22-D1A576DD7D56}.Release|x64.ActiveCfg = Release|x64
+		{6ACF1C27-77B9-490A-BE22-D1A576DD7D56}.Release|x64.Build.0 = Release|x64
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal
