@@ -10,6 +10,8 @@ Canvas is a tool for calling copy number variants (CNVs) from human DNA sequenci
 
 Canvas is used as the copy number caller in the Isaac Whole Genome Sequencing workflow in BaseSpace (https://basespace.illumina.com), and in HiSeq Analysis Software (HAS) (http://support.illumina.com/sequencing/sequencing_software/hiseq-analysis-software.html).  
 
+Canvas is written in C# and runs either under a recent version of Mono (e.g. 3.10.0) or on .NET 4.5.1.
+
 For more information on Canvas, see the document Docs/CanvasSoftwareDesignDescription.pdf for a description of Canvas and the algorithms it uses.
 
 # Source code
