@@ -34,7 +34,7 @@ Canvas consists of serveral components all built from one solution file (Canvas.
 ### Compiling from source
 Open the solution file (Canvas.sln) using Visual Studio 2013, and build the main configuriiton (x64 + Release).  The managed code can be run on a Windows system or on a Linux system using Mono.
 
-### Operating Ssystem Guidelines
+### Operating System Guidelines
 
 #### Linux
 Canvas is known to run under the following Linux distributions using Mono 3.10.0:
