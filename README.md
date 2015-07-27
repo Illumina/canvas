@@ -24,7 +24,9 @@ Build instructions
 ------------------
 
 ### Binaries:
-Todo: info on prebuild binaries
+It is recmomended to start from one of the [binary distributions on the Canvas releases page] [releases] if a suitable version is available.  
+
+[releases]:https://github.com/Illumina/canvas/releases
 
 ### Source code organization:
 Canvas consists of serveral components all built from one solution file (Canvas.sln).  There are several executables - e.g. CanvasBin counts coverage for each bin, CanvasSomaticCaller makes CNV calls for tumor/normal data - as well as some shared libraries with utility functions (math functions, file I/O for various formats, etc.)  
