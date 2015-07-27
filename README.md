@@ -34,7 +34,7 @@ It is recmomended to start from one of the [binary distributions on the Canvas r
 Canvas consists of serveral components all built from one solution file (Canvas.sln).  There are several executables - e.g. CanvasBin counts coverage for each bin, CanvasSomaticCaller makes CNV calls for tumor/normal data - as well as some shared libraries with utility functions (math functions, file I/O for various formats, etc.)  
 
 ### Compiling from source
-Open the solution file (Canvas.sln) using Visual Studio 2013, and build the main configuriiton (x64 + Release).  The managed code can be run on a Windows system or on a Linux system using Mono.  The FileCompression library (unmanaged c++ code) can be rebuilt from source under Linux, or the prebuilt binary libFileCompression.so can be used.
+Open the solution file (Canvas.sln) using Visual Studio 2013, and build the main solution configuration (x64 + Release).  The managed code can be run on a Windows system or on a Linux system using Mono.  The FileCompression library (unmanaged c++ code) can be rebuilt from source under Linux, or the prebuilt binary libFileCompression.so can be used.
 
 ### Operating System Guidelines
 
