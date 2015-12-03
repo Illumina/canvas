@@ -42,21 +42,23 @@ namespace CanvasPartition
             this.ReadBEDInput();
         }
 
-        public void SegmentGenome(string outPath, SegmentationMethod method)
+        public void SegmentGenome(string outPath, SegmentationMethod method, bool isGermline)
         {
             switch (method)
             {
                 case SegmentationMethod.Wavelets:
                 default:// use Wavelets if CBS is not selected       
-                    Console.WriteLine("Running Wavelet Partitioning");
-                    this.Wavelets(verbose: 2);
+                    Console.WriteLine("{0} Running Wavelet Partitioning", DateTime.Now);
+                    this.Wavelets(isGermline, verbose: 2);
                     break;
                 case SegmentationMethod.CBS:
-                    Console.WriteLine("Running CBS Partitioning");
+                    Console.WriteLine("{0} Running CBS Partitioning", DateTime.Now);
                     this.CBS(verbose: 2);
                     break;
             }
+            Console.WriteLine("{0} Write CanvasPartition results:", DateTime.Now);
             this.WriteCanvasPartitionResults(outPath);
+            Console.WriteLine("{0} CanvasPartition results written out", DateTime.Now);
         }
 
         private GenomeSegmentationResults GetDummySegmentationResults()
@@ -69,7 +71,7 @@ namespace CanvasPartition
         /// Wavelets: unbalanced HAAR wavelets segmentation 
         /// </summary>
         /// <param name="threshold">wavelets coefficient threshold</param>
-        private void Wavelets(double thresholdLower = 5, double thresholdUpper = 80, int minSize = 10, int verbose = 1)
+        private void Wavelets(bool isGermline, double thresholdLower = 5, double thresholdUpper = 80, int minSize = 10, int verbose = 1 )
         {
             Dictionary<string, int[]> inaByChr = new Dictionary<string, int[]>();
             Dictionary<string, double[]> finiteScoresByChr = new Dictionary<string, double[]>();
@@ -101,8 +103,7 @@ namespace CanvasPartition
 
                     }));
             }
-            Parallel.ForEach(tasks, t => { t.Invoke(); }); //todo allow controling degree of parallelism
-
+            Illumina.SecondaryAnalysis.Utilities.DoWorkParallelThreads(tasks);
             // Quick sanity-check: If we don't have any segments, then return a dummy result.
             int n = 0;
             foreach (var list in finiteScoresByChr.Values)
@@ -128,7 +129,6 @@ namespace CanvasPartition
             tasks = new List<ThreadStart>();
             foreach (string chr in ScoreByChr.Keys)
             {
-
                 tasks.Add(new ThreadStart(() =>
                     {
                         int[] ina = inaByChr[chr];
@@ -136,7 +136,7 @@ namespace CanvasPartition
                         int sizeScoreByChr = this.ScoreByChr[chr].Length;
                         if (sizeScoreByChr > minSize)
                         {
-                            WaveletSegmentation.HaarWavelets(this.ScoreByChr[chr].ToArray(), thresholdLower, thresholdUpper, breakpoints);
+                            WaveletSegmentation.HaarWavelets(this.ScoreByChr[chr].ToArray(), thresholdLower, thresholdUpper, breakpoints, isGermline);
                         }
 
                         List<int> startBreakpointsPos = new List<int>();
@@ -197,11 +197,11 @@ namespace CanvasPartition
                     }));
 
             }
-
-            Parallel.ForEach(tasks, t => { t.Invoke(); });
-
+            Console.WriteLine("{0} Launching wavelet tasks", DateTime.Now);
+            Illumina.SecondaryAnalysis.Utilities.DoWorkParallelThreads(tasks);
+            Console.WriteLine("{0} Completed wavelet tasks", DateTime.Now);
             this.SegmentationResults = new GenomeSegmentationResults(segmentByChr);
-
+            Console.WriteLine("{0} Segmentation results complete", DateTime.Now);
         }
 
 
@@ -270,8 +270,8 @@ namespace CanvasPartition
 
                     }));
             }
-            Parallel.ForEach(tasks, t => { t.Invoke(); });
-
+            //Parallel.ForEach(tasks, t => { t.Invoke(); });
+            Illumina.SecondaryAnalysis.Utilities.DoWorkParallelThreads(tasks);
             // Quick sanity-check: If we don't have any segments, then return a dummy result.
             int n = 0;
             foreach (var list in finiteScoresByChr.Values)
@@ -330,8 +330,8 @@ namespace CanvasPartition
                     }));
             }
 
-            Parallel.ForEach(tasks, t => { t.Invoke(); });
-
+            //Parallel.ForEach(tasks, t => { t.Invoke(); });
+            Illumina.SecondaryAnalysis.Utilities.DoWorkParallelThreads(tasks);
             this.SegmentationResults = new GenomeSegmentationResults(segmentByChr);
         }
 
@@ -445,14 +445,19 @@ namespace CanvasPartition
                         if (excludeIntervals != null)
                         {
                             while (excludeIndex < excludeIntervals.Count && excludeIntervals[excludeIndex].Stop < previousBinEnd) excludeIndex++;
-                            if (excludeIndex < excludeIntervals.Count)
-                            {
+                            if (excludeIndex < excludeIntervals.Count) 
+                            { 
                                 // Note: forbiddenZoneMid should never fall inside a bin, becuase these intervals were already excluded 
                                 // from consideration during the call to CanvasBin.
                                 int forbiddenZoneMid = (excludeIntervals[excludeIndex].Start + excludeIntervals[excludeIndex].Stop) / 2;
                                 if (previousBinEnd < forbiddenZoneMid && end >= forbiddenZoneMid) newSegment = true;
                             }
                         }
+                        if (previousBinEnd > 0 && previousBinEnd + 1000000 < start && !newSegment)
+                        { 
+                            newSegment = true;
+                        }
+
                         if (newSegment) segmentNum++;
                         writer.WriteLine(string.Format("{0}\t{1}\t{2}\t{3}\t{4}", chr, start, end, ScoreByChr[chr][pos], segmentNum));
                         previousBinEnd = end;

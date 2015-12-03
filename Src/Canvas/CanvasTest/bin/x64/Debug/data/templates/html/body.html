@@ -1,0 +1,88 @@
+<html>
+<head>
+<style>
+
+h1 { background : #FFB441 ; clear: both }
+h2 { background : #B7B7B7 ; clear: both }
+
+img
+{
+        height : 300px;
+        width : 400px;
+}
+
+table
+{
+        font-family: "Lucida Sans Unicode", "Lucida Grande", Sans-Serif;
+        font-size: 12px;
+        width: 99%;
+        text-align: right;
+        border-collapse: collapse;
+}
+
+th
+{
+        font-size: 13px;
+        font-weight: normal;
+        padding: 8px;
+
+        background: #ffffff;
+        color: #000000;
+
+        border-width: 3px;
+        border-style: none;
+        border-color: #eeeeee;
+}
+
+div
+{
+        padding-left: 20px
+}
+
+td
+{
+        padding: 8px;
+        
+        background: #ffffff;
+        color: #000000;
+
+        border-width: 3px;
+        border-style: solid;
+        border-color: #eeeeee;
+}
+
+tbody tr.odd td
+{
+        background: #fafafa;
+}
+
+tbody tr:hover td
+{
+        background: #EBE5FF;
+}
+</style>
+</head>
+
+
+<body>
+<p style="text-align:right;"><a href="README.html" >Help</a></p>
+<p style="text-align:center;font-size:50px;"> RNAExpress Summary </p>
+<h1> Alignment </h1>
+<div>
+{{ AlignmentTable }}
+<h2> Abundant Sequences </h2>
+{{ SeqCountTable }}
+<p>
+<h2> Read Counts </h2>
+{{ CountTable }}
+<p>
+
+<p>
+
+{{ DifferentialTable }}
+
+<p style="text-align:left;font-size:20px"><a href="correlation.png" >Sample Correlations</a></p>
+<p style="text-align:left;font-size:20px"><a href="pca.png" >PCA Plot</a></p>
+
+</body>
+</html>

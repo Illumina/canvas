@@ -58,7 +58,7 @@ namespace SequencingFiles
 	}
 
     // some constants
-    public class Constants
+    public static class Constants
     {
         public const int FastqOffset = 33;
     }

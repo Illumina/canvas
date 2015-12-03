@@ -1,0 +1,16 @@
+##fileformat=VCFv4.1
+##fileDate=20140416
+##FILTER=<ID=GQ20,Description='Genotype Quality is less than 20'>
+##FORMAT=<ID=GT,Number=1,Type=String,Description='Genotype'>
+##FORMAT=<ID=GQ,Number=1,Type=Integer,Description='Genotype Quality'>
+##FORMAT=<ID=DP,Number=1,Type=Integer,Description='Read depth'>
+##FORMAT=<ID=AD,Number=.,Type=Integer,Description='Allelic depths for the ref and alt alleles in the order listed'>
+##INFO=<ID=END,Number=1,Type=Integer,Description='End position of the variant described in this record'>
+##INFO=<ID=SVLEN,Number=.,Type=Integer,Description='Difference in length between REF and ALT alleles'>
+##INFO=<ID=SVTYPE,Number=1,Type=String,Description='Type of structural variant'>
+##ALT=<ID=DEL,Description='Deletion'>
+##FORMAT=<ID=PolySum,Number=1,Type=String,Description='PolyTG/PolyT Genotype Summary'>
+#CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT	A-NA01445
+chr7	117138366	.	T	<DEL>	.	PASS	SVTYPE=DEL;END=117159446;SVLEN=-21080	GT:GQ:AD	0/0:999:1687,0	
+chr7	117188661	.	TGTGTGTGTGTGTGTGTGTGTGTTTTTTT	TGTGTGTGTGTGTGTGTGTGTTTTTTT,TGTGTGTGTGTGTGTGTGTGTTTTTTTTT,TGTGTGTGTGTGTGTGTGTTTTTTT	.	PASS	.	GT:GQ:DP:AD:PolySum	1/2:470:1145:6,412,332,80:(TG)10(T)7/(TG)10(T)9	
+chr7	117304663	.	T	<DEL>	.	PASS	SVTYPE=DEL;END=117306195;SVLEN=-1532	GT:GQ:AD	0/0:999:1286,0	

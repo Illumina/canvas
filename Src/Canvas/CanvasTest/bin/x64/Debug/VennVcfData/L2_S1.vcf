@@ -1,0 +1,50 @@
+##fileformat=VCFv4.1
+##fileDate=20140827
+##source=CallSomaticVariants 3.5.1.1
+##CallSomaticVariants_cmdline=" -B D:\Sequencing\Pumice\130205_M00940_0111_000000000-A29W0\Data\Intensities\BaseCalls\Alignment -g [D:\Genomes\Homo_sapiens\UCSC\hg19\Sequence\WholeGenomeFASTA,] -f 0.01 -fo False -b 20 -q 100 -c 1200 -s 0.5 -a 20 -F 20 -gVCF True -i true -PhaseSNPs true -MaxPhaseSNPLength 100 -r D:\Sequencing\Pumice\130205_M00940_0111_000000000-A29W0"
+##reference=D:\Genomes\Homo_sapiens\UCSC\hg19\Sequence\WholeGenomeFASTA\genome.fa
+##INFO=<ID=DP,Number=1,Type=Integer,Description="Total Depth">
+##INFO=<ID=TI,Number=.,Type=String,Description="Transcript ID">
+##INFO=<ID=GI,Number=.,Type=String,Description="Gene ID">
+##INFO=<ID=EXON,Number=0,Type=Flag,Description="Exon Region">
+##INFO=<ID=FC,Number=.,Type=String,Description="Functional Consequence">
+##FILTER=<ID=LowDP,Description="Low coverage (DP tag), therefore no genotype called">
+##FILTER=<ID=SB,Description="Variant strand bias too high">
+##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">
+##FORMAT=<ID=GQ,Number=1,Type=Integer,Description="Genotype Quality">
+##FORMAT=<ID=AD,Number=.,Type=Integer,Description="Allele Depth">
+##FORMAT=<ID=VF,Number=1,Type=Float,Description="Variant Frequency">
+##FORMAT=<ID=NL,Number=1,Type=Integer,Description="Applied BaseCall Noise Level">
+##FORMAT=<ID=SB,Number=1,Type=Float,Description="StrandBias Score">
+##contig=<ID=chr1,length=249250621>
+##contig=<ID=chr2,length=243199373>
+##contig=<ID=chr3,length=198022430>
+##contig=<ID=chr4,length=191154276>
+##contig=<ID=chr5,length=180915260>
+##contig=<ID=chr7,length=159138663>
+##contig=<ID=chr9,length=141213431>
+##contig=<ID=chr10,length=135534747>
+##contig=<ID=chr12,length=133851895>
+##contig=<ID=chr14,length=107349540>
+##contig=<ID=chr15,length=102531392>
+##contig=<ID=chr16,length=90354753>
+##contig=<ID=chr17,length=81195210>
+##contig=<ID=chr18,length=78077248>
+##contig=<ID=chr19,length=59128983>
+##contig=<ID=chr20,length=63025520>
+#CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT	1
+chr2	48030639	.	AC	A	100	PASS	DP=18236	GT:GQ:AD:VF:NL:SB	0/1:100:17473,763:0.0418:20:-100.0000
+chr2	48030639	.	A	AC	100	PASS	DP=18236	GT:GQ:AD:VF:NL:SB	0/1:100:17497,739:0.0405:20:-100.0000
+chr2	48030691	.	CT	C	96	PASS	DP=27582	GT:GQ:AD:VF:NL:SB	0/1:96:27196,386:0.0140:20:-49.9438
+chr3	41266161	.	A	G	100	PASS	DP=5797	GT:GQ:AD:VF:NL:SB	0/1:100:5664,127:0.0219:20:-100.0000
+chr4	55141055	.	A	G	100	PASS	DP=17935	GT:GQ:AD:VF:NL:SB	1/1:100:96,17831:0.9942:20:-53.5655
+chr4	55152040	.	C	T	100	PASS	DP=7681	GT:GQ:AD:VF:NL:SB	0/1:100:3743,3932:0.5119:20:-100.0000
+chr5	112175770	.	G	A	100	PASS	DP=23812	GT:GQ:AD:VF:NL:SB	1/1:100:142,23638:0.9927:20:-100.0000
+chr7	55249063	.	G	A	100	PASS	DP=5182	GT:GQ:AD:VF:NL:SB	1/1:100:6,5165:0.9967:20:-100.0000
+chr7	116417441	.	A	C	100	PASS	DP=16801	GT:GQ:AD:VF:NL:SB	0/1:100:16393,330:0.0196:20:-100.0000
+chr7	116436022	.	G	A	100	PASS	DP=22511	GT:GQ:AD:VF:NL:SB	1/1:100:131,22369:0.9937:20:-100.0000
+chr7	116436097	.	G	A	100	PASS	DP=18210	GT:GQ:AD:VF:NL:SB	1/1:100:138,18028:0.9900:20:-100.0000
+chr12	25398284	.	C	G	100	PASS	DP=4995	GT:GQ:AD:VF:NL:SB	0/1:100:4614,378:0.0757:20:-100.0000
+chr17	7572962	.	GT	G	54	PASS	DP=3880	GT:GQ:AD:VF:NL:SB	0/1:54:3810,70:0.0180:20:-10.1348
+chr17	7572980	.	T	G	100	SB	DP=2601	GT:GQ:AD:VF:NL:SB	0/1:100:2521,78:0.0300:20:0.0000
+chr17	7579472	.	G	C	100	PASS	DP=6579	GT:GQ:AD:VF:NL:SB	0/1:100:2337,4228:0.6427:20:-100.0000

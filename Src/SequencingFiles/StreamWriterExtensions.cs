@@ -21,7 +21,7 @@ public static class StreamWriterExtension
         {
             // retrieve the character position
             bufferPos = (int) writerType.InvokeMember(
-                "decode_pos",
+                "charPos",
                 BindingFlags.DeclaredOnly | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance |
                 BindingFlags.GetField,
                 null,

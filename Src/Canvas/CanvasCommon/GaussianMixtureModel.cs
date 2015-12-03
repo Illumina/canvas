@@ -14,32 +14,31 @@ namespace CanvasCommon
         List<SegmentInfo> Segments;
         private double MeanCoverage;
         private double CoverageWeightingFactor;
+        private double KnearestNeighbourCutoff;
 
         // parameters
-        public bool FFPEMode = false; // Assume MAF and Coverage are independent/uncorrelated in FFPEMode (always false for now)
+        public bool uncorrelated = true; // Assume MAF and Coverage are independent/uncorrelated in FFPEMode (always false for now)
         private const double EMPosteriorProbThres = 0.01; // Controls whether a segment contributes to Mu and Sigma estimates
         private const double EMOmegaThres = 0.01; // Controls when to update means
         private const double EMLikelihoodThres = 1; // Controls when to update means
         #endregion
 
         public GaussianMixtureModel(List<ModelPoint> modelPoints, List<SegmentInfo> segments,
-            double meanCoverage, double coverageWeightingFactor) 
+            double meanCoverage, double coverageWeightingFactor, double knearestNeighbourCutoff) 
         {
             ModelPoints = modelPoints;
             Segments = segments;
             MeanCoverage = meanCoverage;
             CoverageWeightingFactor = coverageWeightingFactor;
+            KnearestNeighbourCutoff = knearestNeighbourCutoff;
         }
 
         public double Fit() 
         {
             double likelihood = FitGaussians(this.ModelPoints, this.Segments);
-
             EMComputeGaussianMeans(this.ModelPoints, this.Segments);
             foreach (var modelPoint in this.ModelPoints) { modelPoint.Ploidy.Sigma = null; }
-
             likelihood = FitGaussians(this.ModelPoints, this.Segments);
-
             return likelihood;
         }
 
@@ -47,27 +46,20 @@ namespace CanvasCommon
         {
             const int Dim = 2;
 
-            foreach (var modelPoint in modelPoints)
+            foreach (ModelPoint modelPoint in modelPoints)
             {
                 modelPoint.Ploidy.Omega = 1.0 / modelPoints.Count;
+                modelPoint.Ploidy.Mu = new double[Dim];
+                modelPoint.Ploidy.Mu[0] = modelPoint.MAF;
+                modelPoint.Ploidy.Mu[1] = modelPoint.Coverage;
 
-                if (modelPoint.Ploidy.Mu == null) // set the means to the model MAF and Coverage
-                {
-                    modelPoint.Ploidy.Mu = new double[Dim];
-                    modelPoint.Ploidy.Mu[0] = modelPoint.MAF;
-                    modelPoint.Ploidy.Mu[1] = modelPoint.Coverage;
-                }
-
-                if (modelPoint.Ploidy.Sigma == null)
-                {
-                    // initialize covariance matrix
-                    modelPoint.Ploidy.Sigma = new double[Dim][];
-                    for (int i = 0; i < Dim; i++) { modelPoint.Ploidy.Sigma[i] = new double[Dim]; }
-                    modelPoint.Ploidy.Sigma[0][0] = 0.01;
-                    modelPoint.Ploidy.Sigma[0][1] = 0.0;
-                    modelPoint.Ploidy.Sigma[1][0] = 0.0;
-                    modelPoint.Ploidy.Sigma[1][1] = 0.01 / (this.CoverageWeightingFactor * this.CoverageWeightingFactor);
-                }
+                // initialize covariance matrix
+                modelPoint.Ploidy.Sigma = new double[Dim][];
+                for (int j = 0; j < Dim; j++) { modelPoint.Ploidy.Sigma[j] = new double[Dim]; }
+                modelPoint.Ploidy.Sigma[0][0] = 0.01;
+                modelPoint.Ploidy.Sigma[0][1] = 0.0;
+                modelPoint.Ploidy.Sigma[1][0] = 0.0;
+                modelPoint.Ploidy.Sigma[1][1] = 0.01 / (this.CoverageWeightingFactor * this.CoverageWeightingFactor);
             }
         }
 
@@ -97,9 +89,9 @@ namespace CanvasCommon
         /// <returns></returns>
         private static double Sigma(double intensityX, double intensityY, double[] mu, double[][] sigma)
         {
-            if (intensityX == -1) // dummy MAF
+            if (intensityX == -1 ) // dummy MAF
             {
-                return Sigma(intensityY, mu[1], sigma[1][1]);
+                Sigma(intensityY, mu[1], sigma[1][1]);
             }
 
             double likelihood = 0;
@@ -135,12 +127,18 @@ namespace CanvasCommon
             }
 
             if (segment.PosteriorProbs == null) { segment.PosteriorProbs = new Dictionary<ModelPoint, double>(); }
+            int bestCluster = 0;
+            double bestProb = 0;
             foreach (var modelPoint in modelPoints)
             {
                 segment.PosteriorProbs[modelPoint] = temp[modelPoint] / tempsum1;
-
+                if (segment.PosteriorProbs[modelPoint] > bestProb) { 
+                    bestCluster = modelPoint.Cluster.Value;
+                    bestProb = temp[modelPoint] / tempsum1;
+                }
                 if (Double.IsNaN(segment.PosteriorProbs[modelPoint])) { segment.PosteriorProbs[modelPoint] = 0; }
             }
+            segment.Cluster = bestCluster;
         }
 
         /// <summary>
@@ -152,7 +150,8 @@ namespace CanvasCommon
         {
             foreach (var segment in segments)
             {
-                EMComputePosteriorProbs(modelPoints, segment);
+                if (segment.KnearestNeighbour > this.KnearestNeighbourCutoff) segment.Cluster = -1;
+                else EMComputePosteriorProbs(modelPoints, segment);
             }
         }
 
@@ -163,11 +162,6 @@ namespace CanvasCommon
             Dictionary<CanvasCommon.SegmentPloidy, double> temp = new Dictionary<CanvasCommon.SegmentPloidy, double>();
             foreach (var ploidy in ploidies)
             {
-                if (maf == -1 && ploidy.MajorChromosomeCount == ploidy.CopyNumber)
-                {
-                    temp[ploidy] = 0;
-                    continue; // if segment has no spanning SNVs do not consider LOH states (as can't discriminate between HET/HOM genotypes)
-                }
                 temp[ploidy] = ploidy.Omega * Sigma(maf, coverage, ploidy.Mu, ploidy.Sigma);
                 tempsum1 += temp[ploidy];
             }
@@ -191,9 +185,12 @@ namespace CanvasCommon
                 modelPoint.Ploidy.Omega = 0;
                 foreach (var segment in segments)
                 {
+                    if (segment.Cluster != -1)
                     // weight segments by segment.Weight
-                    sumWeights += segment.Weight;
-                    modelPoint.Ploidy.Omega += segment.PosteriorProbs[modelPoint] * segment.Weight;
+                    {
+                        sumWeights += segment.Weight;
+                        modelPoint.Ploidy.Omega += segment.PosteriorProbs[modelPoint] * segment.Weight;
+                    }
                 }
                 modelPoint.Ploidy.Omega /= sumWeights;
             }
@@ -320,6 +317,7 @@ namespace CanvasCommon
                 {
                     // weight segments by segment.Weight
                     // each segment represents segment.Weight points
+                    if (segment.Cluster == -1) { continue; }
                     if (segment.PosteriorProbs[modelPoint] < postProbThres) { continue; }
                     double weight = segment.PosteriorProbs[modelPoint] * segment.Weight;
                     sumWeights += weight;
@@ -335,7 +333,7 @@ namespace CanvasCommon
                 if (sumWeights > 0)
                 {
                     modelPoint.Ploidy.Sigma[0][0] = sumMat[0][0] / sumWeights;
-                    if (FFPEMode) // assume uncorrelated
+                    if (uncorrelated) // assume uncorrelated
                     {
                         modelPoint.Ploidy.Sigma[0][1] = 0;
                         modelPoint.Ploidy.Sigma[1][0] = 0;
@@ -351,17 +349,6 @@ namespace CanvasCommon
                 if (modelPoint.Ploidy.Sigma[0][0] < 1E-7) { modelPoint.Ploidy.Sigma[0][0] = 1E-7; }
                 if (modelPoint.Ploidy.Sigma[1][1] < 1E-7) { modelPoint.Ploidy.Sigma[1][1] = 1E-7; }
 
-                double thres = Math.Pow(this.MeanCoverage / 4, 2) * (modelPoint.Ploidy.Omega * 4 + 0.01);
-                if (modelPoint.Ploidy.Sigma[1][1] > thres)
-                {
-                    Scale2DMatrix(modelPoint.Ploidy.Sigma, thres / modelPoint.Ploidy.Sigma[1][1]);
-                }
-
-                thres = Math.Pow(0.1, 2) * (modelPoint.Ploidy.Omega * 4 + 0.01);
-                if (modelPoint.Ploidy.Sigma[0][0] > thres)
-                {
-                    Scale2DMatrix(modelPoint.Ploidy.Sigma, thres / modelPoint.Ploidy.Sigma[0][0]);
-                }
 
                 if (!IsPositiveSemiDefinite(modelPoint.Ploidy.Sigma)) // make sure the covariance matrix is positive-semidefinite
                 {
@@ -382,7 +369,7 @@ namespace CanvasCommon
         {
             foreach (var modelPoint in modelPoints)
             {
-                if (modelPoint.Ploidy.Omega < omegaThres) { continue; }
+               if (modelPoint.Ploidy.Omega < omegaThres) { continue; }
 
                 double[] tempsum = new double[modelPoint.Ploidy.Mu.Length];
                 for (int i = 0; i < tempsum.Length; i++) { tempsum[i] = 0; }
@@ -392,6 +379,7 @@ namespace CanvasCommon
                 {
                     // weight segments by segment.Weight
                     // each segment represents segment.Weight points
+                    if (segment.Cluster == -1) { continue; }
                     if (segment.PosteriorProbs[modelPoint] < postProbThres) { continue; }
                     double weight = segment.PosteriorProbs[modelPoint] * segment.Weight;
                     sumWeights += weight;
@@ -400,9 +388,6 @@ namespace CanvasCommon
                 }
                 double mu0 = tempsum[0] / sumWeights;
                 double mu1 = tempsum[1] / sumWeights;
-
-                double likelihood = Sigma(mu0, mu1, modelPoint.Ploidy.Mu, modelPoint.Ploidy.Sigma);
-                if (likelihood < likelihoodThres) { continue; }
 
                 modelPoint.Ploidy.Mu[0] = mu0;
                 modelPoint.Ploidy.Mu[1] = mu1;
@@ -416,10 +401,15 @@ namespace CanvasCommon
 
             foreach (var segment in segments)
             {
+                if (segment.Cluster == -1) { continue; }
                 double temp = 0;
                 foreach (var modelPoint in modelPoints)
                 {
-                    temp += modelPoint.Ploidy.Omega * Sigma(segment.MAF, segment.Coverage, modelPoint.Ploidy.Mu, modelPoint.Ploidy.Sigma);
+                    // do not consider segments with no MAFs during likelyhood calculation
+                    if (segment.MAF == -1)
+                        temp += modelPoint.Ploidy.Omega;
+                    else
+                        temp += modelPoint.Ploidy.Omega * Sigma(segment.MAF, segment.Coverage, modelPoint.Ploidy.Mu, modelPoint.Ploidy.Sigma);
                 }
                 likelihood += Math.Log(temp) * segment.Weight; // each segment represents segment.Weight points
             }
@@ -427,7 +417,6 @@ namespace CanvasCommon
             return likelihood / segments.Select(s => s.Weight).Sum();
         }
 
-        /* Might be useful in the future
         /// <summary>
         /// http://en.wikipedia.org/wiki/Bayesian_information_criterion
         /// </summary>
@@ -442,6 +431,7 @@ namespace CanvasCommon
 
             foreach (var segment in segments)
             {
+                if (segment.Cluster == -1) { continue; }
                 double temp = 0;
                 foreach (var modelPoint in modelPoints)
                 {
@@ -471,7 +461,7 @@ namespace CanvasCommon
 
             return bic / n;
         }
-         */
+
 
         private double FitGaussians(List<ModelPoint> modelPoints, List<SegmentInfo> segments)
         {
@@ -492,8 +482,8 @@ namespace CanvasCommon
 
                     // update model parameters //
                     EMComputeOmegas(modelPoints, segments);
-                    // do not update means
-                    EMComputeGaussianCovariances(modelPoints, segments); // update covariance matrix
+
+                    EMComputeGaussianCovariances(modelPoints, segments); 
                     /////////////////////////////
 
                     // calculate overall likelihood
@@ -512,6 +502,50 @@ namespace CanvasCommon
                 }
             }
 
+            return likelihood;
+        }
+
+        /// <summary>
+        /// Run Gaussian expectation–maximization algorithm for segment clustering
+        /// </summary>
+        public double runExpectationMaximization()
+        {
+            const int numIterations = 30; //don't go past this many optimizations
+            const double likelihoodCutoff = 0.000025; //if likelihood doesn't change by this much, terminate optimization
+
+            EMInitializeParameters(this.ModelPoints);
+
+            double likelihood = 0;
+            double prevLikelihood = -1;
+
+            try
+            {
+                // enter optimization loop
+                for (int iterationCount = 0; iterationCount < numIterations; iterationCount++)
+                {
+                    EMComputePosteriorProbs(this.ModelPoints, this.Segments);
+
+                    // update model parameters 
+                    EMComputeOmegas(this.ModelPoints, this.Segments);
+                    EMComputeGaussianMeans(this.ModelPoints, this.Segments);
+                    EMComputeGaussianCovariances(this.ModelPoints, this.Segments); // update covariance matrix
+                    
+
+                    // calculate overall likelihood
+                    likelihood = EMComputeLikelihood(this.ModelPoints, this.Segments);
+                    if (Math.Abs(likelihood - prevLikelihood) < likelihoodCutoff && iterationCount > 1) { break; }
+                    prevLikelihood = likelihood;
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine("Error fitting Gaussian mixture model: {0}", ex.Message);
+                foreach (var modelPoint in this.ModelPoints)
+                {
+                    modelPoint.Ploidy.Mu = null;
+                    modelPoint.Ploidy.Sigma = null;
+                }
+            }
             return likelihood;
         }
     }

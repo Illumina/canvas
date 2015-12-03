@@ -1,78 +1,95 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
+using System.IO;
 
 namespace SequencingFiles
 {
     public class BamWriter : BgzfWriterCommon
     {
+        private static class ConversionHelper
+        {
+            static public uint[] BaseToNumber;
+            static public uint[] CigarOpToNumber;
+
+            static ConversionHelper()
+            {
+                // create our base LUT
+                BaseToNumber = new uint[256];
+                for (int i = 0; i < 256; i++) BaseToNumber[i] = BamConstants.LutError;
+
+                BaseToNumber['='] = 0;
+                BaseToNumber['a'] = 1;
+                BaseToNumber['A'] = 1;
+                BaseToNumber['c'] = 2;
+                BaseToNumber['C'] = 2;
+                BaseToNumber['g'] = 4;
+                BaseToNumber['G'] = 4;
+                BaseToNumber['t'] = 8;
+                BaseToNumber['T'] = 8;
+                BaseToNumber['n'] = 15;
+                BaseToNumber['N'] = 15;
+
+                // create our CIGAR LUT
+                CigarOpToNumber = new uint[256];
+                for (int i = 0; i < 256; i++) CigarOpToNumber[i] = BamConstants.LutError;
+                CigarOpToNumber['m'] = 0;
+                CigarOpToNumber['M'] = 0;
+                CigarOpToNumber['i'] = 1;
+                CigarOpToNumber['I'] = 1;
+                CigarOpToNumber['d'] = 2;
+                CigarOpToNumber['D'] = 2;
+                CigarOpToNumber['n'] = 3;
+                CigarOpToNumber['N'] = 3;
+                CigarOpToNumber['s'] = 4;
+                CigarOpToNumber['S'] = 4;
+                CigarOpToNumber['h'] = 5;
+                CigarOpToNumber['H'] = 5;
+                CigarOpToNumber['p'] = 6;
+                CigarOpToNumber['P'] = 6;
+                CigarOpToNumber['='] = 7;
+                CigarOpToNumber['x'] = 8;
+                CigarOpToNumber['X'] = 8;
+            }
+        }
         #region member variables
 
-        private uint[] _baseToNumber;
-        private uint[] _cigarOpToNumber;
         private byte[] _outputBuffer;
+        protected string SamHeader;
+        protected List<GenomeMetadata.SequenceMetadata> References;
+        protected string Filename;
 
         #endregion
 
         // constructor
-        public BamWriter()
-            : this(null, null, null)
+        public BamWriter(int compressionLevel = BamConstants.DefaultCompression, int numThreads = 1)
+            : this(null, null, null, compressionLevel, numThreads)
         {
+            _outputBuffer = null;
         }
 
         // constructor
-        public BamWriter(string filename, string samHeader, List<GenomeMetadata.SequenceMetadata> references)
-            : base(BamConstants.DefaultCompression)
+        public BamWriter(string filename, string samHeader, List<GenomeMetadata.SequenceMetadata> references, int compressionLevel = BamConstants.DefaultCompression, int numThreads = 1)
+            : base(compressionLevel, numThreads)
         {
-            Initialize();
+            Filename = filename;
+            SamHeader = samHeader;
+            References = references;
             if (filename != null) Open(filename, samHeader, references);
         }
 
         private void Initialize()
         {
-            _outputBuffer = new byte[4096];
-
-            // create our base LUT
-            _baseToNumber = new uint[256];
-            for (int i = 0; i < 256; i++) _baseToNumber[i] = BamConstants.LutError;
-
-            _baseToNumber['='] = 0;
-            _baseToNumber['a'] = 1;
-            _baseToNumber['A'] = 1;
-            _baseToNumber['c'] = 2;
-            _baseToNumber['C'] = 2;
-            _baseToNumber['g'] = 4;
-            _baseToNumber['G'] = 4;
-            _baseToNumber['t'] = 8;
-            _baseToNumber['T'] = 8;
-            _baseToNumber['n'] = 15;
-            _baseToNumber['N'] = 15;
-
-            // create our CIGAR LUT
-            _cigarOpToNumber = new uint[256];
-            for (int i = 0; i < 256; i++) _cigarOpToNumber[i] = BamConstants.LutError;
-            _cigarOpToNumber['m'] = 0;
-            _cigarOpToNumber['M'] = 0;
-            _cigarOpToNumber['i'] = 1;
-            _cigarOpToNumber['I'] = 1;
-            _cigarOpToNumber['d'] = 2;
-            _cigarOpToNumber['D'] = 2;
-            _cigarOpToNumber['n'] = 3;
-            _cigarOpToNumber['N'] = 3;
-            _cigarOpToNumber['s'] = 4;
-            _cigarOpToNumber['S'] = 4;
-            _cigarOpToNumber['h'] = 5;
-            _cigarOpToNumber['H'] = 5;
-            _cigarOpToNumber['p'] = 6;
-            _cigarOpToNumber['P'] = 6;
-            _cigarOpToNumber['='] = 7;
-            _cigarOpToNumber['x'] = 8;
-            _cigarOpToNumber['X'] = 8;
+            if (_outputBuffer == null)
+            {
+                _outputBuffer = new byte[4096];
+            }
         }
 
         // opens BAM file
         public void Open(string filename, string samHeader, List<GenomeMetadata.SequenceMetadata> references)
         {
+            Initialize();
             base.Open(filename);
 
             // ================
@@ -133,7 +150,7 @@ namespace SequencingFiles
 
             foreach (char c in s)
             {
-                uint baseCode = _baseToNumber[c];
+                uint baseCode = ConversionHelper.BaseToNumber[c];
                 if (baseCode == BamConstants.LutError)
                 {
                     throw new ApplicationException(
@@ -149,7 +166,7 @@ namespace SequencingFiles
         }
 
         // encodes the supplied query sequence into 4-bit notation
-        private void PackBases(ref int offset, ref byte[] buffer, uint numEncodedBases, string s)
+        static private void PackBases(ref int offset, ref byte[] buffer, uint numEncodedBases, string s)
         {
             //for (uint baseIndex = 0; baseIndex < numEncodedBases; baseIndex++) buffer[offset + baseIndex] = 0;
             byte shift = 4;
@@ -158,7 +175,7 @@ namespace SequencingFiles
 
             foreach (char c in s)
             {
-                uint baseCode = _baseToNumber[c];
+                uint baseCode = ConversionHelper.BaseToNumber[c];
                 if (baseCode == BamConstants.LutError)
                 {
                     throw new ApplicationException(
@@ -173,31 +190,13 @@ namespace SequencingFiles
             offset = endOffset;
         }
 
-        // creates a cigar string from the supplied alignment
-        private void PackCigar(ref int offset, CigarAlignment cigarOps)
+        static private void PackCigar(ref int offset, ref byte[] buffer, CigarAlignment cigarOps)
         {
             // pack the cigar data into the string
 
             foreach (CigarOp op in cigarOps)
             {
-                uint cigarOp = _cigarOpToNumber[op.Type];
-                if (cigarOp == BamConstants.LutError)
-                {
-                    throw new ApplicationException(
-                        string.Format("ERROR: Encountered an unexpected CIGAR operation ({0}).", op.Type));
-                }
-
-                BinaryIO.AddUIntBytes(ref _outputBuffer, ref offset, op.Length << BamConstants.CigarShift | cigarOp);
-            }
-        }
-
-        private void PackCigar(ref int offset, ref byte[] buffer, CigarAlignment cigarOps)
-        {
-            // pack the cigar data into the string
-
-            foreach (CigarOp op in cigarOps)
-            {
-                uint cigarOp = _cigarOpToNumber[op.Type];
+                uint cigarOp = ConversionHelper.CigarOpToNumber[op.Type];
                 if (cigarOp == BamConstants.LutError)
                 {
                     throw new ApplicationException(
@@ -212,7 +211,7 @@ namespace SequencingFiles
         /// <summary>
         /// Serialize alignment to a byte array, for later flushing to output file.
         /// </summary>
-        public byte[] SerializeAlignment(ref BamAlignment al)
+        static public byte[] SerializeAlignment(ref BamAlignment al)
         {
             // initialize
             uint nameLen = (uint)al.Name.Length + 1;
@@ -270,7 +269,7 @@ namespace SequencingFiles
         }
 
         // writes an alignment
-        public void WriteAlignment(ref BamAlignment al)
+        public void WriteAlignment(BamAlignment al)
         {
             if (!IsOpen)
             {
@@ -312,7 +311,7 @@ namespace SequencingFiles
             BinaryIO.AddNullTerminatedString(ref _outputBuffer, ref offset, al.Name);
 
             // store the packed CIGAR string and packed bases
-            PackCigar(ref offset, al.CigarData);
+            PackCigar(ref offset, ref _outputBuffer, al.CigarData);
             PackBases(ref offset, numEncodedBases, al.Bases);
 
             // store the base qualities

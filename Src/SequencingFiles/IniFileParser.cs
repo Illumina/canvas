@@ -8,8 +8,8 @@ namespace SequencingFiles
 
 	public class IniFileParser
 	{
-		private Dictionary<string, Dictionary<string, string>> sectionKeyPairs = new Dictionary<string, Dictionary<string, string>>(StringComparer.InvariantCultureIgnoreCase);
-		private Dictionary<string, string> rootKeyPairs = new Dictionary<string, string>(StringComparer.InvariantCultureIgnoreCase);
+		private Dictionary<string, Dictionary<string, string>> sectionKeyPairs = new Dictionary<string, Dictionary<string, string>>(StringComparer.OrdinalIgnoreCase);
+		private Dictionary<string, string> rootKeyPairs = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 		private readonly string _iniFilePath;
 		private static List<string> _skipLineStart = new List<string> { "#" };
 		/// <summary>
@@ -189,7 +189,7 @@ namespace SequencingFiles
 			foreach (string skipStart in _skipLineStart)
 			{
 				if (settingName.StartsWith(skipStart))
-					throw new ArgumentException(string.Format("Error: illegal setting name {0} for ini file. Setting name cannot start with '{0}' as these lines will be skipped when parsing.", settingName, skipStart));
+					throw new ArgumentException(string.Format("Error: illegal setting name {0} for ini file. Setting name cannot start with '{1}' as these lines will be skipped when parsing.", settingName, skipStart));
 			}
 		}
 
@@ -212,7 +212,7 @@ namespace SequencingFiles
 		{
 			ValidateSectionName(ref sectionName);
 			if (!sectionKeyPairs.ContainsKey(sectionName))
-				sectionKeyPairs[sectionName] = new Dictionary<string, string>(StringComparer.InvariantCultureIgnoreCase);
+				sectionKeyPairs[sectionName] = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 		}
 
 		/// <summary>

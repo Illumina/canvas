@@ -5,353 +5,269 @@ using System.Text;
 
 namespace SequencingFiles
 {
-	/// <summary>
-	///     VcfReader is a multi-sample vcf reader.
-	/// </summary>
-	public class VcfReader : IDisposable
-	{
-		#region members
-		public List<string> HeaderLines = new List<string>();
-		private bool IsDisposed;
-		private bool IsOpen;
-		private GzipReader Reader;
-		public List<string> Samples = new List<string>();
-		private static char[] InfoSplitChars = new char[] { ';' };
-		private bool RequireGenotypes;
-		// For (minor) speedup, cache the genotype tag order from one line to the next, because it's typically the same for every record:
-		private string GenotypeTagString;
-		private string[] GenotypeTagOrder;
-		#endregion
+    /// <summary>
+    ///     VcfReader is a multi-sample vcf reader.
+    /// </summary>
+    public class VcfReader : IDisposable
+    {
+        #region members
+        public List<string> HeaderLines = new List<string>();
+        private bool IsDisposed;
+        private bool IsOpen;
+        private GzipReader Reader;
+        public List<string> Samples = new List<string>();
+        private static char[] InfoSplitChars = new char[] { ';' };
+        private bool RequireGenotypes;
+        // For (minor) speedup, cache the genotype tag order from one line to the next, because it's typically the same for every record:
+        private string GenotypeTagString;
+        private string[] GenotypeTagOrder;
+        #endregion
 
-		// constructor
-		public VcfReader(string vcfPath, bool requireGenotypes = true, bool skipHeader = false)
-		{
-			this.RequireGenotypes = requireGenotypes;
-			IsOpen = false;
-			Open(vcfPath, skipHeader);
-		}
+        // constructor
+        public VcfReader(string vcfPath, bool requireGenotypes = true, bool skipHeader = false)
+        {
+            this.RequireGenotypes = requireGenotypes;
+            IsOpen = false;
+            Open(vcfPath, skipHeader);
+        }
 
-		#region IDisposable
-		// Note: These two pages explain IDisposable in great detail and give a picture for Why We Do Things This Way:
-		// http://stackoverflow.com/questions/538060/proper-use-of-the-idisposable-interface
-		// http://msdn.microsoft.com/en-us/library/system.idisposable(v=vs.110).aspx
-		public void Dispose()
-		{
-			Dispose(true);
-			GC.SuppressFinalize(this);
-		}
+        #region IDisposable
+        // Note: These two pages explain IDisposable in great detail and give a picture for Why We Do Things This Way:
+        // http://stackoverflow.com/questions/538060/proper-use-of-the-idisposable-interface
+        // http://msdn.microsoft.com/en-us/library/system.idisposable(v=vs.110).aspx
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
 
-		// destructor
-		~VcfReader()
-		{
-			Dispose(false);
-		}
+        // destructor
+        ~VcfReader()
+        {
+            Dispose(false);
+        }
 
-		protected virtual void Dispose(bool disposing)
-		{
-			lock (this)
-			{
-				if (!IsDisposed)
-				{
-					IsDisposed = true;
-					Close();
-				}
-			}
-		}
-		#endregion
+        protected virtual void Dispose(bool disposing)
+        {
+            lock (this)
+            {
+                if (!IsDisposed)
+                {
+                    IsDisposed = true;
+                    Close();
+                }
+            }
+        }
+        #endregion
 
-		/// <summary>
-		///     populates a vcf variant object given an array of vcf columns
-		/// </summary>
-		protected void ConvertColumnsToVariant(string[] cols, VcfVariant variant)
-		{
-			variant.ReferenceName = cols[VcfCommon.ChromIndex];
-			variant.ReferencePosition = int.Parse(cols[VcfCommon.PosIndex]);
-			variant.Identifier = cols[VcfCommon.IDIndex];
-			variant.ReferenceAllele = cols[VcfCommon.RefIndex];
-			variant.Filters = cols[VcfCommon.FilterIndex];
+        /// <summary>
+        ///     populates a vcf variant object given an array of vcf columns
+        /// </summary>
+        protected void ConvertColumnsToVariant(string[] cols, VcfVariant variant)
+        {
+            variant.ReferenceName = cols[VcfCommon.ChromIndex];
+            variant.ReferencePosition = int.Parse(cols[VcfCommon.PosIndex]);
+            variant.Identifier = cols[VcfCommon.IDIndex];
+            variant.ReferenceAllele = cols[VcfCommon.RefIndex];
+            variant.Filters = cols[VcfCommon.FilterIndex];
 
-			if (cols[VcfCommon.QualIndex] == ".")
-				variant.HasQuality = false;
-			double.TryParse(cols[VcfCommon.QualIndex], out variant.Quality); // CFTR uses a ".", which is not actually legal... (actually, vcf 4.1 does allow the missing value "." here. Strelka uses it)
+            if (cols[VcfCommon.QualIndex] == ".")
+                variant.HasQuality = false;
+            double.TryParse(cols[VcfCommon.QualIndex], out variant.Quality); // CFTR uses a ".", which is not actually legal... (actually, vcf 4.1 does allow the missing value "." here. Strelka uses it)
 
-			// parse the variant alleles
-			variant.VariantAlleles = cols[VcfCommon.AltIndex].Split(',');
+            // parse the variant alleles
+            variant.VariantAlleles = cols[VcfCommon.AltIndex].Split(',');
 
-			// parse the info fields
-			//variant.InfoFields.Clear();
-			variant.InfoFields = new Dictionary<string, string>();
-			string InfoData = cols[VcfCommon.InfoIndex];
-			if (InfoData == ".") InfoData = ""; // Special case: a "." in the INFO field should be treated like an empty string.
-			string[] infoCols = InfoData.Split(InfoSplitChars, StringSplitOptions.RemoveEmptyEntries);
+            // parse the info fields
+            //variant.InfoFields.Clear();
+            variant.InfoFields = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            string InfoData = cols[VcfCommon.InfoIndex];
+            if (InfoData == ".") InfoData = ""; // Special case: a "." in the INFO field should be treated like an empty string.
+            string[] infoCols = InfoData.Split(InfoSplitChars, StringSplitOptions.RemoveEmptyEntries);
 
-			int numInfoCols = infoCols.Length;
+            int numInfoCols = infoCols.Length;
 
-			if ((variant.InfoTagOrder == null) || (numInfoCols != variant.InfoTagOrder.Length))
-			{
-				variant.InfoTagOrder = new string[numInfoCols];
-			}
+            if ((variant.InfoTagOrder == null) || (numInfoCols != variant.InfoTagOrder.Length))
+            {
+                variant.InfoTagOrder = new string[numInfoCols];
+            }
 
-			for (int infoColIndex = 0; infoColIndex < numInfoCols; infoColIndex++)
-			{
-				string infoField = infoCols[infoColIndex];
-				string[] infoFieldKVP = infoField.Split('=');
+            for (int infoColIndex = 0; infoColIndex < numInfoCols; infoColIndex++)
+            {
+                string infoField = infoCols[infoColIndex];
+                string[] infoFieldKvp = infoField.Split('=');
+                variant.InfoTagOrder[infoColIndex] = infoFieldKvp[0];
+                variant.InfoFields[infoFieldKvp[0]] = (infoFieldKvp.Length == 1 ? null : infoFieldKvp[1]);
+            }
 
-				variant.InfoTagOrder[infoColIndex] = infoFieldKVP[0];
-				variant.InfoFields[infoFieldKVP[0]] = (infoFieldKVP.Length == 1 ? null : infoFieldKVP[1]);
-			}
+            if (cols.Length > VcfCommon.GenotypeIndex) // Genotype columns present
+            {
+                // parse the genotype format field
+                if (cols[VcfCommon.FormatIndex] != GenotypeTagString)
+                {
+                    GenotypeTagString = cols[VcfCommon.FormatIndex];
+                    GenotypeTagOrder = GenotypeTagString.Split(':');
+                }
+                variant.GenotypeTagOrder = GenotypeTagOrder;
 
-			if (cols.Length > VcfCommon.GenotypeIndex) // Genotype columns present
-			{
-				// parse the genotype format field
-				if (cols[VcfCommon.FormatIndex] != GenotypeTagString)
-				{
-					GenotypeTagString = cols[VcfCommon.FormatIndex];
-					GenotypeTagOrder = GenotypeTagString.Split(':');
-				}
-				variant.GenotypeTagOrder = GenotypeTagOrder;
+                // parse the genotype data for each sample
+                variant.Genotypes = new List<Dictionary<string, string>>();
+                for (int sampleIndex = 0; sampleIndex < this.Samples.Count; sampleIndex++)
+                {
+                    string genotypeColumn = cols[VcfCommon.GenotypeIndex + sampleIndex];
+                    if (genotypeColumn == ".")
+                    {
+                        variant.Genotypes.Add(null);
+                    }
+                    else
+                    {
+                        string[] genotypeCols = genotypeColumn.Split(':');
+                        variant.Genotypes.Add(ParseGenotype(variant.GenotypeTagOrder, genotypeCols));
+                    }
+                }
 
-				// parse the genotype data for each sample
-				variant.Genotypes = new List<Dictionary<string, string>>();
-				for (int sampleIndex = 0; sampleIndex < this.Samples.Count; sampleIndex++)
-				{
-					string genotypeColumn = cols[VcfCommon.GenotypeIndex + sampleIndex];
-					if (genotypeColumn == ".")
-					{
-						variant.Genotypes.Add(null);
-					}
-					else
-					{
-						string[] genotypeCols = genotypeColumn.Split(':');
-						variant.Genotypes.Add(ParseGenotype(variant.GenotypeTagOrder, genotypeCols));
-					}
-				}
+                // specify the variant type:
+                AssignVariantType(variant);
+            }
+        }
 
-				// specify the variant type:
-				AssignVariantType(variant);
-			}
-		}
+        /// <summary>
+        ///     closes the vcf file
+        /// </summary>
+        private void Close()
+        {
+            if (!IsOpen) return;
+            IsOpen = false;
+            Reader.Close();
+        }
 
-		/// <summary>
-		///     closes the vcf file
-		/// </summary>
-		private void Close()
-		{
-			if (!IsOpen) return;
-			IsOpen = false;
-			Reader.Close();
-		}
+        /// <summary>
+        /// Loop over variants like this: foreach (VcfVariant variant in reader.GetVariants())
+        /// </summary>
+        public IEnumerable<VcfVariant> GetVariants()
+        {
+            // sanity check: make sure the file is open
+            if (!IsOpen) yield break;
 
-		/// <summary>
-		/// Loop over variants like this: foreach (VcfVariant variant in reader.GetVariants())
-		/// </summary>
-		public IEnumerable<VcfVariant> GetVariants()
-		{
-			// sanity check: make sure the file is open
-			if (!IsOpen) yield break;
+            while (true)
+            {
+                // grab the next vcf line
+                string line = Reader.ReadLine();
+                if (line == null) break;
 
-			while (true)
-			{
-				// grab the next vcf line
-				string line = Reader.ReadLine();
-				if (line == null) break;
+                VcfVariant variant = new VcfVariant();
 
-				VcfVariant variant = new VcfVariant();
+                // split the columns and assign them to VcfVariant
+                string[] cols = line.Split('\t');
 
-				// split the columns and assign them to VcfVariant
-				string[] cols = line.Split('\t');
+                // convert the columns to a variant
+                ConvertColumnsToVariant(cols, variant);
+                if (RequireGenotypes && (variant.Genotypes == null || variant.Genotypes.Count == 0))
+                    throw new ApplicationException("Missing genotype columns in VCF file");
+                yield return variant;
+            }
+        }
 
-				// convert the columns to a variant
-				ConvertColumnsToVariant(cols, variant);
-				if (RequireGenotypes && (variant.Genotypes == null || variant.Genotypes.Count == 0))
-					throw new ApplicationException("Missing genotype columns in VCF file");
-				yield return variant;
-			}
-		}
+        /// <summary>
+        /// Test method: Load variant but keep unparsed line around
+        /// </summary>
+        public bool GetNextVariant(VcfVariant variant, out string line)
+        {
+            line = null;
+            // sanity check: make sure the file is open
+            if (!IsOpen) return false;
 
-		/// <summary>
-		/// Test method: Load variant but keep unparsed line around
-		/// </summary>
-		public bool GetNextVariant(VcfVariant variant, out string line)
-		{
-			line = null;
-			// sanity check: make sure the file is open
-			if (!IsOpen) return false;
+            // grab the next vcf line
+            line = Reader.ReadLine();
+            if (line == null) return false;
 
-			// grab the next vcf line
-			line = Reader.ReadLine();
-			if (line == null) return false;
+            // split the columns and assign them to VcfVariant
+            string[] cols = line.Split('\t');
 
-			// split the columns and assign them to VcfVariant
-			string[] cols = line.Split('\t');
+            // convert the columns to a variant
+            ConvertColumnsToVariant(cols, variant);
+            if (RequireGenotypes && variant.Genotypes.Count == 0)
+                throw new ApplicationException("Missing genotype columns in VCF file");
+            return true;
+        }
 
-			// convert the columns to a variant
-			ConvertColumnsToVariant(cols, variant);
-			if (RequireGenotypes && variant.Genotypes.Count == 0)
-				throw new ApplicationException("Missing genotype columns in VCF file");
-			return true;
-		}
+        /// <summary>
+        /// Test method: Load variant but keep unparsed line around
+        /// </summary>
+        public bool GetNextVariant(VcfVariant variant, out string line, out string[] bits)
+        {
+            line = null;
+            bits = null;
+            // sanity check: make sure the file is open
+            if (!IsOpen) return false;
 
-		/// <summary>
-		/// Test method: Load variant but keep unparsed line around
-		/// </summary>
-		public bool GetNextVariant(VcfVariant variant, out string line, out string[] bits)
-		{
-			line = null;
-			bits = null;
-			// sanity check: make sure the file is open
-			if (!IsOpen) return false;
+            // grab the next vcf line
+            line = Reader.ReadLine();
+            if (line == null) return false;
 
-			// grab the next vcf line
-			line = Reader.ReadLine();
-			if (line == null) return false;
+            // split the columns and assign them to VcfVariant
+            bits = line.Split('\t');
 
-			// split the columns and assign them to VcfVariant
-			bits = line.Split('\t');
-
-			// convert the columns to a variant
-			ConvertColumnsToVariant(bits, variant);
-			if (RequireGenotypes && variant.Genotypes.Count == 0)
-				throw new ApplicationException("Missing genotype columns in VCF file");
-			return true;
-		}
+            // convert the columns to a variant
+            ConvertColumnsToVariant(bits, variant);
+            if (RequireGenotypes && variant.Genotypes.Count == 0)
+                throw new ApplicationException("Missing genotype columns in VCF file");
+            return true;
+        }
 
 
-		/// <summary>
-		///     Retrieves the next available variant and returns false if no variants are available.
-		/// </summary>
-		public bool GetNextVariant(VcfVariant variant)
-		{
-			// sanity check: make sure the file is open
-			if (!IsOpen) return false;
+        /// <summary>
+        ///     Retrieves the next available variant and returns false if no variants are available.
+        /// </summary>
+        public bool GetNextVariant(VcfVariant variant)
+        {
+            // sanity check: make sure the file is open
+            if (!IsOpen) return false;
 
-			// grab the next vcf line
-			string line = Reader.ReadLine();
-			if (line == null) return false;
+            // grab the next vcf line
+            string line = Reader.ReadLine();
+            if (line == null) return false;
 
-			// split the columns and assign them to VcfVariant
-			string[] cols = line.Split('\t');
+            // split the columns and assign them to VcfVariant
+            string[] cols = line.Split('\t');
 
-			// convert the columns to a variant
-			ConvertColumnsToVariant(cols, variant);
-			if (RequireGenotypes && variant.Genotypes.Count == 0)
-				throw new ApplicationException("Missing genotype columns in VCF file");
+            // convert the columns to a variant
+            ConvertColumnsToVariant(cols, variant);
+            if (RequireGenotypes && variant.Genotypes.Count == 0)
+                throw new ApplicationException("Missing genotype columns in VCF file");
 
-			return true;
-		}
+            return true;
+        }
 
-		private static void AssignVariantType(VcfVariant variant)
-		{
-			string genotype = null;
+        private static void AssignVariantType(VcfVariant variant)
+        {
+            string genotype = null;
 
-			if (variant.Genotypes[0] != null && variant.Genotypes[0].ContainsKey("GT"))
-			{
-				genotype = variant.Genotypes[0]["GT"];
-			}
+            if (variant.Genotypes[0] != null && variant.Genotypes[0].ContainsKey("GT"))
+            {
+                genotype = variant.Genotypes[0]["GT"];
+            }
 
-			// sanity check: support missing genotypes
-			if (genotype == null || genotype == "./." || genotype == ".")
-			{
-				variant.VarType1 = VariantType.Missing;
-				variant.VarType2 = VariantType.Missing;
-				variant.VarType = VariantType.Missing;
-				return;
-			}
-			// Handle usual cases like 0/0, 0/1, 1/0, 1/1 as well as 
-			// special cases like ., ./., ./1, 1/.:
-			int haplotypeA = int.TryParse(genotype.Substring(0, 1), out haplotypeA) ? haplotypeA : -1;
-			int haplotypeB = genotype.Length >= 3 && int.TryParse(genotype.Substring(2, 1), out haplotypeB) ? haplotypeB : -1;
-			// Treat things like ./1 or 0/. as homozygous:
-			if (haplotypeA == -1) haplotypeA = haplotypeB;
-			if (haplotypeB == -1) haplotypeB = haplotypeA;
+            // sanity check: support missing genotypes
+            if (genotype == null || genotype == "./." || genotype == ".")
+            {
+                variant.VarType1 = VariantType.Missing;
+                variant.VarType2 = VariantType.Missing;
+                return;
+            }
+            // Handle usual cases like 0/0, 0/1, 1/0, 1/1 as well as 
+            // special cases like ., ./., ./1, 1/.:
+            int haplotypeA = int.TryParse(genotype.Substring(0, 1), out haplotypeA) ? haplotypeA : -1;
+            int haplotypeB = genotype.Length >= 3 && int.TryParse(genotype.Substring(2, 1), out haplotypeB) ? haplotypeB : -1;
+            // Treat things like ./1 or 0/. as homozygous:
+            if (haplotypeA == -1) haplotypeA = haplotypeB;
+            if (haplotypeB == -1) haplotypeB = haplotypeA;
 
-			variant.VarType1 = GetAlleleVariantType(variant, haplotypeA);
-			variant.VarType2 = GetAlleleVariantType(variant, haplotypeB);
+            variant.VarType1 = GetAlleleVariantType(variant, haplotypeA);
+            variant.VarType2 = GetAlleleVariantType(variant, haplotypeB);
+        }
 
-			switch (variant.VarType1)
-			{
-				case VariantType.Reference:
-					variant.VarType = variant.VarType2;
-					break;
-				case VariantType.SNV:
-					switch (variant.VarType2)
-					{
-						case VariantType.Reference:
-							variant.VarType = VariantType.SNV;
-							break;
-						case VariantType.SNV:
-							variant.VarType = VariantType.SNV;
-							break;
-						case VariantType.Insertion:
-							variant.VarType = VariantType.SNVInsertion;
-							break;
-						case VariantType.Deletion:
-							variant.VarType = VariantType.SNVDeletion;
-							break;
-						default:
-							variant.VarType = VariantType.Complex;
-							break;
-					}
-					break;
-				case VariantType.MNP:
-					switch (variant.VarType2)
-					{
-						case VariantType.Reference:
-							variant.VarType = VariantType.MNP;
-							break;
-						case VariantType.MNP:
-							variant.VarType = VariantType.MNP;
-							break;
-						default:
-							variant.VarType = VariantType.Complex;
-							break;
-					}
-					break;
-				case VariantType.Insertion:
-					switch (variant.VarType2)
-					{
-						case VariantType.Reference:
-							variant.VarType = VariantType.Insertion;
-							break;
-						case VariantType.SNV:
-							variant.VarType = VariantType.SNVInsertion;
-							break;
-						case VariantType.Insertion:
-							variant.VarType = VariantType.Insertion;
-							break;
-						case VariantType.Deletion:
-							variant.VarType = VariantType.InsertionDeletion;
-							break;
-						default:
-							variant.VarType = VariantType.Complex;
-							break;
-					}
-					break;
-				case VariantType.Deletion:
-					switch (variant.VarType2)
-					{
-						case VariantType.Reference:
-							variant.VarType = VariantType.Deletion;
-							break;
-						case VariantType.SNV:
-							variant.VarType = VariantType.SNVDeletion;
-							break;
-						case VariantType.Insertion:
-							variant.VarType = VariantType.InsertionDeletion;
-							break;
-						case VariantType.Deletion:
-							variant.VarType = VariantType.Deletion;
-							break;
-						default:
-							variant.VarType = VariantType.Complex;
-							break;
-					}
-					break;
-				default:
-					variant.VarType = VariantType.Complex;
-					break;
-			}
-		}
+
 
 		/// <summary>
 		/// Assign a variant type to a particular allele.  The rules are as follows:
@@ -370,6 +286,11 @@ namespace SequencingFiles
 				return VariantType.Reference;
 			if (haplotype == -1)
 				return VariantType.Missing;
+            if (haplotype > variant.VariantAlleles.Length)
+            {
+                throw new Exception(string.Format("Error in variant at {0}:{1} - GT tag specifies nonexistent allele",
+                    variant.ReferenceName, variant.ReferencePosition));
+            }
 
 			string altAllele = variant.VariantAlleles[haplotype - 1];
 			return GetAlleleVariantType(variant.ReferenceAllele, altAllele);

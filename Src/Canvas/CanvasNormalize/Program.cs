@@ -40,8 +40,7 @@ namespace CanvasNormalize
         // Bed file containing the reference ploidy
         public string ploidyBedPath = null;
 
-        // TODO: enable this option when we have more than one normalization method
-        //public CanvasCommon.CanvasCoverageMode normalizationMode = CanvasCommon.CanvasCoverageMode.TruncatedDynamicRange;
+        public CanvasCommon.CanvasNormalizeMode normalizationMode = CanvasCommon.CanvasNormalizeMode.WeightedAverage;
         #endregion
 
         public static CanvasNormalizeParameters ParseCommandLine(string[] args)
@@ -59,7 +58,7 @@ namespace CanvasNormalize
                     { "f|manifest=",      "Nextera manifest file",                       v => parameters.manifestPath = v },
                     { "p|ploidyBedFile=", "bed file specifying reference ploidy (e.g. for sex chromosomes) (optional)", v => parameters.ploidyBedPath = v},
                     { "h|help",           "show this message and exit",                       v => needHelp = v != null },
-                    //{ "m|mode=",          "normalization mode",                       v => parameters.normalizationMode = CanvasCommon.Utilities.ParseCanvasCoverageMode(v) },
+                    { "m|mode=",          "normalization mode",                               v => parameters.normalizationMode = CanvasCommon.Utilities.ParseCanvasNormalizeMode(v) },
                 };
 
             Console.WriteLine("CanvasNormalize {0}", System.Reflection.Assembly.GetEntryAssembly().GetName().Version.ToString());

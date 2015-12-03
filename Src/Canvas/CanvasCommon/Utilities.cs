@@ -15,6 +15,11 @@ namespace CanvasCommon
         GCContentWeighted // was 5
     }
 
+    public enum CanvasNormalizeMode
+    {
+        WeightedAverage, // Weighted average of all control samples
+        BestLR2 // Use sum of log ratio^2 to find the best control sample
+    }
 
     public static class Utilities
     {
@@ -62,6 +67,18 @@ namespace CanvasCommon
             }
         }
 
+        static public CanvasNormalizeMode ParseCanvasNormalizeMode(string mode)
+        {
+            switch (mode.ToLowerInvariant().Trim())
+            {
+                case "weightedaverage":
+                    return CanvasNormalizeMode.WeightedAverage;
+                case "bestlr2":
+                    return CanvasNormalizeMode.BestLR2;
+                default:
+                    throw new Exception(string.Format("Invalid CanvasNormalize mode '{0}'", mode));
+            }
+        }
 
         static public void LogCommandLine(string[] arguments)
         {
@@ -96,6 +113,22 @@ namespace CanvasCommon
             }
             if (counter == 0) return 0;
             return Convert.ToInt16(sum / counter);
+        }
+
+        // calculate weighted mean
+        static public double WeightedMean(List<double> x, List<double> weight)
+        {
+            double sum = 0;
+            double counter = 0;
+
+            for (int i = 0; i < x.Count; i++)
+            {
+                sum += x[i] * weight[i];
+                counter += weight[i];
+            }
+
+            if (counter == 0) return 0;
+            else return (sum / counter);
         }
 
         // calculate mean of non-zero byte values
@@ -475,6 +508,15 @@ namespace CanvasCommon
         public static double WeightedMedian(List<Tuple<float, float>> x) 
         {
             return WeightedQuantiles(x, new List<float>() { 0.5f })[0];
+        }
+
+        /// <summary>
+        /// Weighted interquartile range
+        /// </summary>
+        public static double WeightedIQR(List<Tuple<float, float>> x)
+        {
+            double [] iqr = WeightedQuantiles(x, new List<float>() { 0.25f, 0.75f });
+            return iqr[1]-iqr[0];
         }
 
 

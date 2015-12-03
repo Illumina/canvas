@@ -47,7 +47,7 @@
     <Prefer32Bit>true</Prefer32Bit>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|x64'">
-    <OutputPath>bin\x64\Release\</OutputPath>
+    <OutputPath>..\x64\Release\</OutputPath>
     <DefineConstants>TRACE</DefineConstants>
     <Optimize>true</Optimize>
     <DebugType>pdbonly</DebugType>
@@ -66,9 +66,10 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="..\..\ILMNcommon\Properties\IsisVersionInfo.cs">
-      <Link>Properties\IsisVersionInfo.cs</Link>
+    <Compile Include="..\..\ILMNcommon\Properties\IsasVersionInfo.cs">
+      <Link>Properties\IsasVersionInfo.cs</Link>
     </Compile>
+    <Compile Include="BinCounts.cs" />
     <Compile Include="CanvasNormalize.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

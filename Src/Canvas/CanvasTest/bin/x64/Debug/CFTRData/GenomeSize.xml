@@ -1,0 +1,3 @@
+<sequenceSizes genomeName="WholeGenomeFASTA">
+	<chromosome fileName="chr7cftr.fa" contigName="chr7" totalBases="188702" isCircular="false" md5="ef15cde5c82fb860694bf8f611807459" ploidy="2" />
+	</sequenceSizes>

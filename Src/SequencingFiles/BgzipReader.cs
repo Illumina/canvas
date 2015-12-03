@@ -59,31 +59,29 @@ namespace SequencingFiles
             // skip if the file is not currently open or if we don't have any data in the buffer
             if (!IsOpen || (BlockLength <= 0)) return null;
 
-            int crOffset = -1;
             while (true)
             {
-                crOffset = Array.IndexOf(LineBuffer, GCLineFeed, BlockOffset, BlockLength - BlockOffset);
+                int crOffset = Array.IndexOf(LineBuffer, GCLineFeed, BlockOffset, BlockLength - BlockOffset);
                 if (crOffset != -1)
                 {
                     s = s + Encoding.ASCII.GetString(LineBuffer, BlockOffset, crOffset - BlockOffset);
                     BlockOffset = crOffset + 1;
                     break;
                 }
-                else
+                int remainingLen = BlockLength - BlockOffset;
+
+                s = s + Encoding.ASCII.GetString(LineBuffer, BlockOffset, remainingLen);
+
+                FillBuffer();
+
+                if (BlockLength <= 0)
                 {
-                    int remainingLen = BlockLength - BlockOffset;
-
-                    s = s + Encoding.ASCII.GetString(LineBuffer, BlockOffset, remainingLen);
-
-                    FillBuffer();
-
-                    if (BlockLength <= 0)
-                    {
-                        //end of file?
-                        return string.IsNullOrEmpty(s) ? null : s;
-                    }
+                    //end of file?
+                    return string.IsNullOrEmpty(s) ? null : s;
                 }
             }
+            if (!string.IsNullOrEmpty(s) && s[s.Length - 1] == '\r')
+                s = s.Substring(0, s.Length - 1);
             return s;
         }
 

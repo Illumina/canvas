@@ -15,7 +15,7 @@ namespace CanvasSomaticCaller
         #region Members
         // Static:
         public static readonly float DefaultDeviationFactor = 1.75f;
-        public static readonly int DefaultDeviationIndexCutoff = 25;
+        public static readonly int DefaultDeviationIndexCutoff = 18;
         public static readonly double DefaultCoverageWeighting = 0.4;
         public static readonly int DefaultMinimumCallSize = 50000;
         public static readonly double DefaultPrecisionWeightingFactor = 0.5;
@@ -25,9 +25,10 @@ namespace CanvasSomaticCaller
         // Data:
         List<CanvasSegment> Segments;
         List<SegmentPloidy> AllPloidies;
-        Dictionary<string, List<CNInterval>> KnownCN = null;
+        CopyNumberOracle CNOracle = null;
         CoveragePurityModel Model;
         Dictionary<string, List<GenomicBin>> ExcludedIntervals = new Dictionary<string, List<GenomicBin>>();
+        List<long> HeterogeneousSegmentsSignature = new List<long>();
 
         // File paths:
         public string TruthDataPath;
@@ -38,12 +39,20 @@ namespace CanvasSomaticCaller
         // Weighting parameters:
         // derived from fitting logistic regression to "true" and "false" ploidy and purity models
         // on tumour sequenced dataset of ~50 samples
-        public double PercentNormal2WeightingFactor = 0.3;
-        public double DeviationScoreWeightingFactor = 0.25;
-        public double CN2WeightingFactor = 0.35;
-        public double DiploidDistanceScoreWeightingFactor = 0.25;
+        //public double PercentNormal2WeightingFactor = 0.3;
+        //public double DeviationScoreWeightingFactor = 0.25;
+        //public double CN2WeightingFactor = 0.35;
+        //public double DiploidDistanceScoreWeightingFactor = 0.25;
+        // New weights - incrementally better separation between top-scoring true model
+        // and the next runner-up:
+        public double PercentNormal2WeightingFactor = 0.275;
+        public double DeviationScoreWeightingFactor = 0.275;
+        public double CN2WeightingFactor = 0.375;
+        public double DiploidDistanceScoreWeightingFactor = 0.225;
 
         // Parameters:
+        public float? userPloidy;
+        public float? userPurity;
         protected float MeanCoverage = 30;
         private double CoverageWeightingFactor; // Computed from CoverageWeighting
         public float DeviationFactor = DefaultDeviationFactor;
@@ -51,10 +60,13 @@ namespace CanvasSomaticCaller
         public double CoverageWeighting = DefaultCoverageWeighting;
         public int MinimumCallSize = DefaultMinimumCallSize;
         static protected int MinimumVariantFrequenciesForInformativeSegment = 50;
-        public double PrecisionWeightingFactor = 0.5f;
+        public double PrecisionWeightingFactor = 0.3333333333f;
         public bool IsEnrichment = false;
         public bool IsDbsnpVcf = false;
         protected PloidyInfo ReferencePloidy;
+        public float MinAllowedPloidy = 0.5f;
+        public float MaxAllowedPloidy = 5.0f;
+
 
         public bool FFPEMode = false; // Assume MAF and Coverage are independent/uncorrelated in FFPEMode (always false for now)
         private const double EMPosteriorProbThres = 0.01; // Controls whether a segment contributes to Mu and Sigma estimates
@@ -71,7 +83,6 @@ namespace CanvasSomaticCaller
             Console.WriteLine(">>>LoadReferencePloidy({0})", filePath);
             ReferencePloidy = PloidyInfo.LoadPloidyFromBedFile(filePath);
         }
-
 
         /// <summary>
         /// Setup: Model various copy ploidies.
@@ -371,9 +382,10 @@ namespace CanvasSomaticCaller
             // Some debugging output, for developer usage:
             if (!string.IsNullOrEmpty(this.TruthDataPath))
             {
-                this.LoadKnownCN(this.TruthDataPath);
+                this.CNOracle = new CopyNumberOracle();
+                this.CNOracle.LoadKnownCN(this.TruthDataPath);
             }
-            if (this.KnownCN != null)
+            if (this.CNOracle != null)
             {
                 this.DebugModelCoverageByCN();
                 this.DebugModelSegmentCoverageByCN();
@@ -384,7 +396,7 @@ namespace CanvasSomaticCaller
                 CanvasCommon.Utilities.PruneVariantFrequencies(this.Segments, this.TempFolder, ref MinimumVariantFrequenciesForInformativeSegment);
             this.InitializePloidies();
 
-            if (this.KnownCN != null) this.DebugModelSegmentsByPloidy();
+            if (this.CNOracle != null) this.DebugModelSegmentsByPloidy();
             List<string> ExtraHeaders = new List<string>();
             try
             {
@@ -416,7 +428,7 @@ namespace CanvasSomaticCaller
                 CanvasSegment.MergeSegmentsUsingExcludedIntervals(ref this.Segments, MinimumCallSize, ExcludedIntervals);
             }
 
-            if (this.KnownCN != null)
+            if (this.CNOracle != null)
             {
                 this.DebugEvaluateCopyNumberCallAccuracy();
                 this.GenerateReportVersusKnownCN();
@@ -538,12 +550,135 @@ namespace CanvasSomaticCaller
             return mu;
         }
 
+        /// <summary>
+        ///  Initialize model points by subsampling from existing segment Coverage and MAF values. 
+        ///  Use distanceThreshold to ensure that both large and small cluster components get subsampled
+        /// </summary>
+        protected List<ModelPoint> InitializeModelPoints(List<SegmentInfo> segments, int numClusters, double distanceThreshold)
+        {
+            List<ModelPoint> modelPoints = new List<ModelPoint>();
+            List<SegmentInfo> usableSegments = new List<SegmentInfo>();
+            List<SegmentInfo> usedSegments = new List<SegmentInfo>();
+
+            foreach (SegmentInfo segment in segments) {
+                if (segment.Cluster != -1 && segment.MAF >= 0)
+                    usableSegments.Add(segment);
+            }
+
+            Random rnd = new Random();
+            int lastIndex = rnd.Next(1, usableSegments.Count);
+            usedSegments.Add(usableSegments[lastIndex]);
+            int counter = 1;
+            double attempts = 0;
+            while (counter < numClusters)
+            {
+                int newIndex = rnd.Next(1, usableSegments.Count);
+                attempts += 1.0;
+                double distance = GetModelDistance(usableSegments[lastIndex].Coverage, usableSegments[newIndex].Coverage, usableSegments[lastIndex].MAF, usableSegments[newIndex].MAF);
+                if (distance > distanceThreshold || attempts/usableSegments.Count > 0.3) // escape outlier minima
+                {
+                    usedSegments.Add(usableSegments[newIndex]);
+                    counter++;
+                    lastIndex = newIndex;
+                    attempts = 0;
+                }
+            }
+            // Initialize model points with coverage and MAF values from subsampled segments
+            for (int i = 0; i < numClusters; i++)
+            {
+                ModelPoint point = new ModelPoint();
+                point.Coverage = usedSegments[i].Coverage;
+                point.MAF = usedSegments[i].MAF;
+                SegmentPloidy ploidy = new SegmentPloidy();
+                ploidy.CopyNumber = 2;
+                ploidy.MajorChromosomeCount = 1;
+                point.Ploidy = ploidy;
+                point.Cluster = i+1;
+                modelPoints.Add(point);
+            } 
+            return modelPoints;
+        }
+
+        /// <summary>
+        ///  Initialize model points given diploid purity modelInitialize model points given somatic purity model
+        /// </summary>
+        protected List<ModelPoint> InitializeModelPoints(List<SegmentInfo> segments, double coverage, int percentPurity, int numClusters)
+        {
+            List<ModelPoint> modelPoints = new List<ModelPoint>();
+            CoveragePurityModel model = new CoveragePurityModel();
+            model.DiploidCoverage = coverage;
+            model.Purity = percentPurity / 100f;
+
+            double[] mu = GetProjectedMeanCoverage(model.DiploidCoverage);
+            double diploidMAF = this.AllPloidies[3].MinorAlleleFrequency; /// %%% Magic number!
+
+
+            /////////////////////////////////////////////
+            // Update the parameters in each SegmentPloidy object, and construct corresponding SegmentInfo objects
+            foreach (SegmentPloidy ploidy in this.AllPloidies)
+            {
+                ModelPoint point = new ModelPoint();
+                double pureCoverage = mu[ploidy.CopyNumber];
+                point.Coverage = (model.Purity * pureCoverage) + (1 - model.Purity) * model.DiploidCoverage;
+                double pureMAF = ploidy.MinorAlleleFrequency;
+                if (ploidy.MajorChromosomeCount * 2 == ploidy.CopyNumber)
+                {
+                    point.MAF = (model.Purity * ploidy.CopyNumber * pureMAF) + ((1 - model.Purity) * 2 * diploidMAF);
+                    point.MAF /= model.Purity * ploidy.CopyNumber + (1 - model.Purity) * 2;
+                    if (double.IsNaN(point.MAF)) point.MAF = 0;
+                }
+                else
+                {
+                    point.MAF = (model.Purity * ploidy.CopyNumber * pureMAF) + ((1 - model.Purity) * 1);
+                    point.MAF /= model.Purity * ploidy.CopyNumber + (1 - model.Purity) * 2;
+                }
+                point.Ploidy = ploidy;
+                modelPoints.Add(point);
+                point.CN = ploidy.CopyNumber;
+                ploidy.MixedMinorAlleleFrequency = point.MAF;
+                ploidy.MixedCoverage = point.Coverage;
+            }
+
+            // estimate distance between each model point and segments 
+            List<double> modelPointsScore = new List<double>();
+            foreach (ModelPoint modelPoint in modelPoints)
+            {
+                List<double> distanceList = new List<double>();
+                foreach (SegmentInfo info in segments)
+                {
+                    if (info.MAF >= 0)
+                        distanceList.Add(GetModelDistance(info.Coverage, modelPoint.Coverage, info.MAF, modelPoint.MAF));
+                }
+                distanceList.Sort();
+                double v15th_percentile = distanceList[Convert.ToInt32(distanceList.Count * 0.15)];
+                // use model points with good fit to observed values
+                modelPointsScore.Add(v15th_percentile);
+            }
+            // sort list and return indices
+            var sortedScores = modelPointsScore.Select((x, i) => new KeyValuePair<double, int>(x, i)).OrderBy(x => x.Key).ToList();
+            List<double> scoresValue = sortedScores.Select(x => x.Key).ToList();
+            List<int> scoresIndex = sortedScores.Select(x => x.Value).ToList();
+
+            List<ModelPoint> selectedModelPoints = new List<ModelPoint>();
+
+            for (int i = 0; i < numClusters; i++)
+            {
+                modelPoints[scoresIndex[i]].Cluster = i + 1;
+                selectedModelPoints.Add(modelPoints[scoresIndex[i]]);
+            }
+
+            return selectedModelPoints;
+        }
+        
+
+        // Initialize model points given expected ploidy and purity values 
         protected List<ModelPoint> InitializeModelPoints(CoveragePurityModel model)
         {
             List<ModelPoint> modelPoints = new List<ModelPoint>();
 
             double[] mu = GetProjectedMeanCoverage(model.DiploidCoverage);
             double diploidMAF = this.AllPloidies[3].MinorAlleleFrequency; /// %%% Magic number!
+
 
             /////////////////////////////////////////////
             // Update the parameters in each SegmentPloidy object, and construct corresponding SegmentInfo objects
@@ -585,11 +720,11 @@ namespace CanvasSomaticCaller
         /// <param name="segments"></param>
         /// <param name="debugPath"></param>
         /// <returns></returns>
-        protected double FitGaussians(CoveragePurityModel model, List<SegmentInfo> segments, string debugPath = null)
+        protected double FitGaussians(CoveragePurityModel model, List<SegmentInfo> segments, string debugPath = null, double knearestNeighbourCutoff = Int32.MaxValue)
         {
             List<ModelPoint> modelPoints = InitializeModelPoints(model);
 
-            GaussianMixtureModel gmm = new GaussianMixtureModel(modelPoints, segments, this.MeanCoverage, this.CoverageWeightingFactor);
+            GaussianMixtureModel gmm = new GaussianMixtureModel(modelPoints, segments, this.MeanCoverage, this.CoverageWeightingFactor, knearestNeighbourCutoff);
             double likelihood = gmm.Fit();
 
             if (debugPath != null)
@@ -689,6 +824,49 @@ namespace CanvasSomaticCaller
         }
 
         /// <summary>
+        /// Compute Silhouette coefficient https://en.wikipedia.org/wiki/Silhouette_(clustering)
+        /// </summary>
+        protected double ComputeSilhouette(List<SegmentInfo> usableSegments, int numClusters)
+        {
+            List<List<double>> withinClusterDistance = new List<List<double>>();
+            List<List<double>> betweenClusterDistance = new List<List<double>>();
+            for (int i = 0; i < numClusters; i++) withinClusterDistance.Add(new List<double>());
+            for (int i = 0; i < numClusters; i++) betweenClusterDistance.Add(new List<double>());
+
+            for (int k = 0; k < numClusters; k++)
+            {
+                for (int i = 0; i < usableSegments.Count; i++)
+                {
+                    for (int j = 0; j < usableSegments.Count; j++)
+                    {
+                        if (i != j && usableSegments[i].Cluster != -1 && usableSegments[j].Cluster != -1 && usableSegments[i].Cluster == k + 1 && usableSegments[i].MAF >= 0 && usableSegments[j].MAF >= 0)
+                        {
+                            if (usableSegments[i].Cluster == usableSegments[j].Cluster)
+                            {
+                                withinClusterDistance[k].Add(GetModelDistance(usableSegments[i].Coverage, usableSegments[j].Coverage, usableSegments[i].MAF, usableSegments[j].MAF));
+                            }
+                            else
+                            {
+                                betweenClusterDistance[k].Add(GetModelDistance(usableSegments[i].Coverage, usableSegments[j].Coverage, usableSegments[i].MAF, usableSegments[j].MAF));
+                            }
+                        }
+                    }
+                }   
+            }
+            double silhouette = 0;
+            for (int i = 0; i < numClusters; i++) 
+            {
+                if (withinClusterDistance[i].Count > 2 && betweenClusterDistance[i].Count > 2)
+                {
+                    double a = CanvasCommon.Utilities.Median(withinClusterDistance[i]);
+                    double b = CanvasCommon.Utilities.Median(betweenClusterDistance[i]);
+                    silhouette += (b - a) / Math.Max(a, b);
+                }
+            }
+            return silhouette / numClusters;
+        }
+
+        /// <summary>
         /// Refine our estimate of diploid MAF.  Our baseline model, based on a binomial distribution, doesn't match real-world data 
         /// perfectly - and it seems some real-world samples have higher or lower diploid MAF than others even for the same coverage level.
         /// So, we average together the initial model with an empirical fit.
@@ -744,6 +922,107 @@ namespace CanvasSomaticCaller
             }
         }
 
+
+        /// <summary>
+        /// Helper function to compute Heterogeneity Index
+        /// </summary>
+        protected double ComputeHeterogeneityIndex(List<ClusterModel> clusterDeviations, double tempDeviation)
+        {
+            List<double> averageClusterDistanceIQR = new List<double>();
+            List<double> clusterSize = new List<double>();
+
+            foreach (ClusterModel clusterInfo in clusterDeviations)
+            {
+                averageClusterDistanceIQR.Add(clusterInfo.ClusterDistanceIQR);
+                clusterSize.Add(Convert.ToDouble(clusterInfo.ClusterDistances.Count));
+            }
+            double ClusterDistanceIQR = CanvasCommon.Utilities.WeightedMean(averageClusterDistanceIQR, clusterSize);
+
+            double heterogeneityIndexCounter = 0;
+            foreach (ClusterModel clusterInfo in clusterDeviations)
+            {
+                // This should capture 20%/80% percentiles 
+                // https://en.wikipedia.org/wiki/Normal_distribution#Standard_normal_distribution
+                if (clusterInfo.ClusterMedianDistance > (tempDeviation + ClusterDistanceIQR * 1.5f))
+                    heterogeneityIndexCounter += Convert.ToDouble(clusterInfo.ClusterDistances.Count);
+            }
+            double heterogeneityIndex = heterogeneityIndexCounter / clusterSize.Sum();
+            return heterogeneityIndex;
+        }
+
+
+        /// <summary>
+        /// Helper function for ModelDeviation. Outputs
+        /// estimates of average cluster deviation.
+        /// </summary>
+        protected double ClusterDeviation(List<SegmentInfo> segments, int numClusters, double tempDeviation, out int heterogeneousClusters, out double heterogeneityIndex, bool bestModel, string debugPathClusterInfo = null)
+        {
+            // compute average deviation for each cluster (clusterDeviation)
+            List<ClusterModel> clusterDeviations = new List<ClusterModel>();
+            for (int clusterID = 0; clusterID < numClusters; clusterID++)
+            {
+                ClusterModel clusterInfo = new ClusterModel();
+                clusterInfo.ClusterID = clusterID + 1;
+                clusterDeviations.Add(clusterInfo);
+            }
+
+            // populate clusters
+            foreach (SegmentInfo info in segments)
+            {
+                if (info.Cluster.Value != -1 && info.MAF != -1)
+                    clusterDeviations[info.Cluster.Value - 1].ClusterDistances.Add(Tuple.Create(Convert.ToSingle(info.Distance), Convert.ToSingle(info.Weight)));
+            }
+
+            // compute cluster mean and standard deviation
+            for (int clusterID = 0; clusterID < numClusters; clusterID++)
+            {
+                clusterDeviations[clusterID].ClusterMedianDistance = Convert.ToDouble(CanvasCommon.Utilities.WeightedMedian(clusterDeviations[clusterID].ClusterDistances));
+                clusterDeviations[clusterID].ClusterDistanceIQR = Convert.ToDouble(CanvasCommon.Utilities.WeightedIQR(clusterDeviations[clusterID].ClusterDistances));
+            }
+            
+
+            // exlcude clusters with deviation larger than 1.5 of average deviation
+            // these clusters locate far from expected model centroids and most likely represent segments coming from heterogeneous variants 
+            double clusterDeviation = 0;
+            List<double> heterogeneousClusterID = new List<double>();
+            for (int i = 0; i < numClusters; i++)
+            {
+                foreach (ClusterModel clusterInfo in clusterDeviations)
+                    if (clusterInfo.ClusterMedianDistance < tempDeviation * 1.5f)
+                        clusterDeviation += clusterInfo.ClusterMedianDistance;
+                    else if (bestModel)
+                        heterogeneousClusterID.Add(i + 1);
+            }
+
+            // store signatures of potential heterogeneous variants 
+            if (heterogeneousClusterID.Count > 0 && bestModel)
+            {
+                foreach (SegmentInfo info in segments)
+                    if (heterogeneousClusterID.Contains(info.Cluster.Value))
+                        this.HeterogeneousSegmentsSignature.Add(info.Segment.Begin + info.Segment.End + info.Segment.Counts.Count);
+            }
+            heterogeneousClusters = heterogeneousClusterID.Count;
+
+            // derive heterogeneity index
+            if (bestModel)
+            {
+                heterogeneityIndex = ComputeHeterogeneityIndex(clusterDeviations, tempDeviation);
+            }
+            else
+                heterogeneityIndex = 0;
+
+            //  write cluster deviations
+            if (debugPathClusterInfo != null)
+            {
+                using (StreamWriter debugWriter = new StreamWriter(debugPathClusterInfo))
+                {                
+                    foreach (ClusterModel clusterInfo in clusterDeviations)
+                        debugWriter.WriteLine("{0:F3}\t{1:F3}", clusterInfo.ClusterMedianDistance, clusterInfo.ClusterDistanceIQR);
+                }
+            }
+            return clusterDeviation;
+        }
+
         /// <summary>
         /// Helper function for ModelOverallCoverageAndPurity.  Measure the deviation (mismatch) between our
         /// model of expected coverage + minor allele frequency, and the actual data.
@@ -753,12 +1032,10 @@ namespace CanvasSomaticCaller
         /// AccuracyDeviation is the weighted average of the distance from the segment centroid 
         /// and the corresponding ploidy.
         /// </summary>
-        protected double ModelDeviation(CoveragePurityModel model, List<SegmentInfo> segments, string debugPath = null)
+        protected double ModelDeviation(CoveragePurityModel model, List<SegmentInfo> segments, int numClusters, string debugPathClusterInfo = null, bool bestModel = false, string debugPath = null)
         {
             List<ModelPoint> modelPoints = InitializeModelPoints(model);
-
             double precisionDeviation = 0;
-
             this.RefineDiploidMAF(segments, modelPoints);
 
             /////////////////////////////////////////////
@@ -783,7 +1060,9 @@ namespace CanvasSomaticCaller
                         bestModelPoint = modelPoint;
                     }
                 }
+
                 bestDistance = Math.Sqrt(bestDistance);
+                info.Distance = bestDistance;            
                 precisionDeviation += bestDistance * info.Weight;
                 totalWeight += info.Weight;
                 model.PercentCN[bestCN] += info.Weight;
@@ -824,13 +1103,29 @@ namespace CanvasSomaticCaller
                 }
             }
             accuracyDeviation /= totalWeight;
-            double totalDeviation = PrecisionWeightingFactor * precisionDeviation + (1 - PrecisionWeightingFactor) * accuracyDeviation;
+            
+            // standard somatic model deviation
+            double tempDeviation = precisionDeviation * 0.5f + 0.5f * accuracyDeviation;
+
+            // compute cluster deviation
+            int heterogeneousClusters = 0;
+            double heterogeneityIndex = 0;
+            double clusterDeviation = ClusterDeviation(segments, numClusters, tempDeviation, out heterogeneousClusters, out heterogeneityIndex, bestModel, debugPathClusterInfo);
+
+            // compute total deviation
+            double totalDeviation;
+            if (heterogeneousClusters > 0)
+                totalDeviation = PrecisionWeightingFactor * precisionDeviation + PrecisionWeightingFactor * accuracyDeviation + PrecisionWeightingFactor * clusterDeviation;
+            else
+                totalDeviation = tempDeviation;
+
 
             // estimate abundance of each CN state
             for (int index = 0; index < model.PercentCN.Length; index++)
             {
                 model.PercentCN[index] /= totalWeight;
             }
+     
             // get model ploidy
             for (int index = 0; index < model.PercentCN.Length; index++)
             {
@@ -838,7 +1133,6 @@ namespace CanvasSomaticCaller
             }
 
             model.PercentNormal = totalBasesNormal / totalWeight;
-
             if (!string.IsNullOrEmpty(debugPath))
             {
                 try
@@ -848,7 +1142,8 @@ namespace CanvasSomaticCaller
                         debugWriter.WriteLine("#MAF\tCoverage\t");
                         foreach (ModelPoint modelPoint in modelPoints)
                         {
-                            debugWriter.WriteLine("{0}\t{1}\t", modelPoint.MAF, modelPoint.Coverage);
+                            string gt = modelPoint.Ploidy.MajorChromosomeCount.ToString() + "/" + modelPoint.CN.ToString();
+                            debugWriter.WriteLine("{0}\t{1}\t{2}\t", modelPoint.MAF, modelPoint.Coverage, gt);
                         }
                         debugWriter.WriteLine();
                         debugWriter.WriteLine("#MAF\tCoverage\tBestDistance\tChromosome\tBegin\tEnd\tLength\tTruthSetCN");
@@ -887,6 +1182,7 @@ namespace CanvasSomaticCaller
             model.PrecisionDeviation = precisionDeviation;
             model.AccuracyDeviation = accuracyDeviation;
             model.Deviation = totalDeviation;
+            model.HeterogeneityIndex = heterogeneityIndex;
             return totalDeviation;
         }
 
@@ -897,6 +1193,7 @@ namespace CanvasSomaticCaller
             public double PercentNormal; // Percentage of bases called as CN=2, MajorChromosomeCount=1 (no LOH)
             public double DiploidDistance;
             public double? InterModelDistance;
+            public double? HeterogeneityIndex;
         }
 
         static public List<SegmentInfo> GetUsableSegmentsForModeling(List<CanvasSegment> segments)
@@ -953,6 +1250,114 @@ namespace CanvasSomaticCaller
             return usableSegments;
         }
 
+
+        /// <summary>
+        /// Estimate the optimal number of clusters in an Expectation Maximizationfrom model using silhouette coefficient
+        /// </summary>
+        public List<ModelPoint> BestNumClusters(List<SegmentInfo> usableSegments, double medianCoverageLevel, double bestCoverageWeightingFactor, double knearestNeighbourCutoff)
+        {
+            double bestSilhouette = double.MinValue;
+            List<ModelPoint> bestModelPoints = new List<ModelPoint>(); 
+            int bestNumClusters = 0;
+            int maxNumClusters = 8;
+
+            // find distanceThreshold, use it in InitializeModelPoints
+            List<double> tempModelDistanceList = new List<double>();
+            for (int i = 0; i < usableSegments.Count; i++)
+            {
+                for (int j = 0; j < usableSegments.Count; j++)
+                {
+                    if (i != j && usableSegments[i].Cluster != -1 && usableSegments[j].Cluster != -1 &&  usableSegments[i].MAF >= 0 && usableSegments[j].MAF >= 0)
+                    {
+                        tempModelDistanceList.Add(GetModelDistance(usableSegments[i].Coverage, usableSegments[j].Coverage, usableSegments[i].MAF, usableSegments[j].MAF));
+                    }
+                }
+            }
+            tempModelDistanceList.Sort();
+            double distanceThreshold = tempModelDistanceList[Convert.ToInt32(tempModelDistanceList.Count * 0.8)]; // enable capturing clusters with less than 30% abundance 
+
+            // find optimal number of clusters using silhouette distance and return bestModelPoints
+            for (int numClusters = 4; numClusters < maxNumClusters; numClusters++)
+            {
+                for (int i = 0; i < 10; i++)
+                {
+                    List<ModelPoint> tempModelPoints = InitializeModelPoints(usableSegments, numClusters, distanceThreshold);
+                    GaussianMixtureModel tempgmm = new GaussianMixtureModel(tempModelPoints, usableSegments, medianCoverageLevel, bestCoverageWeightingFactor, knearestNeighbourCutoff);
+                    double currentLikelihood = tempgmm.runExpectationMaximization(); // return BIC rather than raw likelihood
+                    double currentSilhouette = ComputeSilhouette(usableSegments, numClusters);
+                    if (bestSilhouette < currentSilhouette)
+                    {
+                        bestSilhouette = currentSilhouette;
+                        bestNumClusters = numClusters;
+                        if (bestModelPoints.Count > 0)
+                            bestModelPoints.Clear();
+                        foreach (ModelPoint tempModelPoint in tempModelPoints)
+                            bestModelPoints.Add(tempModelPoint);
+                    }
+                }
+            }
+            return bestModelPoints;
+        }
+
+        /// <summary>
+        /// Find K-nearest neighbours cutoff. The cutoff is used to identify outlier segments that do not belong to any cluster
+        /// </summary>
+        public double KnearestNeighbourCutoff(List<SegmentInfo> usableSegments)
+        {
+            int kneighours = 10;
+            List<double> knearestNeighbourList = new List<double>();
+            for (int i = 0; i < usableSegments.Count; i++)
+            {
+                List<double> tempModelDistanceList = new List<double>();
+
+                for (int j = 0; j < usableSegments.Count; j++)
+                {
+                    if (i != j)
+                    {
+                        tempModelDistanceList.Add(GetModelDistance(usableSegments[i].Coverage, usableSegments[j].Coverage, usableSegments[i].MAF, usableSegments[j].MAF));
+                    }
+                }
+                tempModelDistanceList.Sort();
+                double distance = 0;
+                for (int k = 0; k < kneighours; k++)
+                {
+                    distance += tempModelDistanceList[k];
+                }
+                usableSegments[i].KnearestNeighbour = distance;
+                knearestNeighbourList.Add(distance);
+            }
+
+            knearestNeighbourList.Sort();
+            double knearestNeighbourCutoff = knearestNeighbourList[Convert.ToInt32(knearestNeighbourList.Count * 0.9)];
+            return knearestNeighbourCutoff;
+        }    
+
+        /// <summary>
+        /// Estimate the optimal number of clusters in an Expectation Maximizationfrom model using silhouette coefficient
+        /// </summary>
+        public double BestCoverageWeightingFactor(List<SegmentInfo> usableSegments, int maxCoverageLevel, int medianCoverageLevel, double knearestNeighbourCutoff)
+        {
+            double bestLikelihood = double.MinValue;
+            double bestCoverageWeightingFactor = 0;
+            // magic-scaling for now - keep small to penalize coverage, tested on 50+ groundtruth corpus
+            double maxCoverageWeightingFactor = this.CoverageWeighting / medianCoverageLevel;
+            double minCoverageWeightingFactor = 0.1 / maxCoverageLevel;
+            double stepCoverageWeightingFactor =  Math.Max(0.00001, (maxCoverageWeightingFactor - minCoverageWeightingFactor) / 10);
+
+            for (double coverageWeighting = minCoverageWeightingFactor; coverageWeighting < maxCoverageWeightingFactor; coverageWeighting += stepCoverageWeightingFactor)
+            {
+                List<ModelPoint> tempModelPoints = InitializeModelPoints(usableSegments, medianCoverageLevel/2.0, 90, 6);
+                GaussianMixtureModel tempgmm = new GaussianMixtureModel(tempModelPoints, usableSegments, medianCoverageLevel, coverageWeighting, knearestNeighbourCutoff);
+                double currentLikelihood = tempgmm.runExpectationMaximization();
+                if (currentLikelihood > bestLikelihood)
+                {
+                    bestLikelihood = currentLikelihood;
+                    bestCoverageWeightingFactor = coverageWeighting;                    
+                }
+            }
+            return bestCoverageWeightingFactor;
+        } 
+
         /// <summary>
         /// Identify the tuple (DiploidCoverage, OverallPurity) which best models our overall
         /// distribution of (MAF, Coverage) data across all segments.  Consider various tuples (first with a coarse-grained
@@ -980,178 +1385,265 @@ namespace CanvasSomaticCaller
             // to coverage (which covers a large range) and MAF, which falls in the range (0, 0.5).  
             // If we already knew the diploid coverage, then we'd know just how to scale things (catch-22).
             // Let's assume that the median coverage is a sane thing to use for scaling:
-            List<double> tempCoverageList = new List<double>();
-            foreach (SegmentInfo info in usableSegments) tempCoverageList.Add(info.Coverage);
-            tempCoverageList.Sort();
-            double medianCoverageLevel = tempCoverageList[tempCoverageList.Count / 2];
+            List<float> tempCoverageList = new List<float>();
+            List<double> knearestNeighbourList = new List<double>();
+                        
+            // Segments clustering using Gaussian Expectation Maximisation
+
+            // Step0: Prepare model parameters
+            foreach (SegmentInfo info in usableSegments) tempCoverageList.Add(Convert.ToSingle(info.Coverage));
+            Tuple<float, float, float> coverageQuartiles = CanvasCommon.Utilities.Quartiles(tempCoverageList);
+            int minCoverageLevel = Convert.ToInt32(coverageQuartiles.Item1);
+            int maxCoverageLevel = Convert.ToInt32(coverageQuartiles.Item3);
+            int medianCoverageLevel = Convert.ToInt32(coverageQuartiles.Item2);
             this.CoverageWeightingFactor = this.CoverageWeighting / medianCoverageLevel;
+            int bestNumClusters = 0;
+
+            // Need  large number of segments for cluster analysis
+            if (usableSegments.Count > 100)
+            {
+                List<float> tempMAFList = new List<float>();
+                foreach (SegmentInfo info in usableSegments) tempMAFList.Add(Convert.ToSingle(info.MAF));
+                Tuple<float, float, float> MAFQuartiles = CanvasCommon.Utilities.Quartiles(tempMAFList);
+                double minMAF = Math.Max(Convert.ToDouble(MAFQuartiles.Item1) - 0.05, 0.01);
+                double maxMAF = Math.Min(Convert.ToDouble(MAFQuartiles.Item3) + 0.05, 0.46);
+
+                // Step1: Find outliers
+                double knearestNeighbourCutoff = KnearestNeighbourCutoff(usableSegments);
+
+                // Step2: Find the best CoverageWeightingFactor 
+                double bestCoverageWeightingFactor = BestCoverageWeightingFactor(usableSegments, maxCoverageLevel, medianCoverageLevel, knearestNeighbourCutoff);
+
+                // Step3: Find the optimal number of clusters
+                List<ModelPoint> modelPoints = BestNumClusters(usableSegments, medianCoverageLevel, bestCoverageWeightingFactor, knearestNeighbourCutoff);
+                bestNumClusters = modelPoints.Count;
+
+                // Step4: Find segment clusters using the final model
+                GaussianMixtureModel gmm = new GaussianMixtureModel(modelPoints, usableSegments, medianCoverageLevel, bestCoverageWeightingFactor, knearestNeighbourCutoff);
+                double likelihood = gmm.runExpectationMaximization();
+
+                // Step5: Write results
+                string debugPathClusterModel = Path.Combine(this.TempFolder, "ClusteringModel.txt");
+                if (!string.IsNullOrEmpty(debugPathClusterModel))
+                {
+                    using (StreamWriter debugWriter = new StreamWriter(debugPathClusterModel))
+                    {
+                        debugWriter.WriteLine("#MAF\tCoverage\tClusterID");
+                        foreach (ModelPoint modelPoint in modelPoints)
+                        {
+                            debugWriter.WriteLine("{0}\t{1}\t{2}", modelPoint.Ploidy.Mu[0], modelPoint.Ploidy.Mu[1], modelPoint.Cluster);
+                        }
+                        debugWriter.WriteLine();
+                        debugWriter.WriteLine("#MAF\tCoverage\tBestDistance\tClusterID");
+                        foreach (SegmentInfo info in usableSegments)
+                        {
+
+                            debugWriter.Write("{0}\t{1}\t{2}", info.MAF, info.Coverage, info.Cluster);
+                            debugWriter.WriteLine();
+                        }
+                    }
+                }
+            }
 
             // Note: Don't consider purity below 20 (at this point), becuase that creates a model that is very noise-sensitive.
             // We tried using a "tumor" sample that is actually just the real normal: We could overfit this data as very low 
             // purity 5% and make lots of (bogus) calls which fit the noise in coverage and MAF.
 
-            // Coarse search: Consider various (coverage, purity) tuples.  
             double bestDeviation = double.MaxValue;
             List<CoveragePurityModel> allModels = new List<CoveragePurityModel>();
-            int minCoverage = (int)Math.Max(10, medianCoverageLevel / 2.5);
-            int maxCoverage = (int)Math.Max(10, medianCoverageLevel * 2.5);
-            int coverageStep = Math.Max(1, (maxCoverage - minCoverage) / 80);
-            Console.WriteLine(">>>DiploidCoverage: Consider {0}...{1} step {2}", minCoverage, maxCoverage, coverageStep);
-            for (int coverage = minCoverage; coverage < maxCoverage; coverage += coverageStep)
+            // set best somatic model to pre-specified  ploidy and purity values
+            if (this.userPloidy != null && this.userPurity != null)
             {
-                // iterate over purity range 
-                for (int percentPurity = 20; percentPurity <= 100; percentPurity += 5)
+                CoveragePurityModel bestModel = new CoveragePurityModel();
+                bestModel.DiploidCoverage = medianCoverageLevel * Convert.ToDouble(this.userPloidy) / 2.0;
+                bestModel.Purity = Convert.ToDouble(this.userPurity);
+
+                this.ModelDeviation(bestModel, usableSegments, bestNumClusters);
+                this.DiploidModelDistance(bestModel, usableSegments, genomeLength);
+                return bestModel;
+            }
+            // find best somatic model
+            else
+            {
+                // Coarse search: Consider various (coverage, purity) tuples.  
+                int minCoverage = (int)Math.Max(10, medianCoverageLevel / 2.5);
+                int maxCoverage = (int)Math.Max(10, medianCoverageLevel * 2.5);
+                int coverageStep = Math.Max(1, (maxCoverage - minCoverage) / 80);
+                Console.WriteLine(">>>DiploidCoverage: Consider {0}...{1} step {2}", minCoverage, maxCoverage, coverageStep);
+                for (int coverage = minCoverage; coverage < maxCoverage; coverage += coverageStep)
                 {
-                    CoveragePurityModel model = new CoveragePurityModel();
-                    model.DiploidCoverage = coverage;
-                    model.Purity = percentPurity / 100f;
-
-                    this.ModelDeviation(model, usableSegments);
-                    this.DiploidModelDistance(model, usableSegments, genomeLength);
-                    if (model.Deviation < bestDeviation)
+                    // iterate over purity range 
+                    for (int percentPurity = 20; percentPurity <= 100; percentPurity += 5)
                     {
-                        bestDeviation = model.Deviation;
+                        CoveragePurityModel model = new CoveragePurityModel();
+                        model.DiploidCoverage = coverage;
+                        model.Purity = percentPurity / 100f;
+                        this.ModelDeviation(model, usableSegments, bestNumClusters);
+                        this.DiploidModelDistance(model, usableSegments, genomeLength);
+                        if (model.Deviation < bestDeviation && model.Ploidy < this.MaxAllowedPloidy && model.Ploidy > this.MinAllowedPloidy)
+                        {
+                            bestDeviation = model.Deviation;
+                        }
+                        // exluce models with unrealistic genome ploidies
+                        if (model.Ploidy < this.MaxAllowedPloidy && model.Ploidy > this.MinAllowedPloidy)
+                            allModels.Add(model);
                     }
-                    allModels.Add(model);
                 }
-            }
 
-            // New logic for model selection:
-            // - First, compute the best model deviation.  This establishes a baseline for how large the deviation is allowed to get in 
-            //   an acceptable model.  Allow somewhat higher deviation for targeted data, since we see extra noise there.
-            // - Review models.  Discard any with unacceptable deviation.  Note the best attainable % copy number 2 and % normal.
-            // - For each model, scale PercentNormal to a range of 0..100 where 100 = the best number seen for any acceptable model.  Similarly
-            //   for PercentCN2.  And similarly for DeviationScore: BestDeviation=1, WorstAllowedDeviation=0
-            // - Choose a model (with acceptable deviation) which maximizes a score of the form:
-            //   PercentNormal + a * PercentCN2 + b * DeviationScore
-            double worstAllowedDeviation = bestDeviation * this.DeviationFactor;
-            double bestCN2 = 0;
-            double bestCN2Normal = 0;
-            double bestDiploidDistance = 0;
+                // New logic for model selection:
+                // - First, compute the best model deviation.  This establishes a baseline for how large the deviation is allowed to get in 
+                //   an acceptable model.  Allow somewhat higher deviation for targeted data, since we see extra noise there.
+                // - Review models.  Discard any with unacceptable deviation.  Note the best attainable % copy number 2 and % normal.
+                // - For each model, scale PercentNormal to a range of 0..100 where 100 = the best number seen for any acceptable model.  Similarly
+                //   for PercentCN2.  And similarly for DeviationScore: BestDeviation=1, WorstAllowedDeviation=0
+                // - Choose a model (with acceptable deviation) which maximizes a score of the form:
+                //   PercentNormal + a * PercentCN2 + b * DeviationScore
+                double worstAllowedDeviation = bestDeviation * this.DeviationFactor;
+                double bestCN2 = 0;
+                double bestCN2Normal = 0;
+                double bestDiploidDistance = 0;
 
-            // derive max values for scaling
-            int counter = 0;
-            List<double> deviations = new List<double>();
-            foreach (CoveragePurityModel model in allModels)
-            {
-                if (model.Deviation < worstAllowedDeviation) counter++;
-                deviations.Add(model.Deviation);
-            }
-            deviations.Sort();
-            if (counter < this.DeviationIndexCutoff)
-            {
-                worstAllowedDeviation = deviations[this.DeviationIndexCutoff];
-            }
-
-            // derive max values for scaling
-            foreach (CoveragePurityModel model in allModels)
-            {
-                if (model.Deviation > worstAllowedDeviation) continue;
-                if (model.PercentCN[2] > bestCN2) bestCN2 = model.PercentCN[2];
-                if (model.PercentNormal > bestCN2Normal) bestCN2Normal = model.PercentNormal;
-                if (model.DiploidDistance > bestDiploidDistance) bestDiploidDistance = model.DiploidDistance;
-            }
-
-            // coarse search to find best ploidy and purity model  
-            List<CoveragePurityModel> bestModels = new List<CoveragePurityModel>();
-            CoveragePurityModel bestModel = null;
-            double bestScore = 0;
-            // holds scores for all models
-            List<double> scores = new List<double>();
-            // save all purity and ploidy models to a file 
-            string debugPath = Path.Combine(this.TempFolder, "PurityModel.txt");
-            using (StreamWriter debugWriter = new StreamWriter(debugPath))
-            {
-                debugWriter.WriteLine("#Score\tDeviationScore\tPloidy\tPurity\tDiploidCoverage\tNormal/best\tCN2/Best\tDiploidDistance/Best");
+                // derive max values for scaling
+                int counter = 0;
+                List<double> deviations = new List<double>();
                 foreach (CoveragePurityModel model in allModels)
                 {
+                    if (model.Deviation < worstAllowedDeviation) counter++;
+                    deviations.Add(model.Deviation);
+                }
+                deviations.Sort();
+                if (counter < this.DeviationIndexCutoff)
+                {
+                    worstAllowedDeviation = deviations[Math.Min(this.DeviationIndexCutoff, deviations.Count - 1)];
+                }
+
+                double bestAccuracyDeviation = double.MaxValue;
+                double bestPrecisionDeviation = double.MaxValue;
+                // derive max values for scaling
+                foreach (CoveragePurityModel model in allModels)
+                {
+                    bestAccuracyDeviation = Math.Min(bestAccuracyDeviation, model.AccuracyDeviation);
+                    bestPrecisionDeviation = Math.Min(bestPrecisionDeviation, model.PrecisionDeviation);
                     if (model.Deviation > worstAllowedDeviation) continue;
-                    // Transform purity into Weighting Factor to penalize abnormal ploidies at low purity: 
-                    // (1.5 - 0.5) = minmax range of the new weighting scale; (1.0 - 0.2) = minmax range of the purity values 
-                    // This transformation leads a maximal lowPurityWeightingFactor value of 1.5 for the lowest purity model and a minimal value of 0.75 for the highest purity model 
-                    double lowPurityWeightingFactor = 1.5 / ((1.5 - 0.5) / (1.0 - 0.2) * (model.Purity - 0.2) + 1.0);
-                    double score = this.PercentNormal2WeightingFactor * model.PercentNormal / Math.Max(0.01, bestCN2Normal);
-                    score += lowPurityWeightingFactor * this.CN2WeightingFactor * model.PercentCN[2] / Math.Max(0.01, bestCN2);
-                    score += this.DeviationScoreWeightingFactor * (worstAllowedDeviation - model.Deviation) / (worstAllowedDeviation - bestDeviation);
-                    score += this.DiploidDistanceScoreWeightingFactor * model.DiploidDistance / Math.Max(0.01, bestDiploidDistance);
-                    scores.Add(score);
-                    bestModels.Add(model);
-                    // write to file
-                    debugWriter.WriteLine("{0:F4}\t{1}\t{2}\t{3}\t{4}\t{5}\t{6}\t{7}\t", score, (worstAllowedDeviation - model.Deviation) / (worstAllowedDeviation - bestDeviation), model.Ploidy, (int)(100 * model.Purity),
-                       (int)model.DiploidCoverage, model.PercentNormal / Math.Max(0.01, bestCN2Normal), model.PercentCN[2] / Math.Max(0.01, bestCN2), model.DiploidDistance / Math.Max(0.01, bestDiploidDistance));
-                    if (score > bestScore)
+                    if (model.PercentCN[2] > bestCN2) bestCN2 = model.PercentCN[2];
+                    if (model.PercentNormal > bestCN2Normal) bestCN2Normal = model.PercentNormal;
+                    if (model.DiploidDistance > bestDiploidDistance) bestDiploidDistance = model.DiploidDistance;
+                }
+
+                // coarse search to find best ploidy and purity model  
+                List<CoveragePurityModel> bestModels = new List<CoveragePurityModel>();
+                CoveragePurityModel bestModel = null;
+                double bestScore = 0;
+                // holds scores for all models
+                List<double> scores = new List<double>();
+                // save all purity and ploidy models to a file 
+                string debugPath = Path.Combine(this.TempFolder, "PurityModel.txt");
+                using (StreamWriter debugWriter = new StreamWriter(debugPath))
+                {
+                    debugWriter.Write("#Purity\tDiploidCoverage\t");
+                    debugWriter.Write("Deviation\tAccuracyDeviation\tPrecisionDeviation\tWorstAllowedDeviation\tAccDev/best\tPrecDev/best\t");
+                    debugWriter.Write("DeviationScore\tScore\tPloidy\t");
+                    debugWriter.Write("Normal\tNormal/best\tCN2\tCN2/Best\t");
+                    debugWriter.Write("DiploidDistance\tDiploidDistance/Best");
+                    debugWriter.WriteLine();
+                    foreach (CoveragePurityModel model in allModels)
                     {
-                        bestModel = model;
-                        bestScore = score;
+
+                        // Filter models with unacceptable deviation:
+                        if (model.Deviation > worstAllowedDeviation) continue;
+                        // Transform purity into Weighting Factor to penalize abnormal ploidies at low purity: 
+                        // (1.5 - 0.5) = minmax range of the new weighting scale; (1.0 - 0.2) = minmax range of the purity values 
+                        // This transformation leads a maximal lowPurityWeightingFactor value of 1.5 for the lowest purity model and a minimal value of 0.75 for the highest purity model 
+                        double lowPurityWeightingFactor = 1.5 / ((1.5 - 0.5) / (1.0 - 0.2) * (model.Purity - 0.2) + 1.0);
+                        double score = this.PercentNormal2WeightingFactor * model.PercentNormal / Math.Max(0.01, bestCN2Normal);
+                        score += lowPurityWeightingFactor * this.CN2WeightingFactor * model.PercentCN[2] / Math.Max(0.01, bestCN2);
+                        score += this.DeviationScoreWeightingFactor * (worstAllowedDeviation - model.Deviation) / (worstAllowedDeviation - bestDeviation);
+                        score += this.DiploidDistanceScoreWeightingFactor * model.DiploidDistance / Math.Max(0.01, bestDiploidDistance);
+                        scores.Add(score);
+                        bestModels.Add(model);
+                        // write to file
+                        debugWriter.Write("{0}\t{1}\t", (int)Math.Round(100 * model.Purity), model.DiploidCoverage);
+                        debugWriter.Write("{0}\t{1}\t{2}\t{3}\t{4}\t{5}\t", model.Deviation, model.AccuracyDeviation, model.PrecisionDeviation,
+                            worstAllowedDeviation, model.AccuracyDeviation / bestAccuracyDeviation, model.PrecisionDeviation / bestPrecisionDeviation);
+                        debugWriter.Write("{0}\t{1}\t{2}\t", (worstAllowedDeviation - model.Deviation) / (worstAllowedDeviation - bestDeviation),
+                            score, model.Ploidy);
+                        debugWriter.Write("{0}\t{1}\t{2}\t{3}\t", model.PercentNormal, model.PercentNormal / Math.Max(0.01, bestCN2Normal),
+                            model.PercentCN[2], model.PercentCN[2] / Math.Max(0.01, bestCN2));
+                        debugWriter.Write("{0}\t{1}\t", model.DiploidDistance, model.DiploidDistance / Math.Max(0.01, bestDiploidDistance));
+                        debugWriter.WriteLine();
+
+                        if (score > bestScore)
+                        {
+                            bestModel = model;
+                            bestScore = score;
+                        }
                     }
                 }
-            }
-            // sort list and return indices
-            var sortedScores = scores.Select((x, i) => new KeyValuePair<double, int>(x, i)).OrderBy(x => x.Key).ToList();
-            List<double> scoresValue = sortedScores.Select(x => x.Key).ToList();
-            List<int> scoresIndex = sortedScores.Select(x => x.Value).ToList();
+                // sort list and return indices
+                var sortedScores = scores.Select((x, i) => new KeyValuePair<double, int>(x, i)).OrderBy(x => x.Key).ToList();
+                List<double> scoresValue = sortedScores.Select(x => x.Key).ToList();
+                List<int> scoresIndex = sortedScores.Select(x => x.Value).ToList();
 
-            // interModelDistance shows genome edit distance between the best model and other top models (defined by MaximumRelatedModels). 
-            // The premise is that if the top models provide widely different genome baseline (leading to high interModelDistance), 
-            // the overall modeling approach might be more unstable.
-            double interModelDistance = 0;
-            // start at one since model #0 is the highest scoring model to compare to
-            for (int i = 1; i < MaximumRelatedModels; i++)
-            {
-                interModelDistance += CalculateModelDistance(bestModels[scoresIndex[0]], bestModels[scoresIndex[i]], usableSegments, genomeLength);
-            }
-            interModelDistance /= (double)MaximumRelatedModels;
-
-            Console.WriteLine(">>> Initial model: Deviation {0:F5}, coverage {1}, purity {2:F1}%, CN2 {3:F2}", bestModel.Deviation,
-                    bestModel.DiploidCoverage, 100 * bestModel.Purity, bestModel.PercentCN[2]);
-
-            // Refine search: Smaller step sizes in the neighborhood of the initial model.
-            minCoverage = (int)Math.Round(bestModel.DiploidCoverage) - 5;
-            maxCoverage = (int)Math.Round(bestModel.DiploidCoverage) + 5;
-            int minPurity = Math.Max(20, (int)Math.Round(bestModel.Purity * 100) - 10);
-            int maxPurity = Math.Min(100, (int)Math.Round(bestModel.Purity * 100) + 10); // %%% magic numbers
-            bestDeviation = double.MaxValue;
-
-            bestModel = null;
-            for (int coverage = minCoverage; coverage <= maxCoverage; coverage++)
-            {
-                for (int percentPurity = minPurity; percentPurity <= maxPurity; percentPurity++)
+                // interModelDistance shows genome edit distance between the best model and other top models (defined by MaximumRelatedModels). 
+                // The premise is that if the top models provide widely different genome baseline (leading to high interModelDistance), 
+                // the overall modeling approach might be more unstable.
+                double interModelDistance = 0;
+                // start at one since model #0 is the highest scoring model to compare to
+                for (int i = 1; i < MaximumRelatedModels; i++)
                 {
-                    CoveragePurityModel model = new CoveragePurityModel();
-                    model.DiploidCoverage = coverage;
-                    model.Purity = percentPurity / 100f;
-                    this.ModelDeviation(model, usableSegments);
-                    if (bestModel == null || model.Deviation < bestModel.Deviation)
+                    interModelDistance += CalculateModelDistance(bestModels[scoresIndex[0]], bestModels[scoresIndex[i]], usableSegments, genomeLength);
+                }
+                interModelDistance /= (double)MaximumRelatedModels;
+
+                Console.WriteLine(">>> Initial model: Deviation {0:F5}, coverage {1}, purity {2:F1}%, CN2 {3:F2}", bestModel.Deviation,
+                        bestModel.DiploidCoverage, 100 * bestModel.Purity, bestModel.PercentCN[2]);
+
+                // Refine search: Smaller step sizes in the neighborhood of the initial model.
+                minCoverage = (int)Math.Round(bestModel.DiploidCoverage) - 5;
+                maxCoverage = (int)Math.Round(bestModel.DiploidCoverage) + 5;
+                int minPurity = Math.Max(20, (int)Math.Round(bestModel.Purity * 100) - 10);
+                int maxPurity = Math.Min(100, (int)Math.Round(bestModel.Purity * 100) + 10); // %%% magic numbers
+                bestDeviation = double.MaxValue;
+
+                bestModel = null;
+                for (int coverage = minCoverage; coverage <= maxCoverage; coverage++)
+                {
+                    for (int percentPurity = minPurity; percentPurity <= maxPurity; percentPurity++)
                     {
-                        bestModel = model;
+                        CoveragePurityModel model = new CoveragePurityModel();
+                        model.DiploidCoverage = coverage;
+                        model.Purity = percentPurity / 100f;
+                        this.ModelDeviation(model, usableSegments, bestNumClusters);
+                        if (bestModel == null || model.Deviation < bestModel.Deviation)
+                        {
+                            bestModel = model;
+                        }
                     }
                 }
-            }
+                // string debugPathClusterModel = Path.Combine(this.TempFolder, "ClusterModel.txt");
+                string debugPathCNVModeling = Path.Combine(this.TempFolder, "CNVModeling.txt");
 
-            ModelDeviation(bestModel, usableSegments, Path.Combine(this.TempFolder, "CNVModeling.txt"));
-            Console.WriteLine();
-            Console.WriteLine(">>> Refined model: Deviation {0:F5}, coverage {1}, purity {2:F1}%", bestModel.Deviation,
-                bestModel.DiploidCoverage, bestModel.Purity * 100);
-            Console.WriteLine();
+                ModelDeviation(bestModel, usableSegments, bestNumClusters, null, true, debugPathCNVModeling);
+                Console.WriteLine();
+                Console.WriteLine(">>> Refined model: Deviation {0:F5}, coverage {1}, purity {2:F1}%", bestModel.Deviation,
+                    bestModel.DiploidCoverage, bestModel.Purity * 100);
+                Console.WriteLine();
 
-            //if (false && usableSegments.Count >= 200) // fit Gaussian mixture model when we have "enough" usable segments
-            //{
-            //    FitGaussians(bestModel, usableSegments, Path.Combine(this.TempFolder, "GaussianMixtureModel.txt"));
-            //}
-            //else
-            {
-                foreach (SegmentPloidy ploidy in AllPloidies)
+
                 {
-                    ploidy.Omega = 0;
-                    ploidy.Mu = null;
-                    ploidy.Sigma = null;
+                    foreach (SegmentPloidy ploidy in AllPloidies)
+                    {
+                        ploidy.Omega = 0;
+                        ploidy.Mu = null;
+                        ploidy.Sigma = null;
+                    }
                 }
+                if (!bestModel.InterModelDistance.HasValue)
+                {
+                    bestModel.InterModelDistance = interModelDistance;
+                }
+                return bestModel;
             }
-            if (!bestModel.InterModelDistance.HasValue)
-            {
-                bestModel.InterModelDistance = interModelDistance;
-            }
-            return bestModel;
         }
 
         /// <summary>
@@ -1181,6 +1673,8 @@ namespace CanvasSomaticCaller
                 double bestDistance = double.MaxValue;
                 double secondBestDistance = double.MaxValue;
                 SegmentPloidy bestPloidy = null;
+                SegmentPloidy secondBestPloidy = null;
+
                 foreach (SegmentPloidy ploidy in AllPloidies)
                 {
                     double distance = GetModelDistance(ploidy.MixedCoverage, medianCoverage, medianMAF, ploidy.MixedMinorAlleleFrequency);
@@ -1188,22 +1682,39 @@ namespace CanvasSomaticCaller
                     if (distance < bestDistance)
                     {
                         secondBestDistance = bestDistance;
+                        secondBestPloidy = bestPloidy;
                         bestDistance = distance;
                         bestPloidy = ploidy;
                     }
                     else if (distance < secondBestDistance)
                     {
                         secondBestDistance = distance;
+                        secondBestPloidy = ploidy;
                     }
                 }
                 segment.CopyNumber = bestPloidy.CopyNumber;
-                segment.PloidyIndex = bestPloidy.ID;
 
-                // If we don't have variant frequencies, then don't report any major chromosome count:
+                // If we don't have variant frequencies, then don't report any major chromosome count
                 segment.MajorChromosomeCount = null;
-                if (medianMAF.HasValue) segment.MajorChromosomeCount = bestPloidy.MajorChromosomeCount;
+                if (medianMAF.HasValue)
+                {
+                    segment.MajorChromosomeCount = bestPloidy.MajorChromosomeCount;
+                }
                 segment.ModelDistance = bestDistance;
                 segment.RunnerUpModelDistance = secondBestDistance;
+
+                // Adjust CN in segments from heterogeneous clusters when the following conditions are satisfied:
+                //      1.Best CN = 2, but second best ploidy suggest CN = 1 or 3
+                //      2.Deviations of best and second best ploidy model are very similar
+                //      3.Purity is reasonably high
+                //      4.There’s an evidence that tumor is heterogeneous
+                // In such a case CN = 2 most likely represents are heterogeneous variant
+
+                if (this.HeterogeneousSegmentsSignature.BinarySearch(segment.Begin + segment.End + segment.Counts.Count) >= 0 && Model.Purity > 0.5f)
+                {
+                    if (bestPloidy.CopyNumber == 2 && (secondBestPloidy.CopyNumber == 1 || secondBestPloidy.CopyNumber == 3) && Math.Abs(bestDistance - secondBestDistance) < Model.Purity * bestDistance * 0.5f)
+                        segment.CopyNumber = secondBestPloidy.CopyNumber;
+                }
 
                 // Special logic for extra-high coverage: Adjust our copy number call to be scaled by coverage,
                 // and adjust our model distance as well.
@@ -1274,7 +1785,6 @@ namespace CanvasSomaticCaller
                 else
                 {
                     segment.CopyNumber = bestPloidy.CopyNumber;
-                    segment.PloidyIndex = bestPloidy.ID;
                     segment.MajorChromosomeCount = bestPloidy.MajorChromosomeCount;
                 }
             }
@@ -1287,7 +1797,7 @@ namespace CanvasSomaticCaller
         protected List<string> CallCNVUsingSNVFrequency(double? localSDmertic, string referenceFolder)
         {
             List<string> Headers = new List<string>();
-            if (this.KnownCN != null)
+            if (this.CNOracle != null)
             {
                 this.DerivePurityEstimateFromVF();
             }
@@ -1302,6 +1812,8 @@ namespace CanvasSomaticCaller
 
             // Make preliminary ploidy calls for all segments.  For those segments which fit their ploidy reasonably well,
             // accumulate information about the MAF by site and coverage by bin.  
+            this.HeterogeneousSegmentsSignature.Sort();
+
             if (AllPloidies.First().Sigma == null)
             {
                 AssignPloidyCalls();
@@ -1341,6 +1853,7 @@ namespace CanvasSomaticCaller
             Headers.Add(string.Format("##InterModelDistance={0:F4}", this.Model.InterModelDistance));
             Headers.Add(string.Format("##EstimatedChromosomeCount={0:F2}", this.EstimateChromosomeCount()));
             Headers.Add(string.Format("##LocalSDmetric={0:F2}", localSDmertic));
+            Headers.Add(string.Format("##Heterogeneity={0:F2}", this.Model.HeterogeneityIndex));
             return Headers;
         }
 
@@ -1540,10 +2053,10 @@ namespace CanvasSomaticCaller
             Dictionary<string, List<CNInterval>> resegmentedKnownCN = new Dictionary<string, List<CNInterval>>();
 
             // Copy KnownCN entries to working container
-            foreach (string chr in this.KnownCN.Keys)
+            foreach (string chr in this.CNOracle.KnownCN.Keys)
             {
                 resegmentedKnownCN[chr] = new List<CNInterval>();
-                foreach (CNInterval interval in this.KnownCN[chr])
+                foreach (CNInterval interval in this.CNOracle.KnownCN[chr])
                 {
                     CNInterval newInterval = new CNInterval();
                     newInterval.Start = interval.Start;
@@ -1775,7 +2288,7 @@ namespace CanvasSomaticCaller
             long allSegmentBases = 0;
             long allTruthBases = 0;
             long partialCreditBases = 0;
-            foreach (List<CNInterval> list in this.KnownCN.Values)
+            foreach (List<CNInterval> list in this.CNOracle.KnownCN.Values)
             {
                 foreach (CNInterval interval in list)
                 {
@@ -1786,8 +2299,8 @@ namespace CanvasSomaticCaller
             foreach (CanvasSegment segment in this.Segments)
             {
                 allSegmentBases += segment.End - segment.Begin;
-                if (!this.KnownCN.ContainsKey(segment.Chr)) continue;
-                foreach (CNInterval interval in this.KnownCN[segment.Chr])
+                if (!this.CNOracle.KnownCN.ContainsKey(segment.Chr)) continue;
+                foreach (CNInterval interval in this.CNOracle.KnownCN[segment.Chr])
                 {
                     if (interval.Start > segment.End) continue;
                     if (interval.End < segment.Begin) continue;
@@ -1858,157 +2371,8 @@ namespace CanvasSomaticCaller
         /// </summary>
         protected int GetKnownCNForSegment(CanvasSegment segment)
         {
-            if (KnownCN == null) return -1;
-            if (!KnownCN.ContainsKey(segment.Chr)) return -1;
-            int CN = -1;
-            foreach (CNInterval interval in KnownCN[segment.Chr])
-            {
-                if (interval.End < segment.Begin) continue;
-                if (interval.Start > segment.End) continue;
-                int start = Math.Max(segment.Begin, interval.Start);
-                int end = Math.Min(segment.End, interval.End);
-                if ((end - start) * 2 >= (segment.End - segment.Begin))
-                {
-                    CN = interval.CN;
-                    break;
-                }
-            }
-            return CN;
-        }
-
-        protected void LoadKnownCN(string oraclePath)
-        {
-
-            if (!File.Exists(oraclePath))
-            {
-                throw new ArgumentException(string.Format("* Error: Truth vcf not found at '{0}'", oraclePath));
-            }
-
-            if (oraclePath.EndsWith(".bed"))
-            {
-                LoadKnownCNBed(oraclePath);
-                return;
-            }
-            LoadKnownCNVCF(oraclePath);
-        }
-
-        /// <summary>
-        /// Load known CN data from a .bed file.  File lines have fields:
-        /// chromosome, start, end, chromcountA, chromcountB
-        /// So, copy number is the sum of the last 2 fields, major chromosome count is the max of the last 2 fields.
-        /// </summary>
-        /// <param name="oracleBedPath"></param>
-        protected void LoadKnownCNBed(string oracleBedPath)
-        {
-            bool stripChr = false;
-            if (!this.Segments[0].Chr.StartsWith("chr"))
-            {
-                stripChr = true;
-            }
-            int count = 0;
-            this.KnownCN = new Dictionary<string, List<CNInterval>>();
-            using (StreamReader reader = new StreamReader(oracleBedPath))
-            {
-                while (true)
-                {
-                    string fileLine = reader.ReadLine();
-                    if (fileLine == null) break;
-                    if (fileLine.Length == 0 || fileLine[0] == '#') continue;
-                    string[] bits = fileLine.Split('\t');
-                    string chromosome = bits[0];
-                    if (stripChr) chromosome = chromosome.Replace("chr", "");
-                    if (!KnownCN.ContainsKey(chromosome)) KnownCN[chromosome] = new List<CNInterval>();
-                    CNInterval interval = new CNInterval();
-                    interval.Start = int.Parse(bits[1]);
-                    interval.End = int.Parse(bits[2]);
-                    interval.CN = int.Parse(bits[3]) + int.Parse(bits[4]);
-                    KnownCN[chromosome].Add(interval);
-                    count++;
-                }
-            }
-            Console.WriteLine(">>>Loaded {0} known-CN intervals", count);
-        }
-
-        protected void LoadKnownCNVCF(string oracleVCFPath)
-        {
-            bool stripChr = false;
-            if (!this.Segments[0].Chr.StartsWith("chr"))
-            {
-                stripChr = true;
-            }
-
-            // Load our "oracle" of known copy numbers:
-            this.KnownCN = new Dictionary<string, List<CNInterval>>();
-            int count = 0;
-            using (GzipReader reader = new GzipReader(oracleVCFPath))
-            {
-                while (true)
-                {
-                    string fileLine = reader.ReadLine();
-                    if (fileLine == null) break;
-                    if (fileLine.Length == 0 || fileLine[0] == '#') continue;
-                    string[] bits = fileLine.Split('\t');
-                    if (bits.Length == 1 && bits[0].Trim().Length == 0) continue; // skip empty lines!
-                    string chromosome = bits[0];
-                    if (stripChr) chromosome = chromosome.Replace("chr", "");
-                    if (!KnownCN.ContainsKey(chromosome)) KnownCN[chromosome] = new List<CNInterval>();
-                    CNInterval interval = new CNInterval();
-                    interval.Start = int.Parse(bits[1]);
-                    interval.CN = -1;
-                    string[] infoBits = bits[7].Split(';');
-                    foreach (string subBit in infoBits)
-                    {
-                        if (subBit.StartsWith("CN="))
-                        {
-                            float tempCN = float.Parse(subBit.Substring(3));
-                            if (subBit.EndsWith(".5"))
-                            {
-                                interval.CN = (int)Math.Round(tempCN + 0.1); // round X.5 up to X+1
-                            }
-                            else
-                            {
-                                interval.CN = (int)Math.Round(tempCN); // Round off
-                            }
-                        }
-                        if (subBit.StartsWith("END="))
-                        {
-                            interval.End = int.Parse(subBit.Substring(4));
-                        }
-                    }
-                    // Parse CN from Canvas output:
-                    if (bits.Length > 8)
-                    {
-                        string[] subBits = bits[8].Split(':');
-                        string[] subBits2 = bits[9].Split(':');
-                        for (int subBitIndex = 0; subBitIndex < subBits.Length; subBitIndex++)
-                        {
-                            if (subBits[subBitIndex] == "CN")
-                            {
-                                interval.CN = int.Parse(subBits2[subBitIndex]);
-                            }
-                        }
-                    }
-                    if (interval.End == 0 || interval.CN < 0)
-                    {
-                        Console.WriteLine("Error - bogus record!");
-                        Console.WriteLine(fileLine);
-                    }
-                    else
-                    {
-                        KnownCN[chromosome].Add(interval);
-                        count++;
-                    }
-                }
-            }
-            Console.WriteLine(">>>Loaded {0} known-CN intervals", count);
-        }
-
-
-        class CNInterval
-        {
-            public int Start;
-            public int End;
-            public int CN;
+            if (this.CNOracle == null) return -1;
+            return this.CNOracle.GetKnownCNForSegment(segment);
         }
 
         class UncallableDataException : Exception

@@ -4,7 +4,7 @@ using System.Text;
 
 namespace Illumina.Win32
 {
-    public class Functions
+    public static class Functions
     {
 
         [DllImport("kernel32.dll")]

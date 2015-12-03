@@ -121,9 +121,12 @@ namespace CanvasCommon
         public double Weight;
         public double MAFWeight;
         public int CN;
+        public int? Cluster;
+        public double? KnearestNeighbour;
         public SegmentPloidy Ploidy;
         public double EmpiricalMAF;
         public double EmpiricalCoverage;
+        public double Distance;
     }
 
     /// <summary>
@@ -143,5 +146,17 @@ namespace CanvasCommon
         public double DiploidCoverage;
         public double Ploidy;
         public List<int> CNs = new List<int>();
+    }
+
+    /// <summary>
+    /// Stores information about clustering of CanvasSegment objects
+    /// </summary>
+    public class ClusterModel
+    {
+        public int? ClusterID;
+        public bool IsHeterogeneous = false;
+        public double ClusterMedianDistance;
+        public double ClusterDistanceIQR;
+        public List<Tuple<float, float>> ClusterDistances = new List<Tuple<float, float>>();
     }
 }

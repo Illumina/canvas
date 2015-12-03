@@ -1,0 +1,22 @@
+C:\Users\sivakhno\Documents\Visual Studio 2015\Trunk1\Src\SequencingFiles\bin\x64\Release\SequencingFiles.dll
+C:\Users\sivakhno\Documents\Visual Studio 2015\Trunk1\Src\SequencingFiles\bin\x64\Release\SequencingFiles.pdb
+C:\Users\sivakhno\Documents\Visual Studio 2015\Trunk1\Src\SequencingFiles\bin\x64\Release\ILMNcommon.dll
+C:\Users\sivakhno\Documents\Visual Studio 2015\Trunk1\Src\SequencingFiles\bin\x64\Release\InterOp.IO.dll
+C:\Users\sivakhno\Documents\Visual Studio 2015\Trunk1\Src\SequencingFiles\bin\x64\Release\InterOp.Logic.dll
+C:\Users\sivakhno\Documents\Visual Studio 2015\Trunk1\Src\SequencingFiles\bin\x64\Release\InterOp.Model.dll
+C:\Users\sivakhno\Documents\Visual Studio 2015\Trunk1\Src\SequencingFiles\bin\x64\Release\protobuf-net.dll
+C:\Users\sivakhno\Documents\Visual Studio 2015\Trunk1\Src\SequencingFiles\bin\x64\Release\SampleSheet.dll
+C:\Users\sivakhno\Documents\Visual Studio 2015\Trunk1\Src\SequencingFiles\bin\x64\Release\ILMNcommon.pdb
+C:\Users\sivakhno\Documents\Visual Studio 2015\Trunk1\Src\SequencingFiles\bin\x64\Release\SampleSheet.pdb
+C:\Users\sivakhno\Documents\Visual Studio 2015\Trunk1\Src\SequencingFiles\obj\x64\Release\SequencingFiles.csprojResolveAssemblyReference.cache
+C:\Users\sivakhno\Documents\Visual Studio 2015\Trunk1\Src\SequencingFiles\obj\x64\Release\SequencingFiles.dll
+C:\Users\sivakhno\Documents\Visual Studio 2015\Trunk1\Src\SequencingFiles\obj\x64\Release\SequencingFiles.pdb
+\\ukch-prd-isi01\CNA\CNV\mansucript\CanvasGitHub\SequencingFiles\bin\x64\Release\SequencingFiles.dll
+\\ukch-prd-isi01\CNA\CNV\mansucript\CanvasGitHub\SequencingFiles\bin\x64\Release\SequencingFiles.pdb
+\\ukch-prd-isi01\CNA\CNV\mansucript\CanvasGitHub\SequencingFiles\bin\x64\Release\ILMNcommon.dll
+\\ukch-prd-isi01\CNA\CNV\mansucript\CanvasGitHub\SequencingFiles\bin\x64\Release\SampleSheet.dll
+\\ukch-prd-isi01\CNA\CNV\mansucript\CanvasGitHub\SequencingFiles\bin\x64\Release\ILMNcommon.pdb
+\\ukch-prd-isi01\CNA\CNV\mansucript\CanvasGitHub\SequencingFiles\bin\x64\Release\SampleSheet.pdb
+\\ukch-prd-isi01\CNA\CNV\mansucript\CanvasGitHub\SequencingFiles\obj\x64\Release\SequencingFiles.csprojResolveAssemblyReference.cache
+\\ukch-prd-isi01\CNA\CNV\mansucript\CanvasGitHub\SequencingFiles\obj\x64\Release\SequencingFiles.dll
+\\ukch-prd-isi01\CNA\CNV\mansucript\CanvasGitHub\SequencingFiles\obj\x64\Release\SequencingFiles.pdb

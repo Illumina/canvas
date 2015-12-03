@@ -1,11 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.IO;
-using GzipWriter = SequencingFiles.GzipWriter;
-using GzipReader = SequencingFiles.GzipReader;
 
 namespace CanvasSNV
 {

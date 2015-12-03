@@ -165,19 +165,19 @@ namespace SequencingFiles
         }
 
         // retrieves the character data associated with the specified tag
-        public char GetCharTag(byte[] tagData, string s)
+        public char? GetCharTag(string s)
         {
             return TagUtils.GetCharTag(TagData, s);
         }
 
         // retrieves the integer data associated with the specified tag
-        public int GetIntTag(byte[] tagData, string s)
+        public int? GetIntTag(string s)
         {
             return TagUtils.GetIntTag(TagData, s);
         }
 
         // retrieves the string data associated with the specified tag
-        public string GetStringTag(byte[] tagData, string s)
+        public string GetStringTag(string s)
         {
             return TagUtils.GetStringTag(TagData, s);
         }
@@ -590,7 +590,7 @@ namespace SequencingFiles
         /// <summary>
         /// Number of bases 'matched' in alignment
         /// </summary>
-        public int countMatches()
+        public int CountMatches()
         {
             int matches = 0;
             foreach (CigarOp op in this)
@@ -798,13 +798,22 @@ namespace SequencingFiles
             _mByteList.Clear();
         }
 
-        // retrieves the integer data associated with the specified tag
-        public static char GetCharTag(byte[] tagData, string s)
+        // returns the byte array
+        public byte[] ToBytes()
+        {
+            return _mByteList.ToArray();
+        }
+
+        /// <summary>
+        /// Returns the index for the first byte of the tag, including the tagKey
+        /// </summary>
+        /// <returns>the index, or -1 if not found</returns>
+        private static int GetTagBeginIndex(byte[] tagData, string tagKey)
         {
             // convert the string into bytes
             byte[] tagNameBytes = new byte[2];
-            tagNameBytes[0] = (byte)s[0];
-            tagNameBytes[1] = (byte)s[1];
+            tagNameBytes[0] = (byte)tagKey[0];
+            tagNameBytes[1] = (byte)tagKey[1];
 
             int tagDataBegin = -1;
             char dataType;
@@ -815,7 +824,7 @@ namespace SequencingFiles
                 // check the current tag
                 if ((tagData[tagIndex] == tagNameBytes[0]) && (tagData[tagIndex + 1] == tagNameBytes[1]))
                 {
-                    tagDataBegin = tagIndex + 2;
+                    tagDataBegin = tagIndex;
                     break;
                 }
 
@@ -849,188 +858,90 @@ namespace SequencingFiles
                     default:
                         throw new ApplicationException(
                             string.Format("Found an unexpected BAM tag data type: [{0}] while looking for a tag ({1})",
-                                          dataType, s));
+                                          dataType, tagKey));
                 }
             }
+            return tagDataBegin;
+        }
 
-            if (tagDataBegin < 0) return '\0';
+        #region Getting Values
+        // retrieves the integer data associated with the specified tag
+        public static char? GetCharTag(byte[] tagData, string tagKey)
+        {
+
+            int tagDataBegin = GetTagBeginIndex(tagData, tagKey);
+            
+            if (tagDataBegin < 0) return null;
 
             // grab the value
-            char ret = '\0';
-            dataType = Char.ToUpper((char)tagData[tagDataBegin]);
-            tagDataBegin++;
-
+            char dataType = Char.ToUpper((char)tagData[tagDataBegin+2]);
+            char? ret = null;
             switch (dataType)
             {
                 // character
                 case 'A':
-                    ret = (char)tagData[tagDataBegin];
+                    ret = (char)tagData[tagDataBegin+3];
                     break;
 
                 default:
                     throw new ApplicationException(
                         string.Format(
                             "Found an unexpected character BAM tag data type: [{0}] while looking for a tag ({1})",
-                            dataType, s));
+                            dataType, tagKey));
             }
 
             return ret;
         }
 
         // retrieves the integer data associated with the specified tag
-        public static int GetIntTag(byte[] tagData, string s)
+        public static int? GetIntTag(byte[] tagData, string tagKey)
         {
-            // convert the string into bytes
-            byte[] tagNameBytes = new byte[2];
-            tagNameBytes[0] = (byte) s[0];
-            tagNameBytes[1] = (byte) s[1];
+            int tagDataBegin = GetTagBeginIndex(tagData, tagKey);
 
-            int tagDataBegin = -1;
-            bool foundTag = false;
-            char dataType;
-
-            int tagIndex = 0;
-            while (tagIndex < tagData.Length)
-            {
-                // check the current tag
-                if ((tagData[tagIndex] == tagNameBytes[0]) && (tagData[tagIndex + 1] == tagNameBytes[1]))
-                {
-                    tagDataBegin = tagIndex + 2;
-                    foundTag = true;
-                    break;
-                }
-
-                // skip to the next tag
-                tagIndex += 2;
-                dataType = Char.ToUpper((char) tagData[tagIndex]);
-                tagIndex++;
-
-                switch (dataType)
-                {
-                    case 'A':
-                    case 'C':
-                        tagIndex++;
-                        break;
-
-                    case 'S':
-                        tagIndex += 2;
-                        break;
-
-                    case 'I':
-                    case 'F':
-                        tagIndex += 4;
-                        break;
-
-                    case 'Z':
-                    case 'H':
-                        while (tagData[tagIndex] != 0) tagIndex++;
-                        tagIndex++;
-                        break;
-
-                    default:
-                        throw new ApplicationException(
-                            string.Format("Found an unexpected BAM tag data type: [{0}] while looking for a tag ({1})",
-                                          dataType, s));
-                }
-            }
-
-            if (!foundTag) return -1;
+            if (tagDataBegin < 0) return null;
 
             // grab the value
             int ret = 0;
-            dataType = Char.ToUpper((char) tagData[tagDataBegin]);
-            tagDataBegin++;
+            char dataType = Char.ToUpper((char) tagData[tagDataBegin + 2]);
 
             switch (dataType)
             {
                     // signed and unsigned int8
                 case 'C':
-                    ret = tagData[tagDataBegin];
+                    ret = tagData[tagDataBegin + 3];
                     break;
 
                     // signed and unsigned int16
                 case 'S':
-                    ret = BitConverter.ToInt16(tagData, tagDataBegin);
+                    ret = BitConverter.ToInt16(tagData, tagDataBegin + 3);
                     break;
 
                     // signed and unsigned int32
                 case 'I':
-                    ret = BitConverter.ToInt32(tagData, tagDataBegin);
+                    ret = BitConverter.ToInt32(tagData, tagDataBegin + 3);
                     break;
 
                 default:
                     throw new ApplicationException(
                         string.Format(
                             "Found an unexpected integer BAM tag data type: [{0}] while looking for a tag ({1})",
-                            dataType, s));
+                            dataType, tagKey));
             }
 
             return ret;
         }
 
         // retrieves the string data associated with the specified tag
-        public static string GetStringTag(byte[] tagData, string s)
+        public static string GetStringTag(byte[] tagData, string tagKey)
         {
-            // convert the string into bytes
-            byte[] tagNameBytes = new byte[2];
-            tagNameBytes[0] = (byte) s[0];
-            tagNameBytes[1] = (byte) s[1];
+            int tagDataBegin = GetTagBeginIndex(tagData, tagKey);
 
-            int tagDataBegin = -1;
-            bool foundTag = false;
-            char dataType;
-
-            int tagIndex = 0;
-            while (tagIndex < tagData.Length)
-            {
-                // check the current tag
-                if ((tagData[tagIndex] == tagNameBytes[0]) && (tagData[tagIndex + 1] == tagNameBytes[1]))
-                {
-                    tagDataBegin = tagIndex + 2;
-                    foundTag = true;
-                    break;
-                }
-
-                // skip to the next tag
-                tagIndex += 2;
-                dataType = Char.ToUpper((char) tagData[tagIndex]);
-                tagIndex++;
-
-                switch (dataType)
-                {
-                    case 'A':
-                    case 'C':
-                        tagIndex++;
-                        break;
-
-                    case 'S':
-                        tagIndex += 2;
-                        break;
-
-                    case 'I':
-                    case 'F':
-                        tagIndex += 4;
-                        break;
-
-                    case 'Z':
-                    case 'H':
-                        while (tagData[tagIndex] != 0) tagIndex++;
-                        tagIndex++;
-                        break;
-
-                    default:
-                        throw new ApplicationException(
-                            string.Format("Found an unexpected BAM tag data type: [{0}] while looking for a tag ({1})",
-                                          dataType, s));
-                }
-            }
-
-            string ret = string.Empty;
-            if (!foundTag) return ret;
+            if (tagDataBegin < 0) return null;
 
             // grab the value
-            dataType = Char.ToUpper((char) tagData[tagDataBegin]);
-            tagDataBegin++;
+            char dataType = Char.ToUpper((char) tagData[tagDataBegin + 2]);
+            tagDataBegin += 3;    // the beginning of the tag value
+            string ret = null;
 
             switch (dataType)
             {
@@ -1050,94 +961,115 @@ namespace SequencingFiles
                     throw new ApplicationException(
                         string.Format(
                             "Found an unexpected string BAM tag data type: [{0}] while looking for a tag ({1})",
-                            dataType, s));
+                            dataType, tagKey));
             }
 
             return ret;
         }
+        #endregion
+
+        #region Replacing Values
 
         // replace the data associated to the specified character tag.
         // return true if found and replaced tag
-        public static bool ReplaceCharTag(ref byte[] tagData, string key, char value)
+        public static bool ReplaceCharTag(ref byte[] tagData, string tagKey, char value)
         {
-            // convert the string into bytes
-            byte[] tagNameBytes = new byte[2];
-            tagNameBytes[0] = (byte)key[0];
-            tagNameBytes[1] = (byte)key[1];
-
-            int tagDataBegin = -1;
-            char dataType;
-
-            int tagIndex = 0;
-            while (tagIndex < tagData.Length)
-            {
-                // check the current tag
-                if ((tagData[tagIndex] == tagNameBytes[0]) && (tagData[tagIndex + 1] == tagNameBytes[1]))
-                {
-                    tagDataBegin = tagIndex + 2;
-                    break;
-                }
-
-                // skip to the next tag
-                tagIndex += 2;
-                dataType = Char.ToUpper((char)tagData[tagIndex]);
-                tagIndex++;
-
-                switch (dataType)
-                {
-                    case 'A':
-                    case 'C':
-                        tagIndex++;
-                        break;
-
-                    case 'S':
-                        tagIndex += 2;
-                        break;
-
-                    case 'I':
-                    case 'F':
-                        tagIndex += 4;
-                        break;
-
-                    case 'Z':
-                    case 'H':
-                        while (tagData[tagIndex] != 0) tagIndex++;
-                        tagIndex++;
-                        break;
-
-                    default:
-                        throw new ApplicationException(
-                            string.Format("Found an unexpected BAM tag data type: [{0}] while looking for a tag ({1})",
-                                          dataType, key));
-                }
-            }
+            int tagDataBegin = GetTagBeginIndex(tagData, tagKey);
 
             if (tagDataBegin < 0) return false;
 
             // replace the value
-            dataType = Char.ToUpper((char)tagData[tagDataBegin]);
+            char dataType = Char.ToUpper((char)tagData[tagDataBegin + 2]);
             tagDataBegin++;
 
             switch (dataType)
             {
                 case 'A':
-                    tagData[tagDataBegin] = (byte)value;
+                    tagData[tagDataBegin + 3] = (byte)value;
                     break;
 
                 default:
                     throw new ApplicationException(
                         string.Format(
                             "Found an unexpected char BAM tag data type: [{0}] while looking for a tag ({1})",
-                            dataType, key));
+                            dataType, tagKey));
             }
 
             return true;
         }
 
-        // returns the byte array
-        public byte[] ToBytes()
+        // replace the specified string tag.
+        // return true if found and replaced tag
+        public static bool ReplaceOrAddStringTag(ref byte[] tagData, string tagKey, string value)
         {
-            return _mByteList.ToArray();
+            int tagDataBegin = GetTagBeginIndex(tagData, tagKey);
+
+            bool found = false;
+            int tagDataEnd;
+            if (tagDataBegin < 0)
+            {
+                tagDataBegin = tagData.Length;
+                tagDataEnd = tagData.Length;
+            }
+            else
+            {
+                found = true;
+                // check the tag type
+                char dataType = Char.ToUpper((char)tagData[tagDataBegin + 2]);
+                if (dataType != 'Z')
+                    throw new ApplicationException(string.Format(
+                                "Found an unexpected char BAM tag data type: [{0}] while looking for a tag ({1})",
+                                dataType, tagKey));
+
+                // find the end of the tag
+                tagDataEnd = tagDataBegin + 3;
+                while (tagData[tagDataEnd] != 0) tagDataEnd++;
+            }
+
+            // if the new value doesn't have the same length as the old one, 
+            //   or if the tag was non-existent, we need to reallocate
+            if (tagDataEnd - tagDataBegin - 3 != value.Length)
+            {
+                int sizeDiff = value.Length - (tagDataEnd - tagDataBegin - 3);
+                if (!found) sizeDiff++; // one more character for the final \0
+                byte[] newTagData = new byte[tagData.Length + sizeDiff];
+                if (found)
+                {
+                    for (int i = 0; i < tagDataBegin + 3; i++)
+                    {
+                        newTagData[i] = tagData[i];
+                    }
+
+                    for (int i = tagDataEnd; i < tagData.Length; i++)
+                    {
+                        newTagData[i + sizeDiff] = tagData[i];
+                    }
+                }
+                else
+                {
+                    for (int i = 0; i < tagData.Length; i++)
+                    {
+                        newTagData[i] = tagData[i];
+                    }
+                    newTagData[tagData.Length] = (byte)tagKey[0];
+                    newTagData[tagData.Length + 1] = (byte)tagKey[1];
+                    newTagData[tagData.Length + 2] = (byte) 'Z';
+                    newTagData[newTagData.Length - 1] = 0;
+                }
+                tagData = newTagData;
+            }
+
+            // overwrite the tag
+            for (int valueIndex = 0; valueIndex < value.Length; valueIndex++)
+            {
+                tagData[tagDataBegin + 3 + valueIndex] = (byte)value[valueIndex];
+            }
+
+            return found;
         }
+
+        #endregion
+
+
     }
 }

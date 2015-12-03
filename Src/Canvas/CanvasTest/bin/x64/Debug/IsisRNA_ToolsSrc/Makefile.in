@@ -1,0 +1,129 @@
+PREFIX := @prefix@
+CURRENT_DIRECTORY := $(realpath $(dir $(lastword $(MAKEFILE_LIST))))
+BUILD_DIRECTORY := $(CURRENT_DIRECTORY)/build
+SAMTOOLS_VERSION=0.1.19
+R_VERSION=3.1.2
+RCPPARMADILLO_VERSION=0.4.650.1.1
+RCPP_VERSION=0.11.4
+DESeq2_VERSION=1.6.3
+STAR_VERSION=2.4.2a
+BEDTOOLS_VERSION=2.17.0
+USERAPPS_VERSION=316
+TABIX_VERSION=0.2.5
+CAIRO_VERSION=1.5-6
+
+BOOST_ROOT := ${PREFIX}
+
+release: symlink.lang install
+fullRelease: install.lang install
+
+install: ${PREFIX}/DESeq2 ${PREFIX}/bin/bedtools ${PREFIX}/bin/STAR ${PREFIX}/bin/tabix ${PREFIX}/bin/samtools ${PREFIX}/bin/bedGraphToBigWig
+
+install.lang: ${PREFIX}/R/bin/R build.R.packages
+
+symlink.lang:
+	mkdir -p ${PREFIX}/bin
+	ln -fs /illumina/thirdparty/IsisRNATools/anaconda/bin/python ${PREFIX}/bin
+	ln -fs /illumina/sync/software/unofficial/IsisRNA/IsisRNATools/R-3.1.2 ${PREFIX}/R
+
+mkdir.prefix:
+	mkdir -p ${PREFIX}
+
+${PREFIX}/data/%: ${CURRENT_DIRECTORY}/data/% 
+	mkdir -p ${PREFIX}/data
+	cp -r "$<" ${PREFIX}/data
+
+${PREFIX}/bin/STAR: ${CURRENT_DIRECTORY}/redist/STAR-STAR_${STAR_VERSION}.tar.gz
+	echo "Build STAR ${STAR_VERSION}"
+	mkdir -p "${BUILD_DIRECTORY}"
+	TEMP_DIR=`mktemp -d -p "${BUILD_DIRECTORY}"` && \
+	cd "$${TEMP_DIR}" && \
+	tar xzf "$<" && \
+	cd STAR-STAR_${STAR_VERSION}/source && \
+	make POSIXSHARED && \
+	mkdir -p ${PREFIX}/bin && cp STAR ${PREFIX}/bin && \
+	rm -r -f "$${TEMP_DIR}"
+
+${PREFIX}/bin/tabix: ${CURRENT_DIRECTORY}/redist/tabix-${TABIX_VERSION}.tar.bz2
+	echo "Build tabix ${TABIX_VERSION}"
+	mkdir -p "${BUILD_DIRECTORY}"
+	mkdir -p ${PREFIX}/lib
+	TEMP_DIR=`mktemp -d -p "${BUILD_DIRECTORY}"` && \
+	cd "$${TEMP_DIR}" && \
+	tar xjf "$<" && \
+	cd tabix-${TABIX_VERSION} && \
+	make && \
+	cp libtabix.a ${PREFIX}/lib && \
+	cp tabix bgzip ${PREFIX}/bin && \
+	mkdir -p ${PREFIX}/include/tabix && \
+	cp *.h ${PREFIX}/include/tabix && \
+	rm -r -f "$${TEMP_DIR}"
+
+${PREFIX}/bin/samtools: ${CURRENT_DIRECTORY}/redist/samtools-${SAMTOOLS_VERSION}.tar.gz
+	echo "Build samtools ${SAMTOOLS_VERSION}"
+	mkdir -p ${PREFIX}/lib
+	mkdir -p ${PREFIX}/bin
+	mkdir -p "${BUILD_DIRECTORY}"
+	TEMP_DIR=`mktemp -d -p "${BUILD_DIRECTORY}"` && \
+	cd "$${TEMP_DIR}" && \
+	tar xzf "$<" && \
+	cd samtools-${SAMTOOLS_VERSION} && \
+	make && \
+	cp libbam.a ${PREFIX}/lib && \
+	cp samtools ${PREFIX}/bin && \
+	mkdir -p ${PREFIX}/include/bam && \
+	cp *.h ${PREFIX}/include/bam && \
+	rm -r -f "$${TEMP_DIR}"
+
+${PREFIX}/bin/bedtools : ${CURRENT_DIRECTORY}/redist/BEDTools.v${BEDTOOLS_VERSION}.tar.gz
+	echo "Build BED Tools ${BEDTOOLS_VERSION}"
+	mkdir -p ${PREFIX}/redist
+	mkdir -p ${PREFIX}/bin
+	mkdir -p "${BUILD_DIRECTORY}"
+	TEMP_DIR=`mktemp -d -p "${BUILD_DIRECTORY}"` && \
+	cd "$${TEMP_DIR}" && \
+	tar xzf "$<" && \
+	cd bedtools-${BEDTOOLS_VERSION} && \
+	make && \
+	cp -r bin/* ${PREFIX}/bin && \
+	rm -r -f "$${TEMP_DIR}" && \
+	touch $@
+
+${PREFIX}/bin/bedGraphToBigWig : ${CURRENT_DIRECTORY}/redist/bedGraphToBigWig-${USERAPPS_VERSION}
+	cp $< "$@"
+
+${PREFIX}/R/bin/R: ${CURRENT_DIRECTORY}/redist/R-${R_VERSION}.tar.gz | mkdir.prefix
+	mkdir -p "${BUILD_DIRECTORY}" && \
+	mkdir -p "${PREFIX}/R" && \
+	TEMP_DIR=`mktemp -d -p "${BUILD_DIRECTORY}"` && \
+	cd "$${TEMP_DIR}" && \
+	tar xzf "$<" && \
+	cd R-${R_VERSION} && \
+	./configure --prefix=$(realpath ${PREFIX})/R --with-x=no && \
+	make && \
+	make install && \
+	rm -r -f "$${TEMP_DIR}"
+
+build.R.packages: ${PREFIX}/R/lib/Rcpp.installed ${PREFIX}/R/lib/RcppArmadillo.installed ${PREFIX}/R/lib/Cairo.installed
+
+${PREFIX}/R/lib/Rcpp.installed: ${CURRENT_DIRECTORY}/redist/Rcpp_${RCPP_VERSION}.tar.gz ${PREFIX}/R/bin/R
+	${PREFIX}/R/bin/R CMD INSTALL $< && \
+	mkdir -p ${PREFIX}/R/lib && \
+	touch $@
+
+${PREFIX}/DESeq2: ${CURRENT_DIRECTORY}/redist/DESeq2-complete_${DESeq2_VERSION}.tgz
+	mkdir -p $@
+	cd $@ && \
+	tar xzf $<
+	touch $@
+
+${PREFIX}/R/lib/RcppArmadillo.installed: ${CURRENT_DIRECTORY}/redist/RcppArmadillo_${RCPPARMADILLO_VERSION}.tar.gz ${PREFIX}/R/bin/R ${PREFIX}/R/lib/Rcpp.installed
+	${PREFIX}/R/bin/R CMD INSTALL $< && \
+	mkdir -p ${PREFIX}/R/lib && \
+	touch $@
+
+${PREFIX}/R/lib/Cairo.installed: ${CURRENT_DIRECTORY}/redist/Cairo_${CAIRO_VERSION}.tar.gz ${PREFIX}/R/bin/R
+	${PREFIX}/R/bin/R CMD INSTALL $< && \
+	mkdir -p ${PREFIX}/lib && \
+	touch $@
+

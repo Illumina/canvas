@@ -51,7 +51,7 @@ namespace SequencingFiles
 		// close BAM file
 		public override void Close()
 		{
-			if (!IsOpen) return;
+            if (!IsOpen) return;
 			IsOpen = false;
 
 			_header = "";
@@ -60,8 +60,8 @@ namespace SequencingFiles
 			BgzfFileStream.Close();
 		}
 
-		// returns the SAM header
-		public string GetHeader()
+        // returns the SAM header
+        public string GetHeader()
 		{
 			return _header;
 		}
@@ -425,8 +425,8 @@ namespace SequencingFiles
 			if (magicNumberString != BamConstants.MagicNumber)
 			{
 				throw new ApplicationException(
-					string.Format("ERROR: Expected the BAM magic number to be {0}, but found {1}.",
-								  BamConstants.MagicNumber, magicNumberString));
+					string.Format("ERROR: Expected the BAM magic number to be {0}, but found {1}. Bam file: {2}",
+								  BamConstants.MagicNumber, magicNumberString, BamPath));
 			}
 
 			// get BAM header text length
@@ -471,7 +471,7 @@ namespace SequencingFiles
 		// opens BAM file
 		public void Open(string filename)
 		{
-			if (!File.Exists(filename))
+            if (!File.Exists(filename))
 			{
 				throw new ApplicationException(string.Format("ERROR: The supplied BAM filename ({0}) does not exist.",
 															 filename));

@@ -1,0 +1,106 @@
+<html>
+<head>
+<style>
+	p.option {padding-left : 10 px; color: gray}
+	p.option_description {padding-left : 20 px}
+</style>
+</head>
+
+<body>
+<h1> RNAExpress Summary Report Description</h1>
+
+<h2>Alignment Summary</h2>
+This table contains statistics describing the alignment of reads to the genome.
+<ul>
+<li>
+Sample: The name of the sample (all replicates of one condition have the same sample name).
+</li>
+<li>
+Replicate: The name of the individual replicate.
+</li>
+<li>
+Read Count: The number of reads (or pairs of reads for paired-end sequencing runs).
+</li>
+<li>
+Uniquely mapped: The percentage of reads that have a unique best alignment position in the genome
+</li>
+<li>
+Multi-mapped: The percentage of reads that have more than one equally good alignment positions in the genome
+</li>
+<li>
+Average mapped length: The average number of bases that are aligned to the genome for each read (pair of reads for PE runs). The difference between this number and the read-length is due to trimming of unaligned sequences (and adapters) at the ends of reads.
+</li>
+<li>
+Mismatch rate: The percent of positions within the aligned portion of a read that do not match the reference genome sequence
+</li>
+<li>
+Number of splices: The total number of splicing-events. Each case where a read-alignment jumps over a known or discovered intron is counted.
+</li>
+<li>
+Alignments spliced: The percentage of aligned reads that contain at least one splice-site (i.e. span at least one intron)
+</li>
+</ul>
+
+<h3>Abundant Sequences</h3>
+This table lists the percentage of all reads that align to various abundant non-mRNA annotation types in the target genome
+<ul>
+    <li> Adapter refers to the percentage of reads that have a match to a sequencing adapter. These adapter matches are trimmed off and the remaining sequence of the read is used for further analysis.</li>
+</ul>
+
+<h3>Read Counts</h3>
+This table contains statistics describing the expression quantification, i.e. counting reads per gene.
+<ul>
+<li>
+Assigned reads: The percentage of totals reads (or read pairs for PE runs) that were aligned to a gene. These reads were uniquely mapped and overlapped exons of one (only one) gene. 
+</li>
+<li>
+Unassigned reads: Aligned reads that could not be assigned to any gene, i.e. mapping outside of the annotated exons
+</li>
+<li>
+Ambiguous: Reads that overlap exons from more than one gene
+</li>
+<li>
+Number of genes: The number of genes in the reference annotation file used
+</li>
+</ul>
+
+<h2> Differential Expression</h2>
+This table summarizes the results of any requested differential expression analyses.
+<ul>
+<li> Control: The control sample </li>
+<li> Comparison: The comparison sample </li>
+<li> Total Genes: The total number of genes evaluated in the comparison </li>
+<li> Tested Genes: The number of genes for which a complete differential expression test was performed (not filtered for e.g. low expression). </li>
+<li> Differential Genes: The number of significantly differentially expressed genes </li>
+</ul>
+
+<h3> Differential Gene Browser </h3>
+An interactive browser providing an overview of the differential expression analysis results. The scatter-plot shows the mean expression level on the x-axis (in read counts) and the estimated log fold-change between the two conditions for each gene. The controls on the left allow to select subsets of all genes. 
+<ul>
+    <li> Status: Genes with status LOW were not tested, due to low average expression across samples. OUTLIER marks genes for which the result is strongly affected by a single (outlier) replicate in either sample.</li>
+    <li> Significant: Genes with an multiple-testing adjusted p-value for differential expression of less than 0.05 </li>
+</ul>
+
+The table shows differential expression results for each gene currently selected.
+<ul>
+    <li> Mean Count: The mean read count for this gene across all samples </li>
+    <li> log(Fold Change): Estimated log fold change between the two samples </li>
+    <li> Std. err. log(Fold Change): Standard error of the Fold Change estimate </li>
+    <li> q value: Multiple-testing adjusted p-value for differential expression </li>
+</ul>
+
+<ul>
+    <li> M/A Plot: Static Mean vs. fold-change plot for all genes. Red points are significant, outliers are drawn as triangles pointing out of the plot-area. </li>
+    <li> Dispersion estimates: Plot showing the relationship between mean expression level of all genes and their variability (dispersion) as estimated by DESeq2. The red line marks the average relationship, the blue dots the final values used for each gene.  </li>
+    <li> Gene heatmap: Log(expression) of differentially expressed genes across all replicates ordered by similarity. </li>
+</ul>
+
+<h3> Sample Correlation </h3>
+A heatmap showing the relative similarity between all samples and replicates in this analysis-run. Each row and column represents one replicate, ordered by similarity (hierarchical clustering). The color of each field indicates the correlation between these replicates (Spearman Rho).
+
+<h3> PCA Plot </h3>
+A scatter plot showing the relative distance between all samples and replicates in this analysis-run. The regularized log-transformed counts are used for principal component analysis.
+
+</body>
+</html>
+

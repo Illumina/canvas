@@ -209,27 +209,27 @@ namespace CanvasClean
         /// neighbors get 1/4 weight, etc.
         /// </summary>
         /// <param name="countsByGC"></param>
-        /// <param name="i"></param>
+        /// <param name="gcBin"></param>
         /// <returns></returns>
-        private static List<Tuple<float, float>> GetWeightedCounts(List<float>[] countsByGC, int i)
+        private static List<Tuple<float, float>> GetWeightedCounts(List<float>[] countsByGC, int gcBin)
         {
             List<Tuple<float, float>> weightedCounts = new List<Tuple<float, float>>();
             int radius = 0;
             float weight = 1;
             while (weightedCounts.Count < defaultMinNumberOfBinsPerGC) 
             {
-                int i1 = i + radius;
-                int i2 = i - radius;
-                if (i1 >= countsByGC.Length && i2 < 0) { break; }
+                int gcWindowEnd = gcBin + radius;
+                int gcWindowStart = gcBin - radius;
+                if (gcWindowEnd >= countsByGC.Length && gcWindowStart < 0) { break; }
 
-                if (i1 < countsByGC.Length) 
+                if (gcWindowEnd < countsByGC.Length) 
                 {
-                    weightedCounts.AddRange(countsByGC[i1].Select(c => Tuple.Create(c, weight)));
+                    weightedCounts.AddRange(countsByGC[gcWindowEnd].Select(c => Tuple.Create(c, weight)));
                 }
 
-                if (i2 != i1 && i2 >= 0) 
+                if (gcWindowStart != gcWindowEnd && gcWindowStart >= 0) 
                 {
-                    weightedCounts.AddRange(countsByGC[i2].Select(c => Tuple.Create(c, weight)));
+                    weightedCounts.AddRange(countsByGC[gcWindowStart].Select(c => Tuple.Create(c, weight)));
                 }
                 radius++;
                 weight /= 2;
@@ -254,29 +254,29 @@ namespace CanvasClean
             GetCountsByGC(bins, manifest, out countsByGC, out counts);
 
             double globalMedian = CanvasCommon.Utilities.Median(counts);
-            double[] medians = new double[countsByGC.Length];
+            double?[] medians = new double?[countsByGC.Length];
 
             // Compute the median count for each GC bin
-            for (int i = 0; i < countsByGC.Length; i++)
+            for (int gcBinIndex = 0; gcBinIndex < countsByGC.Length; gcBinIndex++)
             {
-                if (countsByGC[i].Count == 0) 
+                if (countsByGC[gcBinIndex].Count >= defaultMinNumberOfBinsPerGC)
                 {
-                    medians[i] = -1; 
-                }
-                else if (countsByGC[i].Count >= defaultMinNumberOfBinsPerGC)
-                {
-                    medians[i] = CanvasCommon.Utilities.Median(countsByGC[i]);
+                    medians[gcBinIndex] = CanvasCommon.Utilities.Median(countsByGC[gcBinIndex]);
                 }
                 else
                 {
-                    List<Tuple<float, float>> weightedCounts = GetWeightedCounts(countsByGC, i);              
-                    medians[i] = CanvasCommon.Utilities.WeightedMedian(weightedCounts);
+                    List<Tuple<float, float>> weightedCounts = GetWeightedCounts(countsByGC, gcBinIndex);              
+                    medians[gcBinIndex] = CanvasCommon.Utilities.WeightedMedian(weightedCounts);
                 }
             }
 
             // Divide each count by the median count of bins with the same GC content
-            for (int i = 0; i < bins.Count; i++)
-                bins[i].Count = (float)(globalMedian * (double)bins[i].Count / medians[bins[i].GC]);
+            for (int gcBinIndex = 0; gcBinIndex < bins.Count; gcBinIndex++)
+            {
+                double? median = medians[bins[gcBinIndex].GC];
+                if (median != null && median > 0)
+                    bins[gcBinIndex].Count = (float)(globalMedian * (double)bins[gcBinIndex].Count / median);
+            }
             //DebugPrintCountsByGC(bins, "CountsByGC-After.txt");
         }
 
@@ -506,14 +506,24 @@ namespace CanvasClean
             List<GenomicBin> stripped = new List<GenomicBin>();
 
             // Check each point to see if it is different than both the point to left and the point to the right
-            for (int binIndex = 1; binIndex < bins.Count - 1; binIndex++)
+            for (int binIndex = 0; binIndex < bins.Count; binIndex++)
             {
-                if (!bins[binIndex].Chromosome.Equals(bins[binIndex - 1].Chromosome))
+                bool hasPreviousBin = binIndex > 0;
+                bool hasNextBin = binIndex < bins.Count - 1;
+                string currentBinChromosome = bins[binIndex].Chromosome;
+                string previousBinChromosome =  hasPreviousBin ? bins[binIndex - 1].Chromosome : null;
+                string nextBinChromosome = hasNextBin ? bins[binIndex + 1].Chromosome : null;
+                // Different chromosome on both sides
+                if ((hasPreviousBin && !currentBinChromosome.Equals(previousBinChromosome))
+                    && (hasNextBin && !currentBinChromosome.Equals(nextBinChromosome)))
                     continue;
-                if (!bins[binIndex].Chromosome.Equals(bins[binIndex + 1].Chromosome))
-                    continue;
-                if (!SignificantlyDifferent(bins[binIndex].Count, bins[binIndex - 1].Count) || !SignificantlyDifferent(bins[binIndex].Count, bins[binIndex + 1].Count))
+                // Same chromosome on at least on side or it's the only bin
+                if ((hasPreviousBin && bins[binIndex].Chromosome.Equals(previousBinChromosome) && !SignificantlyDifferent(bins[binIndex].Count, bins[binIndex - 1].Count))
+                    || (hasNextBin && bins[binIndex].Chromosome.Equals(nextBinChromosome) && !SignificantlyDifferent(bins[binIndex].Count, bins[binIndex + 1].Count))
+                    || (!hasPreviousBin && !hasNextBin))
+                {
                     stripped.Add(bins[binIndex]);
+                }
             }
 
             return stripped;
@@ -566,7 +576,7 @@ namespace CanvasClean
             }
 
             List<GenomicBin> bins = CanvasIO.ReadFromTextFile(inFile);
-            
+
             if (doOutlierRemoval)
                 bins = RemoveOutliers(bins);
 
@@ -611,8 +621,6 @@ namespace CanvasClean
 
                 }
             }
-
-
 
             if (ffpeOutliersFile != null)
             {

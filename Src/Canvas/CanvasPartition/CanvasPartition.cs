@@ -19,7 +19,6 @@ namespace CanvasPartition
             Console.WriteLine("Options:");
             p.WriteOptionDescriptions(Console.Out);
         }
-        
       
         static int Main(string[] args)
         {
@@ -27,6 +26,7 @@ namespace CanvasPartition
             string inFile = null;
             string outFile = null;
             bool needHelp = false;
+            bool isGermline = false;
             string bedPath = null;
             double alpha = Segmentation.DefaultAlpha;
             SegmentSplitUndo undoMethod = SegmentSplitUndo.None;
@@ -40,6 +40,7 @@ namespace CanvasPartition
                 { "m|method=", "segmentation method (Wavelets/CBS)", v => partitionMethod = (SegmentationMethod)Enum.Parse(typeof(SegmentationMethod), v) },
                 { "s|split=", "CBS split method (None/Prune/SDUndo)", v => undoMethod = (SegmentSplitUndo)Enum.Parse(typeof(SegmentSplitUndo), v) },
                 { "b|bedfile=", "bed file to exclude (don't span these intervals)", v => bedPath = v },
+                { "g|germline", "flag indicating that input file represents germline genome", v => isGermline = v != null },
             };
 
             List<string> extraArgs = p.Parse(args);
@@ -72,7 +73,7 @@ namespace CanvasPartition
             Segmentation SegmentationEngine = new Segmentation(inFile, bedPath);
             SegmentationEngine.Alpha = alpha;
             SegmentationEngine.UndoMethod = undoMethod;
-            SegmentationEngine.SegmentGenome(outFile, partitionMethod);
+            SegmentationEngine.SegmentGenome(outFile, partitionMethod, isGermline);
             return 0;
         }
     }

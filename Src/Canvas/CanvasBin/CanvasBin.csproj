@@ -87,8 +87,8 @@
     <Reference Include="System.XML" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="..\..\ILMNcommon\Properties\IsisVersionInfo.cs">
-      <Link>Properties\IsisVersionInfo.cs</Link>
+    <Compile Include="..\..\ILMNcommon\Properties\IsasVersionInfo.cs">
+      <Link>Properties\IsasVersionInfo.cs</Link>
     </Compile>
     <Compile Include="CanvasBin.cs" />
     <Compile Include="HitArray.cs" />
@@ -102,6 +102,10 @@
     <ProjectReference Include="..\..\ILMNcommon\ILMNcommon.csproj">
       <Project>{6848da28-baca-4e4d-9e1d-bad1e7cb9cde}</Project>
       <Name>ILMNcommon</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\Isas.Shared\Isas.Shared.csproj">
+      <Project>{f2063ff3-61a7-4084-845d-da591011e36f}</Project>
+      <Name>Isas.Shared</Name>
     </ProjectReference>
     <ProjectReference Include="..\..\SequencingFiles\SequencingFiles.csproj">
       <Project>{3eae6805-e445-4102-87c1-f57e20677778}</Project>

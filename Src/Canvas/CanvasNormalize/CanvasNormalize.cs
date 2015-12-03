@@ -17,8 +17,19 @@ namespace CanvasNormalize
         public static int Run(CanvasNormalizeParameters parameters) 
         {
             NexteraManifest manifest = string.IsNullOrEmpty(parameters.manifestPath) ? null : new NexteraManifest(parameters.manifestPath, null, Console.WriteLine);
-            
-            GetWeightedAverageBinCount(parameters.normalBedPaths, parameters.weightedAverageNormalBedPath, manifest: manifest);
+
+            switch (parameters.normalizationMode)
+            {
+                case CanvasNormalizeMode.BestLR2:
+                    GetBestLR2BinCount(parameters.tumorBedPath, parameters.normalBedPaths, parameters.weightedAverageNormalBedPath,
+                        manifest: manifest);
+                    break;
+                case CanvasNormalizeMode.WeightedAverage:
+                    GetWeightedAverageBinCount(parameters.normalBedPaths, parameters.weightedAverageNormalBedPath, manifest: manifest);
+                    break;
+                default:
+                    throw new Exception(string.Format("Invalid CanvasNormalize mode '{0}'", parameters.normalizationMode));
+            }
             
             GetBinRatio(parameters.tumorBedPath, parameters.weightedAverageNormalBedPath, parameters.outBedPath, parameters.ploidyBedPath);
 
@@ -44,13 +55,13 @@ namespace CanvasNormalize
                 for (int sampleIndex = 0; sampleIndex < sampleCount; sampleIndex++)
                 {
                     string binnedPath = binnedPaths.ElementAt(sampleIndex);
-                    List<double> binCounts;
+                    var binCounts = new BinCounts(binnedPath, manifest: manifest);
+                    List<double> counts = binCounts.AllCounts;
                     // If a manifest is available, get the median of bins overlapping the targeted regions only.
                     // For small panels, there could be a lot of bins with zero count and the median would be 0 if taken over all the bins, resulting in division by zero.
-                    double median = manifest == null ? GetMedianBinCount(binnedPath, out binCounts) :
-                        GetMedianBinCount(binnedPath, out binCounts, manifest);
+                    double median = binCounts.OnTargetMedianBinCount;
                     weights[sampleIndex] = median > 0 ? 1.0 / median : 0;
-                    binCountsBySample[sampleIndex] = binCounts;
+                    binCountsBySample[sampleIndex] = counts;
                 }
                 double weightSum = weights.Sum();
                 for (int i = 0; i < sampleCount; i++) { weights[i] /= weightSum; } // so weights sum to 1
@@ -75,79 +86,111 @@ namespace CanvasNormalize
             }
         }
 
-        private static double GetMedianBinCount(string binnedPath, out List<double> binCounts)
+        /// <summary>
+        /// Pick the best normal control that has the smallest mean squared log-ratios (LR2s).
+        /// </summary>
+        /// <param name="tumorBinnedPath"></param>
+        /// <param name="normalBinnedPaths"></param>
+        /// <param name="bestBinnedPath"></param>
+        /// <param name="manifest"></param>
+        private static void GetBestLR2BinCount(string tumorBinnedPath, IEnumerable<string> normalBinnedPaths, string bestBinnedPath,
+            NexteraManifest manifest = null)
         {
-            binCounts = new List<double>();
-            using (GzipReader reader = new GzipReader(binnedPath))
+            int bestNormalSampleIndex = 0;
+            int normalSampleCount = normalBinnedPaths.Count();
+            if (normalSampleCount > 1) // find the best normal
             {
-                string line;
-                string[] toks;
-                while ((line = reader.ReadLine()) != null)
+                List<double[]> binCountsByNormalSample = new List<double[]>();
+                for (int normalSampleIndex = 0; normalSampleIndex < normalSampleCount; normalSampleIndex++)
                 {
-                    toks = line.Split('\t');
-                    binCounts.Add(double.Parse(toks[3]));
+                    string normalBinnedPath = normalBinnedPaths.ElementAt(normalSampleIndex);
+                    var binCounts = new BinCounts(normalBinnedPath, manifest: manifest);
+                    List<double> counts = binCounts.OnTargetCounts;
+                    double median = binCounts.OnTargetMedianBinCount;
+                    // If a manifest is available, get the median of bins overlapping the targeted regions only.
+                    // For small panels, there could be a lot of bins with zero count and the median would be 0 if taken over all the bins, resulting in division by zero.
+                    double weight = median > 0 ? 1.0 / median : 0;
+                    binCountsByNormalSample.Add(counts.Select(cnt => cnt * weight).ToArray());
+                }
+                double[] tumorBinCounts;
+                {
+                    var binCounts = new BinCounts(tumorBinnedPath, manifest: manifest);
+                    List<double> counts = binCounts.OnTargetCounts;
+                    double tumorMedian = binCounts.OnTargetMedianBinCount;
+                    double tumorWeight = tumorMedian > 0 ? 1.0 / tumorMedian : 0;
+                    tumorBinCounts = counts.Select(cnt => cnt * tumorWeight).ToArray();
+                }
+
+                // Find the best normal sample
+                bestNormalSampleIndex = -1;
+                double minMeanSquaredLogRatios = double.PositiveInfinity;
+                for (int normalSampleIndex = 0; normalSampleIndex < normalSampleCount; normalSampleIndex++)
+                {
+                    // Get the sum of squared log ratios
+                    var result = GetMeanSquaredLogRatios(tumorBinCounts, binCountsByNormalSample[normalSampleIndex]);
+                    double meanSquaredLogRatios = result.Item1;
+                    int ignoredBinCount = result.Item2;
+                    // TODO: Skip a (bad) normal sample if too many bins were ignored.
+                    //       Donavan's script skips a normal sample if more than 100 log ratios is NA.
+                    //       The cut-off is likely panel-dependent.
+                    if (meanSquaredLogRatios < minMeanSquaredLogRatios)
+                    {
+                        minMeanSquaredLogRatios = meanSquaredLogRatios;
+                        bestNormalSampleIndex = normalSampleIndex;
+                    }
                 }
             }
-            return  Utilities.Median(binCounts); // median bin count of a sample across bins
+
+            // copy file
+            string srcBinnedPath = normalBinnedPaths.ElementAt(bestNormalSampleIndex);
+            if (File.Exists(srcBinnedPath))
+            {
+                if (File.Exists(bestBinnedPath)) { File.Delete(bestBinnedPath); }
+                File.Copy(srcBinnedPath, bestBinnedPath);
+            }
         }
 
-        private static double GetMedianBinCount(string binnedPath, out List<double> binCounts, NexteraManifest manifest)
+        private static Tuple<double, int> GetMeanSquaredLogRatios(double[] tumorBinCounts, double[] normalBinCounts)
         {
-            List<double> tmpBinCounts = new List<double>();
-            List<int> onTargetIndices = new List<int>();
-
-            var regionsByChrom = manifest.GetManifestRegionsByChromosome();
-            string currChrom = null;
-            List<NexteraManifest.ManifestRegion> regions = null; // 1-based regions
-            int regionIndex = -1;
-            bool onTarget = false;
-            using (GzipReader reader = new GzipReader(binnedPath))
+            double sumOfSquaredLogRatios = 0;
+            int ignoredBinCount = 0;
+            int nBins = 0;
+            for (int binIndex = 0; binIndex < tumorBinCounts.Length; binIndex++)
             {
-                string line;
-                string[] toks;
-                int binIdx = 0;
-                while ((line = reader.ReadLine()) != null)
+                double tumorBinCount = tumorBinCounts[binIndex];
+                double normalBinCount = normalBinCounts[binIndex];
+
+                if (normalBinCount <= 0)
                 {
-                    toks = line.Split('\t');
-                    string chrom = toks[0];
-                    int start = int.Parse(toks[1]); // 0-based, inclusive
-                    int stop = int.Parse(toks[2]); // 0-based, exclusive
-                    if (currChrom != chrom)
-                    {
-                        currChrom = chrom;
-                        onTarget = false;
-                        if (!regionsByChrom.ContainsKey(currChrom))
-                        {
-                            regions = null;
-                        }
-                        else
-                        {
-                            regions = regionsByChrom[currChrom];
-                            regionIndex = 0;
-                        }
-                    }
-                    while (regions != null && regionIndex < regions.Count && regions[regionIndex].End < start + 1)
-                    {
-                        regionIndex++;
-                    }
-                    if (regions != null && regionIndex < regions.Count && regions[regionIndex].Start <= stop) // overlap
-                    {
-                        onTarget = true;
-                    }
-                    else
-                    {
-                        onTarget = false;
-                    }
-
-                    if (onTarget) { onTargetIndices.Add(binIdx); }
-
-                    tmpBinCounts.Add(double.Parse(toks[3]));
-                    binIdx++;
+                    ignoredBinCount++;
+                    continue;
                 }
+
+                double squaredLogRatio;
+                try
+                {
+                    double logRatio = Math.Log(tumorBinCount / normalBinCount);
+                    squaredLogRatio = logRatio * logRatio;
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine("Error calculating squared log ratio: {0}. Ignoring bin {1}.", e.Message, binIndex);
+                    ignoredBinCount++;
+                    continue;
+                }
+
+                if (double.IsInfinity(squaredLogRatio) || double.IsNaN(squaredLogRatio))
+                {
+                    ignoredBinCount++;
+                    continue;
+                }
+
+                sumOfSquaredLogRatios += squaredLogRatio;
+                nBins++;
             }
-            binCounts = tmpBinCounts;
-            // median bin count of a sample across on-target bins
-            return Utilities.Median(onTargetIndices.Select(idx => tmpBinCounts[idx]).ToList());
+
+            double meanSquaredLogRatios = nBins > 0 ? sumOfSquaredLogRatios / nBins : sumOfSquaredLogRatios;
+            return Tuple.Create(meanSquaredLogRatios, ignoredBinCount);
         }
 
         private static void GetBinRatio(string tumorBinnedPath, string normalBinnedPath, string ratioBinnedPath, string ploidyBedPath)

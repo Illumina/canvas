@@ -106,7 +106,7 @@ namespace SequencingFiles
         {
             if (type == null) return SequenceType.Unknown;
             switch (type.ToLowerInvariant())
-            { 
+            {
                 case "althaplotype":
                     return SequenceType.AltHaplotype;
                 case "autosome":
@@ -120,6 +120,8 @@ namespace SequencingFiles
                 case "sex":
                 case "allosome":
                     return SequenceType.Allosome;
+                case "other":
+                    return SequenceType.Other;
                 default:
                     return SequenceType.Unknown;
             }
@@ -141,7 +143,8 @@ namespace SequencingFiles
 
             // use StreamReader to avoid URI parsing of filename that will cause problems with 
             // certain characters in the path (#). 
-            using (var xmlReader = XmlReader.Create(new StreamReader(inputFilename)))
+            using (var streamReader = new StreamReader(inputFilename))
+            using (var xmlReader = XmlReader.Create(streamReader))
             {
                 while (xmlReader.Read())
                 {
@@ -209,15 +212,36 @@ namespace SequencingFiles
 
         /// <summary>
         /// Scans the reference sequence list and returns the specified sequence metadata
+        /// TODO: nulls are evil. throw an exception rather than return null. have them use TryGetSequence instead
         /// TODO: create lookup table to make this faster? 
         /// </summary>
-        public SequenceMetadata GetSequence(string chromosomeName)
+        public SequenceMetadata GetSequence(string sequenceName)
         {
             foreach (SequenceMetadata sequence in Sequences)
             {
-                if (string.Compare(sequence.Name, chromosomeName, true) == 0) return sequence;
+                if (string.Equals(sequence.Name, sequenceName, StringComparison.OrdinalIgnoreCase))
+                    return sequence;
             }
             return null;
+        }
+
+        /// <summary>
+        /// Scans the reference sequence list and returns the specified sequence metadata if found
+        /// TODO: create lookup table to make this faster? 
+        /// </summary>
+        public bool TryGetSequence(string sequenceName, out SequenceMetadata foundSequence)
+        {
+            foreach (SequenceMetadata sequence in Sequences)
+            {
+                if (string.Equals(sequence.Name, sequenceName, StringComparison.OrdinalIgnoreCase))
+                {
+                    foundSequence = sequence;
+                    return true;
+                }
+            }
+
+            foundSequence = null;
+            return false;
         }
 
         /// <summary>
@@ -321,6 +345,11 @@ namespace SequencingFiles
                 Console.WriteLine(">>> Multiple FASTA files -> require import!");
                 return GenomeFolderState.RequireImport;
             }
+            if (fastaFilenames.Count == 0)
+            {
+                throw new Exception(string.Format("Error: No reference genome FASTA file (genome.fa) found in folder {0}", directory));
+            }
+
             bool requireWritableFolder = false;
 
             // check the derivative files
@@ -433,13 +462,14 @@ namespace SequencingFiles
 
         public enum SequenceType : int
         {
-            Unknown = 0,
+            Unknown = 0, // not classified. Default for older GenomeSize.xml files where sequence type is not specified
             Autosome, // main chromsomes (chr1, chr2...)
             Mitochondria, // chrM
             Allosome, // sex chromosome (chrX, chrY)
             Contig, // Unplaced or unlocalized contigs (e.g. chr1_KI270711v1_random, chrUn_KI270530v1)
             Decoy,
-            AltHaplotype
+            AltHaplotype,
+            Other, // currently only chrEBV has this classification
         }
 
         [Serializable]
@@ -491,6 +521,9 @@ namespace SequencingFiles
             #endregion
 
             /// <summary>
+            /// 
+            /// TODO: completely eliminate the use of this method. All human GenomeSize.xml will have the type specified
+            /// 
             /// Checks if the chromosome is an autosome.
             /// Assumes species is Homo_sapiens 
             /// This metadata should be part of the GenomeSize.xml and come from the Type member, but we fall back
@@ -516,10 +549,41 @@ namespace SequencingFiles
                     case SequenceType.Decoy:
                     case SequenceType.Mitochondria:
                     case SequenceType.Allosome:
+                    case SequenceType.Other:
                         return false;
                     case SequenceType.Unknown:
                     default:
                         return IsAutosome(Name);
+                }
+            }
+
+            /// <summary>
+            /// TODO: DO NOT use this. There is too much ambiguity here when chrom is not found. The caller should use GenomeMetadata.TryGetSequence instead and then call IsDecoyOrOther on the returned SequenceMetadata. Don't have the GenomeMetadata? Tell the caller to give it to you.
+            /// </summary>
+            /// <param name="chrom"></param>
+            /// <param name="chromosomes"></param>
+            /// <returns></returns>
+            public static bool IsDecoyOrOther(string chrom, List<GenomeMetadata.SequenceMetadata> chromosomes)
+            {
+                foreach (GenomeMetadata.SequenceMetadata referenceChromosome in chromosomes)
+                {
+                    if (chrom == referenceChromosome.Name && referenceChromosome.IsDecoyOrOther())
+                    {
+                        return true;
+                    }
+                }
+                return false;
+            }
+
+            public bool IsDecoyOrOther()
+            {
+                switch (this.Type)
+                {
+                    case SequenceType.Decoy:
+                    case SequenceType.Other:
+                        return true;
+                    default:
+                        return false;
                 }
             }
 
@@ -547,6 +611,7 @@ namespace SequencingFiles
                     case SequenceType.Decoy:
                     case SequenceType.Autosome:
                     case SequenceType.Allosome:
+                    case SequenceType.Other:
                         return false;
                     case SequenceType.Unknown:
                     default:

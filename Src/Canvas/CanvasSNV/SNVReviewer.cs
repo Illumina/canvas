@@ -2,8 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.IO;
-using System.Text;
-using System.Threading.Tasks;
 using SequencingFiles;
 
 namespace CanvasSNV
@@ -26,6 +24,7 @@ namespace CanvasSNV
 
         public int Main(string vcfPath, string bamPath, string outputPath)
         {
+            
             if (!File.Exists(vcfPath))
             {
                 Console.Error.WriteLine("Error: Input vcf file not found at {0}", vcfPath);
@@ -50,9 +49,9 @@ namespace CanvasSNV
         /// </summary>
         protected void LoadVariants(string vcfPath)
         {
-            Console.WriteLine("Loading variants of interest from {0}", vcfPath);
+            Console.WriteLine("{0} Loading variants of interest from {1}", DateTime.Now, vcfPath);
             this.Variants = new List<VcfVariant>();
-            int overallCount = 0;
+            int overallCount = 0; 
             int countThisChromosome = 0;
             using (VcfReader reader = new VcfReader(vcfPath, requireGenotypes: false))
             {
@@ -61,7 +60,7 @@ namespace CanvasSNV
                 {
                     bool result = reader.GetNextVariant(variant);
                     if (!result) break;
-                    overallCount++;
+                    overallCount++; 
                     if (variant.ReferenceName != this.Chromosome)
                     {
                         // Shortcut: If we've seen records for the desired chromosome, then as soon as we hit another chromosome,
@@ -76,11 +75,16 @@ namespace CanvasSNV
                     if ((variant.Genotypes != null && variant.Genotypes.Any()) && variant.Filters != "PASS") continue; // FILTER may not say PASS for a dbSNP VCF file
                     if (variant.Genotypes != null && variant.Genotypes.Any()) // not available if we use a dbSNP VCF file
                     {
+                        if (!variant.Genotypes[0].ContainsKey("GT")) continue; // no genotype - we don't know if it's a het SNV.
                         string genotype = variant.Genotypes[0]["GT"];
                         if (genotype != "0/1" && genotype != "1/0") continue;
+
                         // Also require they have a high enough quality score:
-                        float GQX = float.Parse(variant.Genotypes[0]["GQX"]);
-                        if (GQX < 30) continue;
+                        if (variant.Genotypes[0].ContainsKey("GQX")) // Note: Allow no GQX field, in case we want to use another caller (e.g. Pisces) and not crash
+                        {
+                            float GQX = float.Parse(variant.Genotypes[0]["GQX"]);
+                            if (GQX < 30) continue;
+                        }
                     }
                     // Note: Let's NOT require the variant be in dbSNP.  Maybe we didn't do annotation, either because
                     // we chose not to or because we're on a reference without annotation available.
@@ -98,7 +102,7 @@ namespace CanvasSNV
         /// </summary>
         protected void ProcessBamFile(string bamPath)
         {
-            Console.WriteLine("Looping over bam records from {0}", bamPath);
+            Console.WriteLine("{0} Looping over bam records from {1}", DateTime.Now, bamPath);
             int overallCount = 0;
             int nextVariantIndex = 0;
             using (BamReader reader = new BamReader(bamPath))
@@ -208,12 +212,15 @@ namespace CanvasSNV
                 for (int index = 0; index < this.Variants.Count; index++)
                 { 
                     VcfVariant variant = this.Variants[index];
-                    writer.WriteLine(string.Format("{0}\t{1}\t{2}\t{3}\t{4}\t{5}", variant.ReferenceName, variant.ReferencePosition,
+                    // skip HOM REF positions 
+                    if (this.VariantCounts[index] > 5) {
+                        writer.WriteLine(string.Format("{0}\t{1}\t{2}\t{3}\t{4}\t{5}", variant.ReferenceName, variant.ReferencePosition,
                         variant.ReferenceAllele, variant.VariantAlleles[0], this.ReferenceCounts[index], 
                         this.VariantCounts[index]));
+                    }
                 }
             }
-            Console.WriteLine("Results written to {0}", outputPath);
+            Console.WriteLine("{0} Results written to {1}", DateTime.Now, outputPath);
         }
 
     }

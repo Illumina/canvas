@@ -1,0 +1,28 @@
+﻿<!DOCTYPE html>
+
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <meta charset="utf-8" />
+    <title>PCA</title>
+    <link rel="stylesheet" type="text/css" href="basespace-javascript-sdk/Charts/css/basespace.charts.css" />
+    <link rel="stylesheet" type="text/css" href="basespace-javascript-sdk/JSSDK/lib/jquery.powertip-1.2.0/css/jquery.powertip.css" />
+
+    <script type="text/javascript" src="basespace-javascript-sdk/JSSDK/lib/underscore.js"></script>
+    <script type="text/javascript" src="basespace-javascript-sdk/JSSDK/lib/jquery.js"></script>
+    <script type="text/javascript" src="basespace-javascript-sdk/JSSDK/lib/d3.js"></script>
+    <script type="text/javascript" src="basespace-javascript-sdk/JSSDK/lib/jquery.powertip-1.2.0/jquery.powertip.js"></script>
+    <script type="text/javascript" src="basespace-javascript-sdk/JSSDK/dist/bs.sdk.js"></script>
+    <script type="text/javascript" src="basespace-javascript-sdk/Charts/dist/charts.core.js"></script>
+    <script type="text/javascript" src="basespace-javascript-sdk/Charts/dist/charts-linechart.js"></script>
+    <script type="text/javascript" src="KolorWheel-1.0.min.js"></script>
+<script type="text/javascript" src="pca.js"></script>
+    <script type="text/javascript">
+        $(document).ready(function () {
+            pca("#chart", "<PCA DATA>");
+        });
+    </script>
+</head>
+<body>
+    <div id="chart" style="width: 500px; height: 500px"></div>
+</body>
+</html>

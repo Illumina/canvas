@@ -82,16 +82,35 @@ namespace CanvasCommon
             return localSDmetric;
         }
 
-        
+        private static Dictionary<string, string> GetChromosomeAlternativeNames(IEnumerable<string> keys)
+        {
+            Dictionary<string, string> results = new Dictionary<string,string>();
+            foreach (string key in keys)
+            {
+                if (key.StartsWith("chr"))
+                {
+                    results[key.Replace("chr", "")] = key;
+                }
+                else
+                {
+                    results["chr" + key] = key;
+                }
+
+            }
+            return results;
+
+        }
 
         /// <summary>
         /// Parse the outputs of CanvasSNV, and note these variant frequencies in the appropriate segment.
         /// </summary>
         public static float LoadVariantFrequencies(string variantFrequencyFile, List<CanvasSegment> segments)
         {
+            
             Console.WriteLine("{0} Load variant frequencies from {1}", DateTime.Now, variantFrequencyFile);
             int count = 0;
             Dictionary<string, List<CanvasSegment>> segmentsByChromosome = CanvasSegment.GetSegmentsByChromosome(segments);
+            Dictionary<string, string> alternativeNames = GetChromosomeAlternativeNames(segmentsByChromosome.Keys);
             long totalCoverage = 0;
             int totalRecords = 0;
             using (GzipReader reader = new GzipReader(variantFrequencyFile))
@@ -108,8 +127,16 @@ namespace CanvasCommon
                         continue;
                     }
                     string chromosome = bits[0];
-                    if (!segmentsByChromosome.ContainsKey(chromosome)) continue;
-                    int position = int.Parse(bits[1]);
+                    if (!segmentsByChromosome.ContainsKey(chromosome))
+                    {
+                        if (alternativeNames.ContainsKey(chromosome))
+                        {
+                            chromosome = alternativeNames[chromosome];
+                        }
+                        else continue;
+                    }
+
+                    int position = int.Parse(bits[1]); // 1-based (from the input VCF to Canvas SNV)
                     int countRef = int.Parse(bits[4]);
                     int countAlt = int.Parse(bits[5]);
                     if (countRef + countAlt < 10) continue;
@@ -121,19 +148,20 @@ namespace CanvasCommon
                     int mid = (start + end) / 2;
                     while (start <= end)
                     {
-                        if (chrSegments[mid].End < position)
+                        if (chrSegments[mid].End < position) // CanvasSegment.End is already 1-based
                         {
                             start = mid + 1;
                             mid = (start + end) / 2;
                             continue;
                         }
-                        if (chrSegments[mid].Begin > position)
+                        if (chrSegments[mid].Begin + 1 > position) // Convert CanvasSegment.Begin to 1-based by adding 1
                         {
                             end = mid - 1;
                             mid = (start + end) / 2;
                             continue;
                         }
                         chrSegments[mid].VariantFrequencies.Add(VF);
+                        chrSegments[mid].VariantTotalCoverage.Add(countRef + countAlt);
                         count++;
                         totalCoverage += (countRef + countAlt); // use only coverage information in segments
                         totalRecords++;

@@ -1,0 +1,24 @@
+Test	CF Clinical Sequencing Assay
+For In Vitro Diagnostic Use.
+Run ID	CFTRData
+Run Date	
+Analysis Version	
+
+
+Sample ID	A-NA01445
+Sample Name	A-NA01445
+Control	
+Comment	
+Performance	Pass
+Sample Call Rate	100.00%
+
+Variant Type	Coordinate	Chromosome	Frequency	Depth	cDNA Name (HGVS)	Protein Name (HGVS)	dbSNP ID	Reference	Result	Interpretation	
+SNV	117171029	chr7	0.4973836	3822	c.350G>A	p.Arg117His	rs78655421	G	G/A	
+SNV	117199533	chr7	0.9967249	916	N/A	N/A	rs213950	G	A/A	
+Div	117199644	chr7	0.4997429	3890	c.1521_1523delCTT	p.Phe508del	rs113993960	ATCT	ATCT/A	
+SNV	117235055	chr7	0.4903117	4748	N/A	N/A	rs1042077	T	T/G	
+SNV	117282620	chr7	0.4973836	3822	c.3846G>A	p.Trp1282X	rs77010898	G	G/A	
+SNV	117307108	chr7	0.4796640	2262	N/A	N/A	rs1800136	G	G/A	
+PolyTGPolyT	117188661	chr7	N/A	N/A	N/A		PolyTG/PolyT	(TG)11(T)7	(TG)10(T)7/(TG)10(T)9	
+Coordinates Not Called:	
+

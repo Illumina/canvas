@@ -3,16 +3,9 @@ using System.IO;
 using System.Collections;
 using System.Diagnostics;
 using System.Collections.Generic;
-using System.Collections.Concurrent;
-using System.Text;
 using System.Threading;
-using System.Threading.Tasks;
 using SequencingFiles;
-using SequencingFiles.Compression;
-using Illumina.Common;
-using System.Collections.Specialized;
 using CanvasCommon;
-using NDesk.Options;
 using ProtoBuf;
 using System.Linq;
 
@@ -123,59 +116,22 @@ namespace CanvasBin
         /// <param name="possibleAlignments">Stores which alignments are possible (perfect and unique).</param>
         /// <param name="observedAlignments">Stores observed alignments from a sample.</param>
         /// <param name="fragmentLengths">Stores fragment length (Int16).</param>
-        static void InitializeAlignmentArrays(string fastaFile, string chromosome, IDictionary<string, BitArray> possibleAlignments, IDictionary<string, HitArray> observedAlignments, IDictionary<string, Int16[]> fragmentLengths)
+        static void InitializeAlignmentArrays(string fastaFile, string chromosome, CanvasCoverageMode coverageMode, IDictionary<string, BitArray> possibleAlignments, IDictionary<string, HitArray> observedAlignments, IDictionary<string, Int16[]> fragmentLengths)
         {
-            // If the .fai index file is present, then use it to compute the byte position
-            // of the start (> character) of our chromosome.  That way we can seek directly to our
-            // favorite chromosome, rather than looping over each chromosome record.
-            long byteOffset = 0;
-            string faiPath = string.Format("{0}.fai", fastaFile);
-            if (!string.IsNullOrEmpty(chromosome) && File.Exists(faiPath))
-            {
-                using (StreamReader reader = new StreamReader(faiPath))
-                {
-                    while (true)
-                    {
-                        string fileLine = reader.ReadLine();
-                        if (fileLine == null) break;
-                        string[] bits = fileLine.Split('\t');
-                        if (bits[0] == chromosome)
-                        {
-                            break;
-                        }
-                        int lineCharacters = int.Parse(bits[3]);
-                        int lineBytes = int.Parse(bits[4]);
-                        long chrBases = long.Parse(bits[1]);
-                        long thisChromosomeEnd = long.Parse(bits[2]);
-                        thisChromosomeEnd += chrBases;
-                        thisChromosomeEnd += (chrBases / lineCharacters) * (lineBytes - lineCharacters);
-                        if (lineCharacters % chrBases != 0) thisChromosomeEnd += (lineBytes - lineCharacters);
-                        byteOffset = thisChromosomeEnd;
-                    }
-                }
-            }
+            string referenceBases = SequencingFiles.FastaReader.LoadFASTA(fastaFile, chromosome);
 
-            using (FastaReader reader = new FastaReader(fastaFile))
+            BitArray possible = new BitArray(referenceBases.Length);
+            possibleAlignments[chromosome] = possible;
+            observedAlignments[chromosome] = new HitArray(referenceBases.Length);
+            if (coverageMode == CanvasCoverageMode.GCContentWeighted)
+                fragmentLengths[chromosome] = new Int16[referenceBases.Length];
+            else
+                fragmentLengths[chromosome] = new Int16[0];
+            // Mark which k-mers in the fasta file are unique. These are indicated by upper-case letters.
+            for (int i = 0; i < referenceBases.Length; i++)
             {
-                GenericRead fastaEntry = new GenericRead();
-                if (byteOffset != 0)
-                    reader.Seek(byteOffset);
-                while (reader.GetNextEntry(ref fastaEntry))
-                {
-                    string chr = fastaEntry.Name;
-                    if (!string.IsNullOrEmpty(chromosome) && chromosome != chr) continue;
-                    BitArray possible = new BitArray(fastaEntry.Bases.Length);
-                    possibleAlignments[chr] = possible;
-                    observedAlignments[chr] = new HitArray(fastaEntry.Bases.Length);
-                    fragmentLengths[chr] = new Int16[fastaEntry.Bases.Length];
-                    // Mark which mers in the fasta file are unique. These are indicated by upper-case letters.
-                    for (int i = 0; i < fastaEntry.Bases.Length; i++)
-                    {
-                        if (char.IsUpper(fastaEntry.Bases[i]))
-                            possible[i] = true;
-                    }
-                    if (byteOffset != 0) break;
-                }
+                if (char.IsUpper(referenceBases[i]))
+                    possible[i] = true;
             }
         }
 
@@ -249,7 +205,8 @@ namespace CanvasBin
                         observed.Set(alignment.Position);
                     }
                     // store fragment size, make sure it's within Int16 range and is positive (simplification for now)
-                    fragmentLengths[alignment.Position] = Convert.ToInt16(Math.Max(Math.Min(Int16.MaxValue, alignment.FragmentLength), 0));
+                    if (coverageMode == CanvasCoverageMode.GCContentWeighted)
+                        fragmentLengths[alignment.Position] = Convert.ToInt16(Math.Max(Math.Min(Int16.MaxValue, alignment.FragmentLength), 0));
                 }
                 Console.WriteLine("Kept {0} of {1} total reads", keptReadCount, readCount);
             }
@@ -305,7 +262,8 @@ namespace CanvasBin
 
             Console.WriteLine("Launch CalculateNumberOfPossibleAlignmentsPerBin jobs...");
             Console.Out.WriteLine();
-            Parallel.ForEach(tasks, t => { t.Invoke(); }); //todo allow controling degree of parallelism
+            //Parallel.ForEach(tasks, t => { t.Invoke(); }); //todo allow controling degree of parallelism
+            Illumina.SecondaryAnalysis.Utilities.DoWorkParallelThreads(tasks);
             Console.WriteLine("CalculateNumberOfPossibleAlignmentsPerBin jobs complete.");
             Console.Out.WriteLine();
             double medianRate = CanvasCommon.Utilities.Median(rates);
@@ -332,93 +290,20 @@ namespace CanvasBin
 
 
         /// <summary>
-        /// Bin alignments.
+        /// Computes fragment-based GC normalization correction factor 
         /// </summary>
-        /// <param name="referenceFile">Reference fasta file.</param>
-        /// <param name="binSize">Desired number of alignments per bin.</param>
-        /// <param name="possibleAlignments">BitArrays of possible alignments.</param>
-        /// <param name="observedAlignments">BitArrays of observed alignments.</param>
-        /// <param name="predefinedBins">Pre-defined bins. null if not available.</param>
-        /// <returns>A list of bins.</returns>
-        static List<GenomicBin> BinCounts(string referenceFile, int binSize, CanvasCoverageMode coverageMode, NexteraManifest manifest,
-            Dictionary<string, BitArray> possibleAlignments,
-            Dictionary<string, HitArray> observedAlignments,
-            Dictionary<string, Int16[]> fragmentLengths,
-            Dictionary<string, List<GenomicBin>> predefinedBins,
-            string outFile)
+        /// <returns>An array of observed vs expected GC counts.</returns>
+        static float[] ComputeObservedVsExpectedGC(Dictionary<string, HitArray> observedAlignments,
+            Dictionary<string, byte[]> readGCContent, NexteraManifest manifest,
+            bool debugGC, string outFile)
         {
-            bool debugGCCorrection = false; // write value of GC bins and correction factor
-            Dictionary<string, GenericRead> fastaEntries = new Dictionary<string, GenericRead>();
-            List<string> chromosomes = new List<string>();
-            Int16 meanFragmentSize = MeanFragmentSize(fragmentLengths);
-            Int16 meanFragmentCutoff = 3;
-
-            using (FastaReader reader = new FastaReader(referenceFile))
-            {
-                GenericRead fastaEntry = new GenericRead();
-
-                // Loop through each chromosome in the reference.
-                while (reader.GetNextEntry(ref fastaEntry))
-                {
-                    chromosomes.Add(fastaEntry.Name);
-                    fastaEntries[fastaEntry.Name] = fastaEntry;
-                    fastaEntry = new GenericRead();
-                }
-            }
-
-            // calculate GC content of the forward read at every position along the genome  
-            Dictionary<string, byte[]> readGCContent = new Dictionary<string, byte[]>();
-            byte gcCap = (byte)numberOfGCbins;
-            List<ThreadStart> normalizationTasks = new List<ThreadStart>();
-            foreach (KeyValuePair<string, Int16[]> fragmentLengthsKVP in fragmentLengths)
-            {
-                string chr = fragmentLengthsKVP.Key;
-                GenericRead fastaEntry = fastaEntries[chr];
-
-                normalizationTasks.Add(new ThreadStart(() =>
-                {
-                    // contains GC content of the forward read at every position for current chr
-                    byte[] gcContent = new byte[fastaEntry.Bases.Length];
-
-                    int gcCounter = 0;
-
-                    // Iteratively calculate GC content of "reads" using fasta genome reference
-                    for (int pos = 0; pos < fastaEntry.Bases.Length - meanFragmentSize * meanFragmentCutoff - 1; pos++)
-                    {
-                        Int16 currentFragment = 0;
-
-                        if (fragmentLengthsKVP.Value[pos] == 0)
-                            currentFragment = meanFragmentSize;
-                        else
-                            currentFragment = Convert.ToInt16(Math.Min(fragmentLengthsKVP.Value[pos], meanFragmentSize * meanFragmentCutoff));
-                        for (int i = pos; i < pos + currentFragment; i++)
-                        {
-                            if (IsGC(fastaEntry.Bases[i]))
-                                gcCounter++;
-                        }
-                        if (gcCounter < 0)
-                            gcCounter = 0;
-                        gcContent[pos] = (byte)Math.Min(100 * gcCounter / currentFragment, gcCap);
-                        gcCounter = 0;
-                    }
-                    lock (readGCContent)
-                    {
-                        readGCContent[chr] = gcContent;
-                    }
-                }));
-            }
-            Console.WriteLine("Launching normalization tasks.");
-            Console.Out.Flush();
-            Parallel.ForEach(normalizationTasks, t => { t.Invoke(); });
-            Console.WriteLine("Normalization tasks complete.");
-            Console.Out.Flush();
 
             Dictionary<string, List<NexteraManifest.ManifestRegion>> regionsByChrom = null;
             if (manifest != null)
             {
                 regionsByChrom = manifest.GetManifestRegionsByChromosome();
             }
-            // populate observed and expected read GC bin vectors
+
             long[] expectedReadCountsByGC = new long[numberOfGCbins];
             long[] observedReadCountsByGC = new long[numberOfGCbins];
             foreach (KeyValuePair<string, byte[]> chromosomeReadGCContent in readGCContent)
@@ -472,7 +357,7 @@ namespace CanvasBin
                 observedVsExpectedGC[binIndex] = ((float)observedReadCountsByGC[binIndex] / (float)expectedReadCountsByGC[binIndex]) * ((float)sumExpected / (float)sumObserved);
             }
 
-            if (debugGCCorrection)
+            if (debugGC)
             {
                 using (GzipWriter writer = new GzipWriter(outFile + ".gcstat"))
                 {
@@ -482,6 +367,111 @@ namespace CanvasBin
                     }
                 }
             }
+            return observedVsExpectedGC;
+        }
+
+        /// <summary>
+        /// Bin alignments.
+        /// </summary>
+        /// <param name="referenceFile">Reference fasta file.</param>
+        /// <param name="binSize">Desired number of alignments per bin.</param>
+        /// <param name="possibleAlignments">BitArrays of possible alignments.</param>
+        /// <param name="observedAlignments">BitArrays of observed alignments.</param>
+        /// <param name="predefinedBins">Pre-defined bins. null if not available.</param>
+        /// <returns>A list of bins.</returns>
+        static List<GenomicBin> BinCounts(string referenceFile, int binSize, CanvasCoverageMode coverageMode, NexteraManifest manifest,
+            Dictionary<string, BitArray> possibleAlignments,
+            Dictionary<string, HitArray> observedAlignments,
+            Dictionary<string, Int16[]> fragmentLengths,
+            Dictionary<string, List<GenomicBin>> predefinedBins,
+            string outFile)
+        {
+            bool debugGCCorrection = false; // write value of GC bins and correction factor
+            Dictionary<string, GenericRead> fastaEntries = new Dictionary<string, GenericRead>();
+            List<string> chromosomes = new List<string>();
+            Int16 meanFragmentSize = 0;
+            Int16 meanFragmentCutoff = 3;
+            if (coverageMode == CanvasCoverageMode.GCContentWeighted)
+                meanFragmentSize = MeanFragmentSize(fragmentLengths);
+
+            using (FastaReader reader = new FastaReader(referenceFile))
+            {
+                GenericRead fastaEntry = new GenericRead();
+
+                // Loop through each chromosome in the reference.
+                while (reader.GetNextEntry(ref fastaEntry))
+                {
+                    chromosomes.Add(fastaEntry.Name);
+                    fastaEntries[fastaEntry.Name] = fastaEntry;
+                    fastaEntry = new GenericRead();
+                }
+            }
+
+            // calculate GC content of the forward read at every position along the genome  
+            Dictionary<string, byte[]> readGCContent = new Dictionary<string, byte[]>();
+            if (coverageMode == CanvasCoverageMode.GCContentWeighted)
+            {
+                byte gcCap = (byte)numberOfGCbins;
+                List<ThreadStart> normalizationTasks = new List<ThreadStart>();
+                foreach (KeyValuePair<string, Int16[]> fragmentLengthsKVP in fragmentLengths)
+                {
+                    string chr = fragmentLengthsKVP.Key;
+                    GenericRead fastaEntry = fastaEntries[chr];
+
+                    normalizationTasks.Add(new ThreadStart(() =>
+                    {
+                    // contains GC content of the forward read at every position for current chr
+                    byte[] gcContent = new byte[fastaEntry.Bases.Length];
+
+                        int gcCounter = 0;
+
+                    // Iteratively calculate GC content of "reads" using fasta genome reference
+                    for (int pos = 0; pos < fastaEntry.Bases.Length - meanFragmentSize * meanFragmentCutoff - 1; pos++)
+                        {
+                            Int16 currentFragment = 0;
+
+                            if (fragmentLengthsKVP.Value[pos] == 0)
+                                currentFragment = meanFragmentSize;
+                            else
+                                currentFragment = Convert.ToInt16(Math.Min(fragmentLengthsKVP.Value[pos], meanFragmentSize * meanFragmentCutoff));
+                            for (int i = pos; i < pos + currentFragment; i++)
+                            {
+                                switch (fastaEntry.Bases[i])
+                                {
+                                    case 'C':
+                                    case 'c':
+                                    case 'G':
+                                    case 'g':
+                                        gcCounter++;
+                                        break;
+                                    default:
+                                        break;
+                                }
+                            }
+                            if (gcCounter < 0)
+                                gcCounter = 0;
+                            gcContent[pos] = (byte)Math.Min(100 * gcCounter / currentFragment, gcCap);
+                            gcCounter = 0;
+                        }
+                        lock (readGCContent)
+                        {
+                            readGCContent[chr] = gcContent;
+                        }
+                    }));
+                }
+
+                Console.WriteLine("{0} Launching normalization tasks.", DateTime.Now);
+                Console.Out.Flush();
+                //Parallel.ForEach(normalizationTasks, t => { t.Invoke(); });
+                Illumina.SecondaryAnalysis.Utilities.DoWorkParallelThreads(normalizationTasks);
+                Console.WriteLine("{0} Normalization tasks complete.", DateTime.Now);
+                Console.Out.Flush();
+            }
+
+            // populate observed and expected read GC bin vectors
+            float[] observedVsExpectedGC = new float[0];
+            if (coverageMode == CanvasCoverageMode.GCContentWeighted)
+                observedVsExpectedGC = ComputeObservedVsExpectedGC(observedAlignments, readGCContent, manifest, debugGCCorrection, outFile);
 
             Dictionary<string, List<GenomicBin>> perChromosomeBins = new Dictionary<string, List<GenomicBin>>();
             List<ThreadStart> binningTasks = new List<ThreadStart>();
@@ -500,14 +490,18 @@ namespace CanvasBin
                 perChromosomeBins[chr] = predefinedBins == null ? new List<GenomicBin>() : predefinedBins[chr];
                 args.Bins = perChromosomeBins[chr];
                 args.BinSize = binSize;
-                args.ReadGCContent = readGCContent[chr];
+                if (coverageMode == CanvasCoverageMode.GCContentWeighted)
+                    args.ReadGCContent = readGCContent[chr];
+                else
+                    args.ReadGCContent = null;
                 args.ObservedVsExpectedGC = observedVsExpectedGC;
                 binningTasks.Add(new ThreadStart(() => { BinCountsForChromosome(args); }));
             }
-            Console.WriteLine("Launch BinCountsForChromosome jobs...");
+            Console.WriteLine("{0} Launch BinCountsForChromosome jobs...", DateTime.Now);
             Console.Out.WriteLine();
-            Parallel.ForEach(binningTasks, t => { t.Invoke(); });
-            Console.WriteLine("Completed BinCountsForChromosome jobs.");
+            //Parallel.ForEach(binningTasks, t => { t.Invoke(); });
+            Illumina.SecondaryAnalysis.Utilities.DoWorkParallelThreads(binningTasks);
+            Console.WriteLine("{0} Completed BinCountsForChromosome jobs.", DateTime.Now);
             Console.Out.WriteLine();
 
             List<GenomicBin> finalBins = new List<GenomicBin>();
@@ -562,15 +556,27 @@ namespace CanvasBin
                 if (!fastaEntry.Bases[pos].Equals("n"))
                     currentBin.NucleotideCount++;
 
-                if (IsGC(fastaEntry.Bases[pos]))
-                    currentBin.GCCount++;
+
+                //if (IsGC(fastaEntry.Bases[pos]))
+                //    currentBin.GCCount++;
+                switch (fastaEntry.Bases[pos])
+                {
+                    case 'C':
+                    case 'c':
+                    case 'G':
+                    case 'g':
+                        currentBin.GCCount++;
+                        break;
+
+                }
 
                 if (possibleAlignments[pos])
                 {
                     currentBin.PossibleCount++;
                     currentBin.ObservedCount += observedAlignments.Data[pos];
                     binObservations.Add(observedAlignments.Data[pos]);
-                    binPositions.Add(arguments.ObservedVsExpectedGC[arguments.ReadGCContent[pos]]);
+                    if (coverageMode == CanvasCoverageMode.GCContentWeighted)
+                        binPositions.Add(arguments.ObservedVsExpectedGC[arguments.ReadGCContent[pos]]);
                 }
 
                 // We've seen the desired number of possible alignment positions.
@@ -599,7 +605,7 @@ namespace CanvasBin
 
                     int gc = (int)(100 * currentBin.GCCount / currentBin.NucleotideCount);
 
-                    if (usePredefinedBins) 
+                    if (usePredefinedBins)
                     {
                         bins[predefinedBinIndex].GC = gc;
                         bins[predefinedBinIndex].Count = currentBin.ObservedCount;
@@ -657,12 +663,12 @@ namespace CanvasBin
         /// </summary>
         /// <param name="predefinedBinsFile">input BED file</param>
         /// <returns>predefined bins by chromosome</returns>
-        static Dictionary<string, List<GenomicBin>> ReadPredefinedBins(string predefinedBinsFile) 
+        static Dictionary<string, List<GenomicBin>> ReadPredefinedBins(string predefinedBinsFile)
         {
             Dictionary<string, List<GenomicBin>> predefinedBins = new Dictionary<string, List<GenomicBin>>();
             if (!File.Exists(predefinedBinsFile)) { return predefinedBins; }
 
-            using (StreamReader reader = new StreamReader(predefinedBinsFile)) 
+            using (StreamReader reader = new StreamReader(predefinedBinsFile))
             {
                 string row;
 
@@ -681,7 +687,7 @@ namespace CanvasBin
                         if (!predefinedBins.ContainsKey(chr)) { predefinedBins[chr] = new List<GenomicBin>(); }
                         predefinedBins[chr].Add(bin);
                     }
-                    catch (Exception e) 
+                    catch (Exception e)
                     {
                         throw new Exception(String.Format("Failed to parse {0}; Line: {1}", predefinedBinsFile, row), e);
                     }
@@ -724,7 +730,7 @@ namespace CanvasBin
         /// <param name="fragmentLengths">Stores fragment length in byte format.</param>
         public static void DeserializeCanvasData(string inputFile, Dictionary<string, BitArray> possibleAlignments,
             Dictionary<string, HitArray> observedAlignments, Dictionary<string, Int16[]> fragmentLengths,
-            Object semaphore)
+            Object semaphore, CanvasCoverageMode coverageMode)
         {
             IntermediateData data = null;
             using (FileStream stream = new FileStream(inputFile, FileMode.Open, FileAccess.Read, FileShare.Read))
@@ -750,10 +756,14 @@ namespace CanvasBin
                 {
                     observedAlignments.Add(kvp.Key, kvp.Value);
                 }
-                foreach (KeyValuePair<string, Int16[]> kvp in tempFragmentLengths)
+                if (coverageMode == CanvasCoverageMode.GCContentWeighted)
                 {
-                    fragmentLengths.Add(kvp.Key, kvp.Value);
+                    foreach (KeyValuePair<string, Int16[]> kvp in tempFragmentLengths)
+                    {
+                        fragmentLengths.Add(kvp.Key, kvp.Value);
+                    }
                 }
+
             }
         }
 
@@ -763,7 +773,7 @@ namespace CanvasBin
             Dictionary<string, HitArray> observedAlignments,
             Dictionary<string, Int16[]> fragmentLengths)
         {
-            InitializeAlignmentArrays(parameters.referenceFile, parameters.chromosome, possibleAlignments, observedAlignments, fragmentLengths);
+            InitializeAlignmentArrays(parameters.referenceFile, parameters.chromosome, parameters.coverageMode, possibleAlignments, observedAlignments, fragmentLengths);
             Console.WriteLine("{0} Initialized alignment arrays", DateTime.Now);
             LoadObservedAlignmentsBAM(parameters.bamFile, parameters.isPairedEnd, parameters.chromosome, parameters.coverageMode, observedAlignments[parameters.chromosome], fragmentLengths[parameters.chromosome]);
             Console.WriteLine("{0} Loaded observed alignments", DateTime.Now);
@@ -777,7 +787,7 @@ namespace CanvasBin
 
             Console.WriteLine("{0} Serialize intermediate data", DateTime.Now);
             //output binary intermediate file
-            IntermediateData data = new IntermediateData(possibleAlignments, observedAlignments, fragmentLengths);
+            IntermediateData data = new IntermediateData(possibleAlignments, observedAlignments, fragmentLengths, parameters.coverageMode);
             Directory.CreateDirectory(Path.GetDirectoryName(parameters.outFile));
             using (FileStream stream = new FileStream(parameters.outFile, FileMode.Create, FileAccess.Write))
             {
@@ -837,7 +847,7 @@ namespace CanvasBin
                 while (inputFiles.Count > 0 && threads.Count < processorCoreCount)
                 {
                     string inputFile = inputFiles.First();
-                    ThreadStart threadDelegate = new ThreadStart(() => DeserializeCanvasData(inputFile, possibleAlignments, observedAlignments, fragmentLengths, semaphore));
+                    ThreadStart threadDelegate = new ThreadStart(() => DeserializeCanvasData(inputFile, possibleAlignments, observedAlignments, fragmentLengths, semaphore, parameters.coverageMode));
                     Thread newThread = new Thread(threadDelegate);
                     threads.Add(newThread);
                     newThread.Name = "CanvasBin " + inputFiles[0];
@@ -846,7 +856,7 @@ namespace CanvasBin
                     inputFiles.RemoveAt(0);
                 }
             }
-            Console.WriteLine("Deserialization complete");
+            Console.WriteLine("{0} Deserialization complete", DateTime.Now);
             Console.Out.Flush();
 
             NexteraManifest manifest = parameters.manifestFile == null ? null : new NexteraManifest(parameters.manifestFile, null, Console.WriteLine);
@@ -864,9 +874,9 @@ namespace CanvasBin
                 System.IO.File.WriteAllText(parameters.outFile + ".binsize", "" + parameters.binSize);
                 return 0;
             }
-            
+
             Dictionary<string, List<GenomicBin>> predefinedBins = null;
-            if (parameters.predefinedBinsFile != null) 
+            if (parameters.predefinedBinsFile != null)
             {
                 // Read predefined bins
                 predefinedBins = ReadPredefinedBins(parameters.predefinedBinsFile);
@@ -876,7 +886,10 @@ namespace CanvasBin
             List<GenomicBin> bins = BinCounts(parameters.referenceFile, parameters.binSize, parameters.coverageMode, manifest,
                 possibleAlignments, observedAlignments, fragmentLengths, predefinedBins, parameters.outFile);
             // Output!
+            Console.WriteLine("{0} Output binned counts:", DateTime.Now);
             CanvasIO.WriteToTextFile(parameters.outFile, bins);
+            Console.WriteLine("{0} Output complete", DateTime.Now);
+            Console.Out.Flush();
             return 0;
         }
 
@@ -894,7 +907,7 @@ namespace CanvasBin
             public Dictionary<string, Int16[]> FragmentLengths = new Dictionary<string, Int16[]>();
             #endregion
 
-            public IntermediateData(Dictionary<string, BitArray> possibleAlignments, Dictionary<string, HitArray> observedAlignments, Dictionary<string, Int16[]> fragmentLengths)
+            public IntermediateData(Dictionary<string, BitArray> possibleAlignments, Dictionary<string, HitArray> observedAlignments, Dictionary<string, Int16[]> fragmentLengths, CanvasCoverageMode coverageMode)
             {
                 foreach (KeyValuePair<string, BitArray> kvp in possibleAlignments)
                 {
@@ -909,10 +922,15 @@ namespace CanvasBin
                 {
                     this.ObservedAlignments[kvp.Key] = kvp.Value.Data;
                 }
-                foreach (KeyValuePair<string, Int16[]> kvp in fragmentLengths)
+
+                if (coverageMode == CanvasCoverageMode.GCContentWeighted)
                 {
-                    this.FragmentLengths[kvp.Key] = kvp.Value;
+                    foreach (KeyValuePair<string, Int16[]> kvp in fragmentLengths)
+                    {
+                        this.FragmentLengths[kvp.Key] = kvp.Value;
+                    }
                 }
+
             }
 
             public IntermediateData() { }

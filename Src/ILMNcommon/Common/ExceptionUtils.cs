@@ -11,7 +11,7 @@ namespace Illumina.Common
     /// <summary>
     /// Misc functions for manipulating exceptions
     /// </summary>
-    public class ExceptionUtils
+    public static class ExceptionUtils
     {
         public static string GetMessagesRecursiveAsSingleString(Exception ex, string separator = null)
         {

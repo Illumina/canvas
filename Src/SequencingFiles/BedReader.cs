@@ -60,7 +60,7 @@ namespace SequencingFiles
             if (i < parts.Length)
                 BlockCount = Int32.Parse(parts[i++]);
             if (i < parts.Length && BlockCount > 0)
-                BlockSizes = parts[i++].Split(new [] {','}, StringSplitOptions.RemoveEmptyEntries).Select(x => Int32.Parse(x)).ToArray();
+                BlockSizes = parts[i++].Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries).Select(x => Int32.Parse(x)).ToArray();
             if (i < parts.Length && BlockCount > 0)
                 BlockStarts = parts[i++].Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries).Select(x => Int32.Parse(x)).ToArray();
             if (BlockCount > 0 && (BlockSizes.Count != BlockCount || BlockStarts.Count != BlockCount))
@@ -100,18 +100,33 @@ namespace SequencingFiles
     public class BedReader : ClosableDisposable
     {
         TextReader _reader;
+
+        public IEnumerable<string> HeaderLines { get; }
+
         public BedReader(string fileName) : this(File.OpenText(fileName))
-        { }
+        {
+            var headerLines = new List<string>();
+            while (true)
+            {
+                int c = _reader.Peek();
+                if (c == -1 || c != '#') break;
+                headerLines.Add(_reader.ReadLine());
+            }
+            HeaderLines = headerLines;
+        }
+
         public BedReader(TextReader input)
         {
             _reader = input;
         }
+
         public IEnumerable<BedEntry> GetEntries()
         {
             string line;
             while ((line = _reader.ReadLine()) != null)
                 yield return new BedEntry(line);
         }
+
         public override void Close()
         {
             if (_reader != null)

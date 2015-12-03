@@ -2,7 +2,7 @@
 
 namespace Illumina.Common
 {
-    public class CrossPlatform
+    public static class CrossPlatform
     {
         public static bool IsThisMono()
         {

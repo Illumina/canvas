@@ -1,0 +1,20 @@
+Test	CF 139-Variant Assay
+For In Vitro Diagnostic Use.
+Run ID	CFTRData
+Run Date	
+Analysis Version	
+
+
+Sample ID	A-NA01445
+Sample Name	A-NA01445
+Control	
+Comment	
+Performance	Pass
+Sample Call Rate	100.00%
+
+Mutations (Common Name)	Mutation Type	dbSNP rsID	CFTR gene region	Genomic location	cDNA Name (HGVS)	Protein Name (HGVS)	Result	Interpretation
+R117H	SNV	rs78655421	Exon 4	117171029	c.350G>A	p.Arg117His	HET	
+PolyTG/PolyT	PolyTGPolyT	N/A	Intron 9	117188661-117188689	c.1210-12T[5_9]	N/A	(TG)10(T)7/(TG)10(T)9	
+F508del	DIV	rs113993960	Exon 11	117199645	c.1521_1523delCTT	p.Phe508del	HET	
+W1282X	SNV	rs77010898	Exon 23	117282620	c.3846G>A	p.Trp1282X	HET	
+

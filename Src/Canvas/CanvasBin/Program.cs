@@ -73,7 +73,7 @@ namespace CanvasBin
 
             OptionSet p = new OptionSet()
                 {
-                    { "b|bam=",           "bam file containing unique alignments; if specified, -s is ignored", v => parameters.bamFile = v },
+                    { "b|bam=",           "bam file containing unique alignments", v => parameters.bamFile = v },
                     { "r|reference=",     "Canvas-ready reference fasta file", v => parameters.referenceFile = v },
                     { "c|chr=",           "for bam input, only work on this chromosome. Output intermediate binary data. Must follow-up with a single CanvasBin call passing all the intermediate binary data files (see -i option)", v => parameters.chromosome = v},
                     { "i|infile=",        "intermediate binary data file from individual chromosome. Pass this option multiple times, once for each chromosome", v => parameters.intermediatePaths.Add(v)}, 

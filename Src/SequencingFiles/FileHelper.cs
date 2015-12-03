@@ -67,26 +67,6 @@ namespace SequencingFiles
 			ClusterCounts = clusterCountList.ToArray();
 		}
 
-		// Load legacy pos.txt files - these shouldn't exist for any run made post-2010
-		public static FloatPoint[] LoadPosFile(string filePath)
-		{
-			List<FloatPoint> list = new List<FloatPoint>();
-			char[] sep = new[] { ' ', '\t' };
-			using (StreamReader reader = new StreamReader(filePath))
-			{
-				string line;
-				while ((line = reader.ReadLine()) != null)
-				{
-					string[] columns = line.Split(sep, StringSplitOptions.RemoveEmptyEntries);
-					if (columns.Length != 2)
-						break;
-					FloatPoint cluster = new FloatPoint { X = float.Parse(columns[0]), Y = float.Parse(columns[1]) };
-					list.Add(cluster);
-				}
-			}
-			return list.ToArray();
-		}
-
 		/// <summary>
 		///     save calls with file sharing
 		/// </summary>

@@ -1,0 +1,25 @@
+﻿<!DOCTYPE html>
+
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <meta charset="utf-8" />
+    <title>Transcript Coverage</title>
+    <link rel="stylesheet" type="text/css" href="basespace-javascript-sdk/Charts/css/basespace.charts.css" />
+
+    <script type="text/javascript" src="basespace-javascript-sdk/JSSDK/lib/underscore.js"></script>
+    <script type="text/javascript" src="basespace-javascript-sdk/JSSDK/lib/jquery.js"></script>
+    <script type="text/javascript" src="basespace-javascript-sdk/JSSDK/lib/d3.js"></script>
+    <script type="text/javascript" src="basespace-javascript-sdk/JSSDK/dist/bs.sdk.js"></script>
+    <script type="text/javascript" src="basespace-javascript-sdk/Charts/dist/charts.core.js"></script>
+    <script type="text/javascript" src="basespace-javascript-sdk/Charts/dist/charts-coveragebaf.js"></script>
+    <script type="text/javascript" src="coverageBAF.js"></script>
+    <script type="text/javascript">
+        $(document).ready(function () {
+            drawCoverageBAF("#chart", "<COVERAGE BAF DATA>", 2.5, "<SOMATIC SV VCF DATA>");
+        });
+    </script>
+</head>
+<body>
+    <div id="chart" style="width: 2400px; height: 1350px"></div>
+</body>
+</html>

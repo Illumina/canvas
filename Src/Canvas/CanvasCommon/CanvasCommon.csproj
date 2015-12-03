@@ -67,14 +67,15 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="..\..\ILMNcommon\Properties\IsisVersionInfo.cs">
-      <Link>Properties\IsisVersionInfo.cs</Link>
+    <Compile Include="..\..\ILMNcommon\Properties\IsasVersionInfo.cs">
+      <Link>Properties\IsasVersionInfo.cs</Link>
     </Compile>
     <Compile Include="CanvasSegment.cs" />
     <Compile Include="CanvasVersionInfo.cs" />
     <Compile Include="GaussianMixtureModel.cs" />
     <Compile Include="GenomicBin.cs" />
     <Compile Include="IO.cs" />
+    <Compile Include="CopyNumberOracle.cs" />
     <Compile Include="PloidyInfo.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Utilities.cs" />

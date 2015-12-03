@@ -42,14 +42,17 @@ namespace CanvasSomaticCaller
             double coverageWeighting = SomaticCaller.DefaultCoverageWeighting;
             int minimumCallSize = SomaticCaller.DefaultMinimumCallSize;
             double precisionWeightingFactor = SomaticCaller.DefaultPrecisionWeightingFactor;
+            float? userPurity = null;
+            float? userPloidy = null;
+
             OptionSet p = new OptionSet()
             {
                 { "i|infile=", "file containing bins, their counts, and assigned segments (obtained from CanvasPartition.exe)",  v => inFile = v },
                 { "v|varfile=", "file containing variant frequencies (obtained from CanvasSNV.exe)", v => variantFrequencyFile = v },
                 { "o|outfile=", "file name prefix to ouput copy number calls to outfile.vcf", v => outFile = v },
-                { "r|reference=", "reference genome folder that contains GenomeSize.xml", v => referenceFolder = v },
+                { "r|reference=", "folder that contains both genome.fa and GenomeSize.xml", v => referenceFolder = v },
                 { "n|name=", "sample name for output VCF header (optional)", v => name = v },
-                { "t|truth=", "path to vcf with CNV truth data (optional)", v => truthDataPath = v },
+                { "t|truth=", "path to vcf/bed with CNV truth data (optional)", v => truthDataPath = v },
                 { "h|help", "show this message and exit", v => needHelp = v != null },
                 { "e|enrichment", "flag indicating this is enrichment data", v => isEnrichment = v != null },
                 { "s|somaticvcf=", "somatic vcf file - optionally used for purity estimation", v => somaticVCFPath = v },
@@ -61,6 +64,8 @@ namespace CanvasSomaticCaller
                 { "C|coverageweight=", "INTERNAL: coverage weighting", v => coverageWeighting = float.Parse(v) }, 
                 { "M|minimumcall=", "INTERNAL: minimum call size", v => minimumCallSize = int.Parse(v) }, 
                 { "P|precisionweight=", "INTERNAL: precision weighting factor", v => precisionWeightingFactor = double.Parse(v) }, 
+                { "u|definedpurity=", "INTERNAL: user pre-defined purity", v => userPurity = float.Parse(v) }, 
+                { "l|definedploidy=", "INTERNAL: user pre-defined ploidy", v => userPloidy = float.Parse(v) }, 
             };
 
             List<string> extraArgs = p.Parse(args);
@@ -100,6 +105,12 @@ namespace CanvasSomaticCaller
                 Console.WriteLine("Canvas error: File {0} does not exist! Exiting.", Path.Combine(referenceFolder, "GenomeSize.xml"));
                 return 1;
             }
+
+            if (userPurity == null && userPloidy != null || userPurity != null && userPloidy == null)
+            {
+                Console.WriteLine("Canvas error: both definedpurity and definedploidy should be specified");
+                return 1;
+            }
             SomaticCaller caller = new SomaticCaller();
             // Set parameters:
             caller.TruthDataPath = truthDataPath;
@@ -109,6 +120,8 @@ namespace CanvasSomaticCaller
             caller.DeviationFactor = deviationFactor;
             caller.MinimumCallSize = minimumCallSize;
             caller.CoverageWeighting = coverageWeighting;
+            caller.userPurity = userPurity;
+            caller.userPloidy = userPloidy;
             caller.PrecisionWeightingFactor = precisionWeightingFactor;
             if (!string.IsNullOrEmpty(ploidyBedPath))
             {

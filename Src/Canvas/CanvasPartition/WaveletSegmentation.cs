@@ -83,23 +83,52 @@ namespace CanvasPartition
         /// <summary>
         /// given sigma, set Unbalanced Haar wavelet coefficients to zero
         /// </summary>
-        private static void HardThresh(List<List<double>> tree, double sigma)
+        private static void HardThresh(List<List<double>> tree, double sigma, bool isGermline)
         {
-            int J = tree.Count();
-            double n = tree[0][5 - 1];
-            for (int j = 0; j < J; j++)
+            int treeSize = tree.Count();
+            List<double> thresholds = new List<double>();
+            int[] indices = new int[treeSize];
+            // makes threshold depend on the complexity of wavelet basis functions 
+            if (isGermline)
             {
-                int K = (int)Math.Floor(tree[j].Count() / 5.0);
+                int[] counts = new int[treeSize];
+                for (int nodeIndex = 0; nodeIndex < treeSize; nodeIndex++)
+                {
+                    counts[nodeIndex] = (int)Math.Floor(tree[nodeIndex].Count() / 5.0);
+                    indices[nodeIndex] = nodeIndex;
+                }
+                // transform number of segments at each wavelet scale into NewMin-NewMax range, use it to weight threshold function
+                Array.Sort<int>(indices, (a, b) => counts[b].CompareTo(counts[a]));
+                double NewMax = 1.0;
+                double NewMin = 0.8;
+                thresholds = Enumerable.Range(1, treeSize).Select(x => ((double)x * (NewMax - NewMin)) / treeSize + NewMin).ToList();
+            }
+            else 
+            {
+                for (int nodeIndex = 0; nodeIndex < treeSize; nodeIndex++)
+                {
+                    thresholds.Add(1.0);
+                    indices[nodeIndex] = nodeIndex;
+                }
+            }
+            int subtreeSize = 5;
+            double n = tree[0][subtreeSize - 1];
+            for (int nodeIndex = 0; nodeIndex < treeSize; nodeIndex++)
+            {
+                int K = (int)Math.Floor(tree[nodeIndex].Count() / 5.0);
                 for (int k = 0; k < K; k++)
                 {
-                    if (Math.Abs(tree[j][k * 5 + 2 - 1]) <= sigma * Math.Sqrt(2 * Math.Log(n)))
+                    // threshold 2x*sigma for TN and ranges from 0.5x to 1.5x *sigma for Germline
+                    // parameters trained on CanvasRegression datasets 
+                    if (Math.Abs(tree[nodeIndex][k * subtreeSize + 2 - 1]) <= sigma * (thresholds[indices[nodeIndex]]) * Math.Sqrt(2 * Math.Log(n)))
                     {
-                        tree[j][k * 5 + 2 - 1] = 0;
+                        tree[nodeIndex][k * subtreeSize + 2 - 1] = 0;
                     }
                 }
-            } //for (int j=0;j<J;j++)
+            }
         }
 
+        // 
         private static List<double> GetUnbalHaarVector(double[] a)
         {
             double n = a[2] - a[0] + 1;
@@ -125,7 +154,11 @@ namespace CanvasPartition
             int J = tree.Count();
 
             int n = (int)tree[0][5 - 1];
-            double[] rec = Enumerable.Repeat(1.0 / Math.Sqrt(n) * smooth, n).ToArray();
+            double[] rec = new double[n];
+            for (int i = 0; i < n; i++)
+            {
+                rec[i] = 1.0 / Math.Sqrt(n) * smooth;
+            }
 
             for (int j = 0; j < J; j++)
             {
@@ -135,7 +168,8 @@ namespace CanvasPartition
                     int skip = k * 5 + 3 - 1;
                     int take = k * 5 + 5 - skip;
                     double[] branch = new double[take];
-                    Array.Copy(tree[j].ToArray(), skip, branch, 0, take);
+                    for (int i = 0; i < take; i++)
+                        branch[i] = tree[j][skip + i];
                     List<double> unbal_haar_vector = GetUnbalHaarVector(branch);
 
                     // for (unsigned i=3; i<=5;i++)
@@ -145,7 +179,7 @@ namespace CanvasPartition
                     }
                 }
             }
-            return (rec);
+            return rec;
         }
 
         /// <summary>
@@ -200,7 +234,7 @@ namespace CanvasPartition
             {
                 bpSum += tree[j][5 + i * 5 - 1] - tree[j][3 + i * 5 - 1] - 1.0;
             }
-
+            
             while (bpSum != 0)
             {
 
@@ -290,21 +324,22 @@ namespace CanvasPartition
         /// Enrty function for performing Unbalanced Haar (UH) wavelets decomposition
         /// for change point (breakpoint) detection
         /// </summary>
-        public static void HaarWavelets(double[] ratio, double thresholdlower, double thresholdupper, List<int> breakpoints)
+        public static void HaarWavelets(double[] ratio, double thresholdlower, double thresholdupper, List<int> breakpoints, bool isGermline)
         {
             // tree = A list of J matrices (list of lists in C#), where J represents the number of UH “scales”. 
-            // Each matrix is ofsize 5 x (the number of UH coefficients at a given scale). 
+            // Each matrix is of size 5 x (the number of UH coefficients at a given scale). 
             // Each column (= vector // of length 5) contains an Unbalanced Haar coefficient in the following format:
             // 1st component - an index of the coefficient; 2nd component - the value of the
             // coefficient; 3rd component - time point where the corresponding UH vector
             // starts; 4th component - last time point before the breakpoint of the UH vector;
             // 5th component - end point of the UH vector.
+            
             List<List<double>> tree = new List<List<double>>();
-
+            thresholdlower = 0;
             double smooth = 0;
             FindBestUnbalancedHaarDecomposition(ratio, tree, smooth);
             // set threshold proportional to SD as and sample size as suggested in
-            //  Piotr Fryzlewicz, Journal of the American Statistical Association
+            // Piotr Fryzlewicz, Journal of the American Statistical Association
             // Vol. 102, No. 480 (Dec., 2007), pp. 1318-1327
             double sd = CanvasCommon.Utilities.StandardDeviation(ratio) * 2.0;
             if (sd < thresholdlower)
@@ -315,7 +350,9 @@ namespace CanvasPartition
             {
                 sd = thresholdupper;
             }
-            HardThresh(tree, sd);
+            HardThresh(tree, sd, isGermline);
+            Console.WriteLine("Wavelet threshold:");
+            Console.WriteLine(sd);
             GetSegments(tree, smooth, breakpoints);
 
 

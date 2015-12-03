@@ -1,0 +1,15 @@
+C:\Users\sivakhno\Documents\Visual Studio 2015\Trunk1\Src\SampleSheet\bin\x64\Release\SampleSheet.dll
+C:\Users\sivakhno\Documents\Visual Studio 2015\Trunk1\Src\SampleSheet\bin\x64\Release\SampleSheet.pdb
+C:\Users\sivakhno\Documents\Visual Studio 2015\Trunk1\Src\SampleSheet\bin\x64\Release\ILMNcommon.dll
+C:\Users\sivakhno\Documents\Visual Studio 2015\Trunk1\Src\SampleSheet\bin\x64\Release\protobuf-net.dll
+C:\Users\sivakhno\Documents\Visual Studio 2015\Trunk1\Src\SampleSheet\bin\x64\Release\ILMNcommon.pdb
+C:\Users\sivakhno\Documents\Visual Studio 2015\Trunk1\Src\SampleSheet\obj\x64\Release\SampleSheet.csprojResolveAssemblyReference.cache
+C:\Users\sivakhno\Documents\Visual Studio 2015\Trunk1\Src\SampleSheet\obj\x64\Release\SampleSheet.dll
+C:\Users\sivakhno\Documents\Visual Studio 2015\Trunk1\Src\SampleSheet\obj\x64\Release\SampleSheet.pdb
+\\ukch-prd-isi01\CNA\CNV\mansucript\CanvasGitHub\SampleSheet\bin\x64\Release\SampleSheet.dll
+\\ukch-prd-isi01\CNA\CNV\mansucript\CanvasGitHub\SampleSheet\bin\x64\Release\SampleSheet.pdb
+\\ukch-prd-isi01\CNA\CNV\mansucript\CanvasGitHub\SampleSheet\bin\x64\Release\ILMNcommon.dll
+\\ukch-prd-isi01\CNA\CNV\mansucript\CanvasGitHub\SampleSheet\bin\x64\Release\ILMNcommon.pdb
+\\ukch-prd-isi01\CNA\CNV\mansucript\CanvasGitHub\SampleSheet\obj\x64\Release\SampleSheet.csprojResolveAssemblyReference.cache
+\\ukch-prd-isi01\CNA\CNV\mansucript\CanvasGitHub\SampleSheet\obj\x64\Release\SampleSheet.dll
+\\ukch-prd-isi01\CNA\CNV\mansucript\CanvasGitHub\SampleSheet\obj\x64\Release\SampleSheet.pdb

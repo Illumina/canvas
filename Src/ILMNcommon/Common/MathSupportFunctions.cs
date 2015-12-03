@@ -4,9 +4,8 @@ using System.Collections.Generic;
 
 namespace Illumina.Common
 {
-    public class MathSupportFunctions
+    public static class MathSupportFunctions
     {
-
         public static double Correlate(List<double> listA, List<double> listB)
         {
             if (listA.Count == 0 || listA.Count != listB.Count)

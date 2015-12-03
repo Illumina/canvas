@@ -94,7 +94,6 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Common\CrossPlatform.cs" />
-    <Compile Include="Common\Exceptions.cs" />
     <Compile Include="Common\ExceptionUtils.cs" />
     <Compile Include="Common\FloatPoint.cs" />
     <Compile Include="Common\MaPack.cs" />
@@ -102,7 +101,7 @@
     <Compile Include="Common\Options.cs" />
     <Compile Include="Common\OrderedDictionary.cs" />
     <Compile Include="Common\SimplePlot.cs" />
-    <Compile Include="Properties\IsisVersionInfo.cs" />
+    <Compile Include="Properties\IsasVersionInfo.cs" />
     <Compile Include="Win32\Functions.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>

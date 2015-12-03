@@ -1,0 +1,13 @@
+C:\Users\sivakhno\Documents\Visual Studio 2015\Trunk1\Src\SequencingFiles\bin\x64\Debug\SequencingFiles.dll
+C:\Users\sivakhno\Documents\Visual Studio 2015\Trunk1\Src\SequencingFiles\bin\x64\Debug\SequencingFiles.pdb
+C:\Users\sivakhno\Documents\Visual Studio 2015\Trunk1\Src\SequencingFiles\bin\x64\Debug\ILMNcommon.dll
+C:\Users\sivakhno\Documents\Visual Studio 2015\Trunk1\Src\SequencingFiles\bin\x64\Debug\InterOp.IO.dll
+C:\Users\sivakhno\Documents\Visual Studio 2015\Trunk1\Src\SequencingFiles\bin\x64\Debug\InterOp.Logic.dll
+C:\Users\sivakhno\Documents\Visual Studio 2015\Trunk1\Src\SequencingFiles\bin\x64\Debug\InterOp.Model.dll
+C:\Users\sivakhno\Documents\Visual Studio 2015\Trunk1\Src\SequencingFiles\bin\x64\Debug\protobuf-net.dll
+C:\Users\sivakhno\Documents\Visual Studio 2015\Trunk1\Src\SequencingFiles\bin\x64\Debug\SampleSheet.dll
+C:\Users\sivakhno\Documents\Visual Studio 2015\Trunk1\Src\SequencingFiles\bin\x64\Debug\ILMNcommon.pdb
+C:\Users\sivakhno\Documents\Visual Studio 2015\Trunk1\Src\SequencingFiles\bin\x64\Debug\SampleSheet.pdb
+C:\Users\sivakhno\Documents\Visual Studio 2015\Trunk1\Src\SequencingFiles\obj\x64\Debug\SequencingFiles.csprojResolveAssemblyReference.cache
+C:\Users\sivakhno\Documents\Visual Studio 2015\Trunk1\Src\SequencingFiles\obj\x64\Debug\SequencingFiles.dll
+C:\Users\sivakhno\Documents\Visual Studio 2015\Trunk1\Src\SequencingFiles\obj\x64\Debug\SequencingFiles.pdb

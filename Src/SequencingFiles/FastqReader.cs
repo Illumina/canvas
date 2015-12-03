@@ -18,14 +18,14 @@ namespace SequencingFiles
         /// <summary>
         ///     constructor
         /// </summary>
-        public FastqReader(string filename)
+        public FastqReader(string filename, bool skipReadNameParsing = false)
         {
             headerRegex = new Regex(@"^@(\S+)(?:\s+(\d):(\w):\d+:(\S+))?", RegexOptions.Compiled);
-            SkipReadNameParsing = false;
+            SkipReadNameParsing = skipReadNameParsing;
             SkipAllReadNameParsing = false;
             Open(filename);
         }
-
+        
         /// <summary>
         ///     Closes the file
         /// </summary>
