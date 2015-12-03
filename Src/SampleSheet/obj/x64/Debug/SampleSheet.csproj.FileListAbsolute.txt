@@ -1,8 +1,0 @@
-C:\Users\sivakhno\Documents\Visual Studio 2015\Trunk1\Src\SampleSheet\bin\x64\Debug\SampleSheet.dll
-C:\Users\sivakhno\Documents\Visual Studio 2015\Trunk1\Src\SampleSheet\bin\x64\Debug\SampleSheet.pdb
-C:\Users\sivakhno\Documents\Visual Studio 2015\Trunk1\Src\SampleSheet\bin\x64\Debug\ILMNcommon.dll
-C:\Users\sivakhno\Documents\Visual Studio 2015\Trunk1\Src\SampleSheet\bin\x64\Debug\protobuf-net.dll
-C:\Users\sivakhno\Documents\Visual Studio 2015\Trunk1\Src\SampleSheet\bin\x64\Debug\ILMNcommon.pdb
-C:\Users\sivakhno\Documents\Visual Studio 2015\Trunk1\Src\SampleSheet\obj\x64\Debug\SampleSheet.csprojResolveAssemblyReference.cache
-C:\Users\sivakhno\Documents\Visual Studio 2015\Trunk1\Src\SampleSheet\obj\x64\Debug\SampleSheet.dll
-C:\Users\sivakhno\Documents\Visual Studio 2015\Trunk1\Src\SampleSheet\obj\x64\Debug\SampleSheet.pdb
