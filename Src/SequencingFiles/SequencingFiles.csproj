@@ -91,15 +91,6 @@
     <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="InterOp.IO">
-      <HintPath>..\Isas\IsasGroup\packages\InterOp\InterOp.IO.dll</HintPath>
-    </Reference>
-    <Reference Include="InterOp.Logic">
-      <HintPath>..\Isas\IsasGroup\packages\InterOp\InterOp.Logic.dll</HintPath>
-    </Reference>
-    <Reference Include="InterOp.Model">
-      <HintPath>..\Isas\IsasGroup\packages\InterOp\InterOp.Model.dll</HintPath>
-    </Reference>
     <Reference Include="protobuf-net, Version=2.0.0.622, Culture=neutral, PublicKeyToken=257b51d87d2e4d67, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\packages\ProtoBuf\protobuf-net.dll</HintPath>
@@ -150,7 +141,6 @@
     <Compile Include="IntensityStats.cs" />
     <Compile Include="NativeZStream.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="RunInfo.cs" />
     <Compile Include="StreamReaderExtension.cs" />
     <Compile Include="StreamWriterExtensions.cs" />
     <Compile Include="VCFCommon.cs" />

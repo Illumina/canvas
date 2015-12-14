@@ -67,7 +67,6 @@ namespace Isas.Shared
         public DateTime CompletionTime;
         public string Error { get; set; } // if this is non-null then the job was terminated for some reason and didn't complete
         public string Warning { get; set; }
-        public RunInfoRun RTARunInfo; // TODO: This is redundant with AnalysisWorker.RTARunInfo. What should go here if more than one runFolder is used. Todo: Eventually stop using RNARunInfo completely
         public string RunFolder; // the run folder
 		[XmlIgnore]
 		public List<SampleSheet.Sample> Samples; // TODO: make this the only copy in memory
