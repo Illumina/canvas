@@ -14,7 +14,7 @@ namespace EvaluateCNV
             {
                 Console.WriteLine("EvaluateCNV {0}",
                     System.Reflection.Assembly.GetExecutingAssembly().GetName().Version);
-                Console.WriteLine("For more info see: http://sea-wiki.illumina.com/display/BIOINFO/EvaluateCNV");
+                Console.WriteLine("For more info see: http://confluence.illumina.com/display/BIOINFO/EvaluateCNV");
                 Console.WriteLine();
                 Console.WriteLine("Usage info:");
                 Console.WriteLine("EvaluateCNV $TruthSetPath $CNV.vcf $ExcludedRegionsBed $OutputPath [$RegionOfInterestBed]");

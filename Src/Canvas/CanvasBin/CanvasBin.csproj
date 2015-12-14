@@ -135,7 +135,7 @@
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
-    <PostBuildEvent>robocopy "$(SolutionDir)..\Compression\$(Platform)\$(Configuration)" . FileCompression.dll FileCompression.pdb
+    <PostBuildEvent>robocopy "$(SolutionDir)..\..\Compression\$(Platform)\$(Configuration)" . FileCompression.dll FileCompression.pdb
 
 if %25ERRORLEVEL%25 EQU 1 exit 0</PostBuildEvent>
   </PropertyGroup>

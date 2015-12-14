@@ -51,13 +51,13 @@ namespace Isas.Shared
         ///     Creates a estimated TaskResourceRequirements based on maximumThreads and available resources in this machine.
         ///     *** When possible set explicit TaskResourceRequirements *** 
         /// </summary>
-        public static void DoWorkParallelThreads(this IWorkManager manager, List<UnitOfWork> tasks, int maximumThreads,
+        public static bool DoWorkParallelThreads(this IWorkManager manager, List<UnitOfWork> tasks, int maximumThreads,
             bool checkReturnCode = true, bool redirectOutput = true, bool throwExceptionOnError = true)
         {
             // Estimated requirements object to attach to jobs, since none was supplied.
             // We still use the maximumThreads parameter do decide how many jobs to actually launch
             TaskResourceRequirements reqs = AvailableResources.GetMaxParallelThreadsRequirements(maximumThreads);
-            manager.DoWorkParallelLocal(tasks, reqs, maximumThreads,
+            return manager.DoWorkParallelLocal(tasks, reqs, maximumThreads,
                     checkReturnCode, redirectOutput, throwExceptionOnError);
         }
 
@@ -230,13 +230,14 @@ namespace Isas.Shared
                 maximumThreads = taskRequirements.GetMaximumParallelTasks(tasks.Count);
             }
             int NumberCores = taskRequirements.GetNumberCoresPerTask(maximumThreads);
-            foreach (UnitOfWork task in tasks)
+            foreach (UnitOfWork task in tasks) 
             {
                 task.CommandLine = task.CommandLine.Replace(CommandLineTokens.NumProcessors, string.Format("{0}", NumberCores));
             }
             // todo pass TaskRequirements to the jobManager and use it there for monitoring etc.
             JobManager jobManager = new JobManager(MaximumMemoryGB, MaximumHoursPerProcess, _logger.Info, _logger.Error);
-            jobManager.ProcessJobs(tasks, maximumThreads, redirectOutput, true, throwExceptionOnError);
+            jobManager.ProcessJobs(tasks, maximumThreads, redirectOutput, checkReturnCode, throwExceptionOnError);
+            if (!checkReturnCode) return true;
             return tasks.All(t => t.ExitCode == 0); // All done successfully
         }
 

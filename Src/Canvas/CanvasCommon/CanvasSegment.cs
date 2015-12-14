@@ -228,7 +228,7 @@ namespace CanvasCommon
             {
                 // Write the VCF header:
                 writer.WriteLine("##fileformat=VCFv4.1");
-                writer.WriteLine("##source=ISIS," + CanvasCommon.CanvasVersionInfo.NameString + " " + CanvasCommon.CanvasVersionInfo.VersionString);
+                writer.WriteLine("##source=Isas," + CanvasCommon.CanvasVersionInfo.NameString + " " + CanvasCommon.CanvasVersionInfo.VersionString);
                 writer.WriteLine("##reference={0}", Path.Combine(reference, "genome.fa"));
                 if (extraHeaders != null)
                 {

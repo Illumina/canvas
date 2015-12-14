@@ -409,8 +409,18 @@ namespace SequencingFiles
 			return true;
 		}
 
-		// loads the header data
-		private void LoadHeaderData()
+        /// <summary>
+        /// Read counts on each reference sequence in the BAM from the index (like samtools idxstats)
+        /// </summary>
+        /// <returns>refID -> unfiltered Read/Alignment Count; null if no index</returns>
+        public Dictionary<int, ulong> GetIndexReadCounts()
+        {
+            if (!_hasIndex) return null;
+            return _index.GetReadCounts();
+        }
+
+        // loads the header data
+        private void LoadHeaderData()
 		{
 			// check to see if proper BAM header
 			byte[] buffer = new byte[4];

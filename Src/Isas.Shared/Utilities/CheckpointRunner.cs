@@ -186,7 +186,8 @@ namespace Illumina.SecondaryAnalysis.Workflow
             _manager.BeginCheckpoint(key);
             Tout output;
             bool hasExistingSerializedOutput = HasExistingSerializedOutput();
-            if (_manager.ShouldRun(hasExistingSerializedOutput))
+            CheckpointStatus status = _manager.GetCheckpointStatus(hasExistingSerializedOutput);
+            if (status.ShouldRun())
             {
                 string checkpoint = GetCheckpointName();
                 string checkpointNumber = GetCheckpointNumber();
@@ -216,9 +217,10 @@ namespace Illumina.SecondaryAnalysis.Workflow
             string checkpoint = GetCheckpointName();
             string checkpointNumber = GetCheckpointNumber();
             bool hasBeenRunBefore = HasExistingSerializedOutput();
-            if (_manager.ShouldRun(hasBeenRunBefore))
+            CheckpointStatus status = _manager.GetCheckpointStatus(hasBeenRunBefore);
+            if (status.ShouldRun())
             {
-                IDirectoryLocation tempDir = GetCleanTempDirectory(key);
+                IDirectoryLocation tempDir = GetCleanTempDirectory(key, status == CheckpointStatus.Run);
                 _logger.Info("Running checkpoint {0}: {1}", checkpointNumber, checkpoint);
                 Benchmark benchmark = new Benchmark();
                 output = wrapper.Run(input, tempDir);
@@ -247,9 +249,10 @@ namespace Illumina.SecondaryAnalysis.Workflow
             string checkpoint = GetCheckpointName();
             string checkpointNumber = GetCheckpointNumber();
             bool hasBeenRunBefore = HasExistingSerializedOutput();
-            if (_manager.ShouldRun(hasBeenRunBefore))
+            CheckpointStatus status = _manager.GetCheckpointStatus(hasBeenRunBefore);
+            if (status.ShouldRun())
             {
-                IDirectoryLocation tempDir = GetCleanTempDirectory(key);
+                IDirectoryLocation tempDir = GetCleanTempDirectory(key, status == CheckpointStatus.Run);
                 _logger.Info("Running checkpoint {0}: {1}", checkpointNumber, checkpoint);
                 Benchmark benchmark = new Benchmark();
                 output = wrapper.Run(input, tempDir);
@@ -279,11 +282,12 @@ namespace Illumina.SecondaryAnalysis.Workflow
             _manager.BeginCheckpoint(key);
             Tout output;
             bool hasExistingSerializedOutput = HasExistingSerializedOutput();
-            if (_manager.ShouldRun(hasExistingSerializedOutput))
+            CheckpointStatus status = _manager.GetCheckpointStatus(hasExistingSerializedOutput);
+            if (status.ShouldRun())
             {
                 string checkpoint = GetCheckpointName();
                 string checkpointNumber = GetCheckpointNumber();
-                IDirectoryLocation tempDir = GetCleanTempDirectory(checkpoint);
+                IDirectoryLocation tempDir = GetCleanTempDirectory(checkpoint, status == CheckpointStatus.Run);
                 _logger.Info("Running checkpoint {0}: {1}", checkpointNumber, checkpoint);
                 Benchmark benchmark = new Benchmark();
                 output = function(tempDir);
@@ -335,9 +339,12 @@ namespace Illumina.SecondaryAnalysis.Workflow
             return string.Format("{0}-{1}", GetZeroPaddedCheckpointNumber(), GetCheckpointName().RemoveWhiteSpace());
         }
 
-        private IDirectoryLocation GetCleanTempDirectory(string key)
+        private IDirectoryLocation GetCleanTempDirectory(string key, bool makeClean)
         {
-            return _placeForTempFolders.CreateEmptySubdirectory(key.RemoveWhiteSpace() + "Temp");
+            if (makeClean)
+                return _placeForTempFolders.CreateEmptySubdirectory(key.RemoveWhiteSpace() + "Temp");
+            else
+                return _placeForTempFolders.GetDirectoryLocation(key.RemoveWhiteSpace() + "Temp");
         }
 
         public void Dispose()

@@ -122,6 +122,8 @@
     <Compile Include="BgzfCommon.cs" />
     <Compile Include="BgzipReader.cs" />
     <Compile Include="BgzipWriter.cs" />
+    <Compile Include="FastaLoader.cs" />
+    <Compile Include="IndexedFastaLoader.cs" />
     <Compile Include="ReferenceInterval.cs" />
     <Compile Include="NexteraManifest.cs" />
     <Compile Include="VcfVariant.cs" />

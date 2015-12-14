@@ -16,8 +16,8 @@ namespace Illumina.Shared.Version
 {
 	internal class VersionInfo
 	{
-		public const string VersionString = "2.6.66";
-		public const string BuildDateString = "11/30/2015 7:43:35 AM";
+		public const string VersionString = "2.6.68";
+		public const string BuildDateString = "12/8/2015 12:31:59 PM";
 		public const string AssemblyCompany = CompanyName;
 		public const string AssemblyCopyright = "Copyright © Illumina 2015";
 		/// <summary>

@@ -51,8 +51,8 @@
     <Reference Include="System.Core" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="..\ILMNcommon\Properties\IsisVersionInfo.cs">
-      <Link>Properties\IsisVersionInfo.cs</Link>
+    <Compile Include="..\ILMNcommon\Properties\IsasVersionInfo.cs">
+      <Link>Properties\IsasVersionInfo.cs</Link>
     </Compile>
     <Compile Include="DescriptiveStatistics.cs" />
     <Compile Include="Poisson.cs" />

@@ -11,14 +11,39 @@ namespace EvaluateCNV
 
     class CNInterval
     {
-        public int Start;
-        public int End;
+        public int Start; // 0-based inclusive
+        public int End; // 0-based exclusive
         public int CN;
         public int BasesCovered;
         public int BasesExcluded;
         public int BasesCalledCorrectly;
+
+        public int Length
+        {
+            get { return End - Start; }
+        }
     }
 
+    class CNVCall
+    {
+        public string Chr;
+        public int Start; // 0-based inclusive
+        public int End; // 0-based exclusive
+        public int CN;
+
+        public int Length
+        {
+            get { return End - Start; }
+        }
+
+        public CNVCall(string chr, int start, int end, int cn) 
+        {
+            Chr = chr;
+            Start = start;
+            End = end;
+            CN = cn;
+        }
+    }
 
     class CNVChecker
     {
@@ -59,7 +84,7 @@ namespace EvaluateCNV
                     {
                         interval.CN = int.Parse(bits[3]) + int.Parse(bits[4]);
                     }
-                    totalBases += interval.End - interval.Start;
+                    totalBases += interval.Length;
                     bedIntervals[chromosome].Add(interval);
                     count++;
                 }
@@ -181,7 +206,7 @@ namespace EvaluateCNV
                 foreach (CNInterval interval in KnownCN[key])
                 {
                     if (interval.CN == 2) continue;
-                    long length = interval.End - interval.Start;
+                    long length = interval.Length;
                     EventSizes.Add(length);
                     MeanEventSize += length;
                     if (length <= 10000)
@@ -263,7 +288,58 @@ namespace EvaluateCNV
             }
         }
 
-        protected void ComputeAccuracy(string vcfPath, string outputPath, string truthSetPath, string cnvCallsPath)
+        protected IEnumerable<CNVCall> GetCnvCallsFromVcf(string vcfPath) 
+        {
+            using (VcfReader reader = new VcfReader(vcfPath, false))
+            {
+                foreach (VcfVariant variant in reader.GetVariants())
+                {
+                    int end;
+                    int CN = GetCopyNumber(variant, out end);
+                    yield return new CNVCall(variant.ReferenceName, variant.ReferencePosition, end, CN);
+                }
+            }
+        }
+
+        protected IEnumerable<CNVCall> GetCnvCallsFromBed(string bedPath, int[] cnIndices = null) 
+        {
+            if (cnIndices == null) { cnIndices = new int[] { 3 }; }
+            int maxCnIndex = cnIndices.Max();
+            using (StreamReader reader = new StreamReader(bedPath)) 
+            {
+                string line;
+                string[] toks;
+                while ((line = reader.ReadLine()) != null) 
+                {
+                    if (line.StartsWith("#")) { continue; } // skip comments
+                    toks = line.Split('\t');
+                    if (toks.Length <= maxCnIndex) 
+                    {
+                        Console.WriteLine("Error: Line has fewer than {0} columns: {1}", maxCnIndex + 1, line);
+                        continue;
+                    }
+                    string chr;
+                    int start;
+                    int end;
+                    int cn;
+                    try
+                    {
+                        chr = toks[0];
+                        start = int.Parse(toks[1]);
+                        end = int.Parse(toks[2]);
+                        cn = cnIndices.Sum(cnIndex => int.Parse(toks[cnIndex]));
+                    }
+                    catch 
+                    {
+                        Console.WriteLine("Error: Failed to parse line: {0}", line);
+                        continue;
+                    }
+                    yield return new CNVCall(chr, start, end, cn);
+                }
+            }
+        }
+
+        protected void ComputeAccuracy(string truthSetPath, string cnvCallsPath, string outputPath)
         {
             int totalVariants = 0;
             long totalVariantBases = 0;
@@ -276,62 +352,60 @@ namespace EvaluateCNV
             // the "cnaqc" exclusion set:
             this.CountExcludedBasesInTruthSetIntervals();
 
-            using (VcfReader reader = new VcfReader(vcfPath, false))
+            IEnumerable<CNVCall> calls = Path.GetFileName(cnvCallsPath).ToLower().Contains("vcf")
+                ? GetCnvCallsFromVcf(cnvCallsPath) : GetCnvCallsFromBed(cnvCallsPath);
+            foreach (CNVCall call in calls) 
             {
-                foreach (VcfVariant variant in reader.GetVariants())
+                int CN = call.CN;
+                if (CN < 0 || call.End < 0) continue; // Not a CNV call, apparently
+                if (CN != 2)
                 {
-                    int end;
-                    int CN = GetCopyNumber(variant, out end);
-                    if (CN < 0 || end < 0) continue; // Not a CNV call, apparently
-                    if (CN != 2)
+                    totalVariants++;
+                    totalVariantBases += call.Length;
+                }
+                if (CN > maxCN) CN = maxCN;
+                string chr = call.Chr;
+                if (!KnownCN.ContainsKey(chr)) chr = call.Chr.Replace("chr", "");
+                if (!KnownCN.ContainsKey(chr)) chr = "chr" + call.Chr;
+                if (!KnownCN.ContainsKey(chr))
+                {
+                    Console.WriteLine("Error: Skipping variant call for chromosome {0} with no truth data", call.Chr);
+                    continue;
+                }
+                foreach (CNInterval interval in KnownCN[chr])
+                {
+                    int overlapStart = Math.Max(call.Start, interval.Start);
+                    int overlapEnd = Math.Min(call.End, interval.End);
+                    if (overlapStart >= overlapEnd) continue;
+                    int overlapBases = overlapEnd - overlapStart;
+                    // We've got an overlap interval.  Kill off some bases from this interval, if it happens
+                    // to overlap with an excluded interval:
+                    if (ExcludeIntervals.ContainsKey(chr))
                     {
-                        totalVariants++;
-                        totalVariantBases += end - variant.ReferencePosition;
-                    }
-                    if (CN > maxCN) CN = maxCN;
-                    string chr = variant.ReferenceName;
-                    if (!KnownCN.ContainsKey(chr)) chr = variant.ReferenceName.Replace("chr", "");
-                    if (!KnownCN.ContainsKey(chr)) chr = "chr" + variant.ReferenceName;
-                    if (!KnownCN.ContainsKey(chr))
-                    {
-                        Console.WriteLine("Error: Skipping variant call for chromosome {0} with no truth data", variant.ReferenceName);
-                        continue;
-                    }
-                    foreach (CNInterval interval in KnownCN[chr])
-                    {
-                        int overlapStart = Math.Max(variant.ReferencePosition, interval.Start);
-                        int overlapEnd = Math.Min(end, interval.End);
-                        if (overlapStart >= overlapEnd) continue;
-                        int overlapBases = overlapEnd - overlapStart;
-                        // We've got an overlap interval.  Kill off some bases from this interval, if it happens
-                        // to overlap with an excluded interval:
-                        if (ExcludeIntervals.ContainsKey(chr))
+                        foreach (CNInterval excludeInterval in ExcludeIntervals[chr])
                         {
-                            foreach (CNInterval excludeInterval in ExcludeIntervals[chr])
-                            {
-                                int excludeOverlapStart = Math.Max(excludeInterval.Start, overlapStart);
-                                int excludeOverlapEnd = Math.Min(excludeInterval.End, overlapEnd);
-                                if (excludeOverlapStart >= excludeOverlapEnd) continue;
-                                overlapBases -= (excludeOverlapEnd - excludeOverlapStart);
-                            }
+                            int excludeOverlapStart = Math.Max(excludeInterval.Start, overlapStart);
+                            int excludeOverlapEnd = Math.Min(excludeInterval.End, overlapEnd);
+                            if (excludeOverlapStart >= excludeOverlapEnd) continue;
+                            overlapBases -= (excludeOverlapEnd - excludeOverlapStart);
                         }
+                    }
 
-                        int knownCN = interval.CN;
-                        if (knownCN > maxCN) knownCN = maxCN;
-                        BaseCount[knownCN, CN] += overlapBases;
-                        interval.BasesCovered += overlapBases;
-                        if (knownCN == CN) interval.BasesCalledCorrectly += overlapBases;
+                    int knownCN = interval.CN;
+                    if (knownCN > maxCN) knownCN = maxCN;
+                    BaseCount[knownCN, CN] += overlapBases;
+                    interval.BasesCovered += overlapBases;
+                    if (knownCN == CN) interval.BasesCalledCorrectly += overlapBases;
 
-                        if (this.RegionsOfInterest != null && this.RegionsOfInterest.ContainsKey(chr))
+                    if (this.RegionsOfInterest != null && this.RegionsOfInterest.ContainsKey(chr))
+                    {
+                        foreach (CNInterval roiInterval in this.RegionsOfInterest[chr])
                         {
-                            foreach (CNInterval roiInterval in this.RegionsOfInterest[chr])
-                            {
-                                int roiOverlapStart = Math.Max(roiInterval.Start, overlapStart);
-                                int roiOverlapEnd = Math.Min(roiInterval.End, overlapEnd);
-                                if (roiOverlapStart >= roiOverlapEnd) continue;
-                                int roiOverlapBases = roiOverlapEnd - roiOverlapStart;
-                                ROIBaseCount[knownCN, CN] += roiOverlapBases;
-                            }
+                            int roiOverlapStart = Math.Max(roiInterval.Start, overlapStart);
+                            int roiOverlapEnd = Math.Min(roiInterval.End, overlapEnd);
+                            if (roiOverlapStart >= roiOverlapEnd) continue;
+                            int roiOverlapBases = roiOverlapEnd - roiOverlapStart;
+                            ROIBaseCount[knownCN, CN] += roiOverlapBases;
                         }
                     }
                 }
@@ -344,7 +418,7 @@ namespace EvaluateCNV
             {
                 foreach (CNInterval interval in KnownCN[chr])
                 {
-                    int remainingBases = (interval.End - interval.Start) - interval.BasesCovered - interval.BasesExcluded;
+                    int remainingBases = (interval.Length) - interval.BasesCovered - interval.BasesExcluded;
                     if (remainingBases <= 0) continue;
                     int knownCN = Math.Min(interval.CN, maxCN);
                     BaseCount[knownCN, 2] += remainingBases;
@@ -360,7 +434,7 @@ namespace EvaluateCNV
                 foreach (CNInterval interval in KnownCN[chr])
                 {
                     if (interval.CN == 2) continue;
-                    int baseCount = (interval.End - interval.Start) - interval.BasesExcluded;
+                    int baseCount = interval.Length - interval.BasesExcluded;
                     if (baseCount <= 0) continue;
                     double accuracy = interval.BasesCalledCorrectly / (double)baseCount;
                     eventAccuracies.Add(accuracy);
@@ -472,7 +546,7 @@ namespace EvaluateCNV
             }
             Console.WriteLine("TruthSet\t{0}", truthSetPath);
             Console.WriteLine("CNVCalls\t{0}", cnvCallsPath);
-            ComputeAccuracy(cnvCallsPath, outputPath, truthSetPath, cnvCallsPath);
+            ComputeAccuracy(truthSetPath, cnvCallsPath, outputPath);
             Console.WriteLine(">>>Done - results written to {0}", outputPath);
         }
     }

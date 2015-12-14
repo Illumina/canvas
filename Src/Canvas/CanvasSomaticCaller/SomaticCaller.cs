@@ -1274,7 +1274,8 @@ namespace CanvasSomaticCaller
                 }
             }
             tempModelDistanceList.Sort();
-            double distanceThreshold = tempModelDistanceList[Convert.ToInt32(tempModelDistanceList.Count * 0.8)]; // enable capturing clusters with less than 30% abundance 
+            int distanceThresholdIndex = Math.Min(Convert.ToInt32(tempModelDistanceList.Count * 0.8), tempModelDistanceList.Count - 1);
+            double distanceThreshold = tempModelDistanceList[distanceThresholdIndex]; // enable capturing clusters with less than 30% abundance 
 
             // find optimal number of clusters using silhouette distance and return bestModelPoints
             for (int numClusters = 4; numClusters < maxNumClusters; numClusters++)

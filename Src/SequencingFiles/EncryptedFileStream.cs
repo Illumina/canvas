@@ -15,7 +15,7 @@ namespace SequencingFiles
     {
         #region members
 
-        private const string Salt = "IlluminaIsis";
+        private const string Salt = "IlluminaIsas";
         private readonly MemoryStream _baseMemoryStream;
         private readonly string _filePath;
         private readonly string _key;

@@ -20,7 +20,7 @@ namespace Canvas
         public CommonOptions CommonOptions { get; }
         public void Run(ILogger logger, ICheckpointRunner checkpointRunner, IWorkManager workManager)
         {
-            CanvasRunner runner = new CanvasRunner(logger, workManager, checkpointRunner, false, CanvasCoverageMode.TruncatedDynamicRange, 300, CommonOptions.CustomParams);
+            CanvasRunner runner = new CanvasRunner(logger, workManager, checkpointRunner, true, CanvasCoverageMode.TruncatedDynamicRange, 300, CommonOptions.CustomParams);
             var callset = GetCallset(logger);
             runner.CallSample(callset);
         }

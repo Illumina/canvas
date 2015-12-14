@@ -1,6 +1,6 @@
 ﻿// **** IMPORTANT NOTE:
 // This source file is used by several projects: Isas, MSR, RTA, HCS, MCS, and BaseSpace
-// When making changes, to limit the need to merge, please make fixes/edits first in the Illumina.Isis trunk,
+// When making changes, to limit the need to merge, please make fixes/edits first in the Illumina.Isas trunk,
 // then propagate the changes to other branches.  
 // ****
 
@@ -387,7 +387,7 @@ namespace SequencingFiles
         }
 
         /// <summary>
-        /// Attach isisConfigGenomeRepository to front of sampleGenomeFolder if the latter is relative path.
+        /// Attach isasConfigGenomeRepository to front of sampleGenomeFolder if the latter is relative path.
         ///     This function is split from GetGenomes() so that it could be invoked standalone for one sample.
         /// </summary>
         public string GetProperGenomeFolderPath(string sampleGenomeFolder, string isasConfigGenomeRepository = null)
@@ -1200,7 +1200,7 @@ namespace SequencingFiles
         /// <summary>
         ///    Write out a sample sheet (current format, not legacy Casava-format) using the parsed data contained in this instance
         /// </summary>
-        public void WriteIsisSampleSheet(string path)
+        public void WriteIsasSampleSheet(string path)
         {
             using (StreamWriter writer = new StreamWriter(path))
             {

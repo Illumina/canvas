@@ -118,7 +118,7 @@ namespace CanvasBin
         /// <param name="fragmentLengths">Stores fragment length (Int16).</param>
         static void InitializeAlignmentArrays(string fastaFile, string chromosome, CanvasCoverageMode coverageMode, IDictionary<string, BitArray> possibleAlignments, IDictionary<string, HitArray> observedAlignments, IDictionary<string, Int16[]> fragmentLengths)
         {
-            string referenceBases = SequencingFiles.FastaReader.LoadFASTA(fastaFile, chromosome);
+            string referenceBases = FastaLoader.LoadFastaSequence(fastaFile, chromosome);
 
             BitArray possible = new BitArray(referenceBases.Length);
             possibleAlignments[chromosome] = possible;

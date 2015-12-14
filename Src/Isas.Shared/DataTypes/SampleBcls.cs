@@ -6,6 +6,9 @@ using Isas.Shared.Utilities;
 
 namespace Illumina.SecondaryAnalysis
 {
+    /// <summary>
+    /// Represents BCLs for one sample in one runFolder (flow-cell) possibly on several lanes.
+    /// </summary>
     public class SampleBcls
     {
         public readonly BclRunFolder BclRunFolder;

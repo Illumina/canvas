@@ -28,7 +28,11 @@ namespace Isas.Shared
                 {"AnalysisFolder", analysisFolder},
                 {"GenomesRoot", _genomesRoot}
             };
-            JsonConverter[] converters = { new FileSystemLocationConverter(parentDirectories) };
+            JsonConverter[] converters =
+            {
+                new FileSystemLocationConverter(parentDirectories),
+                new EnumerableConverter()
+            };
 
             var settings = new JsonSerializerSettings
             {

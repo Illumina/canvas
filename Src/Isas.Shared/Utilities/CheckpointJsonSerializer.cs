@@ -35,7 +35,7 @@ namespace Illumina.SecondaryAnalysis.Workflow
         {
             IFileLocation path = GetCurrentCheckpointFile(checkpoint);
             _logger.Info("Saving checkpoint results to {0}", path);
-            Serialize(path.FullName, input);
+            Serialize(path, input);
         }
 
         public T Load<T>(string checkpoint)
@@ -44,7 +44,7 @@ namespace Illumina.SecondaryAnalysis.Workflow
             if (!Exists(checkpoint))
                 throw new ApplicationException(string.Format("Unable to load checkpoint results. Missing expected checkpoint file at {0}", path));
             _logger.Info("Loading checkpoint results from {0}", path);
-            return Deserialize<T>(path.FullName);
+            return Deserialize<T>(path);
         }
 
         public bool Exists(string checkpoint)
@@ -54,14 +54,16 @@ namespace Illumina.SecondaryAnalysis.Workflow
             return true;
         }
 
-        private void Serialize<T>(string path, T obj)
+        private void Serialize<T>(IFileLocation path, T obj)
         {
-            File.WriteAllText(path, JsonConvert.SerializeObject(obj, Formatting.Indented, _settings));
+            using (StreamWriter writer = new StreamWriter(path.OpenWrite()))
+                writer.Write(JsonConvert.SerializeObject(obj, Formatting.Indented, _settings));
         }
 
-        private T Deserialize<T>(string path)
+        private T Deserialize<T>(IFileLocation path)
         {
-            return JsonConvert.DeserializeObject<T>(File.ReadAllText(path), _settings);
+            using (StreamReader reader = path.OpenText())
+                return JsonConvert.DeserializeObject<T>(reader.ReadToEnd(), _settings);
         }
 
         private IFileLocation GetCurrentCheckpointFile(string checkpoint)
@@ -120,11 +122,31 @@ namespace Illumina.SecondaryAnalysis.Workflow
         }
     }
 
+    public interface IAbsolutePathInstantiator
+    {
+        object InstantiateAbsolutePath(string path, Type objectType);
+    }
+
+    public class RealFileAbsolutePathInstantiator : IAbsolutePathInstantiator
+    {
+        public object InstantiateAbsolutePath(string path, Type objectType)
+        {
+            if (typeof(IFileLocation).IsAssignableFrom(objectType))
+            {
+                return new FileLocation(path);
+            }
+            if (typeof(IDirectoryLocation).IsAssignableFrom(objectType))
+            {
+                return new DirectoryLocation(path);
+            }
+            throw new ApplicationException("Tried to deserialize something that wasn't IFileLocation or IDirectoryLocation.");
+        }
+    }
     public class FileSystemLocationConverter : JsonConverter
     {
         private static readonly Type[] Types = { typeof(IFileLocation), typeof(IDirectoryLocation) };
         private readonly Dictionary<string, IDirectoryLocation> _parentDirectories;
-
+        private readonly IAbsolutePathInstantiator _absolutePathInstantiator;
         /// <summary>
         /// Constructor for custom FileSystemLocationConverter
         /// </summary>
@@ -132,9 +154,11 @@ namespace Illumina.SecondaryAnalysis.Workflow
         /// If a location starts with one of the parent directories, the parent directory will be removed from the path and replaced with a prefix: "${key}"
         /// For example if a parent directory with key "AnalysisFolder" and value "/path/to/AnalysisFolder" exists, then the path: "/path/to/AnalysisFolder/myfile"
         /// will get serialized as "${AnalysisFolder}/myfile</param>
-        public FileSystemLocationConverter(Dictionary<string, IDirectoryLocation> parentDirectories = null)
+        public FileSystemLocationConverter(Dictionary<string, IDirectoryLocation> parentDirectories = null,
+            IAbsolutePathInstantiator absPath = null)
         {
             _parentDirectories = parentDirectories ?? new Dictionary<string, IDirectoryLocation>();
+            _absolutePathInstantiator = absPath ?? new RealFileAbsolutePathInstantiator();
         }
 
         public override bool CanConvert(Type objectType)
@@ -148,30 +172,26 @@ namespace Illumina.SecondaryAnalysis.Workflow
             var path = (string)serializer.Deserialize(reader, typeof(string));
             if (path == null)
                 return null;
-            path = ConvertRelativeToAbsolute(path);
-            if (typeof(IFileLocation).IsAssignableFrom(objectType))
-            {
-                return new FileLocation(path);
-            }
-            if (typeof(IDirectoryLocation).IsAssignableFrom(objectType))
-            {
-                return new DirectoryLocation(path);
-            }
-
-            throw new ApplicationException("Tried to deserialize something that wasn't IFileLocation or IDirectoryLocation.");
+            return ConvertRelativeToAbsolute(path, objectType);
         }
 
         public override void WriteJson(JsonWriter writer, object value, JsonSerializer serializer)
         {
             // Serialize FileLocation and DirectoryLocation as their FullName (string)
-            var fileSysObj = value as FileSystemLocationBase;
-            serializer.Serialize(writer, ConvertAbsoluteToRelative(fileSysObj.FullName));
+            string fileSysPath;
+            if (typeof(IFileLocation).IsAssignableFrom(value.GetType()))
+                fileSysPath = ((IFileLocation)value).FullName;
+            else if (typeof(IDirectoryLocation).IsAssignableFrom(value.GetType()))
+                fileSysPath = ((IDirectoryLocation)value).FullName;
+            else
+                throw new ApplicationException("Tried to deserialize something that wasn't IFileLocation or IDirectoryLocation.");
+            serializer.Serialize(writer, ConvertAbsoluteToRelative(fileSysPath));
         }
 
-        private string ConvertRelativeToAbsolute(string path)
+        private object ConvertRelativeToAbsolute(string path, Type objectType)
         {
             if (Path.IsPathRooted(path))
-                return path;
+                return _absolutePathInstantiator.InstantiateAbsolutePath(path, objectType);
             foreach (var kvp in _parentDirectories)
             {
                 string key = kvp.Key;
@@ -180,10 +200,18 @@ namespace Illumina.SecondaryAnalysis.Workflow
                 if (path.StartsWith(pathPrefix))
                 {
                     string relativePath = path.Substring(pathPrefix.Length).Trim('\\', '/');
-                    return Path.GetFullPath(Path.Combine(parent.FullName, relativePath));
+                    if (typeof(IFileLocation).IsAssignableFrom(objectType))
+                    {
+                        return parent.GetFileLocation(relativePath);
+                    }
+                    if (typeof(IDirectoryLocation).IsAssignableFrom(objectType))
+                    {
+                        return parent.GetDirectoryLocation(relativePath);
+                    }
+                    throw new ApplicationException("Tried to deserialize something that wasn't IFileLocation or IDirectoryLocation.");
                 }
             }
-            throw new ApplicationException(string.Format("Could not find parent directory for relative path {0}."));
+            throw new ApplicationException($"Could not find parent directory to create relative path {path}.");
         }
 
         private static string GetPathPrefix(string key)
@@ -205,6 +233,34 @@ namespace Illumina.SecondaryAnalysis.Workflow
                 }
             }
             return path;
+        }
+    }
+
+    public class EnumerableConverter : JsonConverter
+    {
+        public override bool CanConvert(Type objectType)
+        {
+            return typeof(IEnumerable<dynamic>).IsAssignableFrom(objectType) 
+                && !typeof(List<dynamic>).IsAssignableFrom(objectType);
+        }
+
+        public override object ReadJson(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer)
+        {
+            throw new NotImplementedException();
+        }
+
+        public override void WriteJson(JsonWriter writer, object value, JsonSerializer serializer)
+        {
+            var enumer = value as IEnumerable<dynamic>;
+            serializer.Serialize(writer, enumer.ToList());
+        }
+
+        public override bool CanRead
+        {
+            get
+            {
+                return false;
+            }
         }
     }
 }

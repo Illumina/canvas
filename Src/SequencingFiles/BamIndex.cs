@@ -39,7 +39,7 @@ namespace SequencingFiles
 
         private const int BamLidxShift = 14;
         public const uint BamMaxBin = 37450;
-        private readonly List<BamReferenceIndex> _index;
+        private readonly List<BamReferenceIndex> _index = new List<BamReferenceIndex>();
 
         private ulong _beginOffset;
         private ulong _endOffset;
@@ -61,8 +61,36 @@ namespace SequencingFiles
 
         // constructor
         public BamIndex()
+        { }
+
+        /// <summary>
+        /// Create an index from a sorted BAM file
+        /// </summary>
+        /// <param name="bamFilePath">Path to BAM file</param>
+        public BamIndex(string bamFilePath)
         {
-            _index = new List<BamReferenceIndex>();
+            _numUnalignedWithoutCoordinates = 0;
+
+            // allocate space for the reference index
+            using (var reader = new BamReader(bamFilePath))
+            {
+                List<GenomeMetadata.SequenceMetadata> references = reader.GetReferences();
+                Initialize(references.Count, reader.Tell());
+
+                BamAlignment alignment = new BamAlignment();
+                while (reader.GetNextAlignment(ref alignment, true))
+                {
+                    if (!UpdateReferenceIndex(ref alignment, reader.Tell())) break;
+                }
+
+                // perform some post-processing on the index
+                PostProcessing(reader.Tell());
+
+                if (_hasUnalignedReads)
+                {
+                    while (reader.GetNextAlignment(ref alignment, true)) ++_numUnalignedWithoutCoordinates;
+                }
+            }
         }
 
         /// <summary>
@@ -208,41 +236,6 @@ namespace SequencingFiles
                     if (offsetList[i] == 0) offsetList[i] = offsetList[i - 1];
                 }
             }
-        }
-
-        /// <summary>
-        ///     Creates an index from a specified BAM file
-        /// </summary>
-        public void CreateIndexFromBamFile(string filename)
-        {
-            _numUnalignedWithoutCoordinates = 0;
-
-            // open the BAM file and retrieve the reference data
-            using (BamReader reader = new BamReader(filename))
-            {
-                // allocate space for the reference index
-                List<GenomeMetadata.SequenceMetadata> references = reader.GetReferences();
-
-                // iterate over all of the reads in the BAM file
-                Initialize(references.Count, reader.Tell());
-
-                BamAlignment al = new BamAlignment();
-                while (reader.GetNextAlignment(ref al, true))
-                {
-                    if (!UpdateReferenceIndex(ref al, reader.Tell())) break;
-                }
-
-                // perform some post-processing on the index
-                PostProcessing(reader.Tell());
-
-                if (_hasUnalignedReads)
-                {
-                    while (reader.GetNextAlignment(ref al, true)) ++_numUnalignedWithoutCoordinates;
-                }
-            }
-
-            // write the index to a file
-            WriteIndex(filename + ".bai");
         }
 
         /// <summary>
@@ -530,7 +523,7 @@ namespace SequencingFiles
             if (alignment.RefID != _lastRefID)
             {
                 _lastRefID = alignment.RefID;
-                _lastBin = int.MaxValue;
+                _lastBin = uint.MaxValue;
             }
             else if (alignment.Position < _lastPosition)
             {
@@ -638,6 +631,27 @@ namespace SequencingFiles
                 // write the number of unaligned reads without coordinates
                 writer.Write(BitConverter.GetBytes(_numUnalignedWithoutCoordinates));
             }
+        }
+
+        /// <summary>
+        /// Reads on each reference sequence in the BAM
+        /// </summary>
+        /// <returns>refID -> unfiltered Read/Alignment Count</returns>
+        public Dictionary<int, ulong> GetReadCounts()
+        {
+            var res = new Dictionary<int, ulong>();
+            for (int refIndex = 0; refIndex < _index.Count; refIndex++)
+            {
+                ulong readCount = 0;
+                var currentRefIndex = _index[refIndex];
+                List<BamIndexRegion> bamIndexRegions;
+                if (currentRefIndex.RegionsDictionary.TryGetValue(BamMaxBin, out bamIndexRegions))
+                {
+                    readCount = bamIndexRegions[1].Begin;
+                }
+                res[refIndex] = readCount;
+            }
+            return res;
         }
 
         /// <summary>

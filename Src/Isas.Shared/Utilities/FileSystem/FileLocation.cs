@@ -1,7 +1,6 @@
 ﻿using System;
 using System.IO;
 using System.Security.AccessControl;
-using Illumina.SecondaryAnalysis;
 using Isas.Shared.Utilities;
 
 namespace Isas.Shared
@@ -338,13 +337,22 @@ namespace Isas.Shared
             if (source.FullName.Equals(destination.FullName))
                 return source;
 
-            // Move the file to the destination
-            var movedFile = source.MoveTo(destination);
+            // If you're a symbolic link, don't move anything, as you don't have anything real to move.
+            // The symbolic link is probably there because this method was called previously
+            // and if you move the link, it will break, accomplishing nothing useful.
+            // If you're an actual file, move it to the destination
+            if (!source.Attributes.HasFlag(FileAttributes.ReparsePoint))
+                source.MoveTo(destination);
 
-            // then symlink the original file to the destination
+            // Then put a symlink in the place of the source pointing to the destination
             destination.RelativeSymlinkTo(source);
 
-            return movedFile;
+            return destination;
+        }
+
+        public static IFileLocation MoveAndLinkInto(this IFileLocation source, IDirectoryLocation destination)
+        {
+            return source.MoveAndLink(destination.GetFileLocation(source.Name));
         }
 
         public static void HardlinkTo(IFileLocation source, IFileLocation destination)

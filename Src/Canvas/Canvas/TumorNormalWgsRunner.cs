@@ -20,7 +20,7 @@ namespace Canvas
 
         public void Run(ILogger logger, ICheckpointRunner checkpointRunner, IWorkManager workManager)
         {
-            CanvasRunner runner = new CanvasRunner(logger, workManager, checkpointRunner, false, CanvasCoverageMode.GCContentWeighted, 100, CommonOptions.CustomParams);
+            CanvasRunner runner = new CanvasRunner(logger, workManager, checkpointRunner, true, CanvasCoverageMode.GCContentWeighted, 100, CommonOptions.CustomParams);
             var callset = GetCallset();
             runner.CallSample(callset);
         }

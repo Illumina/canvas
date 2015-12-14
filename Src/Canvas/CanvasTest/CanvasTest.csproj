@@ -109,6 +109,8 @@
       <Link>Properties\IsasVersionInfo.cs</Link>
     </Compile>
     <Compile Include="Canvas\CommandLineParsing\ModeParserTests.cs" />
+    <Compile Include="InlineAutoNSubstituteDataAttribute.cs" />
+    <Compile Include="TemporaryDirectoryFixture.cs" />
     <Compile Include="TestCanvasSomatic.cs" />
     <Compile Include="TestSegments.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
@@ -117,10 +119,6 @@
     <ProjectReference Include="..\..\Isas.Shared\Isas.Shared.csproj">
       <Project>{f2063ff3-61a7-4084-845d-da591011e36f}</Project>
       <Name>Isas.Shared</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\..\UnitTests\UnitTests.csproj">
-      <Project>{0564dd13-b713-452c-8b66-f3c0fa036047}</Project>
-      <Name>UnitTests</Name>
     </ProjectReference>
     <ProjectReference Include="..\CanvasBin\CanvasBin.csproj">
       <Project>{4fe7dc26-bb44-4a6e-b02b-785328c41260}</Project>

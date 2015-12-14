@@ -7,12 +7,27 @@ using Isas.Shared.Utilities;
 namespace Illumina.SecondaryAnalysis.Workflow
 {
     /// <summary>
+    /// Indicates whether the checkpoint should be run, resumed, or skipped
+    /// </summary>
+    public enum CheckpointStatus
+    {
+        Run, Resume, Skip
+    }
+    public static class CheckpointStatusExtentions
+    {
+        public static bool ShouldRun(this CheckpointStatus status)
+        {
+            return status != CheckpointStatus.Skip;
+        }
+    }
+
+    /// <summary>
     /// throws StopCheckpointFoundException when the specified stop checkpoint has finished running
     /// </summary>
     public interface ICheckpointManager : IDisposable
     {
         void BeginCheckpoint(string key);
-        bool ShouldRun(bool hasRunBefore);
+        CheckpointStatus GetCheckpointStatus(bool hasRunBefore);
         List<string> CheckpointNames { get; }
         List<int> CheckpointNumbers { get; }
         void EndCheckpoint();
@@ -189,7 +204,7 @@ namespace Illumina.SecondaryAnalysis.Workflow
             _previousCheckpointNumber = CheckpointNumbers.RemoveLast();
         }
 
-        public bool ShouldRun(bool hasRunBefore)
+        public CheckpointStatus GetCheckpointStatus(bool hasRunBefore)
         {
             // We want to start running code (as opposed to loading from the repository) when we find the 
             //  checkpoint provided during initialization.
@@ -199,10 +214,10 @@ namespace Illumina.SecondaryAnalysis.Workflow
             {
                 // if there is no start checkpoint and this step has already been run before we don't want to run it again
                 if (_startCheckpoint.IsNullOrEmpty() && hasRunBefore)
-                    return false;
+                    return CheckpointStatus.Skip;
 
                 // Once we've found the starting checkpoint, we run all subsequent checkpoints up to the stopping checkpoint
-                return true;
+                return CheckpointStatus.Run;
             }
             // We haven't found the checkpoint yet, so check if the current checkpoint is part of the starting checkpoint
             int checkpointLevel = CheckpointNames.Count;
@@ -210,10 +225,10 @@ namespace Illumina.SecondaryAnalysis.Workflow
             if (CurrentCheckpointComparedToStartingCheckpoint.Last() == _startCheckpoint[checkpointLevel - 1])
             {
                 // We've found part of the current checkpoint!
-                return true;
+                return CheckpointStatus.Resume;
             }
             // We still haven't found the starting checkpoint, so don't run the code (load instead).
-            return false;
+            return CheckpointStatus.Skip;
         }
 
         /// <summary>
