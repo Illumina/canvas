@@ -51,17 +51,17 @@ Run instructions
 ------------------
 Canvas can be run on a variety of sequencing input. See the help information from the command line executable for the supported workflows and required input files:
 
-$Canvas.exe --help
-Canvas 1.3.4.0 Copyright c Illumina 2015
-Usage: Canvas.exe [MODE] [OPTIONS]+
-Available modes:
-        Germline-WGS - CNV calling of a germline sample from whole genome sequencing data
-        Somatic-Enrichment - CNV calling of a somatic sample from targeted sequencing data
-        Somatic-WGS - CNV calling of a somatic sample from whole genome sequencing data
-        Tumor-normal-enrichment - CNV calling of a tumor/normal pair from targeted sequencing data
-Options:
-  -h, --help                 show this message and exit
-  -v, --version              print version and exit
+$Canvas.exe --help  
+Canvas 1.3.4.0 Copyright c Illumina 2015  
+Usage: Canvas.exe [MODE] [OPTIONS]+  
+Available modes:  
+        Germline-WGS - CNV calling of a germline sample from whole genome sequencing data  
+        Somatic-Enrichment - CNV calling of a somatic sample from targeted sequencing data  
+        Somatic-WGS - CNV calling of a somatic sample from whole genome sequencing data  
+        Tumor-normal-enrichment - CNV calling of a tumor/normal pair from targeted sequencing data  
+Options:  
+  -h, --help                 show this message and exit  
+  -v, --version              print version and exit  
 
 #### Reference genome
 The required input files for Human reference genome builds GRCh37, hg19, and GRCh38 can be downloaded from https://illumina.box.com/CanvasPublic. When using a custom reference genome the equivalent files need to be created. Use the FlagUniqueKmers project to generate the annotated fasta file (kmer.fa) for a custom reference genome. 
