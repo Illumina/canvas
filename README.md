@@ -31,7 +31,7 @@ It is recmomended to start from one of the [binary distributions on the Canvas r
 [releases]:https://github.com/Illumina/canvas/releases
 
 ### Source code organization:
-Canvas consists of serveral components all built from one solution file (Canvas.sln).  There are several executables - e.g. CanvasBin counts coverage for each bin, CanvasSomaticCaller makes CNV calls for tumor/normal data - as well as some shared libraries with utility functions (math functions, file I/O for various formats, etc.)  
+Canvas consists of several projects all built from one solution file (Src/Canvas/Canvas/Canvas.sln).  The main Canvas project is a command line tool for launching the various workflows. Additionally, there are projects for each Canvas module - e.g. CanvasBin counts coverage for each bin, CanvasSomaticCaller makes CNV calls for tumor/normal data - as well as some shared libraries with utility functions (math functions, file I/O for various formats, etc.)  
 
 ### Compiling from source
 Open the solution file (Canvas.sln) using Visual Studio 2013, and build the main solution configuration (x64 + Release).  The managed code can be run on a Windows system or on a Linux system using Mono.  The FileCompression library (unmanaged c++ code) can be rebuilt from source under Linux, or the prebuilt binary libFileCompression.so can be used.
@@ -49,7 +49,8 @@ Canvas is known to run on Windows 7 or Windows 8 systems using .NET 4.5.1
 
 Run instructions
 ------------------
-Canvas can be run on a variety of sequencing input. See the help information from the command line executable for the supported workflows and required input files:
+
+Canvas can be run on a variety of sequencing input. See the help information from the Canvas.exe command line executable for the supported workflows and required input files:
 
 $Canvas.exe --help  
 Canvas 1.3.4.0 Copyright c Illumina 2015  
