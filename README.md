@@ -66,3 +66,43 @@ Options:
 
 #### Reference genome
 The required input files for Human reference genome builds GRCh37, hg19, and GRCh38 can be downloaded from https://illumina.box.com/CanvasPublic. When using a custom reference genome the equivalent files need to be created. Use the FlagUniqueKmers project to generate the annotated fasta file (kmer.fa) for a custom reference genome. 
+
+#### DEMO (Tumor-normal-enrichmen data)
+## Installation
+The easiest way to install Canvas is to use the latest pre-copiled binaries from [releases]:https://github.com/Illumina/canvas/releases (just download and uncopress). The demo presumes that binary files were installed to WORKDIR/canvas/canvas-1.3.4_x64/. Exact installation of mono environment depends on OS, below is an installation example for Ubuntu:
+```
+sudo apt-get install mono-runtime
+sudo apt-get install mono-complete
+```
+## Data 
+To download demo data, add BasepSpace project https://basespace.illumina.com/s/DcPnOqHmtPNB to your account (you might need to register first). The actual files can then be downloaded from the following subdirectories:
+https://basespace.illumina.com/analyses/30697313/files/28317292?projectId=26760736
+https://basespace.illumina.com/analyses/30697313/files/28296383?projectId=26760736
+In addition to manual download, a command line basemount (https://basemount.basespace.illumina.com ) can be used for file transfer. To install basemount run
+```
+sudo bash -c "$(curl -L https://basemount.basespace.illumina.com/install/)"
+mkdir /tmp/BaseSpace
+basemount  /tmp/BaseSpace
+cd /tmp/BaseSpace
+```
+BaseSpace files are now available under your current directory. To run demo, transfer the follwoing files into WORKDIR/testing/files/
+```
+“Projects/HiSeq 2500 RR: NRC Exome (HCC1187 & HCC2218)/AppResults/HCC1187BL/Files/HCC1187BL_S1.vcf" (germline vcf)
+"Projects/HiSeq 2500 RR: NRC Exome (HCC1187 & HCC2218)/AppResults/HCC2218C/Files/HCC2218C_S1.bam" (somatic bam)
+"Projects/HiSeq 2500 RR: NRC Exome (HCC1187 & HCC2218)/AppResults/HCC2218C/Files/HCC2218C_S1.bam.bai"
+"Projects/HiSeq 2500 RR: NRC Exome (HCC1187 & HCC2218)/AppResults/HCC2218BL/Files/HCC2218BL_S1.bam" (normal bam)
+"Projects/HiSeq 2500 RR: NRC Exome (HCC1187 & HCC2218)/AppResults/HCC2218BL/Files/HCC2218BL_S1.bam.bai"
+“Projects/HiSeq 2500 RR:  NRC\ Exome\ (HCC1187 & HCC2218)/AppSessions/Isaac Enrichment 11|24|2015 9:23:23/AppResults.28295376.HCC1187BL/Files/Additional Files/NexteraRapidCapture_Exome_TargetedRegions_v1.2Used.txt” (targeted regions)
+“/tmp/BaseSpace/Projects/HiSeq 2500 RR: NRC Exome (HCC1187 & HCC2218)/AppResults/HCC2218C/Files/HCC2218C_S1.vcf” (somatic vcf)
+```
+## Genome reference files  
+Download hg19 genome reference files from https://illumina.box.com/CanvasPublic into WORKDIR/testing/hg19/.
+
+## Running demo
+With all files copied and installed, we are now ready to run Canvas. This demo will use Tumor-normal-enrichment workflow that runs on Nextera exome data.  Execute the command below. 
+```
+mono $WORKDIR/canvas/canvas-1.3.4_x64/Canvas.exe Tumor-normal-enrichment -b $WORKDIR/testing/files/HCC2218C_S1.bam --normal-bam=$WORKDIR/testing/files/HCC2218BL_S1.bam --reference=$WORKDIR/testing/hg19/kmer.fa --manifest=$WORKDIR/testing/files/NexteraRapidCapture_Exome_TargetedRegions_v1.2Used.txt -g $WORKDIR/testing/hg19/ -n HCC2218C -f $WORKDIR/testing/hg19/filter13.bed -o $WORKDIR/testing/HCC2218_v2 --b-allele-vcf=$WORKDIR/testing/files/HCC2218BL_S1.vcf --somatic-vcf=$WORKDIR/testing/files/HCC2218C_S1.vcf --custom-parameters=CanvasBin,--mode=TruncatedDynamicRange
+```
+CNV.vcf.gz files will be saved to HCC2218_v2 output directory. Depending on the number of available CPUs, the demo will take from few minutes to under an hour to complete.
+
+## Inspecting results 
