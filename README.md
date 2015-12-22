@@ -68,6 +68,7 @@ Options:
 The required input files for Human reference genome builds GRCh37, hg19, and GRCh38 can be downloaded from https://illumina.box.com/CanvasPublic. When using a custom reference genome the equivalent files need to be created. Use the FlagUniqueKmers project to generate the annotated fasta file (kmer.fa) for a custom reference genome. 
 
 ## DEMO (Tumor-normal-enrichmen data)
+This demo will run Canvas on exome data for HCC2218 breast carcinoma cell lines and compare results with previously curated ground truth set.
 #### Installation
 The easiest way to install Canvas is to use the latest pre-copiled binaries from [releases]:https://github.com/Illumina/canvas/releases (just download and uncopress). The demo presumes that binary files were installed to WORKDIR/canvas/canvas-1.3.4_x64/. Exact installation of mono environment depends on OS, below is an installation example for Ubuntu:
 ```
@@ -106,3 +107,24 @@ mono $WORKDIR/canvas/canvas-1.3.4_x64/Canvas.exe Tumor-normal-enrichment -b $WOR
 CNV.vcf.gz files will be saved to HCC2218_v2 output directory. Depending on the number of available CPUs, the demo will take from few minutes to under an hour to complete.
 
 #### Inspecting results 
+Now we can test Canvas performance by using a previously curated HCC2218 copy number calls from whole-genome data (HCC2218Truth.vcf) and a set of repetitive or ambiguous regions (HCC2218.cnaqc.excluded_regions.bed), which are available under Tools/EvaluateCNV/Docs/ of the canvas GitHub repository.  The evaluation is accomplished by using EvaluateCNV; the latest binary distribution for the tool can be found in [releases]:https://github.com/Illumina/canvas/releases.  
+EvaluateCNV uage info:
+```
+EvaluateCNV $TruthSetPath $CNV.vcf $ExcludedRegionsBed $OutputPath  [$RegionOfInterestBed]
+```
+In our case, given that truth files location in WORKDIR/tools/EvaluateCNV, the command is:
+```
+mono $WORKDIR/tools/EvaluateCNV/EvaluateCNV.exe WORKDIR/tools/EvaluateCNV/HCC2218Truth.vcf $WORKDIR/testing/HCC2218/CNV.vcf.gz 
+$WORKDIR/tools/EvaluateCNV/HCC2218.cnaqc.excluded_regions.bed $WORKDIR/testing/HCC2218/EvaluateCNV.txt
+```
+This will save evaluation data into $WORKDIR/testing/HCC2218/EvaluateCNV.txt.
+Inspecting it suggest that Canvas performed quite well in calling somatic CNV variants in HCC2218, below is an extract from the file
+```
+Accuracy        92.0255
+DirectionAccuracy       93.1368
+Recall  88.0894
+DirectionRecall 92.0237
+Precision       81.3032
+DirectionPrecision      84.9345
+```
+
