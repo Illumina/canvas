@@ -111,7 +111,7 @@ namespace Isas.Shared
         /// Gets the parent directory of a specified subdirectory.
         /// </summary>
         /// <value>
-        /// The parent directory, or null if the path is <c>null</c> or if the file path denotes a root (such as "\", "C:", or * "\\server\share").
+        /// The parent directory, or null if the file path denotes a root (such as "\", "C:", or * "\\server\share").
         /// </value>
         IDirectoryLocation Parent { get; }
 
@@ -457,6 +457,8 @@ namespace Isas.Shared
         /// <param name="directoryInfo">A DirectoryInfo object to wrap.</param>
         public DirectoryLocation(DirectoryInfo directoryInfo)
         {
+            if (directoryInfo == null)
+                throw new ArgumentNullException(nameof(directoryInfo));
             _instance = directoryInfo;
         }
 
@@ -1016,11 +1018,16 @@ namespace Isas.Shared
         /// Gets the parent directory of a specified subdirectory.
         /// </summary>
         /// <value>
-        /// The parent directory, or null if the path is <c>null</c> or if the file path denotes a root (such as "\", "C:", or * "\\server\share").
+        /// The parent directory, or null if the file path denotes a root (such as "\", "C:", or * "\\server\share").
         /// </value>
         public IDirectoryLocation Parent
         {
-            get { return new DirectoryLocation(_instance.Parent); }
+            get
+            {
+                var parent = _instance.Parent;
+                if (parent == null) return null;
+                return new DirectoryLocation(_instance.Parent);
+            }
         }
 
         /// <summary>

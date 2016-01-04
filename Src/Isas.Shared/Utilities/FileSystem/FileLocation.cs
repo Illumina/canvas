@@ -415,6 +415,8 @@ namespace Isas.Shared
         /// <param name="fileInfo">The FileInfo object to wrap.</param>
         public FileLocation(FileInfo fileInfo)
         {
+            if (fileInfo == null)
+                throw new ArgumentNullException(nameof(fileInfo));
             _instance = fileInfo;
         }
 
@@ -422,9 +424,8 @@ namespace Isas.Shared
         /// Initializes a new instance of the <see cref="FileLocation"/> class.
         /// </summary>
         /// <param name="filePath">The file path.</param>
-        public FileLocation(string filePath)
+        public FileLocation(string filePath) : this(new FileInfo(filePath))
         {
-            _instance = new FileInfo(filePath);
         }
 
         /// <summary>

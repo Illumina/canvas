@@ -9,6 +9,6 @@ namespace CanvasCommon
     public class CanvasVersionInfo
     {
         public const string NameString = "Canvas";
-        public const string VersionString = "1.3.4";
+        public const string VersionString = "1.3.5";
     }
 }

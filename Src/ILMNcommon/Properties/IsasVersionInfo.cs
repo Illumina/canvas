@@ -19,7 +19,7 @@ namespace Illumina.Shared.Version
 		public const string VersionString = "2.6.68";
 		public const string BuildDateString = "12/8/2015 12:31:59 PM";
 		public const string AssemblyCompany = CompanyName;
-		public const string AssemblyCopyright = "Copyright © Illumina 2015";
+		public const string AssemblyCopyright = "Copyright © Illumina 2016";
 		/// <summary>
 		///     Important that this is the same as the RegistryKeyName
 		///     because .NET will use the assembly attribute AssemblyCompany
