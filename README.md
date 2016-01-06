@@ -39,8 +39,9 @@ Open the solution file (Canvas.sln) using Visual Studio 2013, and build the main
 ### Operating System Guidelines
 
 #### Linux
-Canvas is known to run under the following Linux distributions using Mono 3.10.0:
-- CentOS 5, 6
+Canvas is known to run under the following Linux distributions:
+- CentOS 5, 6 (Mono 3.10.0, Mono 4.0.2)
+- Ubuntu 14.04 (Mono 4.0.2)
 
 Other Linux distributions and other recent Mono versions are likely to work as well but have not been explicitly tested
 
@@ -72,6 +73,22 @@ This demo will run Canvas on exome data for HCC2218 breast carcinoma cell lines 
 #### Installation
 The easiest way to install Canvas is to use the latest pre-copiled binaries from [releases]:https://github.com/Illumina/canvas/releases (just download and uncopress). The demo presumes that binary files were installed to WORKDIR/canvas/canvas-1.3.4_x64/. Exact installation of mono environment depends on OS, below is an installation example for Ubuntu:
 ```
+Compiling mono from source
+mkdir mono-4.0.2_source
+wget http://download.mono-project.com/sources/mono/mono-4.0.2.5.tar.bz2
+tar xf mono-4.0.2.5.tar.bz2
+cd mono-4.0.2
+mkdir /home/ubuntu/mono-4.0.2
+./configure --prefix=/home/ubuntu/mono-4.0.2
+sudo apt-get update
+sudo apt-get install gcc
+sudo apt-get install g++
+sudo apt-get install gettext
+sudo apt-get install automake
+sudo apt-get install libtool
+./autogen.sh --prefix=/home/ubuntu/mono-4.0.2 --with-large-heap=yes --enable-parallel-mark --with-sgen=yes
+
+Installing binaries (make sure mono-4.0.2 is installed)
 sudo apt-get install mono-runtime
 sudo apt-get install mono-complete
 ```
@@ -102,7 +119,7 @@ Download hg19 genome reference files from https://illumina.box.com/CanvasPublic 
 #### Running demo
 With all files copied and installed, we are now ready to run Canvas. This demo will use Tumor-normal-enrichment workflow that runs on Nextera exome data.  Execute the command below. 
 ```
-mono $WORKDIR/canvas/canvas-1.3.4_x64/Canvas.exe Tumor-normal-enrichment -b $WORKDIR/testing/files/HCC2218C_S1.bam --normal-bam=$WORKDIR/testing/files/HCC2218BL_S1.bam --reference=$WORKDIR/testing/hg19/kmer.fa --manifest=$WORKDIR/testing/files/NexteraRapidCapture_Exome_TargetedRegions_v1.2Used.txt -g $WORKDIR/testing/hg19/ -n HCC2218C -f $WORKDIR/testing/hg19/filter13.bed -o $WORKDIR/testing/HCC2218_v2 --b-allele-vcf=$WORKDIR/testing/files/HCC2218BL_S1.vcf --somatic-vcf=$WORKDIR/testing/files/HCC2218C_S1.vcf --custom-parameters=CanvasBin,--mode=TruncatedDynamicRange
+/home/ubuntu/mono-4.0.2/bin/mono $WORKDIR/canvas/canvas-1.3.4_x64/Canvas.exe Tumor-normal-enrichment -b $WORKDIR/testing/files/HCC2218C_S1.bam --normal-bam=$WORKDIR/testing/files/HCC2218BL_S1.bam --reference=$WORKDIR/testing/hg19/kmer.fa --manifest=$WORKDIR/testing/files/NexteraRapidCapture_Exome_TargetedRegions_v1.2Used.txt -g $WORKDIR/testing/hg19/ -n HCC2218C -f $WORKDIR/testing/hg19/filter13.bed -o $WORKDIR/testing/HCC2218_v2 --b-allele-vcf=$WORKDIR/testing/files/HCC2218BL_S1.vcf --somatic-vcf=$WORKDIR/testing/files/HCC2218C_S1.vcf --custom-parameters=CanvasBin,-m=TruncatedDynamicRange
 ```
 CNV.vcf.gz files will be saved to HCC2218_v2 output directory. Depending on the number of available CPUs, the demo will take from few minutes to under an hour to complete.
 
