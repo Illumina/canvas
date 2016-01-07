@@ -135,7 +135,7 @@ mono $WORKDIR/tools/EvaluateCNV/EvaluateCNV.exe WORKDIR/tools/EvaluateCNV/HCC221
 $WORKDIR/tools/EvaluateCNV/HCC2218.cnaqc.excluded_regions.bed $WORKDIR/testing/HCC2218/EvaluateCNV.txt
 ```
 This will save evaluation data into $WORKDIR/testing/HCC2218/EvaluateCNV.txt.
-Inspecting it suggest that Canvas performed quite well in calling somatic CNV variants in HCC2218, below is an extract from the file (results obtained using Canvas 1.3.4, other versions and main/custom parameters might alter performance metrics)
+Inspecting it suggest that Canvas performed quite well in calling somatic CNV variants in HCC2218, below is an extract from the file (results obtained using Canvas 1.3.4 with the command line shown above, other versions and main/custom parameters might alter performance metrics)
 ```
 Accuracy        92.0255
 DirectionAccuracy       93.1368
