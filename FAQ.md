@@ -1,7 +1,7 @@
 Frequently asked questions
 =================================
 
-#### I've downloaded and installed the Canvas software and trying to run the tumor-normal and somatic WGS workflow.  The software calls for two required files.  One is the somatic small variant vcf file, and the other is the b-allele vcf file.  I do you generate these files?  
+#### I've downloaded and installed the Canvas software and trying to run the tumor-normal and somatic WGS workflow.  The software calls for two required files.  One is the somatic small variant vcf file, and the other is the b-allele vcf file.  How do you generate these files?  
 Canvas Somatic-WGS uses the following vriant files: 
 --somatic-vcf = SNVs and small indels in the control (“cancer”) sample – used to predict purity in the tumor sample that have no copy number changes 
 --b-allele-vcf = SNVs and small indels in the reference (“normal”) sample – used to determine which germline SNPs are heterozygous. These are later utilized to compute allelic ratios that are part of the Canvas model for predicting purity and ploidy. 
