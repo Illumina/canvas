@@ -26,7 +26,7 @@ Build instructions
 ------------------
 
 ### Binaries:
-It is recmomended to start from one of the [binary distributions on the Canvas releases page] [releases] if a suitable version is available.  
+It is recommended to start from one of the [binary distributions on the Canvas releases page] [releases] if a suitable version is available.  
 
 [releases]:https://github.com/Illumina/canvas/releases
 
@@ -43,7 +43,7 @@ Canvas is known to run under the following Linux distributions:
 - CentOS 5, 6 (Mono 3.10.0, Mono 4.0.2)
 - Ubuntu 14.04 (Mono 4.0.2)
 
-Other Linux distributions and other recent Mono versions are likely to work as well but have not been explicitly tested
+Other Linux distributions and other recent Mono versions are likely to work as well but have not been explicitly tested.
 
 #### Windows
 Canvas is known to run on Windows 7 or Windows 8 systems using .NET 4.5.1
@@ -51,7 +51,7 @@ Canvas is known to run on Windows 7 or Windows 8 systems using .NET 4.5.1
 Run instructions
 ------------------
 
-Canvas can be run on a variety of sequencing input. See the help information from the Canvas.exe command line executable for the supported workflows and required input files:
+Canvas can be run on a variety of sequencing inputs. See the help information from the Canvas.exe command line executable for the supported workflows and required input files:
 
 $Canvas.exe --help  
 Canvas 1.3.4.0 Copyright c Illumina 2015  
@@ -68,7 +68,7 @@ Options:
 #### Reference genome
 The required input files for Human reference genome builds GRCh37, hg19, and GRCh38 can be downloaded from https://illumina.box.com/CanvasPublic. When using a custom reference genome the equivalent files need to be created. Use the FlagUniqueKmers project to generate the annotated fasta file (kmer.fa) for a custom reference genome. 
 
-## DEMO (Tumor-normal-enrichmen data)
+## DEMO (Tumor-normal-enrichment data)
 This demo will run Canvas on exome data for HCC2218 breast carcinoma cell lines and compare results with previously curated ground truth set.
 #### Installation
 The easiest way to install Canvas is to use the latest pre-copiled binaries from [releases]:https://github.com/Illumina/canvas/releases (just download and uncopress). The demo presumes that binary files were installed to WORKDIR/canvas/canvas-1.3.4_x64/. Exact installation of mono environment depends on OS, below is an installation example for Ubuntu:
@@ -93,7 +93,7 @@ sudo apt-get install mono-runtime
 sudo apt-get install mono-complete
 ```
 #### Data 
-To download demo data, add BasepSpace project https://basespace.illumina.com/s/DcPnOqHmtPNB to your account (you might need to register first). The actual files can then be downloaded from the following subdirectories:
+To download demo data, add BaseSpace project https://basespace.illumina.com/s/DcPnOqHmtPNB to your account (you might need to register first). The actual files can then be downloaded from the following subdirectories:
 https://basespace.illumina.com/analyses/30697313/files/28317292?projectId=26760736
 https://basespace.illumina.com/analyses/30697313/files/28296383?projectId=26760736
 In addition to manual download, a command line basemount (https://basemount.basespace.illumina.com ) can be used for file transfer. To install basemount run
@@ -103,7 +103,7 @@ mkdir /tmp/BaseSpace
 basemount  /tmp/BaseSpace
 cd /tmp/BaseSpace
 ```
-BaseSpace files are now available under your current directory. To run demo, transfer the follwoing files into WORKDIR/testing/files/
+BaseSpace files are now available under your current directory. To run demo, transfer the following files into WORKDIR/testing/files/
 ```
 “Projects/HiSeq 2500 RR: NRC Exome (HCC1187 & HCC2218)/AppResults/HCC1187BL/Files/HCC1187BL_S1.vcf" (germline vcf)
 "Projects/HiSeq 2500 RR: NRC Exome (HCC1187 & HCC2218)/AppResults/HCC2218C/Files/HCC2218C_S1.bam" (somatic bam)
@@ -124,8 +124,8 @@ With all files copied and installed, we are now ready to run Canvas. This demo w
 CNV.vcf.gz files will be saved to HCC2218_v2 output directory. Depending on the number of available CPUs, the demo will take from few minutes to under an hour to complete.
 
 #### Inspecting results 
-Now we can test Canvas performance by using a previously curated HCC2218 copy number calls from whole-genome data (HCC2218Truth.vcf) and a set of repetitive or ambiguous regions (HCC2218.cnaqc.excluded_regions.bed), which are available under Tools/EvaluateCNV/Docs/ of the canvas GitHub repository.  The evaluation is accomplished by using EvaluateCNV; the latest binary distribution for the tool can be found in [releases]:https://github.com/Illumina/canvas/releases.  
-EvaluateCNV uage info:
+Now we can test Canvas performance by using a set of previously curated HCC2218 copy number calls from whole-genome data (HCC2218Truth.vcf) and a set of repetitive or ambiguous regions (HCC2218.cnaqc.excluded_regions.bed), which are available under Tools/EvaluateCNV/Docs/ of the canvas GitHub repository.  The evaluation is accomplished by using EvaluateCNV; the latest binary distribution for the tool can be found in [releases]:https://github.com/Illumina/canvas/releases.  
+EvaluateCNV usage info:
 ```
 EvaluateCNV $TruthSetPath $CNV.vcf $ExcludedRegionsBed $OutputPath  [$RegionOfInterestBed]
 ```
@@ -135,7 +135,7 @@ mono $WORKDIR/tools/EvaluateCNV/EvaluateCNV.exe WORKDIR/tools/EvaluateCNV/HCC221
 $WORKDIR/tools/EvaluateCNV/HCC2218.cnaqc.excluded_regions.bed $WORKDIR/testing/HCC2218/EvaluateCNV.txt
 ```
 This will save evaluation data into $WORKDIR/testing/HCC2218/EvaluateCNV.txt.
-Inspecting it suggest that Canvas performed quite well in calling somatic CNV variants in HCC2218, below is an extract from the file (results obtained using Canvas 1.3.4 with the command line shown above, other versions and main/custom parameters might alter performance metrics)
+Inspecting it suggests that Canvas performed quite well in calling somatic CNV variants in HCC2218, below is an extract from the file (results obtained using Canvas 1.3.4 with the command line shown above, other versions and main/custom parameters might alter performance metrics)
 ```
 Accuracy        92.0255
 DirectionAccuracy       93.1368
