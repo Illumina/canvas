@@ -76,6 +76,7 @@
     <Compile Include="GenomicBin.cs" />
     <Compile Include="IO.cs" />
     <Compile Include="CopyNumberOracle.cs" />
+    <Compile Include="LoessInterpolator.cs" />
     <Compile Include="PloidyInfo.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Utilities.cs" />
