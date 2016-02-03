@@ -5,32 +5,40 @@ using System.Collections.Generic;
 
 namespace SequencingFiles
 {
-	/// <summary>
-	///     Writes to bgzip format
-	///     Note there is no reader at this time because any valid bgzip file can be read with a gzip reader,
-	///     however we may need some read functionality if we bring vcf indexing into C#.
-	/// </summary>
-	public class BgzipWriter : BgzfWriterCommon, BgzipOrStreamWriter.IWriter
+    public enum CompressionStrategyType
+    {
+        Z_FILTERED = 1,
+        Z_HUFFMAN_ONLY = 2,
+        Z_RLE = 3,
+        Z_FIXED = 4,
+        Z_DEFAULT_STRATEGY = 0,
+    }
+
+    /// <summary>
+    ///     Writes to bgzip format
+    ///     Note there is no reader at this time because any valid bgzip file can be read with a gzip reader,
+    ///     however we may need some read functionality if we bring vcf indexing into C#.
+    /// </summary>
+    public class BgzipWriter : BgzfWriterCommon, BgzipOrStreamWriter.IWriter
 	{
 		#region member variables
-
 		private const byte Newline = 10;
-
 		private const int InitBufSize = 4 * 1024;
 		private readonly ASCIIEncoding _encoding = new ASCIIEncoding();
 		private byte[] _outputBuffer = new byte[InitBufSize];
+        #endregion
 
-		#endregion
-
-		public BgzipWriter(string filename, GzipCompressionLevel compressionLevel = GzipCompressionLevel.DefaultCompression5)
-			: base((int)compressionLevel)
+        public BgzipWriter(string filename, GzipCompressionLevel compressionLevel = GzipCompressionLevel.DefaultCompression5,
+            CompressionStrategyType compressionStrategy = CompressionStrategyType.Z_DEFAULT_STRATEGY)
+			: base((int)compressionLevel, (int)compressionStrategy)
 		{
 			base.Open(filename);
 		}
 
-		public BgzipWriter(Stream outStream, GzipCompressionLevel compressionLevel = GzipCompressionLevel.DefaultCompression5)
-			: base((int)compressionLevel)
-		{
+		public BgzipWriter(Stream outStream, GzipCompressionLevel compressionLevel = GzipCompressionLevel.DefaultCompression5,
+            CompressionStrategyType compressionStrategy = CompressionStrategyType.Z_DEFAULT_STRATEGY)
+			: base((int)compressionLevel, (int)compressionStrategy)
+        {
 			base.Open(outStream);
 		}
 

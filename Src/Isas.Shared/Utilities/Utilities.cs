@@ -919,41 +919,7 @@ namespace Illumina.SecondaryAnalysis
             }
 
             //now we finally do the updating
-            int lastUpdatedOptionIndex = -1;
-            foreach (KeyValuePair<string, string> newOption in prioritizedNewOptions)
-            {
-                // Handle option removals:
-                if (newOption.Key.StartsWith("#"))
-                {
-                    List<KeyValuePair<string, string>> removals = new List<KeyValuePair<string, string>>();
-                    for (int index = 0; index < updatedOptions.Count; index++)
-                    {
-                        var option = updatedOptions[index];
-                        if (option.Key.TrimStart('-') == newOption.Key.Substring(1))
-                        {
-                            removals.Add(option);
-                            if (lastUpdatedOptionIndex >= index) lastUpdatedOptionIndex--;
-                        }
-                    }
-                    foreach (var removal in removals) updatedOptions.Remove(removal);
-                    continue;
-                }
-
-                // Handle option overrides and insertions:
-                int newOptionIndex = updatedOptions.FindIndex(kvp => kvp.Key == newOption.Key);
-                if (newOptionIndex != -1)
-                {
-                    updatedOptions[newOptionIndex] = newOption;
-                }
-                else if (lastUpdatedOptionIndex != -1)
-                    updatedOptions.Insert(lastUpdatedOptionIndex + 1, newOption);
-                else if (insertAtEnd)
-                    updatedOptions.Add(newOption);
-                else
-                    updatedOptions.Insert(0, newOption);
-
-                lastUpdatedOptionIndex = updatedOptions.IndexOf(newOption);
-            }
+            UpdateCommandOptions(updatedOptions, prioritizedNewOptions, insertAtEnd);
 
             //build up the final command that includes the update options
             StringBuilder updatedCommand = new StringBuilder(beforeFirstOption);
@@ -964,6 +930,45 @@ namespace Illumina.SecondaryAnalysis
             }
             updatedCommand.AppendWithSpace(afterLastOption);
             return updatedCommand.ToString();
+        }
+
+        public static void UpdateCommandOptions(List<KeyValuePair<string, string>> originalOptions, List<KeyValuePair<string, string>> newOptions, bool insertAtEnd)
+        {
+            int lastUpdatedOptionIndex = -1;
+            foreach (KeyValuePair<string, string> newOption in newOptions)
+            {
+                // Handle option removals:
+                if (newOption.Key.StartsWith("#"))
+                {
+                    List<KeyValuePair<string, string>> removals = new List<KeyValuePair<string, string>>();
+                    for (int index = 0; index < originalOptions.Count; index++)
+                    {
+                        var option = originalOptions[index];
+                        if (option.Key.TrimStart('-') == newOption.Key.Substring(1))
+                        {
+                            removals.Add(option);
+                            if (lastUpdatedOptionIndex >= index) lastUpdatedOptionIndex--;
+                        }
+                    }
+                    foreach (var removal in removals) originalOptions.Remove(removal);
+                    continue;
+                }
+
+                // Handle option overrides and insertions:
+                int newOptionIndex = originalOptions.FindIndex(kvp => kvp.Key == newOption.Key);
+                if (newOptionIndex != -1)
+                {
+                    originalOptions[newOptionIndex] = newOption;
+                }
+                else if (lastUpdatedOptionIndex != -1)
+                    originalOptions.Insert(lastUpdatedOptionIndex + 1, newOption);
+                else if (insertAtEnd)
+                    originalOptions.Add(newOption);
+                else
+                    originalOptions.Insert(0, newOption);
+
+                lastUpdatedOptionIndex = originalOptions.IndexOf(newOption);
+            }
         }
 
         //count the number of values in the expectedValues string and grab the corresponding number of values from the currentValues string.
@@ -985,7 +990,7 @@ namespace Illumina.SecondaryAnalysis
         }
 
         //split the command into option key/value pairs and separately save anything that comes before the first option 
-        private static List<KeyValuePair<string, string>> GetCommandOptions(string command, out string beforeFirstOption)
+        public static List<KeyValuePair<string, string>> GetCommandOptions(string command, out string beforeFirstOption)
         {
             //this regex is the meat of this feature. We want to capture all valid options from the command
             //each option must happen after white space or at the beginning of the command

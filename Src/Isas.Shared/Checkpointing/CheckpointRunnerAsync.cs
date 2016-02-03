@@ -16,11 +16,12 @@ namespace Isas.Shared.Checkpointing
         private readonly List<string> _childStopCheckpoints;
         private readonly ILogger _logger;
         private readonly bool _retainTempFiles;
+        private readonly bool _forceSynchronous;
         private readonly List<Checkpoint> _parentCheckpoints;
         private bool _disposed;
 
         private CheckpointRunnerAsync(ILogger logger, IDirectoryLocation tempRepository, CheckpointManagerAsync manager, ICheckpointSerializerAsync serializer,
-            bool retainTempFiles = false, List<string> childStartCheckpoints = null, List<string> childStopCheckpoints = null, List<Checkpoint> parentCheckpoints = null)
+            bool retainTempFiles = false, bool forceSynchronous = false, List<string> childStartCheckpoints = null, List<string> childStopCheckpoints = null, List<Checkpoint> parentCheckpoints = null)
         {
             _tempRepository = tempRepository;
             _manager = manager;
@@ -29,7 +30,13 @@ namespace Isas.Shared.Checkpointing
             _childStopCheckpoints = childStopCheckpoints ?? new List<string>();
             _logger = logger;
             _retainTempFiles = retainTempFiles;
+            _forceSynchronous = forceSynchronous;
             _parentCheckpoints = parentCheckpoints ?? new List<Checkpoint>();
+        }
+
+        private CheckpointHelper<T> CreateCheckpoint<T>(Checkpoint checkpoint, Func<T> func)
+        {
+            return new CheckpointHelper<T>(checkpoint, func, _logger, this);
         }
 
         public Task<TOut> RunCheckpointAsync<TOut>(string checkpointName, Func<TOut> func)
@@ -40,57 +47,13 @@ namespace Isas.Shared.Checkpointing
 
         private Task<TOut> RunCheckpointAsync<TOut>(Checkpoint checkpoint, Func<TOut> func)
         {
-            func = WrapWithBenchmarkAndSaveAndRunOrLoad(checkpoint, func);
-            func = WrapWithStopCheckpointCheck(checkpoint, func);
-            return Task.Run(func);
-        }
-
-        private Func<TOut> WrapWithBenchmarkAndSaveAndRunOrLoad<TOut>(Checkpoint checkpoint, Func<TOut> func)
-        {
-            func = WrapWithBenchmark(checkpoint, func);
-            func = WrapWithSave(checkpoint, func);
-            func = RunOrLoad(checkpoint, func);
-            return func;
-        }
-
-        private Func<TOut> RunOrLoad<TOut>(Checkpoint checkpoint, Func<TOut> func)
-        {
-            bool hasBeenRunBefore = _serializer.CanLoad(checkpoint);
-            if (!checkpoint.ShouldRun(hasBeenRunBefore))
-                return () =>
-                {
-                    _logger.Info($"Loading previously saved results for {PrettyFullCheckpoint(checkpoint)}");
-                    return _serializer.Load<TOut>(checkpoint);
-                };
-            return func;
-        }
-
-        private Func<TOut> WrapWithStopCheckpointCheck<TOut>(Checkpoint checkpoint, Func<TOut> func)
-        {
-            return () =>
-            {
-                var result = func.Invoke();
-                if (checkpoint.IsStopCheckpoint)
-                {
-                    var message = $"Stop checkpoint {FullCheckpoint(checkpoint)} finished";
-                    _logger.Info(message);
-                    throw new StopCheckpointFoundException(message);
-                }
-                return result;
-            };
-        }
-
-        private Func<TOut> WrapWithBenchmark<TOut>(Checkpoint checkpoint, Func<TOut> func)
-        {
-            return () =>
-               {
-                   _logger.Info($"Running {PrettyFullCheckpoint(checkpoint)}");
-                   Benchmark benchmark = new Benchmark();
-                   var result = func.Invoke();
-                   _logger.Info("Elapsed time (step/time(sec)/name)\t{0}\t{1:F1}\t{2}",
-                       checkpoint.Number, benchmark.GetElapsedTime(), checkpoint.Name);
-                   return result;
-               };
+            var checkpointHelper = CreateCheckpoint(checkpoint, func);
+            return checkpointHelper
+                .WrapWithBenchmark()
+                .WrapWithSave()
+                .RunOrLoad()
+                .WrapWithStopCheckpointCheck()
+                .RunAsync();
         }
 
         private string FullCheckpoint(Checkpoint currentCheckpoint)
@@ -103,16 +66,6 @@ namespace Isas.Shared.Checkpointing
             if (_parentCheckpoints.Any())
                 return $"nested checkpoint {FullCheckpoint(currentCheckpoint)}";
             return $"checkpoint {FullCheckpoint(currentCheckpoint)}";
-        }
-
-        private Func<TOut> WrapWithSave<TOut>(Checkpoint checkpoint, Func<TOut> func)
-        {
-            return () =>
-            {
-                var result = func.Invoke();
-                _serializer.Save(checkpoint, result);
-                return result;
-            };
         }
 
         public Task<TOutput> RunCheckpointAsync<TOutput>(
@@ -142,7 +95,7 @@ namespace Isas.Shared.Checkpointing
                     childStopCheckpoints = _childStopCheckpoints.Skip(1).ToList();
                 }
                 IDirectoryLocation tempDir = GetTempDirectory(checkpoint);
-                var childSerializer = _serializer.GetChildSerializer(IsasFilePaths.GetCheckpointFolder(tempDir));
+                var childSerializer = _serializer.GetChildSerializer(CheckpointManagerFactory.GetCheckpointFolder(tempDir));
 
                 var childManager = _manager.CreateChildCheckpointerManager(startCheckpoint, stopCheckpoint);
                 using (var childCheckpointer = GetChildCheckpointer(tempDir, childManager, childSerializer, childStartCheckpoints, childStopCheckpoints, GetParentCheckpoints(checkpoint)))
@@ -168,36 +121,41 @@ namespace Isas.Shared.Checkpointing
         private CheckpointRunnerAsync GetChildCheckpointer(IDirectoryLocation tempDir, CheckpointManagerAsync childManager, ICheckpointSerializerAsync childSerializer,
             List<string> childStartCheckpoints, List<string> childStopCheckpoints, List<Checkpoint> parentCheckpoints)
         {
-            return new CheckpointRunnerAsync(_logger, tempDir, childManager, childSerializer, _retainTempFiles, childStartCheckpoints, childStopCheckpoints, parentCheckpoints);
+            return new CheckpointRunnerAsync(_logger, tempDir, childManager, childSerializer, _retainTempFiles, _forceSynchronous, childStartCheckpoints, childStopCheckpoints, parentCheckpoints);
         }
 
         public Task<TOut> RunCheckpointAsync<TIn, TOut>(string key, Func<ICheckpointRunnerAsync, TIn, IDirectoryLocation, TOut> run,
     TIn input, ILoadingConvention<TIn, TOut> loadingConvention)
         {
             var checkpoint = _manager.CreateCheckpoint(key);
-            return Task.Run(WrapWithStopCheckpointCheck(checkpoint, SupplyNestedCheckpoint(checkpoint, WrapWithLoadingConvention(checkpoint, run, input, loadingConvention))));
+            var checkpointHelper = CreateCheckpoint(checkpoint,
+                SupplyNestedCheckpoint(checkpoint, WrapWithLoadingConvention(checkpoint, run, input, loadingConvention)));
+            return checkpointHelper.WrapWithStopCheckpointCheck().RunAsync();
         }
 
         private Func<ICheckpointRunnerAsync, IDirectoryLocation, TOutput> WrapWithLoadingConvention<TInput, TOutput>(Checkpoint checkpoint, Func<ICheckpointRunnerAsync, TInput, IDirectoryLocation, TOutput> run,
             TInput input,
             ILoadingConvention<TInput, TOutput> convention)
         {
-            bool hasBeenRunBefore = _serializer.CanLoad(checkpoint);
-            if (!checkpoint.ShouldRun(hasBeenRunBefore) && !hasBeenRunBefore)
+            return (runner, tempDir) =>
             {
-                return (runner, tempDir) => WrapWithSave(checkpoint, () =>
-                 {
-                     _logger.Warn($"Skipping {PrettyFullCheckpoint(checkpoint)} by loading results from the filesystem. " +
-                                  $"Any results from this checkpoint that are generated only in memory will be unavailable to downstream steps and may cause unexpected behavior");
-                     return convention.Load(input);
-                 }).Invoke();
-            }
-            return (runner, tempDir) => WrapWithBenchmarkAndSaveAndRunOrLoad(checkpoint, () =>
-              {
-                  var results = run.Invoke(runner, input, tempDir);
-                  convention.Move(results, (source, destination) => source.MoveAndLink(destination));
-                  return convention.Load(input);
-              }).Invoke();
+                bool hasBeenRunBefore = _serializer.CanLoad(checkpoint);
+                if (!checkpoint.ShouldRun(hasBeenRunBefore) && !hasBeenRunBefore)
+                {
+                    return CreateCheckpoint(checkpoint, () =>
+                    {
+                        _logger.Warn($"Skipping {PrettyFullCheckpoint(checkpoint)} by loading results from the filesystem. " +
+                                     $"Any results from this checkpoint that are generated only in memory will be unavailable to downstream steps and may cause unexpected behavior");
+                        return convention.Load(input);
+                    }).WrapWithSave().Func.Invoke();
+                }
+                return CreateCheckpoint(checkpoint, () =>
+                {
+                    var results = run.Invoke(runner, input, tempDir);
+                    convention.Move(results, (source, destination) => source.MoveAndLink(destination));
+                    return convention.Load(input);
+                }).WrapWithBenchmark().WrapWithSave().RunOrLoad().Func.Invoke();
+            };
         }
 
         public Task<TOutput> RunCheckpointAsync<TInput, TOutput>(
@@ -266,7 +224,7 @@ namespace Isas.Shared.Checkpointing
         }
 
         public static ICheckpointRunnerAsync Create(ICheckpointSerializerAsync serializer, ILogger logger, IDirectoryLocation tempDir,
-            string startCheckpoint = null, string stopCheckpoint = null, bool retainTempFiles = false)
+            string startCheckpoint = null, string stopCheckpoint = null, bool retainTempFiles = false, bool forceSynchronous = false)
         {
             var startCheckpoints = string.IsNullOrEmpty(startCheckpoint) ? new List<string>() : startCheckpoint.Split('.').ToList();
             if (startCheckpoints.Any(string.IsNullOrWhiteSpace))
@@ -296,8 +254,82 @@ namespace Isas.Shared.Checkpointing
                 throw new ArgumentException("Numbered stopping checkpoints must be greater than or equal to 1");
 
             var manager = new CheckpointManagerAsync(logger, startCheckpoints.FirstOrDefault(), stopCheckpoints.FirstOrDefault());
-            return new CheckpointRunnerAsync(logger, tempDir, manager, serializer, retainTempFiles, startCheckpoints.Skip(1).ToList(),
+            return new CheckpointRunnerAsync(logger, tempDir, manager, serializer, retainTempFiles, forceSynchronous, startCheckpoints.Skip(1).ToList(),
                 stopCheckpoints.Skip(1).ToList());
+        }
+
+        private class CheckpointHelper<T>
+        {
+            private Checkpoint Checkpoint { get; }
+            public Func<T> Func { get; }
+            private readonly ILogger _logger;
+            private readonly CheckpointRunnerAsync _runner;
+
+            public CheckpointHelper(Checkpoint checkpoint, Func<T> func, ILogger logger, CheckpointRunnerAsync runner)
+            {
+                Checkpoint = checkpoint;
+                Func = func;
+                _logger = logger;
+                _runner = runner;
+            }
+
+            public CheckpointHelper<T> WrapWithBenchmark()
+            {
+                return new CheckpointHelper<T>(Checkpoint, () =>
+                {
+                    _logger.Info($"Running {_runner.PrettyFullCheckpoint(Checkpoint)}");
+                    Benchmark benchmark = new Benchmark();
+                    var result = Func.Invoke();
+                    _logger.Info("Elapsed time (step/time(sec)/name)\t{0}\t{1:F1}\t{2}",
+                        Checkpoint.Number, benchmark.GetElapsedTime(), Checkpoint.Name);
+                    return result;
+                }, _logger, _runner);
+            }
+
+            public CheckpointHelper<T> WrapWithSave()
+            {
+                return new CheckpointHelper<T>(Checkpoint, () =>
+                {
+                    var result = Func.Invoke();
+                    _runner._serializer.Save(Checkpoint, result);
+                    return result;
+                }, _logger, _runner);
+            }
+
+            public CheckpointHelper<T> RunOrLoad()
+            {
+                bool hasBeenRunBefore = _runner._serializer.CanLoad(Checkpoint);
+                var func = Func;
+                if (!Checkpoint.ShouldRun(hasBeenRunBefore))
+                    func = () =>
+                    {
+                        _logger.Info($"Loading previously saved results for {_runner.PrettyFullCheckpoint(Checkpoint)}");
+                        return _runner._serializer.Load<T>(Checkpoint);
+                    };
+                return new CheckpointHelper<T>(Checkpoint, func, _logger, _runner);
+            }
+
+            public CheckpointHelper<T> WrapWithStopCheckpointCheck()
+            {
+                return new CheckpointHelper<T>(Checkpoint, () =>
+                {
+                    var result = Func.Invoke();
+                    if (Checkpoint.IsStopCheckpoint)
+                    {
+                        var message = $"Stop checkpoint {_runner.FullCheckpoint(Checkpoint)} finished";
+                        _logger.Info(message);
+                        throw new StopCheckpointFoundException(message);
+                    }
+                    return result;
+                }, _logger, _runner);
+            }
+
+            public Task<T> RunAsync()
+            {
+                if (_runner._forceSynchronous)
+                    return Task.FromResult(Func.Invoke());
+                return Task.Run(Func);
+            }
         }
     }
 }

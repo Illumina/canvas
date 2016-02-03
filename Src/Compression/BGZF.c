@@ -3,7 +3,9 @@
 #include "BGZF.h"
 
 // compresses the current block
-int CompressBlock(char* uncompressedBlock, unsigned int* pUncompressLen, char* compressedBlock, const unsigned int compressedLen, const int compressionLevel) {
+int CompressBlock(char* uncompressedBlock, unsigned int* pUncompressLen, char* compressedBlock, const unsigned int compressedLen, 
+	const int compressionLevel, const int compressionStrategy) 
+{
 
 	// initialization
 	char* buffer = compressedBlock;
@@ -42,7 +44,7 @@ int CompressBlock(char* uncompressedBlock, unsigned int* pUncompressLen, char* c
 		zs.avail_out = bufferSize - BLOCK_HEADER_LENGTH - BLOCK_FOOTER_LENGTH;
 
 		// initialize the zlib compression algorithm
-		if(deflateInit2(&zs, compressionLevel, Z_DEFLATED, GZIP_WINDOW_BITS, Z_DEFAULT_MEM_LEVEL, Z_DEFAULT_STRATEGY) != Z_OK) {
+		if(deflateInit2(&zs, compressionLevel, Z_DEFLATED, GZIP_WINDOW_BITS, Z_DEFAULT_MEM_LEVEL, compressionStrategy) != Z_OK) {
 			printf("ERROR: zlib deflate initialization failed.\n");
 			return -1;
 		}

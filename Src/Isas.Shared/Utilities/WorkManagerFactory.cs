@@ -10,7 +10,7 @@ namespace Isas.Shared
         {
             int maxThreadCount = settings.GetIntegerSetting(SampleSheetUtils.MaximumThreadCount, 0);
             float maxMemGB = settings.GetFloatSetting(SampleSheetUtils.MaximumMemoryGB, config.MaximumMemoryGB);
-            var loggingFolder = IsasFilePaths.GetLoggingFolder(analysisFolder);
+            var loggingFolder = analysisFolder.CreateSubdirectory("Logging");
 
             return new LocalWorkManager(logger, loggingFolder, maxThreadCount, maxMemGB, config.MaximumHoursPerProcess);
         }

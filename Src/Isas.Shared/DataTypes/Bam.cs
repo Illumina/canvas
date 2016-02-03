@@ -1,8 +1,8 @@
-﻿using Isas.Shared;
-using SequencingFiles;
+﻿using SequencingFiles;
 using System;
+using Illumina.SecondaryAnalysis;
 
-namespace Illumina.SecondaryAnalysis
+namespace Isas.Shared
 {
     /// <summary>
     /// Encapsulates a .bam file at a particular location.  (When the file moves, we create a new Bam object)
@@ -130,7 +130,7 @@ namespace Illumina.SecondaryAnalysis
 
         public Bam Move(IFileLocation newPath)
         {
-            Utilities.Move(BamFile.FullName, newPath.FullName);
+            Illumina.SecondaryAnalysis.Utilities.Move(BamFile.FullName, newPath.FullName);
             Bam movedBam = new Bam(newPath, _readLength, _isPairedEnd);
             if (Index.Exists)
                 Index.MoveTo(movedBam.Index);

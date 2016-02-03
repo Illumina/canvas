@@ -2,9 +2,8 @@
 using System.Collections.Generic;
 using System.Linq;
 using ILMNcommon.Common;
-using Isas.Shared;
 
-namespace Illumina.SecondaryAnalysis
+namespace Isas.Shared
 {
     /// <summary>
     /// Represents BCLs for one sample in one runFolder (flow-cell) possibly on several lanes.
@@ -108,7 +107,7 @@ namespace Illumina.SecondaryAnalysis
         public static SampleSet<SampleBcls> GetSampleBclsForRunFolder(SampleSet<IEnumerable<SampleBcls>> sampleBcls, BclRunFolder bclRunFolder)
         {
             return sampleBcls.SelectData(bcls => bcls.First(
-                b => b.BclRunFolder.RunFolder.FullName.Equals(bclRunFolder.RunFolder.FullName, Utilities.IsThisMono() ? StringComparison.Ordinal : StringComparison.OrdinalIgnoreCase)));
+                b => b.BclRunFolder.RunFolder.FullName.Equals(bclRunFolder.RunFolder.FullName, Illumina.SecondaryAnalysis.Utilities.IsThisMono() ? StringComparison.Ordinal : StringComparison.OrdinalIgnoreCase)));
         }
 
         public static IEnumerable<IDirectoryLocation> GetRunFolders(SampleSet<IEnumerable<SampleBcls>> samples)

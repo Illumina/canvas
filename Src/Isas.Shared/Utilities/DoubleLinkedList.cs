@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections;
 
-namespace Illumina.SecondaryAnalysis
+namespace Isas.Shared
 {
     public class DoubleLinkedList<T> : IEnumerator, IEnumerable
     {
