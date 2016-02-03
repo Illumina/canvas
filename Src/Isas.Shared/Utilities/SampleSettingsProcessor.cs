@@ -38,19 +38,29 @@ namespace SampleSettingsProcessing
             }
         }
 
+        public static int? GetPositiveNullableIntegerSetting(this ISampleSettings processor, string setting, int? _default)
+        {
+            int? value = processor.GetNullableIntegerSetting(setting, _default);
+            if (value < 0)
+            {
+                throw new ApplicationException($"{setting} cannot be negative. Use default: {_default}");
+            }
+            return value;
+        }
+
         /// <summary>
         /// Parse an optional integer setting from the Samplesheet
         /// </summary>
         /// <param name="processor">Samplesheet info</param>
         /// <param name="setting">Name of the setting</param>
         /// <returns>Integer value of setting or null if not present</returns>
-        public static int? GetNullableIntegerSetting(this ISampleSettings processor, string setting)
+        public static int? GetNullableIntegerSetting(this ISampleSettings processor, string setting, int? _default = null)
         {
             string value = processor.GetSetting(setting);
             if (value != null)
                 return int.Parse(value);
             else
-                return null;            
+                return _default;
         }
 
         public static float GetFloatSetting(this ISampleSettings processor, string setting, float _default)
@@ -110,6 +120,11 @@ namespace SampleSettingsProcessing
                 throw new Exception(string.Format("Errror: Sample sheet setting '{0} = {1}' not understood; use true or false (or 1 or 0) for this setting", setting, value));
             }
             return boolvalue.Value;
+        }
+
+        public static bool? GetNullableBooleanSetting(this ISampleSettings processor, string setting, bool? _default)
+        {
+            return setting.ParseBooleanSetting() ?? _default;
         }
 
         /// <summary>
@@ -262,6 +277,7 @@ namespace SampleSettingsProcessing
         private ILogger logger;
         private readonly Func<string, string[]> ParseCommaDelimitedLine;
 
+        private Dictionary<string, List<string>> Sections;
         private Dictionary<string, string> Header;
         private Dictionary<string, string> Settings;
         private Dictionary<string, SampleSet<List<string>>> Data;
@@ -278,7 +294,7 @@ namespace SampleSettingsProcessing
 
             ParseCommaDelimitedLine = s => CSVReader.ParseCommaDelimitedLine(s).Select(bit => bit.Trim()).ToArray();
 
-            Dictionary<string, List<string>> Sections = null;
+            Sections = null;
 
             try
             {
@@ -328,7 +344,7 @@ namespace SampleSettingsProcessing
         {
             // Header section begins with [Header]
             Dictionary<string, string> header = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-            foreach (string line in Sections["[Header]"])
+            foreach (string line in Sections["Header"])
             {
                 var tokens = ParseCommaDelimitedLine(line);
                 header[tokens[0]] = tokens[1];
@@ -340,8 +356,8 @@ namespace SampleSettingsProcessing
         {
             // Settings section begins with [Settings]
             Dictionary<string, string> settings = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-            if (!Sections.ContainsKey("[Settings]")) return settings;
-            foreach (var line in Sections["[Settings]"])
+            if (!Sections.ContainsKey("Settings")) return settings;
+            foreach (var line in Sections["Settings"])
             {
                 var tokens = ParseCommaDelimitedLine(line);
                 if (tokens[0] == "") continue;
@@ -356,20 +372,20 @@ namespace SampleSettingsProcessing
         {
             // Data section begins with [Data]
             Dictionary<string, SampleSet<List<string>>> data = new Dictionary<string, SampleSet<List<string>>>(StringComparer.OrdinalIgnoreCase);
-            if (!Sections.ContainsKey("[Data]") || !Sections["[Data]"].Any())
+            if (!Sections.ContainsKey("Data") || !Sections["Data"].Any())
                 return data;
 
             ISet<SampleInfo> sampleInfos = new HashSet<SampleInfo>();
 
             // First row contains column names
-            Dictionary<string, int> Columns = ParseColumnNames(Sections["[Data]"][0]);
+            Dictionary<string, int> Columns = ParseColumnNames(Sections["Data"][0]);
             foreach (var key in Columns.Keys)
             {
                 data[key] = new SampleSet<List<string>>();
             }
 
             int SampleNumber = 1;
-            foreach (string line in Sections["[Data]"].Skip(1))
+            foreach (string line in Sections["Data"].Skip(1))
             {
                 var tokens = ParseCommaDelimitedLine(line);
                 if (tokens.All(string.IsNullOrWhiteSpace)) continue;
@@ -432,7 +448,7 @@ namespace SampleSettingsProcessing
                 {
                     if (Columns.ContainsKey(column))
                     {
-                        throw new Exception(String.Format("Duplicate column headers found in [Data] section: {0}", column));
+                        throw new Exception(String.Format("Duplicate column headers found in Data section: {0}", column));
                     }
                     Columns[column] = ii;
                 }
@@ -486,8 +502,8 @@ namespace SampleSettingsProcessing
         {
             // Manifests section begins with [Manifests]
             Dictionary<string, string> manifests = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-            if (!Sections.ContainsKey("[Manifests]")) return manifests;
-            foreach (var line in Sections["[Manifests]"])
+            if (!Sections.ContainsKey("Manifests")) return manifests;
+            foreach (var line in Sections["Manifests"])
             {
                 var tokens = ParseCommaDelimitedLine(line);
                 manifests[tokens[0]] = tokens[1];
@@ -511,7 +527,7 @@ namespace SampleSettingsProcessing
                 if (line.StartsWith("["))
                 {
                     // This is a section label
-                    sectionLabel = fields[0];
+                    sectionLabel = ParseSectionName(fields[0]);
                     Sections[sectionLabel] = new List<string>();
                 }
                 else
@@ -523,6 +539,18 @@ namespace SampleSettingsProcessing
                 }
             }
             return Sections;
+        }
+
+        private string ParseSectionName(string sectionName)
+        {
+            // return string between [ ]
+            int start = sectionName.IndexOf('[');
+            if (start < 0)
+                throw new ApplicationException($"{sectionName} is not a Section name.");
+            int end = sectionName.IndexOf(']', start);
+            if (end < 0)
+                throw new ApplicationException($"{sectionName} is not a Section name.");
+            return sectionName.Substring(start + 1, end - start - 1);
         }
 
         private TValue GetValueOrDefault<TKey, TValue>(IDictionary<TKey, TValue> dictionary, TKey key, TValue value)
@@ -605,6 +633,11 @@ namespace SampleSettingsProcessing
                 samples[sample] = sample;
             }
             return samples;
+        }
+
+        public List<string> GetSection(string sectionName)
+        {
+            return GetValueOrDefault(Sections, sectionName, null);
         }
     }
 }

@@ -55,7 +55,7 @@ namespace Canvas
                             commonOptions.StopCheckpoint,
                             commonOptions.WholeGenomeFasta))
                     {
-                        IDirectoryLocation loggingFolder = outFolder.CreateSubdirectory(IsasFilePaths.LoggingFolderName);
+                        IDirectoryLocation loggingFolder = outFolder.CreateSubdirectory("Logging");
                         IsasConfiguration config = IsasConfiguration.GetConfiguration();
                         IWorkManager workManager = new LocalWorkManager(logger, loggingFolder, 0, config.MaximumMemoryGB, config.MaximumHoursPerProcess);
                         _modeRunner.Run(logger, checkpointRunner, workManager);
@@ -84,7 +84,7 @@ namespace Canvas
 
             JsonConverter[] converters = { new FileSystemLocationConverter(parentDirectories) };
 
-            ICheckpointSerializer serializer = new CheckpointJsonSerializer(IsasFilePaths.GetCheckpointFolder(outputDirectory), logger, converters);
+            ICheckpointSerializer serializer = new CheckpointJsonSerializer(CheckpointManagerFactory.GetCheckpointFolder(outputDirectory), logger, converters);
             ICheckpointManager manager = new CheckpointManager(logger, startCheckpoint, stopCheckpoint);
             return new CheckpointRunner(logger, outputDirectory, manager, serializer, true);
         }

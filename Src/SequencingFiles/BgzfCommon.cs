@@ -89,6 +89,7 @@ namespace SequencingFiles
         }
 
         protected readonly int CompressionLevel;
+        protected readonly int CompressionStrategy;
 
         // The compression threads pull the data off of this queue.
         private BlockingCollection<Data> _compressQueue;
@@ -105,9 +106,10 @@ namespace SequencingFiles
 
         #endregion
 
-        public BgzfWriterCommon(int compressionLevel, int numThreads=1)
+        public BgzfWriterCommon(int compressionLevel, int compressionStrategy, int numThreads = 1)
         {
             CompressionLevel = compressionLevel;
+            CompressionStrategy = compressionStrategy;
             NumThreads = numThreads;
 
             _compressQueue = null;
@@ -153,7 +155,8 @@ namespace SequencingFiles
                             ref blockOffset,
                             compressedBlock,
                             MaxBlockSize,
-                            CompressionLevel);
+                            CompressionLevel,
+                            CompressionStrategy);
 
                         uncompressedBlock._compressedData._buffers.Add(compressedBlock);
                         uncompressedBlock._compressedData._bufferSizes.Add(blockLength);
@@ -257,12 +260,9 @@ namespace SequencingFiles
 
         private int FlushSingleBlock()
         {
-            int blockLength = SafeNativeMethods.CompressBlock(
-                UncompressedBlock,
-                ref BlockOffset,
-                CompressedBlock,
-                MaxBlockSize,
-                CompressionLevel);
+            int blockLength = SafeNativeMethods.CompressBlock(UncompressedBlock,
+                ref BlockOffset, CompressedBlock, MaxBlockSize,
+                CompressionLevel, CompressionStrategy);
 
             try
             {

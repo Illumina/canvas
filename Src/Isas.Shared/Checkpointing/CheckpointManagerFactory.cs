@@ -1,17 +1,21 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using Illumina.SecondaryAnalysis;
 using Newtonsoft.Json;
+using SampleSettingsProcessing;
 
 namespace Isas.Shared.Checkpointing
 {
     public class CheckpointManagerFactory
     {
+        private readonly ISampleSettings _settings;
         private readonly ILogger _logger;
         private readonly IDirectoryLocation _genomesRoot;
         private readonly bool _retainTemps;
-
-        public CheckpointManagerFactory(ILogger logger, IDirectoryLocation genomesRoot, bool retainTemps)
+        public static string RunStepsSerially = "RunStepsSerially";
+        public CheckpointManagerFactory(ISampleSettings settings, ILogger logger, IDirectoryLocation genomesRoot, bool retainTemps)
         {
+            _settings = settings;
             _logger = logger;
             _genomesRoot = genomesRoot;
             _retainTemps = retainTemps;
@@ -21,7 +25,7 @@ namespace Isas.Shared.Checkpointing
             string startingCheckpointName, string stopCheckpointName)
         {
             // Checkpoint Manager
-            ICheckpointSerializer serializer = new CheckpointJsonSerializer(IsasFilePaths.GetCheckpointFolder(analysisFolder), _logger, GetJsonConverters(analysisFolder));
+            ICheckpointSerializer serializer = new CheckpointJsonSerializer(GetCheckpointFolder(analysisFolder), _logger, GetJsonConverters(analysisFolder));
             ICheckpointManager manager = new CheckpointManager(_logger, GetStartingCheckpointName(startingCheckpointName), stopCheckpointName);
             return new CheckpointRunner(_logger, analysisFolder, manager, serializer, _retainTemps);
         }
@@ -30,7 +34,7 @@ namespace Isas.Shared.Checkpointing
         {
             //todo: remove this increment logic once the legacy checkpointer is no longer used
             int tempStartCheckpoint;
-            if (int.TryParse(startingCheckpointName, out tempStartCheckpoint))
+            if (Int32.TryParse(startingCheckpointName, out tempStartCheckpoint))
             {
                 tempStartCheckpoint++;
                 startingCheckpointName = tempStartCheckpoint.ToString();
@@ -57,11 +61,18 @@ namespace Isas.Shared.Checkpointing
             return converters;
         }
 
-        public ICheckpointRunner GetAsyncCheckpointManager(IDirectoryLocation analysisFolder,
-            string startingCheckpointName, string stopCheckpointName)
+        public ICheckpointRunnerAsync GetAsyncCheckpointManager(IDirectoryLocation analysisFolder,
+            string startingCheckpointName, string stopCheckpointName, bool defaultRunStepsSerially = false)
         {
-            var serializer = new CheckpointJsonSerializerAsync(IsasFilePaths.GetCheckpointFolder(analysisFolder), _logger, GetJsonConverters(analysisFolder));
-            return CheckpointRunnerAsync.Create(serializer, _logger, analysisFolder, GetStartingCheckpointName(startingCheckpointName), stopCheckpointName, _retainTemps);
+            bool runStepsSerially = _settings.GetBooleanSetting(RunStepsSerially, defaultRunStepsSerially);
+            string message = $"Workflow steps will {(runStepsSerially ? "not" : "")} run in parallel";
+            _logger.Info(message);
+            if (runStepsSerially != defaultRunStepsSerially)
+            {
+                _logger.Warn($"Overriding default value for setting '{RunStepsSerially}'. {message}");
+            }
+            var serializer = new CheckpointJsonSerializerAsync(GetCheckpointFolder(analysisFolder), _logger, GetJsonConverters(analysisFolder));
+            return CheckpointRunnerAsync.Create(serializer, _logger, analysisFolder, GetStartingCheckpointName(startingCheckpointName), stopCheckpointName, _retainTemps, runStepsSerially);
         }
 
         public static JsonSerializerSettings GetJsonSerializerSettings(params JsonConverter[] converters)
@@ -74,6 +85,11 @@ namespace Isas.Shared.Checkpointing
                 ContractResolver = new WritablePropertiesOnlyResolver(),
                 ConstructorHandling = ConstructorHandling.AllowNonPublicDefaultConstructor,
             };
+        }
+
+        public static IDirectoryLocation GetCheckpointFolder(IDirectoryLocation analysisFolder)
+        {
+            return analysisFolder.CreateSubdirectory("Checkpoints");
         }
     }
 }

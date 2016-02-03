@@ -1,0 +1,558 @@
+diff -ipuwr -x config.log -x config.status -x config.cache -x '*.Po' -x '*.pot' -x '*.bak' -x '*.orig' -x '*.rej' -x '*.new' -x '*~' -x '*.o' -x '*.exe' -x patches -x '*.dll' -x'*.la' -x res -x debian -x '*.log' -x '*.lib' -x'*.a' -x .libs -x'*.def' -x'*.uu' -x'*.rc' -x'*.ico' -x'*.lo' bzip2-1.0.5-orig/Makefile bzip2-1.0.5/Makefile
+--- bzip2-1.0.5-orig/Makefile	2008-02-14 13:39:18.000000000 +0100
++++ bzip2-1.0.5/Makefile	2008-03-20 20:05:47.015625000 +0100
+@@ -12,19 +12,33 @@
+ # in the file LICENSE.
+ # ------------------------------------------------------------------
+ 
++VERSION = 1.0.4
++MAJOR=$(shell echo $(VERSION) | sed -e "s/\..*$$//")
++MINOR=$(shell echo $(VERSION) | sed -e "s/^[^\.]*\.0*\([0-9]\+\).*$$/\1/")
++VERSADD = -Wl,--major-image-version=$(MAJOR) -Wl,--minor-image-version=$(MINOR) 
+ SHELL=/bin/sh
++RESDIR=./resource
++VPATH=. $(RESDIR)
+ 
+ # To assist in cross-compiling
+ CC=gcc
+ AR=ar
+ RANLIB=ranlib
+-LDFLAGS=
+-
+-BIGFILES=-D_FILE_OFFSET_BITS=64
+-CFLAGS=-Wall -Winline -O2 -g $(BIGFILES)
++LDFLAGS= -Wl,-s $(VERSADD)
++EXE_EXT=.exe
++DLL_EXT=.dll
++LN=cp -fp
++  
++ # Suitably paranoid flags to avoid bugs in gcc-2.7
++BIGFILES = 
++CFLAGS = -Wall -Winline -O3 -fms-extensions -mms-bitfields \
++	-fno-exceptions -fomit-frame-pointer -march=i386 \
++	-ffast-math -fno-strength-reduce $(BIGFILES) \
++	-I. -ID:/progra~1/gnuwin32/lib 
++LIBS = -lole32 -luuid -liberty
+ 
+ # Where you want it installed when you do 'make install'
+-PREFIX=/usr/local
++PREFIX=c:/progra~1/Bzip2
+ 
+ 
+ OBJS= blocksort.o  \
+@@ -35,13 +49,24 @@ OBJS= blocksort.o  \
+       decompress.o \
+       bzlib.o
+ 
+-all: libbz2.a bzip2 bzip2recover test
++DLLOBJS = $(OBJS) bzip-dllversion.o
++
++.SUFFIXES:
++.SUFFIXES: .c .o .exe .rc .dll 
++
++# Rule to make compiled resource (Windows)
++.rc.o:
++	windres --include-dir $(RESDIR) -i $< -o $@
+ 
+-bzip2: libbz2.a bzip2.o
+-	$(CC) $(CFLAGS) $(LDFLAGS) -o bzip2 bzip2.o -L. -lbz2
++all: bzip2$(DLL_EXT) bzip2 bzip2recover test
+ 
+-bzip2recover: bzip2recover.o
+-	$(CC) $(CFLAGS) $(LDFLAGS) -o bzip2recover bzip2recover.o
++bzip2: libbz2.a bzip2.o bzip2-res.o
++	$(CC) $(CFLAGS) $(LDFLAGS) -o bzip2 bzip2.o bzip2-res.o \
++		-L. -lbz2 $(LIBS)
++
++bzip2recover: bzip2recover.o bzip2recover-res.o
++	$(CC) $(CFLAGS) $(LDFLAGS) -o bzip2recover bzip2recover.o \
++		bzip2recover-res.o $(LIBS)
+ 
+ libbz2.a: $(OBJS)
+ 	rm -f libbz2.a
+@@ -52,6 +77,10 @@ libbz2.a: $(OBJS)
+ 		$(RANLIB) libbz2.a ; \
+ 	fi
+ 
++bzip2$(DLL_EXT): $(DLLOBJS)
++	-rm -f bzip2.def
++	o2dll -o $@ -l libbz2 $(DLLOBJS) -version-info 0:0:0 
++
+ check: test
+ test: bzip2
+ 	@cat words1
+@@ -75,29 +104,30 @@ install: bzip2 bzip2recover
+ 	if ( test ! -d $(PREFIX)/man ) ; then mkdir -p $(PREFIX)/man ; fi
+ 	if ( test ! -d $(PREFIX)/man/man1 ) ; then mkdir -p $(PREFIX)/man/man1 ; fi
+ 	if ( test ! -d $(PREFIX)/include ) ; then mkdir -p $(PREFIX)/include ; fi
+-	cp -f bzip2 $(PREFIX)/bin/bzip2
+-	cp -f bzip2 $(PREFIX)/bin/bunzip2
+-	cp -f bzip2 $(PREFIX)/bin/bzcat
+-	cp -f bzip2recover $(PREFIX)/bin/bzip2recover
+-	chmod a+x $(PREFIX)/bin/bzip2
+-	chmod a+x $(PREFIX)/bin/bunzip2
+-	chmod a+x $(PREFIX)/bin/bzcat
+-	chmod a+x $(PREFIX)/bin/bzip2recover
+-	cp -f bzip2.1 $(PREFIX)/man/man1
++	cp -fp bzip2 $(PREFIX)/bin/bzip2$(EXE_EXT)
++	cp -fp bzip2 $(PREFIX)/bin/bunzip2$(EXE_EXT)
++	cp -fp bzip2 $(PREFIX)/bin/bzcat$(EXE_EXT)
++	cp -fp bzip2$(DLL_EXT) $(PREFIX)/bin/bzip2$(DLL_EXT)
++	cp -fp bzip2recover $(PREFIX)/bin/bzip2recover$(EXE_EXT)
++	chmod a+x $(PREFIX)/bin/bzip2$(EXE_EXT)
++	chmod a+x $(PREFIX)/bin/bunzip2$(EXE_EXT)
++	chmod a+x $(PREFIX)/bin/bzcat$(EXE_EXT)
++	chmod a+x $(PREFIX)/bin/bzip2recover$(EXE_EXT)
++	cp -fp bzip2.1 $(PREFIX)/man/man1
+ 	chmod a+r $(PREFIX)/man/man1/bzip2.1
+-	cp -f bzlib.h $(PREFIX)/include
++	cp -fp bzlib.h $(PREFIX)/include
+ 	chmod a+r $(PREFIX)/include/bzlib.h
+-	cp -f libbz2.a $(PREFIX)/lib
++	cp -fp libbz2.a $(PREFIX)/lib
+ 	chmod a+r $(PREFIX)/lib/libbz2.a
+-	cp -f bzgrep $(PREFIX)/bin/bzgrep
+-	ln -s -f $(PREFIX)/bin/bzgrep $(PREFIX)/bin/bzegrep
+-	ln -s -f $(PREFIX)/bin/bzgrep $(PREFIX)/bin/bzfgrep
++	cp -fp bzgrep $(PREFIX)/bin/bzgrep
++	cp -fp -f $(PREFIX)/bin/bzgrep $(PREFIX)/bin/bzegrep
++	cp -fp -f $(PREFIX)/bin/bzgrep $(PREFIX)/bin/bzfgrep
+ 	chmod a+x $(PREFIX)/bin/bzgrep
+ 	cp -f bzmore $(PREFIX)/bin/bzmore
+-	ln -s -f $(PREFIX)/bin/bzmore $(PREFIX)/bin/bzless
++	cp -fp -f $(PREFIX)/bin/bzmore $(PREFIX)/bin/bzless
+ 	chmod a+x $(PREFIX)/bin/bzmore
+ 	cp -f bzdiff $(PREFIX)/bin/bzdiff
+-	ln -s -f $(PREFIX)/bin/bzdiff $(PREFIX)/bin/bzcmp
++	cp -fp -f $(PREFIX)/bin/bzdiff $(PREFIX)/bin/bzcmp
+ 	chmod a+x $(PREFIX)/bin/bzdiff
+ 	cp -f bzgrep.1 bzmore.1 bzdiff.1 $(PREFIX)/man/man1
+ 	chmod a+r $(PREFIX)/man/man1/bzgrep.1
+@@ -109,9 +139,10 @@ install: bzip2 bzip2recover
+ 	echo ".so man1/bzdiff.1" > $(PREFIX)/man/man1/bzcmp.1
+ 
+ clean: 
+-	rm -f *.o libbz2.a bzip2 bzip2recover \
++	rm -f *.o libbz2*.a bzip2$(EXE_EXT) bzip2recover$(EXE_EXT) bzip2$(DLL_EXT) \
+ 	sample1.rb2 sample2.rb2 sample3.rb2 \
+-	sample1.tst sample2.tst sample3.tst
++	sample1.tst sample2.tst sample3.tst	 \
++	bzip2*.lib 
+ 
+ blocksort.o: blocksort.c
+ 	@cat words0
+@@ -140,7 +171,7 @@ distclean: clean
+ DISTNAME=bzip2-1.0.5
+ dist: check manual
+ 	rm -f $(DISTNAME)
+-	ln -s -f . $(DISTNAME)
++	cp -fp -f . $(DISTNAME)
+ 	tar cvf $(DISTNAME).tar \
+ 	   $(DISTNAME)/blocksort.c \
+ 	   $(DISTNAME)/huffman.c \
+@@ -176,7 +207,7 @@ dist: check manual
+ 	   $(DISTNAME)/README.COMPILATION.PROBLEMS \
+ 	   $(DISTNAME)/README.XML.STUFF \
+ 	   $(DISTNAME)/CHANGES \
+-	   $(DISTNAME)/libbz2.def \
++	   $(DISTNAME)/bzip2.def \
+ 	   $(DISTNAME)/libbz2.dsp \
+ 	   $(DISTNAME)/dlltest.dsp \
+ 	   $(DISTNAME)/makefile.msc \
+diff -ipuwr -x config.log -x config.status -x config.cache -x '*.Po' -x '*.pot' -x '*.bak' -x '*.orig' -x '*.rej' -x '*.new' -x '*~' -x '*.o' -x '*.exe' -x patches -x '*.dll' -x'*.la' -x res -x debian -x '*.log' -x '*.lib' -x'*.a' -x .libs -x'*.def' -x'*.uu' -x'*.rc' -x'*.ico' -x'*.lo' bzip2-1.0.5-orig/bzgrep.1 bzip2-1.0.5/bzgrep.1
+--- bzip2-1.0.5-orig/bzgrep.1	2007-01-03 03:00:55.000000000 +0100
++++ bzip2-1.0.5/bzgrep.1	2008-03-20 20:05:47.171875000 +0100
+@@ -1,5 +1,5 @@
+-\"Shamelessly copied from zmore.1 by Philippe Troin <phil@fifi.org>
+-\"for Debian GNU/Linux
++.\"Shamelessly copied from zmore.1 by Philippe Troin <phil@fifi.org>
++.\"for Debian GNU/Linux
+ .TH BZGREP 1
+ .SH NAME
+ bzgrep, bzfgrep, bzegrep \- search possibly bzip2 compressed files for a regular expression
+diff -ipuwr -x config.log -x config.status -x config.cache -x '*.Po' -x '*.pot' -x '*.bak' -x '*.orig' -x '*.rej' -x '*.new' -x '*~' -x '*.o' -x '*.exe' -x patches -x '*.dll' -x'*.la' -x res -x debian -x '*.log' -x '*.lib' -x'*.a' -x .libs -x'*.def' -x'*.uu' -x'*.rc' -x'*.ico' -x'*.lo' bzip2-1.0.5-orig/bzip2.c bzip2-1.0.5/bzip2.c
+--- bzip2-1.0.5-orig/bzip2.c	2007-12-09 13:22:06.000000000 +0100
++++ bzip2-1.0.5/bzip2.c	2008-03-20 20:05:47.187500000 +0100
+@@ -129,11 +129,12 @@
+ #   include <io.h>
+ #   include <fcntl.h>
+ #   include <sys\stat.h>
++#   include <sys\utime.h>
+ 
+ #   define NORETURN       /**/
+ #   define PATH_SEP       '\\'
+-#   define MY_LSTAT       _stat
+-#   define MY_STAT        _stat
++#   define MY_LSTAT       _stati64
++#   define MY_STAT        _stati64
+ #   define MY_S_ISREG(x)  ((x) & _S_IFREG)
+ #   define MY_S_ISDIR(x)  ((x) & _S_IFDIR)
+ 
+@@ -152,7 +153,6 @@
+ 
+ #endif /* BZ_LCCWIN32 */
+ 
+-
+ /*---------------------------------------------*/
+ /*--
+   Some more stuff for all platforms :-)
+@@ -1029,7 +1029,7 @@ Int32 countHardLinks ( Char* name )
+    robustly to arbitrary Unix-like platforms (or even works robustly
+    on this one, RedHat 7.2) is unknown to me.  Nevertheless ...  
+ */
+-#if BZ_UNIX
++#if defined(BZ_UNIX) || defined (_WIN32)
+ static 
+ struct MY_STAT fileMetaInfo;
+ #endif
+@@ -1037,7 +1037,7 @@ struct MY_STAT fileMetaInfo;
+ static 
+ void saveInputFileMetaInfo ( Char *srcName )
+ {
+-#  if BZ_UNIX
++#if defined(BZ_UNIX) || defined (_WIN32)
+    IntNative retVal;
+    /* Note use of stat here, not lstat. */
+    retVal = MY_STAT( srcName, &fileMetaInfo );
+@@ -1049,7 +1049,7 @@ void saveInputFileMetaInfo ( Char *srcNa
+ static 
+ void applySavedTimeInfoToOutputFile ( Char *dstName )
+ {
+-#  if BZ_UNIX
++#if defined(BZ_UNIX) || defined (_WIN32)
+    IntNative      retVal;
+    struct utimbuf uTimBuf;
+ 
+diff -ipuwr -x config.log -x config.status -x config.cache -x '*.Po' -x '*.pot' -x '*.bak' -x '*.orig' -x '*.rej' -x '*.new' -x '*~' -x '*.o' -x '*.exe' -x patches -x '*.dll' -x'*.la' -x res -x debian -x '*.log' -x '*.lib' -x'*.a' -x .libs -x'*.def' -x'*.uu' -x'*.rc' -x'*.ico' -x'*.lo' bzip2-1.0.5-orig/bzip2recover.c bzip2-1.0.5/bzip2recover.c
+--- bzip2-1.0.5-orig/bzip2recover.c	2007-12-09 13:28:26.000000000 +0100
++++ bzip2-1.0.5/bzip2recover.c	2008-03-20 20:05:47.187500000 +0100
+@@ -158,7 +158,7 @@ static BitStream* bsOpenReadStream ( FIL
+    bs->handle = stream;
+    bs->buffer = 0;
+    bs->buffLive = 0;
+-   bs->mode = 'r';
++   bs->mode = 'rb';
+    return bs;
+ }
+ 
+@@ -171,7 +171,7 @@ static BitStream* bsOpenWriteStream ( FI
+    bs->handle = stream;
+    bs->buffer = 0;
+    bs->buffLive = 0;
+-   bs->mode = 'w';
++   bs->mode = 'wb';
+    return bs;
+ }
+ 
+@@ -309,7 +309,8 @@ Int32 main ( Int32 argc, Char** argv )
+    UInt32      buffHi, buffLo, blockCRC;
+    Char*       p;
+ 
+-   strcpy ( progName, argv[0] );
++   strncpy ( progName, argv[0], BZ_MAX_FILENAME-1);
++   progName[BZ_MAX_FILENAME-1]='\0';
+    inFileName[0] = outFileName[0] = 0;
+ 
+    fprintf ( stderr, 
+diff -ipuwr -x config.log -x config.status -x config.cache -x '*.Po' -x '*.pot' -x '*.bak' -x '*.orig' -x '*.rej' -x '*.new' -x '*~' -x '*.o' -x '*.exe' -x patches -x '*.dll' -x'*.la' -x res -x debian -x '*.log' -x '*.lib' -x'*.a' -x .libs -x'*.def' -x'*.uu' -x'*.rc' -x'*.ico' -x'*.lo' bzip2-1.0.5-orig/bzlib.h bzip2-1.0.5/bzlib.h
+--- bzip2-1.0.5-orig/bzlib.h	2007-12-09 13:34:39.000000000 +0100
++++ bzip2-1.0.5/bzlib.h	2008-03-20 20:05:47.203125000 +0100
+@@ -81,18 +81,52 @@ typedef 
+       /* windows.h define small to char */
+ #      undef small
+ #   endif
+-#   ifdef BZ_EXPORT
+-#   define BZ_API(func) WINAPI func
+-#   define BZ_EXTERN extern
++//#   ifdef BZ_EXPORT
++//#   define BZ_API(func) WINAPI func
++//#   define BZ_EXTERN extern
++//#   else
++//   /* import windows dll dynamically */
++//#   define BZ_API(func) (WINAPI * func)
++//#   define BZ_EXTERN
++//#   endif
++//#else
++//#   define BZ_API(func) func
++//#   define BZ_EXTERN extern
++#   include <stdio.h>
++#   include <io.h>
++#   include <sys/utime.h>
++#   define fdopen		_fdopen
++#   define isatty		_isatty
++#   define setmode		_setmode
++#   define utime		_utime
++#   endif
++
++#ifndef __GNUC__
++# define __DLL_IMPORT__ __declspec(dllimport)
++# define __DLL_EXPORT__ __declspec(dllexport)
+ #   else
+-   /* import windows dll dynamically */
+-#   define BZ_API(func) (WINAPI * func)
+-#   define BZ_EXTERN
++# define __DLL_IMPORT__ __attribute__((dllimport)) extern
++# define __DLL_EXPORT__ __attribute__((dllexport)) extern
+ #   endif
+-#else
+-#   define BZ_API(func) func
+-#   define BZ_EXTERN extern
++
++#if (defined __WIN32__) || (defined _WIN32)
++# if defined BUILD_BZIP2_DLL  || defined BZ_EXPORT
++#  define BZIP2_DLL_IMPEXP __DLL_EXPORT__
++# elif defined(BZIP2_STATIC)
++#  define BZIP2_DLL_IMPEXP  
++# elif defined (USE_BZIP2_DLL) || defined BZ_IMPORT
++#  define BZIP2_DLL_IMPEXP __DLL_IMPORT__
++# elif defined (USE_BZIP2_STATIC)
++#  define BZIP2_DLL_IMPEXP   
++# else /* assume USE_BZIP2_DLL */
++#  define BZIP2_DLL_IMPEXP __DLL_IMPORT__
+ #endif
++#else /* __WIN32__ */
++# define BZIP2_DLL_IMPEXP  
++#endif
++
++#define BZ_API(func) func
++#define BZ_EXTERN BZIP2_DLL_IMPEXP
+ 
+ 
+ /*-- Core (low-level) library functions --*/
+diff -ipuwr -x config.log -x config.status -x config.cache -x '*.Po' -x '*.pot' -x '*.bak' -x '*.orig' -x '*.rej' -x '*.new' -x '*~' -x '*.o' -x '*.exe' -x patches -x '*.dll' -x'*.la' -x res -x debian -x '*.log' -x '*.lib' -x'*.a' -x .libs -x'*.def' -x'*.uu' -x'*.rc' -x'*.ico' -x'*.lo' bzip2-1.0.5-orig/bzlib_private.h bzip2-1.0.5/bzlib_private.h
+--- bzip2-1.0.5-orig/bzlib_private.h	2007-12-09 15:00:46.000000000 +0100
++++ bzip2-1.0.5/bzlib_private.h	2008-03-20 20:05:47.234375000 +0100
+@@ -340,6 +340,7 @@ BZ2_hbMakeCodeLengths ( UChar*, Int32*, 
+ #define MTFA_SIZE 4096
+ #define MTFL_SIZE 16
+ 
++#define HUFCODE_SIZE 10
+ 
+ 
+ /*-- Structure holding all the decompression-side stuff. --*/
+@@ -407,6 +408,7 @@ typedef
+       Int32    base   [BZ_N_GROUPS][BZ_MAX_ALPHA_SIZE];
+       Int32    perm   [BZ_N_GROUPS][BZ_MAX_ALPHA_SIZE];
+       Int32    minLens[BZ_N_GROUPS];
++      Int16    hufcode[BZ_N_GROUPS][1 << HUFCODE_SIZE];
+ 
+       /* save area for scalars in the main decompress code */
+       Int32    save_i;
+@@ -433,6 +435,7 @@ typedef
+       Int32*   save_gLimit;
+       Int32*   save_gBase;
+       Int32*   save_gPerm;
++      Int16*   save_gHufCode;
+ 
+    }
+    DState;
+@@ -488,8 +491,8 @@ extern Int32 
+ BZ2_decompress ( DState* );
+ 
+ extern void 
+-BZ2_hbCreateDecodeTables ( Int32*, Int32*, Int32*, UChar*,
+-                           Int32,  Int32, Int32 );
++BZ2_hbCreateDecodeTables ( Int32*, Int32*, Int32*, Int16 *,
++                           UChar*, Int32,  Int32, Int32 );
+ 
+ 
+ #endif
+diff -ipuwr -x config.log -x config.status -x config.cache -x '*.Po' -x '*.pot' -x '*.bak' -x '*.orig' -x '*.rej' -x '*.new' -x '*~' -x '*.o' -x '*.exe' -x patches -x '*.dll' -x'*.la' -x res -x debian -x '*.log' -x '*.lib' -x'*.a' -x .libs -x'*.def' -x'*.uu' -x'*.rc' -x'*.ico' -x'*.lo' bzip2-1.0.5-orig/decompress.c bzip2-1.0.5/decompress.c
+--- bzip2-1.0.5-orig/decompress.c	2007-12-09 13:31:31.000000000 +0100
++++ bzip2-1.0.5/decompress.c	2008-03-20 20:05:47.250000000 +0100
+@@ -64,6 +64,9 @@ void makeMaps_d ( DState* s )
+          s->strm->total_in_hi32++;                \
+    }
+ 
++#define UNGET_BITS(nnn)                           \
++   s->bsLive += nnn
++
+ #define GET_UCHAR(lll,uuu)                        \
+    GET_BITS(lll,uuu,8)
+ 
+@@ -83,10 +86,15 @@ void makeMaps_d ( DState* s )
+       gLimit = &(s->limit[gSel][0]);              \
+       gPerm = &(s->perm[gSel][0]);                \
+       gBase = &(s->base[gSel][0]);                \
++      gHufCode = &(s->hufcode[gSel][0]);          \
+    }                                              \
+    groupPos--;                                    \
+-   zn = gMinlen;                                  \
++   zn = HUFCODE_SIZE;                             \
+    GET_BITS(label1, zvec, zn);                    \
++   if (gHufCode[zvec]) {                          \
++      UNGET_BITS(gHufCode[zvec] >> 10);           \
++      lval = gHufCode[zvec] & 511;                \
++   } else {                                       \
+    while (1) {                                    \
+       if (zn > 20 /* the longest code */)         \
+          RETURN(BZ_DATA_ERROR);                   \
+@@ -99,7 +107,8 @@ void makeMaps_d ( DState* s )
+        || zvec - gBase[zn] >= BZ_MAX_ALPHA_SIZE)  \
+       RETURN(BZ_DATA_ERROR);                      \
+    lval = gPerm[zvec - gBase[zn]];                \
+-}
++   }                                              \
++}                                                 \
+ 
+ 
+ /*---------------------------------------------------*/
+@@ -135,6 +144,7 @@ Int32 BZ2_decompress ( DState* s )
+    Int32* gLimit;
+    Int32* gBase;
+    Int32* gPerm;
++   Int16* gHufCode;
+ 
+    if (s->state == BZ_X_MAGIC_1) {
+       /*initialise the save area*/
+@@ -162,6 +172,7 @@ Int32 BZ2_decompress ( DState* s )
+       s->save_gLimit      = NULL;
+       s->save_gBase       = NULL;
+       s->save_gPerm       = NULL;
++      s->save_gHufCode    = NULL;
+    }
+ 
+    /*restore from the save area*/
+@@ -189,6 +200,7 @@ Int32 BZ2_decompress ( DState* s )
+    gLimit      = s->save_gLimit;
+    gBase       = s->save_gBase;
+    gPerm       = s->save_gPerm;
++   gHufCode    = s->save_gHufCode;
+ 
+    retVal = BZ_OK;
+ 
+@@ -340,6 +352,7 @@ Int32 BZ2_decompress ( DState* s )
+             &(s->limit[t][0]), 
+             &(s->base[t][0]), 
+             &(s->perm[t][0]), 
++            &(s->hufcode[t][0]),
+             &(s->len[t][0]),
+             minLen, maxLen, alphaSize
+          );
+@@ -414,6 +427,62 @@ Int32 BZ2_decompress ( DState* s )
+             if (nblock >= nblockMAX) RETURN(BZ_DATA_ERROR);
+ 
+             /*-- uc = MTF ( nextSym-1 ) --*/
++#if MTFL_SIZE == 16
++            {
++               unsigned char *ppx = s->mtfa + s->mtfbase[0];
++               int lno = 0;
++
++               nextSym--;
++               if (nextSym >= MTFL_SIZE) {
++                  lno = nextSym / MTFL_SIZE;
++                  nextSym %= MTFL_SIZE;
++                  ppx = s->mtfa + s->mtfbase[lno];
++               }
++               uc = ppx[nextSym];
++               switch(nextSym) {
++                  case 9:  ppx[9]  = ppx[10];
++                  case 10: ppx[10] = ppx[11];
++                  case 11: ppx[11] = ppx[12];
++                  case 12: ppx[12] = ppx[13];
++                  case 13: ppx[13] = ppx[14];
++                  case 14: ppx[14] = ppx[15];
++                  case 15: goto copy;
++
++                  case 8: ppx[8] = ppx[7];
++                  case 7: ppx[7] = ppx[6];
++                  case 6: ppx[6] = ppx[5];
++                  case 5: ppx[5] = ppx[4];
++                  case 4: ppx[4] = ppx[3];
++                  case 3: ppx[3] = ppx[2];
++                  case 2: ppx[2] = ppx[1];
++                  case 1: ppx[1] = ppx[0];
++                  default: break;
++               }
++               if (lno) {
++                  s->mtfbase[lno]++;
++               copy:
++                  while (lno > 0) {
++                     s->mtfbase[lno]--;
++                     s->mtfa[s->mtfbase[lno]] = s->mtfa[s->mtfbase[lno-1] + MTFL_SIZE - 1];
++                     lno--;
++                  }
++                  s->mtfbase[0]--;
++                  if (s->mtfbase[0] == 0) {
++                     int ii, jj, kk;
++                     s->mtfa[0] = uc;
++                     kk = MTFA_SIZE-1;
++                     for (ii = 256 / MTFL_SIZE-1; ii >= 0; ii--) {
++                        for (jj = MTFL_SIZE-1; jj >= 0; jj--) {
++                           s->mtfa[kk] = s->mtfa[s->mtfbase[ii] + jj];
++                           kk--;
++                        }
++                        s->mtfbase[ii] = kk + 1;
++                     }
++                  }
++               }
++               s->mtfa[s->mtfbase[0]] = uc;
++            }
++#else
+             {
+                Int32 ii, jj, kk, pp, lno, off;
+                UInt32 nn;
+@@ -465,6 +534,7 @@ Int32 BZ2_decompress ( DState* s )
+                   }
+                }
+             }
++#endif
+             /*-- end uc = MTF ( nextSym-1 ) --*/
+ 
+             s->unzftab[s->seqToUnseq[uc]]++;
+@@ -616,6 +686,7 @@ Int32 BZ2_decompress ( DState* s )
+    s->save_gLimit      = gLimit;
+    s->save_gBase       = gBase;
+    s->save_gPerm       = gPerm;
++   s->save_gHufCode    = gHufCode;
+ 
+    return retVal;   
+ }
+diff -ipuwr -x config.log -x config.status -x config.cache -x '*.Po' -x '*.pot' -x '*.bak' -x '*.orig' -x '*.rej' -x '*.new' -x '*~' -x '*.o' -x '*.exe' -x patches -x '*.dll' -x'*.la' -x res -x debian -x '*.log' -x '*.lib' -x'*.a' -x .libs -x'*.def' -x'*.uu' -x'*.rc' -x'*.ico' -x'*.lo' bzip2-1.0.5-orig/huffman.c bzip2-1.0.5/huffman.c
+--- bzip2-1.0.5-orig/huffman.c	2007-12-09 13:31:57.000000000 +0100
++++ bzip2-1.0.5/huffman.c	2008-03-20 20:05:47.250000000 +0100
+@@ -170,13 +170,16 @@ void BZ2_hbAssignCodes ( Int32 *code,
+ void BZ2_hbCreateDecodeTables ( Int32 *limit,
+                                 Int32 *base,
+                                 Int32 *perm,
++                                Int16 *hufcode,
+                                 UChar *length,
+                                 Int32 minLen,
+                                 Int32 maxLen,
+                                 Int32 alphaSize )
+ {
+-   Int32 pp, i, j, vec;
++   Int32 pp, i, j, vec, k, vec2;
+ 
++   for (i = 0; i < (1 << HUFCODE_SIZE); i++)
++      hufcode[i] = 0;
+    pp = 0;
+    for (i = minLen; i <= maxLen; i++)
+       for (j = 0; j < alphaSize; j++)
+@@ -187,16 +190,25 @@ void BZ2_hbCreateDecodeTables ( Int32 *l
+ 
+    for (i = 1; i < BZ_MAX_CODE_LEN; i++) base[i] += base[i-1];
+ 
+-   for (i = 0; i < BZ_MAX_CODE_LEN; i++) limit[i] = 0;
++   for (i = 0; i < BZ_MAX_CODE_LEN; i++) limit[i] = -1;
+    vec = 0;
+ 
+    for (i = minLen; i <= maxLen; i++) {
++      if (i <= HUFCODE_SIZE) {
++         for (j = base[i]; j < base[i + 1]; j++) {
++            vec2 = (vec + j - base[i]) << (HUFCODE_SIZE - i);
++            for (k = (1 << (HUFCODE_SIZE - i)) ; --k >= 0; vec2++) 
++               hufcode[vec2] = perm[j] | 512 | (HUFCODE_SIZE - i) << 10;
++         }
++      }
+       vec += (base[i+1] - base[i]);
+       limit[i] = vec-1;
+       vec <<= 1;
+    }
+    for (i = minLen + 1; i <= maxLen; i++)
+       base[i] = ((limit[i-1] + 1) << 1) - base[i];
++   limit[maxLen + 1] = 0x7fffffff;      /* make it terminate */
++   base[maxLen + 1] = 0;
+ }
+ 
+ 

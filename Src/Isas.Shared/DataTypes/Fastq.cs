@@ -1,11 +1,10 @@
-﻿using Isas.Shared;
-using Newtonsoft.Json;
+﻿using Newtonsoft.Json;
 using SequencingFiles;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace Illumina.SecondaryAnalysis
+namespace Isas.Shared
 {
     public class Fastq : IMoveable<Fastq>, IMoveableResult<Fastq>
     {

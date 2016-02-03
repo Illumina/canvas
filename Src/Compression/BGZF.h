@@ -25,7 +25,8 @@ const int BLOCK_HEADER_LENGTH = 18;
 const int BLOCK_FOOTER_LENGTH = 8;
 
 // compresses the current block
-int CompressBlock(char* uncompressedBlock, unsigned int* pUncompressLen, char* compressedBlock, const unsigned int compressedLen, const int compressionLevel);
+int CompressBlock(char* uncompressedBlock, unsigned int* pUncompressLen, char* compressedBlock, 
+	const unsigned int compressedLen, const int compressionLevel, const int compressionStrategy);
 // augmented the gzread parameters to use offsets rather than pointers
 int gzreadOffset(gzFile file, char* buf, int offset, unsigned len);
 // augmented the gzwrite parameters to use offsets rather than pointers

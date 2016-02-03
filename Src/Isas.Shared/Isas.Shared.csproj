@@ -109,19 +109,18 @@
     <Compile Include="..\ILMNcommon\Properties\IsasVersionInfo.cs">
       <Link>Properties\IsisVersionInfo.cs</Link>
     </Compile>
-    <Compile Include="AnalysisJobInfo.cs" />
     <Compile Include="Checkpointing\CheckpointRunnerAsync.cs" />
     <Compile Include="Checkpointing\Checkpoint.cs" />
     <Compile Include="Checkpointing\CheckpointManagerAsync.cs" />
     <Compile Include="Checkpointing\CheckpointJsonSerializerAsync.cs" />
     <Compile Include="Checkpointing\ICheckpointRunner.cs" />
+    <Compile Include="Checkpointing\ICheckpointRunnerAsync.cs" />
+    <Compile Include="Checkpointing\LegacyCheckpointRunnerAsync.cs" />
     <Compile Include="Common Statistics\DescriptiveStats.cs" />
     <Compile Include="Common Statistics\ReadPairProperties.cs" />
-    <Compile Include="Common Statistics\RunStatistics.cs" />
     <Compile Include="Common Statistics\RunStatisticsMetadata.cs" />
     <Compile Include="Common Statistics\SampleStatistics.cs" />
     <Compile Include="Common Statistics\VariantStatistics.cs" />
-    <Compile Include="Common Statistics\WorkflowStatistics.cs" />
     <Compile Include="DataAccess.cs" />
     <Compile Include="DataTypes\Adapters.cs" />
     <Compile Include="DataTypes\Bam.cs" />
@@ -138,8 +137,6 @@
     <Compile Include="DataTypes\Strandedness.cs" />
     <Compile Include="DataTypes\TileSelection.cs" />
     <Compile Include="DataTypes\Vcf.cs" />
-    <Compile Include="GenomicInterval.cs" />
-    <Compile Include="Manifest.cs" />
     <Compile Include="MARSModel.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="SecondaryAnalysisWorkflow.cs" />
@@ -175,28 +172,12 @@
     <Compile Include="Utilities\WorkManagerFactory.cs" />
     <Compile Include="VariantCallingCombinePoolSettings.cs" />
     <Compile Include="VariantCallingFilterSettings.cs" />
-    <Compile Include="Workflow Statistics\MethylSeqStatistics.cs" />
-    <Compile Include="Workflow Statistics\RNAQuantStatistics.cs" />
-    <Compile Include="Workflow Statistics\CustomAmpliconStatistics.cs" />
-    <Compile Include="Workflow Statistics\EnrichmentStatistics.cs" />
-    <Compile Include="Workflow Statistics\GenerateFASTQStatistics.cs" />
-    <Compile Include="Workflow Statistics\MetagenomicsConstants.cs" />
-    <Compile Include="Workflow Statistics\MetagenomicsStatistics.cs" />
-    <Compile Include="Workflow Statistics\SmallRNAStatistics.cs" />
-    <Compile Include="Workflow Statistics\SomaWorkerStatistics.cs" />
-    <Compile Include="Workflow Statistics\TargetedRNASeqStatistics.cs" />
-    <Compile Include="Workflow Statistics\VeriSeqPGSStatistics.cs" />
-    <Compile Include="Workflow Statistics\ZodiacRNAStatistics.cs" />
-    <Compile Include="Workflow Statistics\WholeGenomeRNASeqStatistics.cs" />
+    <Compile Include="Workflow Statistics\RegionStatistics.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\ILMNcommon\ILMNcommon.csproj">
       <Project>{6848DA28-BACA-4E4D-9E1D-BAD1E7CB9CDE}</Project>
       <Name>ILMNcommon</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\SampleSheet\SampleSheet.csproj">
-      <Project>{f310b4ef-80ca-4486-93a3-7e028edcd8b3}</Project>
-      <Name>SampleSheet</Name>
     </ProjectReference>
     <ProjectReference Include="..\SequencingFiles\SequencingFiles.csproj">
       <Project>{3eae6805-e445-4102-87c1-f57e20677778}</Project>

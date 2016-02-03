@@ -62,15 +62,6 @@
     <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="InterOp.IO">
-      <HintPath>..\Isas\IsasGroup\packages\InterOp\InterOp.IO.dll</HintPath>
-    </Reference>
-    <Reference Include="InterOp.Logic">
-      <HintPath>..\Isas\IsasGroup\packages\InterOp\InterOp.Logic.dll</HintPath>
-    </Reference>
-    <Reference Include="InterOp.Model">
-      <HintPath>..\Isas\IsasGroup\packages\InterOp\InterOp.Model.dll</HintPath>
-    </Reference>
     <Reference Include="protobuf-net, Version=2.0.0.622, Culture=neutral, PublicKeyToken=257b51d87d2e4d67, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\packages\ProtoBuf\protobuf-net.dll</HintPath>
@@ -83,6 +74,7 @@
     <Compile Include="..\ILMNcommon\Properties\IsasVersionInfo.cs">
       <Link>Properties\IsasVersionInfo.cs</Link>
     </Compile>
+    <Compile Include="AmpliconManifest.cs" />
     <Compile Include="AnnotationParameters.cs" />
     <Compile Include="BamCommon.cs" />
     <Compile Include="BamIndex.cs" />
@@ -93,11 +85,19 @@
     <Compile Include="BgzfCommon.cs" />
     <Compile Include="BgzipReader.cs" />
     <Compile Include="BgzipWriter.cs" />
+    <Compile Include="CSVReader.cs" />
+    <Compile Include="CSVWriter.cs" />
     <Compile Include="FastaLoader.cs" />
+    <Compile Include="GenomicInterval.cs" />
+    <Compile Include="HeaderSection.cs" />
     <Compile Include="IndexedFastaLoader.cs" />
     <Compile Include="Interval.cs" />
+    <Compile Include="NexteraManifestUtils.cs" />
+    <Compile Include="ProbeSet.cs" />
+    <Compile Include="ProbeSetTarget.cs" />
     <Compile Include="ReferenceInterval.cs" />
     <Compile Include="NexteraManifest.cs" />
+    <Compile Include="TargetedRegions.cs" />
     <Compile Include="Vcf\Allele.cs" />
     <Compile Include="Vcf\IOverlappable.cs" />
     <Compile Include="Vcf\Genotype.cs" />
@@ -125,7 +125,6 @@
     <Compile Include="IntensityStats.cs" />
     <Compile Include="NativeZStream.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="RunInfo.cs" />
     <Compile Include="StreamReaderExtension.cs" />
     <Compile Include="StreamWriterExtensions.cs" />
     <Compile Include="Vcf\VcfCommon.cs" />
@@ -153,10 +152,6 @@
     <ProjectReference Include="..\ILMNcommon\ILMNcommon.csproj">
       <Project>{6848da28-baca-4e4d-9e1d-bad1e7cb9cde}</Project>
       <Name>ILMNcommon</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\SampleSheet\SampleSheet.csproj">
-      <Project>{f310b4ef-80ca-4486-93a3-7e028edcd8b3}</Project>
-      <Name>SampleSheet</Name>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup />

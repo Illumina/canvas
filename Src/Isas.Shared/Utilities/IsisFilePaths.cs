@@ -17,17 +17,15 @@ namespace Isas.Shared
 		public const string UsedSampleSheetFileName = "SampleSheetUsed.csv";
 		public const string RunInfoFileName = "RunInfo.xml";
 		public const string CheckpointFileName = "Checkpoint.txt";
-		public const string CompletedJobFileName = AnalysisJobInfo.FileName;
+		public const string CompletedJobFileName = "CompletedJobInfo.xml";
 		public const string AnalysisErrorFileName = "AnalysisError.txt";
 		public const string AnalysisLogFileName = "AnalysisLog.txt";
 
 		// folder names
-        public const string CheckpointFolderName = "Checkpoints";
-		public const string DataFolderName = "Data";
+	    public const string DataFolderName = "Data";
 		public const string IntensitiesFolderName = "Intensities";
 		public const string BaseCallsFolderName = "BaseCalls";
-		public const string LoggingFolderName = "Logging";
-		public const string AnalysisFolderName = "Analysis";
+	    public const string AnalysisFolderName = "Analysis";
 		public const string FastqFolderName = "Fastq";
 
 		/// <summary>
@@ -48,22 +46,12 @@ namespace Isas.Shared
 						string.Format("s_{0}_{1}_{2}.demux", lane, tile, runFolderNumber));
 		}
 
-        public static IDirectoryLocation GetCheckpointFolder(IDirectoryLocation analysisFolder)
-        {
-            return analysisFolder.CreateSubdirectory(CheckpointFolderName);
-        }
-
-		public static string GetLoggingFolder(string analysisFolder)
+	    public static string GetLoggingFolder(string analysisFolder)
 		{
-			return Path.Combine(analysisFolder, LoggingFolderName);
+			return Path.Combine(analysisFolder, "Logging");
 		}
 
-        public static IDirectoryLocation GetLoggingFolder(IDirectoryLocation analysisFolder)
-        {
-            return analysisFolder.CreateSubdirectory(LoggingFolderName);
-        }
-        
-		/// <summary>
+	    /// <summary>
 		/// Root directory for fastq files (actual files are in subdirectories)
 		/// </summary>
 		public static string GetFastqFolder(string analysisFolder)
@@ -106,111 +94,7 @@ namespace Isas.Shared
 			return int.Parse(theMatch.Groups[2].Value);
 		}
 
-		// returns the path to the Isas filename
-		// returns null if we don't know this file
-		public static string GetDefaultFilePath(AnalysisJobInfo jobInfo, string filename)
-		{
-			string dirpath = GetDefaultFolderPathForFilename(jobInfo, filename);
-			return (dirpath == null) ? null : Path.Combine(dirpath, filename);
-		}
-
-		// returns the full path to the Isas filename
-		// returns null if we don't know this file
-		public static string GetDefaultFileFullPath(AnalysisJobInfo jobInfo, string filename)
-		{
-			string dirpath = GetDefaultFolderFullPathForFileName(jobInfo, filename);
-			return (dirpath == null) ? null : Path.Combine(dirpath, filename);
-		}
-
-		/// <summary>
-		/// For Isas common files (i.e. those present in this class), 
-		/// returns where Isas expects to find the files.
-		/// </summary>
-		public static string GetDefaultFolderPathForFilename(AnalysisJobInfo jobInfo, string filename)
-		{
-			// switch-case statements is the closest we get to a const dictionary 
-			string folderPath = null;
-			switch (filename)
-			{
-				case SampleSheetFileName:
-				case RunInfoFileName:
-				case CompletedJobFileName:
-				case AnalysisErrorFileName:
-				case AnalysisLogFileName:
-					folderPath = jobInfo.RunFolder;
-					break;
-
-				case CheckpointFileName:
-					folderPath = jobInfo.AnalysisFolder;
-					break;
-
-				default:
-					// leave empty
-					break;
-			}
-			return folderPath;
-		}
-
-        /// <summary>
-        /// For Isas common files (i.e. those present in this class), 
-        /// returns the full path to where Isas expects to find the files.
-        /// </summary>
-        public static string GetDefaultFolderFullPathForFileName(AnalysisJobInfo jobInfo, string filename)
-		{
-			string folderPath = GetDefaultFolderPathForFilename(jobInfo, filename);
-			return (folderPath == null) ? null : new DirectoryInfo(folderPath).FullName;
-		}
-
-
-		/// <summary>
-		/// For Isas common subfolders (i.e. those present in this class), 
-		/// returns the path to the folder.
-		/// </summary>
-		public static string GetDefaultFolderPath(AnalysisJobInfo jobInfo, string folderName)
-		{
-			return GetDefaultFolderPath(jobInfo.RunFolder, jobInfo.AnalysisFolder, folderName);
-		}
-
-        /// <summary>
-        /// For Isas common subfolders (i.e. those present in this class), 
-        /// returns the path to the folder.
-        /// </summary>
-        public static string GetDefaultFolderPath(string runFolder, string analysisFolder, string folderName)
-		{
-			// switch-case statements is the closest we get to a const dictionary 
-			string folderPath = null;
-			switch (folderName)
-			{
-				case DataFolderName:
-					folderPath = runFolder;
-					break;
-				case IntensitiesFolderName:
-					folderPath = Path.Combine(runFolder, DataFolderName);
-					break;
-				case BaseCallsFolderName:
-					folderPath = Path.Combine(runFolder, DataFolderName, IntensitiesFolderName);
-					break;
-				case LoggingFolderName:
-					folderPath = Path.Combine(analysisFolder);
-					break;
-				default:
-					// leave empty
-					break;
-			}
-			return (folderPath == null) ? null : Path.Combine(folderPath, folderName);
-		}
-
-		/// <summary>
-		/// For Isas common subfolders (i.e. those present in this class), 
-		/// returns the full path to the folder.
-		/// </summary>
-		public static string GetDefaultFolderFullPath(AnalysisJobInfo jobInfo, string folderName)
-		{
-			string folderPath = GetDefaultFolderPath(jobInfo, folderName);
-			return (folderPath == null) ? null : new DirectoryInfo(folderPath).FullName;
-		}
-
-		public static string VariantConcordance(string analysisFolder)
+	    public static string VariantConcordance(string analysisFolder)
 		{
 			return Path.Combine(analysisFolder, "VariantConcordance.xml");
 		}

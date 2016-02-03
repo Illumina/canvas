@@ -676,6 +676,12 @@ namespace Isas.Shared
                     Directory.Delete(targetDir, true);
                     return;
                 }
+                catch (DirectoryNotFoundException directoryNotFoundException)
+                {
+                    if (Directory.Exists(targetDir))
+                        throw new ApplicationException($"Received DirectoryNotFoundException even though {targetDir} exists", directoryNotFoundException);
+                    //pass, the deed is done
+                }
                 catch (Exception ex)
                 {
                     if (attempt == maxAttempt)

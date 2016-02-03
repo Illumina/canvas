@@ -16,6 +16,7 @@ namespace Isas.Shared
         public const string AnnotationDatabaseVersion = "annotationdatabaseversion";
         public const string AppName = "appname";
         public const string AppVersion = "appversion";
+        public const string DatasetTypeId = "datasettypeid";
         public const string BamSummaryMethod = "bamsummarymethod";
         public const string CanvasBinSizeManifest = "canvasbinsizemanifest"; // Special: We see this setting with letters appended
         public const string CanvasControlBinnedManifest = "canvascontrolbinnedmanifest"; // Special: We see this setting with letters appended
@@ -109,6 +110,7 @@ namespace Isas.Shared
                 case AnnotationDatabaseVersion:
                 case AppName:
                 case AppVersion:
+                case DatasetTypeId:
                 case BamSummaryMethod:
                 case CreateFastqForIndexReads:
                 case UseSGE:

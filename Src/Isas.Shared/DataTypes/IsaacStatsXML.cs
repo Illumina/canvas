@@ -1,10 +1,8 @@
 ﻿using System;
 using System.IO;
-using Isas.Shared;
 using System.Text.RegularExpressions;
 
-
-namespace Illumina.SecondaryAnalysis
+namespace Isas.Shared
 {
     /// <summary>
     /// Encapsulates aligner stats .xml file output by Isaac, where we can parse metrics (e.g. # of adapter bases) not obtainable from 
