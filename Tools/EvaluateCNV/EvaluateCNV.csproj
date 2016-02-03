@@ -82,8 +82,9 @@
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
-    <PostBuildEvent>copy /y "$(SolutionDir)..\Src\Compression\$(Platform)\$(Configuration)\FileCompression.dll" "$(TargetDir)"
-copy /y "$(ProjectDir)\libFileCompression.so"</PostBuildEvent>
+    <PostBuildEvent>copy /y "$(SolutionDir)..\..\Compression\$(Platform)\$(Configuration)\FileCompression.dll" $(TargetDir)
+copy /y "$(SolutionDir)..\..\Compression\$(Platform)\$(Configuration)\FileCompression.pdb" $(TargetDir)
+copy /y "$(SolutionDir)..\..\packages\FileCompression\libFileCompression.so" $(TargetDir)</PostBuildEvent>
   </PropertyGroup>
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
