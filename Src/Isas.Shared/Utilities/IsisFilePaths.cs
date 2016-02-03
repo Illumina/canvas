@@ -22,10 +22,10 @@ namespace Isas.Shared
 		public const string AnalysisLogFileName = "AnalysisLog.txt";
 
 		// folder names
-	    public const string DataFolderName = "Data";
+	        public const string DataFolderName = "Data";
 		public const string IntensitiesFolderName = "Intensities";
 		public const string BaseCallsFolderName = "BaseCalls";
-	    public const string AnalysisFolderName = "Analysis";
+	        public const string AnalysisFolderName = "Analysis";
 		public const string FastqFolderName = "Fastq";
 
 		/// <summary>
