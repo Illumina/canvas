@@ -72,7 +72,6 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
-    <None Include="libFileCompression.so" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\Src\SequencingFiles\SequencingFiles.csproj">
