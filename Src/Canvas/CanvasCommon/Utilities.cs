@@ -242,14 +242,14 @@ namespace CanvasCommon
         /// </summary>
         /// <param name="x">List of doubles.</param>
         /// <returns>Median of x.</returns>
-        public static double Median(List<double> x)
+        public static double Median(IEnumerable<double> x)
         {
 
-            List<double> sorted = new List<double>(x.Count);
+            List<double> sorted = new List<double>(x.Count());
 
-            for (int i = 0; i < x.Count; i++)
+            foreach (double value in x)
             {
-                sorted.Add(x[i]);
+                sorted.Add(value);
             }
 
             sorted.Sort();

@@ -34,7 +34,7 @@ namespace CanvasClean
         /// </summary>
         static void DebugPrintCountsByGC(List<GenomicBin> bins, string filePath)
         {
-            int[][] HistogramByGC = new int[numberOfGCbins][];
+            int[][] HistogramByGC = new int[EnrichmentUtilities.numberOfGCbins][];
             for (int GC = 0; GC < HistogramByGC.Length; GC++) HistogramByGC[GC] = new int[1024];
             foreach (GenomicBin bin in bins)
             {
@@ -60,75 +60,6 @@ namespace CanvasClean
             Console.WriteLine("Wrote counts-by-GC histogram to {0}", filePath);
         }
 
-        public static IEnumerable<GenomicBin> GetOnTargetBins(IEnumerable<GenomicBin> bins, NexteraManifest manifest) 
-        {
-            var regionsByChrom = manifest.GetManifestRegionsByChromosome();
-            string currChrom = null;
-            List<NexteraManifest.ManifestRegion> regions = null; // 1-based regions
-            int regionIndex = -1;
-            bool offTarget = true;
-            foreach (GenomicBin bin in bins) // 0-based bins
-            {
-                if (currChrom != bin.Chromosome)
-                {
-                    currChrom = bin.Chromosome;
-                    offTarget = true;
-                    if (!regionsByChrom.ContainsKey(currChrom))
-                    {
-                        regions = null;
-                    }
-                    else
-                    {
-                        regions = regionsByChrom[currChrom];
-                        regionIndex = 0;
-                    }
-                }
-                while (regions != null && regionIndex < regions.Count && regions[regionIndex].End < bin.Start + 1)
-                {
-                    regionIndex++;
-                }
-                if (regions != null && regionIndex < regions.Count && regions[regionIndex].Start <= bin.Stop) // overlap
-                {
-                    offTarget = false;
-                }
-                else
-                {
-                    offTarget = true;
-                }
-
-                if (offTarget) { continue; } // ignore off-target bins
-
-                yield return bin;
-            }
-        }
-
-        /// <summary>
-        /// Assumes the bins are sorted by genomic coordinates
-        /// </summary>
-        /// <param name="bins">Bins whose counts are to be normalized</param>
-        /// <param name="countsByGC">An array of lists. Each array element (0-100) will hold a list of counts whose bins have the same GC content.</param>
-        /// <param name="counts">Will hold all of the autosomal counts present in 'bins'</param>
-        static void GetCountsByGC(List<GenomicBin> bins, NexteraManifest manifest, out List<float>[] countsByGC, out List<float> counts)
-        {
-            countsByGC = new List<float>[numberOfGCbins];
-            counts = new List<float>(bins.Count);
-
-            // Initialize the lists
-            for (int i = 0; i < countsByGC.Length; i++)
-                countsByGC[i] = new List<float>();
-
-            foreach (GenomicBin bin in manifest == null ? bins : GetOnTargetBins(bins, manifest))
-            {
-                if (!GenomeMetadata.SequenceMetadata.IsAutosome(bin.Chromosome)) { continue; }
-
-                // Put the observed count in the GC-appropriate list.
-                countsByGC[bin.GC].Add(bin.Count);
-
-                // Add to the global list of counts.
-                counts.Add(bin.Count);
-            }
-        }
-
         /// <summary>
         /// Perform variance stabilization by GC bins.
         /// </summary>
@@ -140,7 +71,7 @@ namespace CanvasClean
             List<float>[] countsByGC;
             // Will hold all of the autosomal counts present in 'bins'
             List<float> counts;
-            GetCountsByGC(bins, manifest, out countsByGC, out counts);
+            EnrichmentUtilities.GetCountsByGC(bins, manifest, out countsByGC, out counts);
 
             // Estimate quartiles of all bins genomewide
             var globalQuartiles = CanvasCommon.Utilities.Quartiles(counts);
@@ -251,7 +182,7 @@ namespace CanvasClean
 
             // Will hold all of the autosomal counts present in 'bins'
             List<float> counts;
-            GetCountsByGC(bins, manifest, out countsByGC, out counts);
+            EnrichmentUtilities.GetCountsByGC(bins, manifest, out countsByGC, out counts);
 
             double globalMedian = CanvasCommon.Utilities.Median(counts);
             double?[] medians = new double?[countsByGC.Length];
@@ -295,9 +226,9 @@ namespace CanvasClean
             List<GenomicBin> stripped = new List<GenomicBin>();
 
             // used to count the number of bins with each possible GC content (0-100)
-            int[] counts = new int[numberOfGCbins];
+            int[] counts = new int[EnrichmentUtilities.numberOfGCbins];
             double totalCount = 0;
-            foreach (GenomicBin bin in manifest == null ? bins : GetOnTargetBins(bins, manifest))
+            foreach (GenomicBin bin in manifest == null ? bins : EnrichmentUtilities.GetOnTargetBins(bins, manifest))
             {
 
                 // We only count autosomal bins because these are the ones we computed normalization factor upon.

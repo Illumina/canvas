@@ -106,6 +106,7 @@
     </Compile>
     <Compile Include="Canvas\CommandLineParsing\ModeParserTests.cs" />
     <Compile Include="InlineAutoNSubstituteDataAttribute.cs" />
+    <Compile Include="TestLoessInterpolator.cs" />
     <Compile Include="TemporaryDirectoryFixture.cs" />
     <Compile Include="TestCanvasSomatic.cs" />
     <Compile Include="TestSegments.cs" />

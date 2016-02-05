@@ -85,6 +85,9 @@
       <Link>Properties\IsasVersionInfo.cs</Link>
     </Compile>
     <Compile Include="CanvasClean.cs" />
+    <Compile Include="EnrichmentUtilities.cs" />
+    <Compile Include="LoessGCNormalizer.cs" />
+    <Compile Include="LoessInterpolator.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
