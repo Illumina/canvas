@@ -55,23 +55,26 @@ namespace CanvasClean
         /// <summary>
         /// Train a LOESS model
         /// </summary>
-        /// <param name="xval">x values</param>
-        /// <param name="yval">y values</param>
+        /// <param name="xvals">x values</param>
+        /// <param name="yvals">y values</param>
         /// <param name="xStep">x-value step size</param>
+        /// <param name="computeFitted">to compute the fitted y values? Always true when robustnessIters > 0</param>
         /// <returns>LOESS model</returns>
-        public LoessModel Train(double[] xval, double[] yval, double xStep)
+        public LoessModel Train(double[] xvals, double[] yvals, double xStep, bool computeFitted=true)
         {
-            int[] ascendingOrder = Enumerable.Range(0, xval.Length).OrderBy(i => xval[i]).ToArray(); // argsort xval
+            int[] ascendingOrder = Enumerable.Range(0, xvals.Length).OrderBy(i => xvals[i]).ToArray(); // argsort xvals
 
-            double[] sortedXval = new double[xval.Length];
-            double[] sortedYval = new double[yval.Length];
+            double[] sortedXval = new double[xvals.Length];
+            double[] sortedYval = new double[yvals.Length];
             for (int i = 0; i < ascendingOrder.Length; i++)
             {
-                sortedXval[i] = xval[ascendingOrder[i]];
-                sortedYval[i] = yval[ascendingOrder[i]];
+                sortedXval[i] = xvals[ascendingOrder[i]];
+                sortedYval[i] = yvals[ascendingOrder[i]];
             }
 
-            return train(sortedXval, sortedYval, xStep);
+            var model = train(sortedXval, sortedYval, xStep, ascendingOrder, computeFitted: computeFitted);
+
+            return model;
         }
 
         /// <summary>
@@ -81,7 +84,8 @@ namespace CanvasClean
         /// <param name="yvals">y values</param>
         /// <param name="xStep">x-value step size</param>
         /// <returns>LOESS model</returns>
-        private LoessModel train(double[] xvals, double[] yvals, double xStep)
+        private LoessModel train(double[] xvals, double[] yvals, double xStep, int[] ascendingOrder,
+            bool computeFitted = true)
         {
             if (xvals.Length != yvals.Length)
             {
@@ -91,7 +95,7 @@ namespace CanvasClean
             int n = xvals.Length;
             if (n <= 1)
             {
-                return new LoessModel(xvals, yvals, new double[] { yvals[0] }, null, null);
+                return new LoessModel(xvals, yvals, new double[] { yvals[0] }, null, ascendingOrder, null);
             }
 
             checkAllFiniteReal(xvals, true);
@@ -109,14 +113,19 @@ namespace CanvasClean
                 ));
             }
 
-            double[] fitted = new double[n];
-            double[] residuals = new double[n];
+            double[] fitted = null;
+            double[] residuals = null;
             double[] robustnessWeights = null;
+
+            if (robustnessIters > 0) { computeFitted = true; } // override computeFitted
+            if (computeFitted || robustnessIters > 0) { fitted = new double[n]; }
+
             // Do an initial fit and 'robustnessIters' robustness iterations.
             // This is equivalent to doing 'robustnessIters+1' robustness iterations
             // starting with all robustness weights set to 1.
             if (robustnessIters > 0)
             {
+                residuals = new double[n];
                 robustnessWeights = new double[n];
                 for (int i = 0; i < robustnessWeights.Length; i++) robustnessWeights[i] = 1;
             }
@@ -138,10 +147,12 @@ namespace CanvasClean
                     }
 
                     // Linear regression to get the coeeficients
-                    double[] coefficients = computeCoefficients(x, xvals, yvals, robustnessWeights, bandwidthInterval);
-
-                    fitted[i] = predict(x, coefficients);
-                    residuals[i] = Math.Abs(yvals[i] - fitted[i]);
+                    if (computeFitted || robustnessIters > 0)
+                    {
+                        double[] coefficients = computeCoefficients(x, xvals, yvals, robustnessWeights, bandwidthInterval);
+                        fitted[i] = predict(x, coefficients);
+                    }
+                    if (robustnessIters > 0) { residuals[i] = Math.Abs(yvals[i] - fitted[i]); }
                 }
 
                 // No need to recompute the robustness weights at the last
@@ -149,16 +160,9 @@ namespace CanvasClean
                 if (iter == robustnessIters) { break; }
 
                 // Recompute the robustness weights.
+                double medianResidual = Utilities.Median(residuals); // Find the median residual
 
-                // Find the median residual.
-                // An arraycopy and a sort are completely tractable here, 
-                // because the preceding loop is a lot more expensive
-                double medianResidual = Utilities.Median(residuals);
-
-                if (medianResidual == 0)
-                {
-                    break;
-                }
+                if (medianResidual == 0){ break; }
 
                 for (int i = 0; i < n; ++i)
                 {
@@ -169,7 +173,7 @@ namespace CanvasClean
 
             List<LoessInterval> intervals = computeIntervals(xvals, xStep, bandwidthInPoints);
 
-            return new LoessModel(xvals, yvals, fitted, robustnessWeights, intervals);
+            return new LoessModel(xvals, yvals, fitted, robustnessWeights, ascendingOrder, intervals);
         }
 
         private static List<LoessInterval> computeIntervals(double[] xvals, double xStep, int bandwidthInPoints)
@@ -360,19 +364,90 @@ namespace CanvasClean
 
         public class LoessModel
         {
-            public double[] Xs { get; }
-            public double[] Ys { get; }
-            public double[] RobustnessWeights { get; }
-            public double[] Fitted { get; }
+            public double[] SortedXs { get; }
+            public double[] SortedYs { get; } // sorted in ascending order by X
+            public double[] SortedFitted { get; } // sorted in ascending order by X
+            public double[] SortedRobustnessWeights { get; } // sorted in ascending order by X
+            public int[] OriginalOrder { get; private set; }
             public List<LoessInterval> LoessIntervals { get; }
 
-            public LoessModel(double[] xvals, double[] yvals, double[] fitted, double[] robustnessWeights, List<LoessInterval> loessIntervals)
+            public IEnumerable<double> Xs
             {
-                Xs = xvals;
-                Ys = yvals;
-                Fitted = fitted;
-                RobustnessWeights = robustnessWeights;
+                get
+                {
+                    return OriginalOrder.Select(i => SortedXs[i]);
+                }
+            }
+
+            public IEnumerable<double> Ys
+            {
+                get
+                {
+                    return OriginalOrder.Select(i => SortedYs[i]);
+                }
+            }
+
+            public IEnumerable<double> Fitted
+            {
+                get
+                {
+                    if (SortedFitted == null) { return null; }
+                    return OriginalOrder.Select(i => SortedFitted[i]);
+                }
+            }
+
+            public IEnumerable<double> RobustnessWeights
+            {
+                get
+                {
+                    if (SortedRobustnessWeights == null) { return null; }
+                    return OriginalOrder.Select(i => SortedRobustnessWeights[i]);
+                }
+            }
+
+            public LoessModel(double[] sortedXs, double[] sortedYs, double[] sortedFitted, double[] sortedRobustnessWeights,
+                int[] ascendingOrder, List<LoessInterval> loessIntervals)
+            {
+                SortedXs = sortedXs;
+                SortedYs = sortedYs;
+                SortedFitted = sortedFitted;
+                SortedRobustnessWeights = sortedRobustnessWeights;
                 LoessIntervals = loessIntervals;
+
+                SetOriginalOrder(ascendingOrder);
+            }
+
+            private void SetOriginalOrder(int[] ascendingOrder)
+            {
+                OriginalOrder = new int[ascendingOrder.Length];
+                for (int i = 0; i < ascendingOrder.Length; i++)
+                {
+                    OriginalOrder[ascendingOrder[i]] = i;
+                }
+            }
+
+            public double[] Predict(IEnumerable<double> xvals)
+            {
+                double[] xArr = xvals.ToArray();
+                int[] ascendingOrder = Enumerable.Range(0, xArr.Length).OrderBy(i => xArr[i]).ToArray(); // argsort xvals
+                double[] yArr = new double[xArr.Length];
+
+                int intervalIndex = 0;
+                for (int i = 0; i < xArr.Length; i++)
+                {
+                    double x = xArr[ascendingOrder[i]];
+                    while (intervalIndex < LoessIntervals.Count - 1 && LoessIntervals[intervalIndex].Compare(x) > 0)
+                    {
+                        intervalIndex++;
+                    }
+                    if (intervalIndex >= LoessIntervals.Count && LoessIntervals[intervalIndex].Compare(x) < 0)
+                    {
+                        throw new ApplicationException(String.Format("Unable to find an interval for {0}.", x));
+                    }
+                    yArr[ascendingOrder[i]] = predict(x, LoessIntervals[intervalIndex]);
+                }
+
+                return yArr;
             }
 
             public double Predict(double x)
@@ -417,7 +492,7 @@ namespace CanvasClean
 
             private double predict(double x, LoessInterval interval)
             {
-                var coeffs = LoessInterpolator.computeCoefficients(x, Xs, Ys, RobustnessWeights, interval.BandwidthInterval);
+                var coeffs = LoessInterpolator.computeCoefficients(x, SortedXs, SortedYs, SortedRobustnessWeights, interval.BandwidthInterval);
 
                 return LoessInterpolator.predict(x, coeffs);
 

@@ -661,6 +661,47 @@ namespace CanvasCommon
                 }
             }
         }
+
+        /// <summary>
+        /// Search for argmin f(x) in [a, b]. Assumes that f is unimodal.
+        /// https://en.wikipedia.org/wiki/Golden_section_search
+        /// </summary>
+        /// <param name="f"></param>
+        /// <param name="a"></param>
+        /// <param name="b"></param>
+        /// <param name="tol"></param>
+        /// <returns></returns>
+        public static double GoldenSectionSearch(Func<double, double> f, double a, double b, double tol=1E-5)
+        {
+            const double goldenRatio = 0.618034; // golden ratio - 1: (Math.Sqrt(5) - 1) / 2
+
+            //  a  c  d  b
+            double c = b - goldenRatio * (b - a);
+            double d = a + goldenRatio * (b - a);
+            double fc = f(c);
+            double fd = f(d);
+            while (Math.Abs(d - c) > tol)
+            {
+                if (fc < fd)
+                {
+                    b = d;
+                    d = c;
+                    fd = fc;
+                    c = b - goldenRatio * (b - a);
+                    fc = f(c);
+                }
+                else
+                {
+                    a = c;
+                    c = d;
+                    fc = fd;
+                    d = a + goldenRatio * (b - a);
+                    fd = f(d);
+                }
+            }
+
+            return (b + a) / 2;
+        }
     }
 
 }

@@ -12,7 +12,6 @@ namespace CanvasClean
 {
     class CanvasClean
     {
-        private static readonly int numberOfGCbins = 101;
         private static readonly int defaultMinNumberOfBinsPerGC = 100;
         private static int minNumberOfBinsPerGCForWeightedMedian = 100;
 
