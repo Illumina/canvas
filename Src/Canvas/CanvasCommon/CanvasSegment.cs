@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.IO;
 using SequencingFiles;
 
@@ -214,7 +212,7 @@ namespace CanvasCommon
         /// <param name="outVcfPath">File to write to.</param>
         /// <param name="segments">List of segments to write out.</param>
         public static void WriteSegments(string outVcfPath, List<CanvasSegment> segments, string reference, string sampleName,
-            List<string> extraHeaders, bool reportPloidy, PloidyInfo ploidy, bool reportAllSites = false, bool reportGermlineGenotype = false)
+            List<string> extraHeaders, bool reportPloidy, PloidyInfo ploidy, bool reportAllSites = false, bool reportGermlineGenotype = false, int qualityThreshold = 10)
         {
             string cnvtype = null;
             string filter = null;
@@ -243,9 +241,9 @@ namespace CanvasCommon
                 {
                     writer.WriteLine("##contig=<ID={0},length={1}>", chromosome.Name, chromosome.Length);
                 }
-
+                string qualityFilter = $"q{qualityThreshold}";
                 writer.WriteLine("##ALT=<ID=CNV,Description=\"Copy number variable region\">");
-                writer.WriteLine("##FILTER=<ID=q10,Description=\"Quality below 10\">");
+                writer.WriteLine($"##FILTER=<ID={qualityFilter},Description=\"Quality below {qualityThreshold}\">");
                 writer.WriteLine("##FILTER=<ID=L10kb,Description=\"Length shorter than 10kb\">");
                 writer.WriteLine("##INFO=<ID=SVTYPE,Number=1,Type=String,Description=\"Type of structural variant\">");
                 writer.WriteLine("##INFO=<ID=END,Number=1,Type=Integer,Description=\"End position of the variant described in this record\">");
@@ -277,8 +275,8 @@ namespace CanvasCommon
                         if (!reportAllSites && isReferenceCall)
                             continue;
 
-                        if (segment.QScore < 10)
-                            filter = "q10";
+                        if (segment.QScore < qualityThreshold)
+                            filter = qualityFilter;
 
                         if (segment.End - segment.Begin < 10000)
                         {
