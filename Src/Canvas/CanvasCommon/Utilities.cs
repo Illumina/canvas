@@ -21,6 +21,12 @@ namespace CanvasCommon
         BestLR2 // Use sum of log ratio^2 to find the best control sample
     }
 
+    public enum CanvasGCNormalizationMode
+    {
+        MedianByGC, // Smooth by (global median) * count / (median at %GC)
+        LOESS // Smooth by (global median) + count - (fitted count). Counts are transformed by sqrt.
+    }
+
     public static class Utilities
     {
         #region Members
@@ -77,6 +83,19 @@ namespace CanvasCommon
                     return CanvasNormalizeMode.BestLR2;
                 default:
                     throw new Exception(string.Format("Invalid CanvasNormalize mode '{0}'", mode));
+            }
+        }
+
+        static public CanvasGCNormalizationMode ParseCanvasGCNormalizationMode(string mode)
+        {
+            switch (mode.ToLowerInvariant().Trim())
+            {
+                case "medianbygc":
+                    return CanvasGCNormalizationMode.MedianByGC;
+                case "loess":
+                    return CanvasGCNormalizationMode.LOESS;
+                default:
+                    throw new Exception(string.Format("Invalid CanvasClean mode '{0}'", mode));
             }
         }
 

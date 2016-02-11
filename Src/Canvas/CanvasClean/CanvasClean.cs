@@ -95,8 +95,9 @@ namespace CanvasClean
                 else
                 {
                     List<Tuple<float, float>> weightedCounts = GetWeightedCounts(countsByGC, i);
-                    double[] quartiles = CanvasCommon.Utilities.WeightedQuantiles(weightedCounts, new List<float>() { 0.25f, 0.75f });
-                    localIQR.Add((float)(quartiles[1] - quartiles[0]));
+                    double[] quartiles = CanvasCommon.Utilities.WeightedQuantiles(weightedCounts, new List<float>() { 0.25f, 0.5f, 0.75f });
+                    localQuartiles.Add(new Tuple<float, float, float>((float)quartiles[0], (float)quartiles[1], (float)quartiles[2]));
+                    localIQR.Add((float)(quartiles[2] - quartiles[0]));   
                 }
             }
 
@@ -166,6 +167,21 @@ namespace CanvasClean
             }
 
             return weightedCounts;
+        }
+
+        static void NormalizeByGC(List<GenomicBin> bins, NexteraManifest manifest, CanvasGCNormalizationMode mode)
+        {
+            if (mode == CanvasGCNormalizationMode.MedianByGC)
+            {
+                NormalizeByGC(bins, manifest: manifest);
+            }
+            else
+            {
+                var normalizer = new LoessGCNormalizer(bins, manifest, robustnessIter: 0,
+                    countTransformer: x => (double)Math.Log(x),
+                    invCountTransformer: x => (float)Math.Exp(x));
+                normalizer.Normalize();
+            }
         }
 
         /// <summary>
@@ -469,6 +485,7 @@ namespace CanvasClean
             bool doOutlierRemoval = false;
             string ffpeOutliersFile = null;
             string manifestFile = null;
+            CanvasCommon.CanvasGCNormalizationMode gcNormalizationMode = CanvasGCNormalizationMode.MedianByGC;
             bool needHelp = false;
 
             OptionSet p = new OptionSet()
@@ -481,6 +498,7 @@ namespace CanvasClean
                 { "f|ffpeoutliers=",   "filter regions of FFPE biases",                   v => ffpeOutliersFile = v },
                 { "t|manifest=",      "Nextera manifest file",                            v => manifestFile = v },
                 { "w|weightedmedian=", "Minimum number of bins per GC required to calculate weighted median", v => minNumberOfBinsPerGCForWeightedMedian = int.Parse(v) },
+                { "m|mode=",          "gc normalization mode",                            v => gcNormalizationMode = CanvasCommon.Utilities.ParseCanvasGCNormalizationMode(v) },
                 { "h|help",           "show this message and exit",                       v => needHelp = v != null },
             };
 
@@ -530,7 +548,9 @@ namespace CanvasClean
             if (doGCnorm)
             {
                 NexteraManifest manifest = manifestFile == null ? null : new NexteraManifest(manifestFile, null, Console.WriteLine);
-                List<GenomicBin> strippedBins = RemoveBinsWithExtremeGC(bins, defaultMinNumberOfBinsPerGC, manifest: manifest);
+                List<GenomicBin> strippedBins = gcNormalizationMode == CanvasGCNormalizationMode.MedianByGC
+                    ? RemoveBinsWithExtremeGC(bins, defaultMinNumberOfBinsPerGC, manifest: manifest)
+                    : bins;
                 if (strippedBins.Count == 0)
                 {
                     Console.Error.WriteLine("Warning in CanvasClean: Coverage too low to perform GC correction; proceeding without GC correction");
@@ -538,7 +558,7 @@ namespace CanvasClean
                 else
                 {
                     bins = strippedBins;
-                    NormalizeByGC(bins, manifest: manifest);
+                    NormalizeByGC(bins, manifest, gcNormalizationMode);
                     // Use variance normalization only on large exome panels and whole genome sequencing
                     // The treshold is set to 10% of an average number of bins on CanvasClean data
                     if (ffpeOutliersFile != null && bins.Count > 500000)
@@ -546,7 +566,7 @@ namespace CanvasClean
                         bool isNormalizeVarianceByGC = NormalizeVarianceByGC(bins, manifest: manifest);
                         // If normalization by variance was run (isNormalizeVarianceByGC), perform mean centering by using NormalizeByGC 
                         if (isNormalizeVarianceByGC)
-                            NormalizeByGC(bins, manifest: manifest);
+                            NormalizeByGC(bins, manifest, gcNormalizationMode);
                     }
 
                 }

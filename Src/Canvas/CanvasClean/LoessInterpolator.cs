@@ -100,7 +100,7 @@ namespace CanvasClean
 
             checkAllFiniteReal(xvals, true);
             checkAllFiniteReal(yvals, false);
-            checkStrictlyIncreasing(xvals);
+            checkIncreasing(xvals);
 
             int bandwidthInPoints = (int)Math.Ceiling(bandwidth * n);
 
@@ -339,25 +339,20 @@ namespace CanvasClean
             }
         }
 
-        /**
-         * Check that elements of the abscissae array are in a strictly
-         * increasing order.
-         *
-         * @param xval the abscissae array
-         * @throws MathException if the abscissae array
-         * is not in a strictly increasing order
-         */
-        private static void checkStrictlyIncreasing(double[] xval)
+        /// <summary>
+        /// Check that elements of the abscissae array are in an increasing order.
+        /// Throws MathException if the abscissae array is not in an increasing order.
+        /// </summary>
+        /// <param name="xval">the abscissae array</param>
+        private static void checkIncreasing(double[] xval)
         {
             for (int i = 0; i < xval.Length; ++i)
             {
-                if (i >= 1 && xval[i - 1] >= xval[i])
+                if (i >= 1 && xval[i - 1] > xval[i])
                 {
-                    throw new ApplicationException(string.Format(
-                            "the abscissae array must be sorted in a strictly " +
-                            "increasing order, but the {0}-th element is {1} " +
-                            "whereas {2}-th is {3}",
-                            i - 1, xval[i - 1], i, xval[i]));
+                    throw new ApplicationException(
+                        string.Format("the abscissae array must be sorted in an increasing order, but the {0}-th element is {1} whereas {2}-th is {3}",
+                        i - 1, xval[i - 1], i, xval[i]));
                 }
             }
         }
