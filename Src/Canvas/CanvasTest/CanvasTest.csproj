@@ -106,10 +106,12 @@
     </Compile>
     <Compile Include="Canvas\CommandLineParsing\ModeParserTests.cs" />
     <Compile Include="InlineAutoNSubstituteDataAttribute.cs" />
+    <Compile Include="TestLoessInterpolator.cs" />
     <Compile Include="TemporaryDirectoryFixture.cs" />
     <Compile Include="TestCanvasSomatic.cs" />
     <Compile Include="TestSegments.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="TestUtilities.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\ILMNcommon\ILMNcommon.csproj">

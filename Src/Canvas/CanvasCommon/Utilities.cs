@@ -21,6 +21,12 @@ namespace CanvasCommon
         BestLR2 // Use sum of log ratio^2 to find the best control sample
     }
 
+    public enum CanvasGCNormalizationMode
+    {
+        MedianByGC, // Smooth by (global median) * count / (median at %GC)
+        LOESS // Smooth by (global median) + count - (fitted count). Counts are transformed by sqrt.
+    }
+
     public static class Utilities
     {
         #region Members
@@ -77,6 +83,19 @@ namespace CanvasCommon
                     return CanvasNormalizeMode.BestLR2;
                 default:
                     throw new Exception(string.Format("Invalid CanvasNormalize mode '{0}'", mode));
+            }
+        }
+
+        static public CanvasGCNormalizationMode ParseCanvasGCNormalizationMode(string mode)
+        {
+            switch (mode.ToLowerInvariant().Trim())
+            {
+                case "medianbygc":
+                    return CanvasGCNormalizationMode.MedianByGC;
+                case "loess":
+                    return CanvasGCNormalizationMode.LOESS;
+                default:
+                    throw new Exception(string.Format("Invalid CanvasClean mode '{0}'", mode));
             }
         }
 
@@ -242,14 +261,14 @@ namespace CanvasCommon
         /// </summary>
         /// <param name="x">List of doubles.</param>
         /// <returns>Median of x.</returns>
-        public static double Median(List<double> x)
+        public static double Median(IEnumerable<double> x)
         {
 
-            List<double> sorted = new List<double>(x.Count);
+            List<double> sorted = new List<double>(x.Count());
 
-            for (int i = 0; i < x.Count; i++)
+            foreach (double value in x)
             {
-                sorted.Add(x[i]);
+                sorted.Add(value);
             }
 
             sorted.Sort();
@@ -660,6 +679,47 @@ namespace CanvasCommon
                     writer.WriteLine("\t" + String.Join(",", mafs));
                 }
             }
+        }
+
+        /// <summary>
+        /// Search for argmin f(x) in [a, b]. Assumes that f is unimodal.
+        /// https://en.wikipedia.org/wiki/Golden_section_search
+        /// </summary>
+        /// <param name="f"></param>
+        /// <param name="a"></param>
+        /// <param name="b"></param>
+        /// <param name="tol"></param>
+        /// <returns></returns>
+        public static double GoldenSectionSearch(Func<double, double> f, double a, double b, double tol=1E-5)
+        {
+            const double goldenRatio = 0.618034; // golden ratio - 1: (Math.Sqrt(5) - 1) / 2
+
+            //  a  c  d  b
+            double c = b - goldenRatio * (b - a);
+            double d = a + goldenRatio * (b - a);
+            double fc = f(c);
+            double fd = f(d);
+            while (Math.Abs(d - c) > tol)
+            {
+                if (fc < fd)
+                {
+                    b = d;
+                    d = c;
+                    fd = fc;
+                    c = b - goldenRatio * (b - a);
+                    fc = f(c);
+                }
+                else
+                {
+                    a = c;
+                    c = d;
+                    fc = fd;
+                    d = a + goldenRatio * (b - a);
+                    fd = f(d);
+                }
+            }
+
+            return (b + a) / 2;
         }
     }
 
