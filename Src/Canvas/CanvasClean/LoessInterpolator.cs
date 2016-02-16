@@ -40,9 +40,9 @@ namespace CanvasClean
 
         public LoessInterpolator(double bandwidth, int robustnessIters)
         {
-            if (bandwidth < 0 || bandwidth > 1)
+            if (bandwidth <= 0 || bandwidth > 1)
             {
-                throw new ApplicationException(string.Format("bandwidth must be in the interval [0,1], but got {0}", bandwidth));
+                throw new ApplicationException(string.Format("bandwidth must be in the interval (0, 1], but got {0}", bandwidth));
             }
             this.bandwidth = bandwidth;
             if (robustnessIters < 0)
@@ -60,7 +60,7 @@ namespace CanvasClean
         /// <param name="xStep">x-value step size</param>
         /// <param name="computeFitted">to compute the fitted y values? Always true when robustnessIters > 0</param>
         /// <returns>LOESS model</returns>
-        public LoessModel Train(double[] xvals, double[] yvals, double xStep, bool computeFitted=true)
+        public LoessModel Train(double[] xvals, double[] yvals, double xStep, bool computeFitted = true)
         {
             int[] ascendingOrder = Enumerable.Range(0, xvals.Length).OrderBy(i => xvals[i]).ToArray(); // argsort xvals
 
@@ -143,7 +143,7 @@ namespace CanvasClean
                     if (i > 0)
                     {
                         var newBandwidthInterval = updateBandwidthInterval(x, xvals, bandwidthInterval);
-                        if (newBandwidthInterval != null) { bandwidthInterval = newBandwidthInterval;  }
+                        if (newBandwidthInterval != null) { bandwidthInterval = newBandwidthInterval; }
                     }
 
                     // Linear regression to get the coeeficients
@@ -162,7 +162,7 @@ namespace CanvasClean
                 // Recompute the robustness weights.
                 double medianResidual = Utilities.Median(residuals); // Find the median residual
 
-                if (medianResidual == 0){ break; }
+                if (medianResidual == 0) { break; }
 
                 for (int i = 0; i < n; ++i)
                 {
@@ -359,12 +359,12 @@ namespace CanvasClean
 
         public class LoessModel
         {
-            public double[] SortedXs { get; }
-            public double[] SortedYs { get; } // sorted in ascending order by X
-            public double[] SortedFitted { get; } // sorted in ascending order by X
-            public double[] SortedRobustnessWeights { get; } // sorted in ascending order by X
+            public double[] SortedXs { get; private set; }
+            public double[] SortedYs { get; private set; } // sorted in ascending order by X
+            public double[] SortedFitted { get; private set; } // sorted in ascending order by X
+            public double[] SortedRobustnessWeights { get; private set; } // sorted in ascending order by X
             public int[] OriginalOrder { get; private set; }
-            public List<LoessInterval> LoessIntervals { get; }
+            public List<LoessInterval> LoessIntervals { get; private set; }
 
             public IEnumerable<double> Xs
             {
@@ -431,11 +431,11 @@ namespace CanvasClean
                 for (int i = 0; i < xArr.Length; i++)
                 {
                     double x = xArr[ascendingOrder[i]];
-                    while (intervalIndex < LoessIntervals.Count - 1 && LoessIntervals[intervalIndex].Compare(x) > 0)
+                    while (intervalIndex < LoessIntervals.Count - 1 && LoessIntervals[intervalIndex].IsLeftOf(x))
                     {
                         intervalIndex++;
                     }
-                    if (intervalIndex >= LoessIntervals.Count && LoessIntervals[intervalIndex].Compare(x) < 0)
+                    if (intervalIndex >= LoessIntervals.Count && LoessIntervals[intervalIndex].IsRightOf(x))
                     {
                         throw new ApplicationException(String.Format("Unable to find an interval for {0}.", x));
                     }
@@ -467,18 +467,17 @@ namespace CanvasClean
                 while (iLeft <= iRight)
                 {
                     int iMid = (iLeft + iRight) / 2;
-                    int comp = LoessIntervals[iMid].Compare(x);
-                    if (comp == 0)
-                    {
-                        return LoessIntervals[iMid];
-                    }
-                    else if (comp < 0)
+                    if (LoessIntervals[iMid].IsRightOf(x))
                     {
                         iRight = iMid - 1;
                     }
-                    else // > 0
+                    else if (LoessIntervals[iMid].IsLeftOf(x))
                     {
                         iLeft = iMid + 1;
+                    }
+                    else
+                    {
+                        return LoessIntervals[iMid];
                     }
                 }
 
@@ -496,9 +495,9 @@ namespace CanvasClean
 
         public class LoessInterval
         {
-            public double XMin { get; } // inclusive
-            public double XMax { get; } // exclusive
-            public int[] BandwidthInterval { get; }
+            public double XMin { get; private set; } // inclusive
+            public double XMax { get; private set; } // exclusive
+            public int[] BandwidthInterval { get; private set; }
 
             public LoessInterval(double xMin, double xMax, int[] bandwidthInterval)
             {
@@ -509,28 +508,33 @@ namespace CanvasClean
             }
 
             /// <summary>
-            /// 
+            /// Whether the interval contains x
             /// </summary>
             /// <param name="x"></param>
-            /// <returns>
-            ///     -1: x is on the left of the interval
-            ///      0: x is contained by the interval
-            ///      1: x is on the right of the interval
-            /// </returns>
-            public int Compare(double x)
+            /// <returns></returns>
+            public bool Contains(double x)
             {
-                if (x < XMin)
-                {
-                    return -1;
-                }
-                else if (x >= XMax)
-                {
-                    return 1;
-                }
-                else
-                {
-                    return 0;
-                }
+                return XMin <= x && x < XMax;
+            }
+
+            /// <summary>
+            /// Whether the interval is on the left of x
+            /// </summary>
+            /// <param name="x"></param>
+            /// <returns></returns>
+            public bool IsLeftOf(double x)
+            {
+                return XMax <= x;
+            }
+
+            /// <summary>
+            /// Whether the interval is on the right of x
+            /// </summary>
+            /// <param name="x"></param>
+            /// <returns></returns>
+            public bool IsRightOf(double x)
+            {
+                return x < XMin;
             }
         }
     }

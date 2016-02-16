@@ -169,18 +169,27 @@ namespace CanvasClean
             return weightedCounts;
         }
 
+        /// <summary>
+        /// Perform GC normalization depending on the mode
+        /// </summary>
+        /// <param name="bins">Bins whose counts are to be normalized</param>
+        /// <param name="manifest"></param>
+        /// <param name="mode">GC normalization mode</param>
         static void NormalizeByGC(List<GenomicBin> bins, NexteraManifest manifest, CanvasGCNormalizationMode mode)
         {
-            if (mode == CanvasGCNormalizationMode.MedianByGC)
+            switch (mode)
             {
-                NormalizeByGC(bins, manifest: manifest);
-            }
-            else
-            {
-                var normalizer = new LoessGCNormalizer(bins, manifest, robustnessIter: 0,
-                    countTransformer: x => (double)Math.Log(x),
-                    invCountTransformer: x => (float)Math.Exp(x));
-                normalizer.Normalize();
+                case CanvasGCNormalizationMode.MedianByGC:
+                    NormalizeByGC(bins, manifest: manifest);
+                    break;
+                case CanvasGCNormalizationMode.LOESS:
+                    var normalizer = new LoessGCNormalizer(bins, manifest, robustnessIter: 0,
+                        countTransformer: x => (double)Math.Log(x),
+                        invCountTransformer: x => (float)Math.Exp(x));
+                    normalizer.Normalize();
+                    break;
+                default:
+                    throw new ApplicationException("Unsupported Canvas GC normalization mode: " + mode.ToString());
             }
         }
 
@@ -188,7 +197,7 @@ namespace CanvasClean
         /// Perform a simple GC normalization.
         /// </summary>
         /// <param name="bins">Bins whose counts are to be normalized.</param>
-        /// <param name="skipZeros">Skip bins with zero count</param>
+        /// <param name="manifest"></param>
         static void NormalizeByGC(List<GenomicBin> bins, NexteraManifest manifest = null)
         {
             // DebugPrintCountsByGC(bins, "CountsByGC-Before.txt");
@@ -486,6 +495,9 @@ namespace CanvasClean
             string ffpeOutliersFile = null;
             string manifestFile = null;
             CanvasCommon.CanvasGCNormalizationMode gcNormalizationMode = CanvasGCNormalizationMode.MedianByGC;
+            string modeDescription = String.Format("gc normalization mode. Available modes: {0}. Default: {1}",
+                String.Join(", ", Enum.GetValues(typeof(CanvasGCNormalizationMode)).Cast<CanvasGCNormalizationMode>()),
+                gcNormalizationMode);
             bool needHelp = false;
 
             OptionSet p = new OptionSet()
@@ -498,7 +510,7 @@ namespace CanvasClean
                 { "f|ffpeoutliers=",   "filter regions of FFPE biases",                   v => ffpeOutliersFile = v },
                 { "t|manifest=",      "Nextera manifest file",                            v => manifestFile = v },
                 { "w|weightedmedian=", "Minimum number of bins per GC required to calculate weighted median", v => minNumberOfBinsPerGCForWeightedMedian = int.Parse(v) },
-                { "m|mode=",          "gc normalization mode",                            v => gcNormalizationMode = CanvasCommon.Utilities.ParseCanvasGCNormalizationMode(v) },
+                { "m|mode=",          modeDescription,                                    v => gcNormalizationMode = CanvasCommon.Utilities.ParseCanvasGCNormalizationMode(v) },
                 { "h|help",           "show this message and exit",                       v => needHelp = v != null },
             };
 
