@@ -50,8 +50,6 @@ namespace Isas.Shared.Checkpointing
             if (_disposed) throw new ObjectDisposedException(GetType().FullName);
             if (checkpoint.IsNullOrWhiteSpace())
                 throw new ArgumentException("checkpoint name cannot be null or whitespace");
-            if (_stopCheckpointFound)
-                throw new ApplicationException("Cannot create a new checkpoint after the stop checkpoint");
 
             _currentCheckpointNumber++;
             bool isStartCheckpoint = false;
