@@ -50,7 +50,7 @@ namespace CanvasCommon
                 case CnvType.Gain:
                 case CnvType.Loss:
                 case CnvType.LossOfHeterozygosity:
-                    return "CNV";
+                    return "<CNV>";
                 case CnvType.Reference:
                     return ".";
                 default:
