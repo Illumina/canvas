@@ -436,7 +436,7 @@ namespace CanvasSomaticCaller
                 this.GenerateExtendedReportVersusKnownCN();
             }
             // Write out results:
-            CanvasSegment.WriteSegments(outputVCFPath, this.Segments, referenceFolder, name, ExtraHeaders, true, this.ReferencePloidy, true, qualityThreshold: QualityFilterThreshold);
+            CanvasSegment.WriteSegments(outputVCFPath, this.Segments, referenceFolder, name, ExtraHeaders, this.ReferencePloidy, QualityFilterThreshold);
 
             return 0;
         }
