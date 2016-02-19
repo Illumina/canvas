@@ -17,7 +17,7 @@ namespace Canvas
     public interface IModeRunner
     {
         CommonOptions CommonOptions { get; }
-        void Run(ILogger logger, ICheckpointRunner checkpointRunner, IWorkManager workManager);
+        void Run(ILogger logger, ICheckpointRunnerAsync checkpointRunner, IWorkManager workManager);
     }
 
     public class ModeLauncher : IModeLauncher
@@ -47,7 +47,7 @@ namespace Canvas
                 {
                     logger.Info($"Running Canvas {_mode} {_version}");
                     logger.Info($"Command-line arguments: {string.Join(" ", _args)}");
-                    using (ICheckpointRunner checkpointRunner =
+                    using (ICheckpointRunnerAsync checkpointRunner =
                         GetCheckpointRunner(
                             logger,
                             outFolder,
@@ -71,7 +71,7 @@ namespace Canvas
             return 0;
         }
 
-        private ICheckpointRunner GetCheckpointRunner(ILogger logger, IDirectoryLocation outputDirectory, string startCheckpoint, string stopCheckpoint, IDirectoryLocation wholeGenomeFastaFolder)
+        private ICheckpointRunnerAsync GetCheckpointRunner(ILogger logger, IDirectoryLocation outputDirectory, string startCheckpoint, string stopCheckpoint, IDirectoryLocation wholeGenomeFastaFolder)
         {
 
             var parentDirectories = new Dictionary<string, IDirectoryLocation>
@@ -84,9 +84,8 @@ namespace Canvas
 
             JsonConverter[] converters = { new FileSystemLocationConverter(parentDirectories) };
 
-            ICheckpointSerializer serializer = new CheckpointJsonSerializer(CheckpointManagerFactory.GetCheckpointFolder(outputDirectory), logger, converters);
-            ICheckpointManager manager = new CheckpointManager(logger, startCheckpoint, stopCheckpoint);
-            return new CheckpointRunner(logger, outputDirectory, manager, serializer, true);
+            ICheckpointSerializerAsync serializer = new CheckpointJsonSerializerAsync(CheckpointManagerFactory.GetCheckpointFolder(outputDirectory), logger, converters);
+            return CheckpointRunnerAsync.Create(serializer, logger, outputDirectory, startCheckpoint, stopCheckpoint, true);
         }
     }
 

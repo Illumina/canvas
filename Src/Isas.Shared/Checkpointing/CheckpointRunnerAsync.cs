@@ -19,6 +19,7 @@ namespace Isas.Shared.Checkpointing
         private readonly bool _forceSynchronous;
         private readonly List<Checkpoint> _parentCheckpoints;
         private bool _disposed;
+        private Task _stopCheckpointTask;
 
         private CheckpointRunnerAsync(ILogger logger, IDirectoryLocation tempRepository, CheckpointManagerAsync manager, ICheckpointSerializerAsync serializer,
             bool retainTempFiles = false, bool forceSynchronous = false, List<string> childStartCheckpoints = null, List<string> childStopCheckpoints = null, List<Checkpoint> parentCheckpoints = null)
@@ -52,7 +53,6 @@ namespace Isas.Shared.Checkpointing
                 .WrapWithBenchmark()
                 .WrapWithSave()
                 .RunOrLoad()
-                .WrapWithStopCheckpointCheck()
                 .RunAsync();
         }
 
@@ -130,7 +130,7 @@ namespace Isas.Shared.Checkpointing
             var checkpoint = _manager.CreateCheckpoint(key);
             var checkpointHelper = CreateCheckpoint(checkpoint,
                 SupplyNestedCheckpoint(checkpoint, WrapWithLoadingConvention(checkpoint, run, input, loadingConvention)));
-            return checkpointHelper.WrapWithStopCheckpointCheck().RunAsync();
+            return checkpointHelper.RunAsync();
         }
 
         private Func<ICheckpointRunnerAsync, IDirectoryLocation, TOutput> WrapWithLoadingConvention<TInput, TOutput>(Checkpoint checkpoint, Func<ICheckpointRunnerAsync, TInput, IDirectoryLocation, TOutput> run,
@@ -309,7 +309,7 @@ namespace Isas.Shared.Checkpointing
                 return new CheckpointHelper<T>(Checkpoint, func, _logger, _runner);
             }
 
-            public CheckpointHelper<T> WrapWithStopCheckpointCheck()
+            private CheckpointHelper<T> WrapWithStopCheckpointCheck()
             {
                 return new CheckpointHelper<T>(Checkpoint, () =>
                 {
@@ -324,11 +324,34 @@ namespace Isas.Shared.Checkpointing
                 }, _logger, _runner);
             }
 
+            private Task<T> RunAsyncInternal()
+            {
+                // handle any existing stop checkpoint
+                if (_runner._stopCheckpointTask != null)
+                {
+                    Func<Task<T>> func = async () =>
+                    {
+                        await _runner._stopCheckpointTask;
+                        // the above await should always throw a StopCheckpointFoundException
+                        throw new ApplicationException("Unexpected program execution. A StopCheckpointFoundException was expected");
+                    };
+                    return func.Invoke();
+                }
+
+                Task<T> task;
+                if (_runner._forceSynchronous)
+                    task = Task.FromResult(Func.Invoke());
+                else
+                    task = Task.Run(Func);
+
+                if (Checkpoint.IsStopCheckpoint)
+                    _runner._stopCheckpointTask = task;
+                return task;
+            }
+
             public Task<T> RunAsync()
             {
-                if (_runner._forceSynchronous)
-                    return Task.FromResult(Func.Invoke());
-                return Task.Run(Func);
+                return WrapWithStopCheckpointCheck().RunAsyncInternal();
             }
         }
     }

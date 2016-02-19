@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.IO;
 using System.Text;
+using System.Threading.Tasks;
 using Isas.Shared;
 using SequencingFiles;
 using Canvas;
@@ -23,12 +24,12 @@ namespace Illumina.SecondaryAnalysis
         private readonly int _countsPerBin;
         private readonly ILogger _logger;
         private readonly IWorkManager _workManager;
-        private readonly ICheckpointRunner _checkpointRunner;
+        private readonly ICheckpointRunnerAsync _checkpointRunner;
         private readonly bool _isSomatic;
         private readonly Dictionary<string, string> _customParameters = new Dictionary<string, string>();
         #endregion
 
-        public CanvasRunner(ILogger logger, IWorkManager workManager, ICheckpointRunner checkpointRunner, bool isSomatic, CanvasCoverageMode coverageMode,
+        public CanvasRunner(ILogger logger, IWorkManager workManager, ICheckpointRunnerAsync checkpointRunner, bool isSomatic, CanvasCoverageMode coverageMode,
             int countsPerBin, Dictionary<string, string> customParameters = null)
         {
             _logger = logger;
@@ -489,6 +490,11 @@ namespace Illumina.SecondaryAnalysis
             }
         }
 
+        public void CallSample(CanvasCallset callset)
+        {
+            Task.Run(() => CallSampleInternal(callset)).GetAwaiter().GetResult();
+        }
+
         /// <summary>
         /// Germline workflow:
         /// - Run CanvasBin, CanvasClean, CanvasPartition, CanvasDiploidCaller
@@ -496,7 +502,7 @@ namespace Illumina.SecondaryAnalysis
         /// Somatic workflow:
         /// - Run CanvasBin, CanvasClean, CanvasPartition, CanvasSNV, CanvasSomaticCaller
         /// </summary>
-        public void CallSample(CanvasCallset callset)
+        private async Task CallSampleInternal(CanvasCallset callset)
         {
             Directory.CreateDirectory(callset.TempFolder);
             string canvasReferencePath = callset.KmerFasta.FullName;
@@ -509,6 +515,9 @@ namespace Illumina.SecondaryAnalysis
             {
                 throw new ApplicationException(string.Format("Error: Missing filter bed file required for CNV calling at '{0}'", canvasBedPath));
             }
+
+            // CanvasSNV
+            var canvasSnvTask = _checkpointRunner.RunCheckpointAsync("CanvasSNV", () => InvokeCanvasSnv(callset));
 
             // Prepare ploidy file:
             string ploidyBedPath = callset.PloidyBed?.FullName;
@@ -530,8 +539,7 @@ namespace Illumina.SecondaryAnalysis
                     () => IntersectBinsWithTargetedRegions(callset, partitionedPath));
             }
 
-            // CanvasSNV
-            _checkpointRunner.RunCheckpoint("CanvasSNV", () => InvokeCanvasSnv(callset));
+            await canvasSnvTask;
 
             // Variant calling
             _checkpointRunner.RunCheckpoint("Variant calling", () =>
