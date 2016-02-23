@@ -332,9 +332,12 @@ namespace CanvasCommon
         /// Generate a tabular file with information about coverage and allele frequency for each chunk of the genome.
         /// This file can be used to generate a pretty plot of coverage versus MAF.  
         /// </summary>
-        static public void WriteCoveragePlotData(List<CanvasSegment> segments, double normalDiploidCoverage, PloidyInfo referencePloidy,
+        public static void WriteCoveragePlotData(List<CanvasSegment> segments, double? normalDiploidCoverage, PloidyInfo referencePloidy,
             string filePath, string referenceFolder)
         {
+            if (segments.Any() && !normalDiploidCoverage.HasValue)
+                throw new ApplicationException("normal diploid coverage must be specified");
+
             Dictionary<string, List<CanvasSegment>> segmentsByChromosome = GetSegmentsByChromosome(segments);
             GenomeMetadata genome = new GenomeMetadata();
             genome.Deserialize(Path.Combine(referenceFolder, "GenomeSize.xml"));
@@ -459,7 +462,7 @@ namespace CanvasCommon
                             counts.Sort();
                             double medianHits = counts[counts.Count / 2];
                             writer.Write("{0:F2}\t", medianHits);
-                            double normalizedCount = 2 * medianHits / normalDiploidCoverage;
+                            double normalizedCount = 2 * medianHits / normalDiploidCoverage.Value;
                             writer.Write("{0:F2}\t", normalizedCount);
                             if (MAF.Count >= 10)
                             {
