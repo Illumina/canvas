@@ -402,14 +402,16 @@ namespace CanvasSomaticCaller
             try
             {
                 ExtraHeaders = CallCNVUsingSNVFrequency(localSDmertic, referenceFolder);
-                string coverageOutputPath = CanvasCommon.Utilities.GetCoverageAndVariantFrequencyOutputPath(outputVCFPath);
-                CanvasSegment.WriteCoveragePlotData(this.Segments, this.Model.DiploidCoverage, this.ReferencePloidy, coverageOutputPath, referenceFolder);
             }
             catch (UncallableDataException e)
             {
                 Console.WriteLine("Not calling any CNVs. Reason: {0}", e.Message);
                 Segments.Clear();
             }
+
+            string coverageOutputPath = CanvasCommon.Utilities.GetCoverageAndVariantFrequencyOutputPath(outputVCFPath);
+            CanvasSegment.WriteCoveragePlotData(this.Segments, this.Model?.DiploidCoverage, this.ReferencePloidy, coverageOutputPath, referenceFolder);
+
             if (this.ReferencePloidy != null && !string.IsNullOrEmpty(this.ReferencePloidy.HeaderLine))
             {
                 ExtraHeaders.Add(this.ReferencePloidy.HeaderLine);
