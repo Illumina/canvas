@@ -1,14 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.IO;
 using SequencingFiles;
 
 namespace CanvasCommon
 {
-
     /// <summary>
     /// Contains information about a genomic interval. Has functions for computing copy numbers and their likelihoods.
     /// </summary>
@@ -38,6 +35,18 @@ namespace CanvasCommon
                     sum += x;
                 return sum / this.BinCount;
             }
+        }
+
+        public CnvType GetCnvType(int referenceCopyNumber)
+        {
+            if (CopyNumber < referenceCopyNumber)
+                return CnvType.Loss;
+            if (CopyNumber > referenceCopyNumber)
+                return CnvType.Gain;
+            if (referenceCopyNumber == 2 &&
+                MajorChromosomeCount.HasValue && MajorChromosomeCount == CopyNumber)
+                return CnvType.LossOfHeterozygosity;
+            return CnvType.Reference;
         }
 
         /// <summary>
@@ -211,52 +220,37 @@ namespace CanvasCommon
         /// <summary>
         /// Outputs the copy number calls to a text file.
         /// </summary>
-        /// <param name="outVcfPath">File to write to.</param>
-        /// <param name="segments">List of segments to write out.</param>
-        public static void WriteSegments(string outVcfPath, List<CanvasSegment> segments, string reference, string sampleName,
-            List<string> extraHeaders, bool reportPloidy, PloidyInfo ploidy, bool reportAllSites = false, bool reportGermlineGenotype = false)
+        public static void WriteSegments(string outVcfPath, List<CanvasSegment> segments, string wholeGenomeFastaDirectory, string sampleName,
+            List<string> extraHeaders, PloidyInfo ploidy, int qualityThreshold = 10)
         {
-            string cnvtype = null;
-            string filter = null;
-            // report GT for resequencing workflow and MCC for tumour-normal workflow
-            if (reportGermlineGenotype && reportPloidy)
-            {
-                throw new Exception("WriteSegments VCF file output error: reportGermlineGenotype and reportPloidy can not be both true");
-            }
-
             using (BgzipOrStreamWriter writer = new BgzipOrStreamWriter(outVcfPath))
             {
                 // Write the VCF header:
                 writer.WriteLine("##fileformat=VCFv4.1");
-                writer.WriteLine("##source=Isas," + CanvasCommon.CanvasVersionInfo.NameString + " " + CanvasCommon.CanvasVersionInfo.VersionString);
-                writer.WriteLine("##reference={0}", Path.Combine(reference, "genome.fa"));
-                if (extraHeaders != null)
+                writer.WriteLine($"##source={CanvasVersionInfo.NameString} {CanvasVersionInfo.VersionString}");
+                writer.WriteLine($"##reference={Path.Combine(wholeGenomeFastaDirectory, "genome.fa")}");
+
+                foreach (string header in extraHeaders ?? new List<string>())
                 {
-                    foreach (string header in extraHeaders)
-                    {
-                        writer.WriteLine(header);
-                    }
+                    writer.WriteLine(header);
                 }
                 GenomeMetadata genome = new GenomeMetadata();
-                genome.Deserialize(Path.Combine(reference, "GenomeSize.xml"));
+                genome.Deserialize(Path.Combine(wholeGenomeFastaDirectory, "GenomeSize.xml"));
                 foreach (GenomeMetadata.SequenceMetadata chromosome in genome.Sequences)
                 {
-                    writer.WriteLine("##contig=<ID={0},length={1}>", chromosome.Name, chromosome.Length);
+                    writer.WriteLine($"##contig=<ID={chromosome.Name},length={chromosome.Length}>");
                 }
-
+                string qualityFilter = $"q{qualityThreshold}";
                 writer.WriteLine("##ALT=<ID=CNV,Description=\"Copy number variable region\">");
-                writer.WriteLine("##FILTER=<ID=q10,Description=\"Quality below 10\">");
+                writer.WriteLine($"##FILTER=<ID={qualityFilter},Description=\"Quality below {qualityThreshold}\">");
                 writer.WriteLine("##FILTER=<ID=L10kb,Description=\"Length shorter than 10kb\">");
                 writer.WriteLine("##INFO=<ID=SVTYPE,Number=1,Type=String,Description=\"Type of structural variant\">");
                 writer.WriteLine("##INFO=<ID=END,Number=1,Type=Integer,Description=\"End position of the variant described in this record\">");
                 writer.WriteLine("##INFO=<ID=CNVLEN,Number=1,Type=Integer,Description=\"Number of reference positions spanned by this CNV\">");
-                if (reportGermlineGenotype)
-                    writer.WriteLine("##FORMAT=<ID=GT,Number=1,Type=String,Description=\"Genotype\">");
                 writer.WriteLine("##FORMAT=<ID=RC,Number=1,Type=Float,Description=\"Mean counts per bin in the region\">");
                 writer.WriteLine("##FORMAT=<ID=BC,Number=1,Type=Float,Description=\"Number of bins in the region\">");
                 writer.WriteLine("##FORMAT=<ID=CN,Number=1,Type=Integer,Description=\"Copy number genotype for imprecise events\">");
-                if (reportPloidy)
-                    writer.WriteLine("##FORMAT=<ID=MCC,Number=1,Type=Integer,Description=\"Major chromosome count (equal to copy number for LOH regions)\">");
+                writer.WriteLine("##FORMAT=<ID=MCC,Number=1,Type=Integer,Description=\"Major chromosome count (equal to copy number for LOH regions)\">");
                 writer.WriteLine("#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\t" + sampleName);
 
                 SanityCheckChromosomeNames(genome, segments);
@@ -265,68 +259,35 @@ namespace CanvasCommon
                 {
                     foreach (CanvasSegment segment in segments)
                     {
-                        if (segment.Chr.ToLowerInvariant() != chromosome.Name.ToLowerInvariant()) continue;
-                        int referenceCN = 2;
-                        if (ploidy != null) referenceCN = ploidy.GetReferenceCopyNumber(segment);
-                        filter = null;
-                        bool isReferenceCall = false;
-                        if (segment.CopyNumber == referenceCN) isReferenceCall = true;
-                        if (reportPloidy && segment.CopyNumber == 2 && segment.MajorChromosomeCount.HasValue && segment.MajorChromosomeCount != 1) isReferenceCall = false; // If we're reporting ploidy and there's LOH, this isn't a reference call.
+                        if (!segment.Chr.Equals(chromosome.Name, StringComparison.OrdinalIgnoreCase)) continue;
 
-                        // We can skip reporting of reference sites:
-                        if (!reportAllSites && isReferenceCall)
-                            continue;
+                        int referenceCopyNumber = ploidy?.GetReferenceCopyNumber(segment) ?? 2;
+                        CnvType cnvType = segment.GetCnvType(referenceCopyNumber);
 
-                        if (segment.QScore < 10)
-                            filter = "q10";
-
-                        if (segment.End - segment.Begin < 10000)
-                        {
-                            if (filter != null)
-                                filter = filter + ";L10kb";
-                            else
-                                filter = "L10kb";
-                        }
-
-                        if (filter == null)
-                            filter = "PASS";
-
-                        if (segment.CopyNumber < referenceCN)
-                            cnvtype = "LOSS";
-                        else if (segment.CopyNumber > referenceCN)
-                            cnvtype = "GAIN";
-                        else
-                            cnvtype = "REF";
-
-                        // The Dude abides... from vcf 4.1 spec:
+                        // From vcf 4.1 spec:
                         //     If any of the ALT alleles is a symbolic allele (an angle-bracketed ID String “<ID>”) then the padding base is required and POS denotes the 
                         //     coordinate of the base preceding the polymorphism.
-                        writer.Write("{0}\t{1}\tCanvas:{2}:{0}:{3}-{4}\t", segment.Chr, isReferenceCall ? segment.Begin + 1 : segment.Begin, cnvtype, segment.Begin + 1, segment.End);
-                        writer.Write("N\t{0}\t{1}\t{2}\t", isReferenceCall ? "." : "<CNV>", segment.QScore, filter);
-                        if (segment.copyNumber != referenceCN)
-                            writer.Write("SVTYPE=CNV;");
-                        else if (!isReferenceCall)
-                            writer.Write("SVTYPE=LOH;");
-                        if (segment.copyNumber != referenceCN || !isReferenceCall)
-                            writer.Write("END={0};CNVLEN={1}", segment.End, segment.End - segment.Begin);
-                        else
-                            writer.Write("END={0}", segment.End);
+                        string alternateAllele = cnvType.ToAltId();
+                        int position = (alternateAllele.StartsWith("<") && alternateAllele.EndsWith(">")) ? segment.Begin : segment.Begin + 1;
+                        writer.Write($"{segment.Chr}\t{position}\tCanvas:{cnvType.ToVcfId()}:{segment.Chr}:{segment.Begin + 1}-{segment.End}\t");
+
+                        var filter = segment.GetFilter(qualityThreshold, qualityFilter);
+                        writer.Write($"N\t{alternateAllele}\t{segment.QScore}\t{filter}\t", alternateAllele, segment.QScore, filter);
+
+                        if (cnvType != CnvType.Reference)
+                            writer.Write($"SVTYPE={cnvType.ToSvType()};");
+                        writer.Write($"END={segment.End}");
+                        if (cnvType != CnvType.Reference)
+                            writer.Write($";CNVLEN={segment.End - segment.Begin}");
+
                         //  FORMAT field
-                        if (reportGermlineGenotype)
-                            writer.Write("\tGT:RC:BC:CN", segment.End);
-                        else
-                            writer.Write("\tRC:BC:CN", segment.End);
-                        if (reportPloidy && segment.MajorChromosomeCount.HasValue) writer.Write(":MCC");
-                        // writing GT for resequencing workflow 
-                        if (reportGermlineGenotype)
+                        writer.Write("\tRC:BC:CN", segment.End);
+                        if (segment.MajorChromosomeCount.HasValue)
                         {
-                            writer.Write("\t{0}/{1}:", segment.MajorChromosomeCount, segment.CopyNumber);
+                            writer.Write(":MCC");
                         }
-                        else
-                            writer.Write("\t");
-                        writer.Write("{1}:{2}:{3}", segment.End, Math.Round(segment.MeanCount, 0, MidpointRounding.AwayFromZero), segment.BinCount, segment.CopyNumber);
-                        // writing MCC for tumour-normal workflow 
-                        if (reportPloidy && segment.MajorChromosomeCount.HasValue)
+                        writer.Write("\t{1}:{2}:{3}", segment.End, Math.Round(segment.MeanCount, 0, MidpointRounding.AwayFromZero), segment.BinCount, segment.CopyNumber);
+                        if (segment.MajorChromosomeCount.HasValue)
                         {
                             writer.Write(":{0}", segment.MajorChromosomeCount);
                         }
@@ -334,6 +295,23 @@ namespace CanvasCommon
                     }
                 }
             }
+        }
+
+        private string GetFilter(int qualityThreshold, string qualityFilter)
+        {
+            string filter = null;
+            if (QScore < qualityThreshold)
+                filter = qualityFilter;
+            if (End - Begin < 10000)
+            {
+                if (filter != null)
+                    filter = filter + ";L10kb";
+                else
+                    filter = "L10kb";
+            }
+            if (filter == null)
+                filter = "PASS";
+            return filter;
         }
 
         static public Dictionary<string, List<CanvasSegment>> GetSegmentsByChromosome(List<CanvasSegment> segments)
@@ -354,9 +332,12 @@ namespace CanvasCommon
         /// Generate a tabular file with information about coverage and allele frequency for each chunk of the genome.
         /// This file can be used to generate a pretty plot of coverage versus MAF.  
         /// </summary>
-        static public void WriteCoveragePlotData(List<CanvasSegment> segments, double normalDiploidCoverage, PloidyInfo referencePloidy,
+        public static void WriteCoveragePlotData(List<CanvasSegment> segments, double? normalDiploidCoverage, PloidyInfo referencePloidy,
             string filePath, string referenceFolder)
         {
+            if (segments.Any() && !normalDiploidCoverage.HasValue)
+                throw new ApplicationException("normal diploid coverage must be specified");
+
             Dictionary<string, List<CanvasSegment>> segmentsByChromosome = GetSegmentsByChromosome(segments);
             GenomeMetadata genome = new GenomeMetadata();
             genome.Deserialize(Path.Combine(referenceFolder, "GenomeSize.xml"));
@@ -481,7 +462,7 @@ namespace CanvasCommon
                             counts.Sort();
                             double medianHits = counts[counts.Count / 2];
                             writer.Write("{0:F2}\t", medianHits);
-                            double normalizedCount = 2 * medianHits / normalDiploidCoverage;
+                            double normalizedCount = 2 * medianHits / normalDiploidCoverage.Value;
                             writer.Write("{0:F2}\t", normalizedCount);
                             if (MAF.Count >= 10)
                             {

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.IO;
 using System.Text;
+using System.Threading.Tasks;
 using Isas.Shared;
 using SequencingFiles;
 using Canvas;
@@ -23,12 +24,12 @@ namespace Illumina.SecondaryAnalysis
         private readonly int _countsPerBin;
         private readonly ILogger _logger;
         private readonly IWorkManager _workManager;
-        private readonly ICheckpointRunner _checkpointRunner;
+        private readonly ICheckpointRunnerAsync _checkpointRunner;
         private readonly bool _isSomatic;
         private readonly Dictionary<string, string> _customParameters = new Dictionary<string, string>();
         #endregion
 
-        public CanvasRunner(ILogger logger, IWorkManager workManager, ICheckpointRunner checkpointRunner, bool isSomatic, CanvasCoverageMode coverageMode,
+        public CanvasRunner(ILogger logger, IWorkManager workManager, ICheckpointRunnerAsync checkpointRunner, bool isSomatic, CanvasCoverageMode coverageMode,
             int countsPerBin, Dictionary<string, string> customParameters = null)
         {
             _logger = logger;
@@ -410,14 +411,12 @@ namespace Illumina.SecondaryAnalysis
         protected void InvokeCanvasSnv(CanvasCallset callset)
         {
             List<UnitOfWork> jobList = new List<UnitOfWork>();
-            string canvasExecutablePath = Path.Combine(this._canvasFolder, "CanvasSNV.exe");
-            string executablePath = Utilities.GetMonoPath();
             List<string> outputPaths = new List<string>();
             GenomeMetadata genomeMetadata = callset.GenomeMetadata;
 
             string tumorBamPath = callset.Bam.BamFile.FullName;
             string normalVcfPath = callset.NormalVcfPath.FullName;
-            foreach (SequencingFiles.GenomeMetadata.SequenceMetadata chromosome in genomeMetadata.Sequences)
+            foreach (GenomeMetadata.SequenceMetadata chromosome in genomeMetadata.Sequences)
             {
                 // Only invoke for autosomes + allosomes;
                 // don't invoke it for mitochondrial chromosome or extra contigs or decoys
@@ -425,14 +424,20 @@ namespace Illumina.SecondaryAnalysis
                     continue;
 
                 UnitOfWork job = new UnitOfWork();
+                job.ExecutablePath = Path.Combine(_canvasFolder, "CanvasSNV.exe");
+                if (Utilities.IsThisMono())
+                {
+                    job.CommandLine = job.ExecutablePath;
+                    job.ExecutablePath = Utilities.GetMonoPath();
+                }
+
                 string outputPath = Path.Combine(callset.TempFolder, string.Format("{0}-{1}.SNV.txt.gz", chromosome.Name, callset.Id));
                 outputPaths.Add(outputPath);
-                job.CommandLine = string.Format("{0} {1} {2} {3} {4}", canvasExecutablePath, chromosome.Name, normalVcfPath, tumorBamPath, outputPath);
+                job.CommandLine += $" {chromosome.Name} {normalVcfPath} {tumorBamPath} {outputPath}";
                 if (_customParameters.ContainsKey("CanvasSNV"))
                 {
                     job.CommandLine = Utilities.MergeCommandLineOptions(job.CommandLine, _customParameters["CanvasSNV"], true);
                 }
-                job.ExecutablePath = executablePath;
                 job.LoggingFolder = _workManager.LoggingFolder.FullName;
                 job.LoggingStub = string.Format("CanvasSNV-{0}-{1}", callset.Id, chromosome.Name);
                 jobList.Add(job);
@@ -485,6 +490,11 @@ namespace Illumina.SecondaryAnalysis
             }
         }
 
+        public void CallSample(CanvasCallset callset)
+        {
+            Task.Run(() => CallSampleInternal(callset)).GetAwaiter().GetResult();
+        }
+
         /// <summary>
         /// Germline workflow:
         /// - Run CanvasBin, CanvasClean, CanvasPartition, CanvasDiploidCaller
@@ -492,7 +502,7 @@ namespace Illumina.SecondaryAnalysis
         /// Somatic workflow:
         /// - Run CanvasBin, CanvasClean, CanvasPartition, CanvasSNV, CanvasSomaticCaller
         /// </summary>
-        public void CallSample(CanvasCallset callset)
+        private async Task CallSampleInternal(CanvasCallset callset)
         {
             Directory.CreateDirectory(callset.TempFolder);
             string canvasReferencePath = callset.KmerFasta.FullName;
@@ -505,6 +515,9 @@ namespace Illumina.SecondaryAnalysis
             {
                 throw new ApplicationException(string.Format("Error: Missing filter bed file required for CNV calling at '{0}'", canvasBedPath));
             }
+
+            // CanvasSNV
+            var canvasSnvTask = _checkpointRunner.RunCheckpointAsync("CanvasSNV", () => InvokeCanvasSnv(callset));
 
             // Prepare ploidy file:
             string ploidyBedPath = callset.PloidyBed?.FullName;
@@ -526,8 +539,7 @@ namespace Illumina.SecondaryAnalysis
                     () => IntersectBinsWithTargetedRegions(callset, partitionedPath));
             }
 
-            // CanvasSNV
-            _checkpointRunner.RunCheckpoint("CanvasSNV", () => InvokeCanvasSnv(callset));
+            await canvasSnvTask;
 
             // Variant calling
             _checkpointRunner.RunCheckpoint("Variant calling", () =>
@@ -634,9 +646,12 @@ namespace Illumina.SecondaryAnalysis
             // Prepare and run CanvasSomaticCaller job:
             UnitOfWork callerJob = new UnitOfWork();
             var cnvVcfPath = callset.OutputVcfPath;
-            callerJob.ExecutablePath = Utilities.GetMonoPath();
-            string executablePath = Path.Combine(this._canvasFolder, "CanvasSomaticCaller.exe");
-            callerJob.CommandLine = string.Format(executablePath);
+            callerJob.ExecutablePath = Path.Combine(this._canvasFolder, "CanvasSomaticCaller.exe");
+            if (Utilities.IsThisMono())
+            {
+                callerJob.CommandLine = callerJob.ExecutablePath;
+                callerJob.ExecutablePath = Utilities.GetMonoPath();
+            }
             callerJob.CommandLine += string.Format(" -v {0}", callset.VfSummaryPath);
             callerJob.CommandLine += string.Format(" -i {0}", partitionedPath);
             callerJob.CommandLine += string.Format(" -o {0}", cnvVcfPath);

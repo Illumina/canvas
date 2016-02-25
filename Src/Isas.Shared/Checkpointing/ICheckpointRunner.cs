@@ -1,5 +1,4 @@
 using System;
-using System.Threading.Tasks;
 
 namespace Isas.Shared.Checkpointing
 {
@@ -48,14 +47,6 @@ namespace Isas.Shared.Checkpointing
 
         TOut RunCheckpoint<TIn, TOut>(string key, Func<ICheckpointRunner, TIn, IDirectoryLocation, TOut> run,
             TIn input, ILoadingConvention<TIn, TOut> loadingConvention);
-    }
-
-    public interface ICheckpointRunnerAsync : ICheckpointRunner
-    {
-        Task<TResult> RunCheckpointAsync<TResult>(string checkpointName, Func<ICheckpointRunnerAsync, IDirectoryLocation, TResult> run);
-        Task<TResult> RunCheckpointAsync<TResult>(string checkpointName, Func<TResult> func);
-        Task<TResult> RunCheckpointAsync<T, TResult>(string checkpointName, Func<T, IDirectoryLocation, TResult> run, T input, INamingConvention<TResult> convention);
-        Task<TResult> RunCheckpointAsync<T, TResult>(string checkpointName, Func<T, IDirectoryLocation, TResult> run, T input, ILoadingConvention<T, TResult> convention);
     }
 
     /// <summary>
@@ -109,12 +100,9 @@ namespace Isas.Shared.Checkpointing
     public delegate void TwoOuts<T1, T2>(out T1 output1, out T2 output2);
 
     public delegate void NestedTwoOuts<T1, T2>(ICheckpointRunner runner, out T1 output1, out T2 output2);
-
+    
     public static class CheckpointRunnerExtensions
     {
-
-
-
         public static void RunCheckpoint(this ICheckpointRunner runner, string name, Action<ICheckpointRunner> a)
         {
             string result = $"{name} complete. No output from this checkpoint";

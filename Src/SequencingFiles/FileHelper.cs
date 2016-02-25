@@ -58,7 +58,7 @@ namespace SequencingFiles
 					int TileNumber = reader.ReadInt32();
 					int ClusterCount = reader.ReadInt32();
 					if (TileNumber == 0 && ClusterCount == 0) continue; // Ignore any dummy record with TileNumber = ClusterCount = 0
-					if (TileNumber < 0 || ClusterCount < 0) throw new Exception(string.Format("Error: Invalid date in .bci file {0}", bciFilePath)); // Sanity-check
+					if (TileNumber < 0 || ClusterCount < 0) throw new Exception(string.Format("Error: Invalid data in .bci file {0}", bciFilePath)); // Sanity-check
 					tileNumberList.Add(TileNumber);
 					clusterCountList.Add(ClusterCount);
 				}
@@ -87,8 +87,7 @@ namespace SequencingFiles
 		/// </summary>
 		public static void SaveCallsAndScores(byte[] calls, byte[] scores, string filePath)
 		{
-			using (FileStream outputStream = new FileStream(filePath, FileMode.Create, FileAccess.Write, FileShare.Read)
-				)
+			using (FileStream outputStream = new FileStream(filePath, FileMode.Create, FileAccess.Write, FileShare.Read))
 			{
 				using (BinaryWriter writer = new BinaryWriter(outputStream))
 				{
@@ -105,7 +104,7 @@ namespace SequencingFiles
 			}
 		}
 
-		public static byte[][] LoadCallsAndScores(string filePath, int clusterCount)
+        public static byte[][] LoadCallsAndScores(string filePath, int clusterCount)
 		{
 			using (FileStream inputStream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read))
 				return LoadCallsAndScores(inputStream, clusterCount);

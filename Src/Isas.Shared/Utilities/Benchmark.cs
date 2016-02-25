@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Illumina.SecondaryAnalysis
+namespace Isas.Shared
 {
     public class Benchmark
     {

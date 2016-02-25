@@ -9,7 +9,7 @@ namespace SequencingFiles.Compression
     {
         [DllImport("FileCompression.dll", CallingConvention = CallingConvention.Cdecl)]
         public static extern int CompressBlock(byte[] uncompressedBlock, ref int uncompressedLen, byte[] compressedBlock,
-                                               uint compressedLen, int compressionLevel);
+                                               uint compressedLen, int compressionLevel, int compressionStrategy);
 
         [DllImport("FileCompression.dll", CallingConvention = CallingConvention.Cdecl)]
         public static extern int UncompressBlock(byte[] compressedBlock, uint compressedLen, byte[] uncompressedBlock,

@@ -1,11 +1,7 @@
-﻿ using System;
+﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.IO;
 using NDesk.Options;
-using SequencingFiles;
 
 namespace CanvasSomaticCaller
 {
@@ -45,6 +41,7 @@ namespace CanvasSomaticCaller
             float? userPurity = null;
             float? userPloidy = null;
 
+            SomaticCaller caller = new SomaticCaller();
             OptionSet p = new OptionSet()
             {
                 { "i|infile=", "file containing bins, their counts, and assigned segments (obtained from CanvasPartition.exe)",  v => inFile = v },
@@ -60,12 +57,13 @@ namespace CanvasSomaticCaller
                 { "p|ploidyBedFile=", "bed file specifying reference ploidy (e.g. for sex chromosomes) (optional)", v => ploidyBedPath = v},
                 { "f|localSDFile=", "text file with localSD metric (calculate within CanvasClean) (optional)", v => ffpeOutliersPath = v},
                 { "d|dbsnpvcf", "flag indicating a dbSNP VCF file is used to generate the variant frequency file", v => isDbsnpVcf = v != null },
-                { "D|deviation=", "INTERNAL: best deviation parameter", v => deviationFactor = float.Parse(v) }, 
-                { "C|coverageweight=", "INTERNAL: coverage weighting", v => coverageWeighting = float.Parse(v) }, 
-                { "M|minimumcall=", "INTERNAL: minimum call size", v => minimumCallSize = int.Parse(v) }, 
-                { "P|precisionweight=", "INTERNAL: precision weighting factor", v => precisionWeightingFactor = double.Parse(v) }, 
-                { "u|definedpurity=", "INTERNAL: user pre-defined purity", v => userPurity = float.Parse(v) }, 
-                { "l|definedploidy=", "INTERNAL: user pre-defined ploidy", v => userPloidy = float.Parse(v) }, 
+                { "D|deviation=", "INTERNAL: best deviation parameter", v => deviationFactor = float.Parse(v) },
+                { "C|coverageweight=", "INTERNAL: coverage weighting", v => coverageWeighting = float.Parse(v) },
+                { "M|minimumcall=", "INTERNAL: minimum call size", v => minimumCallSize = int.Parse(v) },
+                { "P|precisionweight=", "INTERNAL: precision weighting factor", v => precisionWeightingFactor = double.Parse(v) },
+                { "u|definedpurity=", "INTERNAL: user pre-defined purity", v => userPurity = float.Parse(v) },
+                { "l|definedploidy=", "INTERNAL: user pre-defined ploidy", v => userPloidy = float.Parse(v) },
+                { "q|qualitythreshold=", $"quality filter threshold (default {caller.QualityFilterThreshold})", v => caller.QualityFilterThreshold = int.Parse(v) },
             };
 
             List<string> extraArgs = p.Parse(args);
@@ -111,7 +109,10 @@ namespace CanvasSomaticCaller
                 Console.WriteLine("Canvas error: both definedpurity and definedploidy should be specified");
                 return 1;
             }
-            SomaticCaller caller = new SomaticCaller();
+
+            if (caller.QualityFilterThreshold < 0)
+                throw new ArgumentException($"Quality filter threshold must be greater than or equal to zero. Value was {caller.QualityFilterThreshold}");
+
             // Set parameters:
             caller.TruthDataPath = truthDataPath;
             caller.SomaticVCFPath = somaticVCFPath;

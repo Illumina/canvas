@@ -111,11 +111,6 @@ namespace SequencingFiles
             return SafeGetReference(sequence.FastaPath);
         }
 
-        public static IGenomesReferencePath GetReference(SequencingFiles.SampleSheet.Sample sample)
-        {
-            return SafeGetReference(sample.WholeGenomeFastaPath ?? sample.GenomePath);
-        }
-
         public static IGenomesReferencePath GetReferenceFromVcfHeader(string vcfPath)
         {
             string referencePath = null;
