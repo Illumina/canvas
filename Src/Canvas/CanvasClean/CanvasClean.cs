@@ -280,25 +280,21 @@ namespace CanvasClean
         /// <summary>
         /// Calculates Standard Deviation separately for each chromosome and output their average 
         /// </summary>
-        static public double LocalStandardDeviation(List<double> list, List<string> chromosome)
+        public static double GetLocalStandardDeviationAverage(List<double> list, List<string> chromosome)
         {
-
-            List<double> StandardDeviations = new List<double>();
-            List<double> temp = new List<double>();
-
-            for (int iterator = 0; iterator < list.Count - 2; iterator++)
+            List<double> medianAbsoluteDeviations = new List<double>();
+            int iStart = 0;
+            for (int i = 0; i < list.Count; i++)
             {
-                if (chromosome[iterator] == chromosome[iterator + 1])
+                if (chromosome[i] != chromosome[iStart])
                 {
-                    temp.Add(list[iterator]);
-                }
-                else
-                {
-                    StandardDeviations.Add(CanvasCommon.Utilities.Mad(temp, 1, temp.Count));
-                    temp.Clear();
+                    int iEnd = i; // 0-based, exclusive
+                    medianAbsoluteDeviations.Add(CanvasCommon.Utilities.Mad(list, iStart, iEnd));
+                    iStart = i;
                 }
             }
-            return StandardDeviations.Average();
+            medianAbsoluteDeviations.Add(CanvasCommon.Utilities.Mad(list, iStart, list.Count));
+            return medianAbsoluteDeviations.Average();
         }
 
         /// <summary>
@@ -311,9 +307,6 @@ namespace CanvasClean
 
         static double getLocalStandardDeviation(List<GenomicBin> bins)
         {
-            // Will hold FFPE outlier-removed bins 
-            List<GenomicBin> strippedBins = new List<GenomicBin>();
-
             // Will hold consecutive bin count difference (approximates Skellam Distribution: mean centred on zero so agnostic to CN changes)
             double[] countsDiffs = new double[bins.Count - 1];
 
@@ -340,47 +333,22 @@ namespace CanvasClean
             }
 
             // average of local SD metric
-            double localSDaverage = LocalStandardDeviation(localSDs, chromosomeBin);
+            double localSDaverage = GetLocalStandardDeviationAverage(localSDs, chromosomeBin);
             return localSDaverage;
         }
 
         /// <summary>
         /// Remove bin regions with extreme local standard deviation (SD).
+        /// Assume that MadOfDiffs has been set in GetLocalStandardDeviationAverage().
         /// </summary>
         /// <param name="bins">Genomic bins from which we filter out local SD outliers associated with FFPE biases.</param>
         /// <param name="threshold">Median SD value which is used to determine whereas to run RemoveBinsWithExtremeLocalMad on a sample and which set of bins to remove (set as threshold*5).</param>
         /// The rationale of this function is that standard deviation of difference of consecutive bins values, when taken over a small range of bin (i.e. 20 bins),
         /// has a distinct distribution for FFPE compared to Fresh Frozen (FF) samples. This property is used to flag and remove such bins.
-
         static List<GenomicBin> RemoveBinsWithExtremeLocalSD(List<GenomicBin> bins, double localSDaverage, double threshold, string outFile)
         {
             // Will hold FFPE outlier-removed bins 
             List<GenomicBin> strippedBins = new List<GenomicBin>();
-
-            // Will hold consecutive bin count difference (approximates Skellam Distribution: mean centred on zero so agnostic to CN changes)
-            double[] countsDiffs = new double[bins.Count - 1];
-
-            for (int binIndex = 0; binIndex < bins.Count - 1; binIndex++)
-            {
-                countsDiffs[binIndex] = System.Convert.ToDouble(bins[binIndex + 1].Count - bins[binIndex].Count);
-            }
-
-            // holder of local SD values (SDs of 20 bins)
-            List<double> localSDs = new List<double>();
-            List<string> chromosomeBin = new List<string>();
-
-            // calculate local SD metric
-            int windowSize = 20;
-            for (int windowEnd = windowSize, windowStart = 0; windowEnd < countsDiffs.Length; windowStart += windowSize, windowEnd += windowSize)
-            {
-                double localSD = CanvasCommon.Utilities.StandardDeviation(countsDiffs, windowStart, windowEnd);
-                localSDs.Add(localSD);
-                chromosomeBin.Add(bins[windowStart].Chromosome);
-                for (int binIndex = windowStart; binIndex < windowEnd; binIndex += 1)
-                {
-                    bins[binIndex].MadOfDiffs = localSD;
-                }
-            }
 
             // remove bins with extreme local SD (populating new list is faster than removing from existing one)
             foreach (GenomicBin bin in bins)
