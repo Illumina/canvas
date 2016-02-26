@@ -1622,16 +1622,29 @@ namespace CanvasSomaticCaller
                         bestModel.DiploidCoverage, 100 * bestModel.Purity, bestModel.PercentCN[2]);
 
                 // Refine search: Smaller step sizes in the neighborhood of the initial model.
-                minCoverage = (int)Math.Round(bestModel.DiploidCoverage) - 5;
-                maxCoverage = (int)Math.Round(bestModel.DiploidCoverage) + 5;
-                int minPurity = Math.Max(20, (int)Math.Round(bestModel.Purity * 100) - 10);
-                int maxPurity = Math.Min(100, (int)Math.Round(bestModel.Purity * 100) + 10); // %%% magic numbers
+                if (this.userPloidy != null)
+                {
+                    minCoverage = maxCoverage = (int)GetDiploidCoverage(medianCoverageLevel, this.userPloidy.Value);
+                }
+                else
+                {
+                    minCoverage = (int)Math.Round(bestModel.DiploidCoverage) - 5;
+                    maxCoverage = (int)Math.Round(bestModel.DiploidCoverage) + 5;
+                }
+                if (this.userPurity != null)
+                {
+                    minPercentPurity = maxPercentPurity = (int)(this.userPurity.Value * 100);
+                }
+                else
+                {
+                    minPercentPurity = Math.Max(20, (int)Math.Round(bestModel.Purity * 100) - 10);
+                    maxPercentPurity = Math.Min(100, (int)Math.Round(bestModel.Purity * 100) + 10); // %%% magic numbers
+                }
                 bestDeviation = double.MaxValue;
-
                 bestModel = null;
                 for (int coverage = minCoverage; coverage <= maxCoverage; coverage++)
                 {
-                    for (int percentPurity = minPurity; percentPurity <= maxPurity; percentPurity++)
+                    for (int percentPurity = minPercentPurity; percentPurity <= maxPercentPurity; percentPurity++)
                     {
                         CoveragePurityModel model = new CoveragePurityModel();
                         model.DiploidCoverage = coverage;
