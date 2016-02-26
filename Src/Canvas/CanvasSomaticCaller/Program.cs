@@ -104,12 +104,6 @@ namespace CanvasSomaticCaller
                 return 1;
             }
 
-            if (userPurity == null && userPloidy != null || userPurity != null && userPloidy == null)
-            {
-                Console.WriteLine("Canvas error: both definedpurity and definedploidy should be specified");
-                return 1;
-            }
-
             if (caller.QualityFilterThreshold < 0)
                 throw new ArgumentException($"Quality filter threshold must be greater than or equal to zero. Value was {caller.QualityFilterThreshold}");
 
