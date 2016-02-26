@@ -111,7 +111,6 @@ BaseSpace files are now available under your current directory. To run demo, tra
 "Projects/HiSeq 2500 RR: NRC Exome (HCC1187 & HCC2218)/AppResults/HCC2218BL/Files/HCC2218BL_S1.bam" (normal bam)
 "Projects/HiSeq 2500 RR: NRC Exome (HCC1187 & HCC2218)/AppResults/HCC2218BL/Files/HCC2218BL_S1.bam.bai"
 “Projects/HiSeq 2500 RR:  NRC\ Exome\ (HCC1187 & HCC2218)/AppSessions/Isaac Enrichment 11|24|2015 9:23:23/AppResults.28295376.HCC1187BL/Files/Additional Files/NexteraRapidCapture_Exome_TargetedRegions_v1.2Used.txt” (targeted regions)
-“/tmp/BaseSpace/Projects/HiSeq 2500 RR: NRC Exome (HCC1187 & HCC2218)/AppResults/HCC2218C/Files/HCC2218C_S1.vcf” (somatic vcf)
 ```
 #### Genome reference files  
 Download hg19 genome reference files from https://illumina.box.com/CanvasPublic into WORKDIR/testing/hg19/.
@@ -119,7 +118,7 @@ Download hg19 genome reference files from https://illumina.box.com/CanvasPublic 
 #### Running demo
 With all files copied and installed, we are now ready to run Canvas. This demo will use Tumor-normal-enrichment workflow that runs on Nextera exome data.  Execute the command below. 
 ```
-/home/ubuntu/mono-4.0.2/bin/mono $WORKDIR/canvas/canvas-1.3.4_x64/Canvas.exe Tumor-normal-enrichment -b $WORKDIR/testing/files/HCC2218C_S1.bam --normal-bam=$WORKDIR/testing/files/HCC2218BL_S1.bam --reference=$WORKDIR/testing/hg19/kmer.fa --manifest=$WORKDIR/testing/files/NexteraRapidCapture_Exome_TargetedRegions_v1.2Used.txt -g $WORKDIR/testing/hg19/ -n HCC2218C -f $WORKDIR/testing/hg19/filter13.bed -o $WORKDIR/testing/HCC2218_v2 --b-allele-vcf=$WORKDIR/testing/files/HCC2218BL_S1.vcf --somatic-vcf=$WORKDIR/testing/files/HCC2218C_S1.vcf --custom-parameters=CanvasBin,-m=TruncatedDynamicRange
+/home/ubuntu/mono-4.0.2/bin/mono $WORKDIR/canvas/canvas-1.3.4_x64/Canvas.exe Tumor-normal-enrichment -b $WORKDIR/testing/files/HCC2218C_S1.bam --normal-bam=$WORKDIR/testing/files/HCC2218BL_S1.bam --reference=$WORKDIR/testing/hg19/kmer.fa --manifest=$WORKDIR/testing/files/NexteraRapidCapture_Exome_TargetedRegions_v1.2Used.txt -g $WORKDIR/testing/hg19/ -n HCC2218C -f $WORKDIR/testing/hg19/filter13.bed -o $WORKDIR/testing/HCC2218_v2 --b-allele-vcf=$WORKDIR/testing/files/HCC2218BL_S1.vcf --custom-parameters=CanvasBin,-m=TruncatedDynamicRange
 ```
 CNV.vcf.gz files will be saved to HCC2218_v2 output directory. Depending on the number of available CPUs, the demo will take from few minutes to under an hour to complete.
 

@@ -8,8 +8,8 @@
     <ProjectGuid>{F2063FF3-61A7-4084-845D-DA591011E36F}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>Isis.Shared</RootNamespace>
-    <AssemblyName>Isis.Shared</AssemblyName>
+    <RootNamespace>Isas.Shared</RootNamespace>
+    <AssemblyName>Isas.Shared</AssemblyName>
     <TargetFrameworkVersion>v4.5.1</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <SccProjectName>SAK</SccProjectName>
@@ -88,16 +88,17 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="Microsoft.CSharp" />
-    <Reference Include="Mono.Posix">
-      <HintPath>..\packages\mono\Mono.Posix.dll</HintPath>
-      <Private>False</Private>
+    <Reference Include="Mono.Posix, Version=4.0.0.0, Culture=neutral, PublicKeyToken=0738eb9f132ed756, processorArchitecture=MSIL">
+      <HintPath>..\Canvas\Canvas\packages\Mono.Posix.4.0.0.0\lib\net40\Mono.Posix.dll</HintPath>
+      <Private>True</Private>
     </Reference>
-    <Reference Include="Newtonsoft.Json">
-      <HintPath>..\packages\JsonNet\Newtonsoft.Json.dll</HintPath>
+    <Reference Include="Newtonsoft.Json, Version=8.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
+      <HintPath>..\Canvas\Canvas\packages\Newtonsoft.Json.8.0.2\lib\net45\Newtonsoft.Json.dll</HintPath>
+      <Private>True</Private>
     </Reference>
     <Reference Include="protobuf-net, Version=2.0.0.668, Culture=neutral, PublicKeyToken=257b51d87d2e4d67, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\packages\Protobuf\protobuf-net.dll</HintPath>
+      <HintPath>..\Canvas\Canvas\packages\protobuf-net.2.0.0.668\lib\net40\protobuf-net.dll</HintPath>
+      <Private>True</Private>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.configuration" />
@@ -109,14 +110,18 @@
     <Compile Include="..\ILMNcommon\Properties\IsasVersionInfo.cs">
       <Link>Properties\IsisVersionInfo.cs</Link>
     </Compile>
-    <Compile Include="AnalysisJobInfo.cs" />
+    <Compile Include="Checkpointing\CheckpointRunnerAsync.cs" />
+    <Compile Include="Checkpointing\Checkpoint.cs" />
+    <Compile Include="Checkpointing\CheckpointManagerAsync.cs" />
+    <Compile Include="Checkpointing\CheckpointJsonSerializerAsync.cs" />
+    <Compile Include="Checkpointing\ICheckpointRunner.cs" />
+    <Compile Include="Checkpointing\ICheckpointRunnerAsync.cs" />
+    <Compile Include="Checkpointing\LegacyCheckpointRunnerAsync.cs" />
     <Compile Include="Common Statistics\DescriptiveStats.cs" />
     <Compile Include="Common Statistics\ReadPairProperties.cs" />
-    <Compile Include="Common Statistics\RunStatistics.cs" />
     <Compile Include="Common Statistics\RunStatisticsMetadata.cs" />
     <Compile Include="Common Statistics\SampleStatistics.cs" />
     <Compile Include="Common Statistics\VariantStatistics.cs" />
-    <Compile Include="Common Statistics\WorkflowStatistics.cs" />
     <Compile Include="DataAccess.cs" />
     <Compile Include="DataTypes\Adapters.cs" />
     <Compile Include="DataTypes\Bam.cs" />
@@ -124,6 +129,7 @@
     <Compile Include="DataTypes\Fastq.cs" />
     <Compile Include="DataTypes\IMoveable.cs" />
     <Compile Include="DataTypes\IMoveableResult.cs" />
+    <Compile Include="DataTypes\IsaacStatsXML.cs" />
     <Compile Include="DataTypes\ReadStructure.cs" />
     <Compile Include="DataTypes\SampleBcls.cs" />
     <Compile Include="DataTypes\SampleIndex.cs" />
@@ -132,25 +138,22 @@
     <Compile Include="DataTypes\Strandedness.cs" />
     <Compile Include="DataTypes\TileSelection.cs" />
     <Compile Include="DataTypes\Vcf.cs" />
-    <Compile Include="GenomicInterval.cs" />
-    <Compile Include="Manifest.cs" />
     <Compile Include="MARSModel.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="SecondaryAnalysisWorkflow.cs" />
     <Compile Include="Utilities\Benchmark.cs" />
-    <Compile Include="Utilities\CheckpointJsonSerializer.cs" />
-    <Compile Include="Utilities\CheckpointManager.cs" />
-    <Compile Include="Utilities\CheckpointManagerFactory.cs" />
-    <Compile Include="Utilities\CheckpointRunner.cs" />
+    <Compile Include="Checkpointing\CheckpointJsonSerializer.cs" />
+    <Compile Include="Checkpointing\CheckpointManager.cs" />
+    <Compile Include="Checkpointing\CheckpointManagerFactory.cs" />
+    <Compile Include="Checkpointing\CheckpointRunner.cs" />
     <Compile Include="Utilities\DoubleLinkedList.cs" />
     <Compile Include="Utilities\DrmaaInterop.cs" />
     <Compile Include="Utilities\FileSystem\Converters.cs" />
+    <Compile Include="Utilities\FileSystem\CrossPlatformLink.cs" />
     <Compile Include="Utilities\FileSystem\DirectoryLocation.cs" />
     <Compile Include="Utilities\FileSystem\FileLocation.cs" />
     <Compile Include="Utilities\FileSystem\FileSystemLocationBase.cs" />
-    <Compile Include="Utilities\IEnumerableExtensions.cs" />
     <Compile Include="Utilities\ReferenceGenome.cs" />
-    <Compile Include="Utilities\IListExtensions.cs" />
     <Compile Include="Utilities\ILogger.cs" />
     <Compile Include="Utilities\ISampleSettings.cs" />
     <Compile Include="Utilities\IsasConfiguration.cs" />
@@ -158,51 +161,33 @@
     <Compile Include="Utilities\IWorkManager.cs" />
     <Compile Include="Utilities\JobManager.cs" />
     <Compile Include="Utilities\Logger.cs" />
-    <Compile Include="Utilities\LegacyCheckpointRunner.cs" />
+    <Compile Include="Checkpointing\LegacyCheckpointRunner.cs" />
     <Compile Include="Utilities\MachineInfo.cs" />
-    <Compile Include="Utilities\IDictionaryExtensions.cs" />
     <Compile Include="Utilities\RnaReferenceGenome.cs" />
     <Compile Include="Utilities\SampleSettingsProcessor.cs" />
     <Compile Include="Utilities\SampleSheetUtils.cs" />
     <Compile Include="Utilities\ShellExtensions.cs" />
-    <Compile Include="Utilities\StringExtensions.cs" />
     <Compile Include="Utilities\Supported.cs" />
     <Compile Include="Utilities\TemporaryDirectory.cs" />
     <Compile Include="Utilities\Utilities.cs" />
     <Compile Include="Utilities\WorkManagerFactory.cs" />
     <Compile Include="VariantCallingCombinePoolSettings.cs" />
     <Compile Include="VariantCallingFilterSettings.cs" />
-    <Compile Include="Workflow Statistics\MethylSeqStatistics.cs" />
-    <Compile Include="Workflow Statistics\RNAQuantStatistics.cs" />
-    <Compile Include="Workflow Statistics\CustomAmpliconStatistics.cs" />
-    <Compile Include="Workflow Statistics\EnrichmentStatistics.cs" />
-    <Compile Include="Workflow Statistics\GenerateFASTQStatistics.cs" />
-    <Compile Include="Workflow Statistics\MetagenomicsConstants.cs" />
-    <Compile Include="Workflow Statistics\MetagenomicsStatistics.cs" />
-    <Compile Include="Workflow Statistics\PCRAmpliconStatistics.cs" />
-    <Compile Include="Workflow Statistics\ResequencingStatistics.cs" />
-    <Compile Include="Workflow Statistics\SmallRNAStatistics.cs" />
-    <Compile Include="Workflow Statistics\SomaWorkerStatistics.cs" />
-    <Compile Include="Workflow Statistics\TargetedRNASeqStatistics.cs" />
-    <Compile Include="Workflow Statistics\VeriSeqPGSStatistics.cs" />
-    <Compile Include="Workflow Statistics\ZodiacRNAStatistics.cs" />
-    <Compile Include="Workflow Statistics\WholeGenomeRNASeqStatistics.cs" />
+    <Compile Include="Workflow Statistics\RegionStatistics.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\ILMNcommon\ILMNcommon.csproj">
       <Project>{6848DA28-BACA-4E4D-9E1D-BAD1E7CB9CDE}</Project>
       <Name>ILMNcommon</Name>
     </ProjectReference>
-    <ProjectReference Include="..\SampleSheet\SampleSheet.csproj">
-      <Project>{f310b4ef-80ca-4486-93a3-7e028edcd8b3}</Project>
-      <Name>SampleSheet</Name>
-    </ProjectReference>
     <ProjectReference Include="..\SequencingFiles\SequencingFiles.csproj">
-      <Project>{3EAE6805-E445-4102-87C1-F57E20677778}</Project>
+      <Project>{3eae6805-e445-4102-87c1-f57e20677778}</Project>
       <Name>SequencingFiles</Name>
     </ProjectReference>
   </ItemGroup>
-  <ItemGroup />
+  <ItemGroup>
+    <None Include="packages.config" />
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

@@ -208,6 +208,11 @@ namespace SequencingFiles
             return ((AlignmentFlag & MateUnmapped) == 0);
         }
 
+        public bool HasPosition()
+        {
+            return (RefID >= 0);
+        }
+
         public bool IsMateReverseStrand()
         {
             return ((AlignmentFlag & MateReverseStrand) != 0);

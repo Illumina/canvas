@@ -1,9 +1,8 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
-using System.Runtime.Remoting.Messaging;
 using Canvas.CommandLineParsing.CoreOptionTypes;
 
-namespace Canvas.CommandLineParsing
+namespace Canvas.CommandLineParsing.OptionProcessing
 {
     public interface IResultCollection
     {

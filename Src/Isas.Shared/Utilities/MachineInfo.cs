@@ -265,6 +265,86 @@ namespace Illumina.SecondaryAnalysis
         }
 
         /// <summary>
+        /// Return the free disk space for a specified folder.  If we aren't able to determine it (e.g. if the folder
+        /// doesn't exist), then return null.
+        /// </summary>
+        public static ulong? GetFreeDiskSpaceBytes(string folder)
+        {
+            if (Utilities.IsThisMono())
+            {
+                return GetFreeDiskSpaceBytesLinux(folder);
+            }
+            return GetFreeDiskSpaceBytesWindows(folder);
+        }
+
+        public static ulong? GetFreeDiskSpaceBytesLinux(string folder)
+        {
+            ProcessStartInfo dfProcess = new ProcessStartInfo("df", string.Format("-k \"{0}\"", folder));
+            dfProcess.UseShellExecute = false;
+            dfProcess.CreateNoWindow = true;
+            dfProcess.RedirectStandardOutput = true;
+
+            StreamReader srOutput = null;
+
+            Process proc = System.Diagnostics.Process.Start(dfProcess);
+            proc.WaitForExit();
+            srOutput = proc.StandardOutput;
+            string lastLine = null;
+
+            // The "df" command has an annoying output format.
+            // - Need to ignore one or two header line(s)
+            // - Need to ignore an arbitrary number of trailing blank lines
+            // - Final line has irregular whitespace and might or might not contain the path;
+            //   the third *number* field is the number of 1k blocks
+            while (true)
+            {
+                string line = srOutput.ReadLine();
+                if (line == null) break;
+                line = line.Trim();
+                if (line.Length > 0) lastLine = line;
+            }
+
+            int exitCode = proc.ExitCode;
+            proc.Close();
+            if (exitCode != 0)
+            {
+                Console.Error.WriteLine("Error getting disk space for folder '{0}'", folder);
+                return null;
+            }
+
+            ulong? returnValue = null;
+            ulong bytes;
+            int fieldNumber = 0;
+            foreach (string bit in lastLine.Split())
+            {
+                if (bit.Trim().Length == 0) continue;
+                bool result = ulong.TryParse(bit, out bytes);
+                if (result)
+                {
+                    fieldNumber++;
+                    if (fieldNumber == 3) returnValue = 1024 * bytes;
+                }
+            }
+            return returnValue;
+        }
+
+        [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Auto)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        static extern bool GetDiskFreeSpaceEx(string lpDirectoryName,
+            out ulong lpFreeBytesAvailable,
+            out ulong lpTotalNumberOfBytes,
+            out ulong lpTotalNumberOfFreeBytes);
+        public static ulong? GetFreeDiskSpaceBytesWindows(string folder)
+        {
+            ulong freeBytes;
+            ulong totalBytes;
+            ulong totalFree;
+            bool result = GetDiskFreeSpaceEx(folder, out freeBytes, out totalBytes, out totalFree);
+            if (!result) return null;
+            return freeBytes;
+        }
+
+        /// <summary>
         ///     Returns the number of physical processor cores (this is less than the number of virtual cores if there's hyperthreading)
         /// </summary>
         public static int GetPhysicalProcessorCoreCount()

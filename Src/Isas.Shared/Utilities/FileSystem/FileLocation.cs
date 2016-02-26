@@ -1,7 +1,8 @@
 ﻿using System;
 using System.IO;
 using System.Security.AccessControl;
-using Isas.Shared.Utilities;
+using ILMNcommon.Common;
+using Isas.Shared.Utilities.FileSystem;
 
 namespace Isas.Shared
 {
@@ -69,6 +70,14 @@ namespace Isas.Shared
         string FullName { get; }
 
         /// <summary>
+        /// Gets the full path of the file after following all symlinks and removing any intermediate relative paths (e.g. "/../" or "/./")
+        /// </summary>
+        /// <value>
+        /// A string containing the full path.
+        /// </value>
+        string FullNameCanonical { get; }
+
+        /// <summary>
         /// Gets or sets the time the current file or directory was last accessed.
         /// </summary>
         /// <value>
@@ -101,7 +110,7 @@ namespace Isas.Shared
         DateTime LastWriteTimeUtc { get; set; }
 
         /// <summary>
-        /// Gets the name of the file.
+        /// Gets the name of the file without the directory
         /// </summary>
         /// <value>
         /// The name of the file.
@@ -266,12 +275,18 @@ namespace Isas.Shared
         /// <param name="fileSecurity">A FileSecurity object that describes an access control list (ACL) entry to apply to the current file.</param>
         void SetAccessControl(FileSecurity fileSecurity);
 
-        IFileLocation SymlinkTo(IFileLocation destinationFile, bool copyOnFail = true);
-        IFileLocation HardlinkTo(IFileLocation destinationFile, bool copyOnFail = true);
-        IFileLocation RelativeSymlinkTo(IFileLocation destFile);
+        IFileLocation CreateAbsoluteSymlinkAt(IFileLocation linkLocation);
+        bool TryCreateAbsoluteSymlinkAt(IFileLocation linkLocation, out Exception e);
+        IFileLocation CreateAbsoluteSymlinkOrCopy(IFileLocation linkLocation);
+        IFileLocation CreateHardlinkAt(IFileLocation linkLocation);
+        bool TryCreateHardlinkAt(IFileLocation linkLocation, out Exception e);
+        IFileLocation CreateHardlinkOrCopy(IFileLocation linkLocation);
+        IFileLocation CreateRelativeSymlinkAt(IFileLocation linkLocation);
+        bool TryCreateRelativeSymlinkAt(IFileLocation linkLocation, out Exception e);
+        IFileLocation CreateRelativeSymlinkOrCopy(IFileLocation linkLocation);
     }
 
-    public static class IFileLocationExtensions
+    public static class FileLocationExtensions
     // Additional extensions are found in the SecondaryAnalysis.Utilities class
     {
         /// <summary>
@@ -333,19 +348,8 @@ namespace Isas.Shared
             if (destination == null)
                 return null;
 
-            // Make sure you don't try to copy over yourself
-            if (source.FullName.Equals(destination.FullName))
-                return source;
-
-            // If you're a symbolic link, don't move anything, as you don't have anything real to move.
-            // The symbolic link is probably there because this method was called previously
-            // and if you move the link, it will break, accomplishing nothing useful.
-            // If you're an actual file, move it to the destination
-            if (!source.Attributes.HasFlag(FileAttributes.ReparsePoint))
-                source.MoveTo(destination);
-
-            // Then put a symlink in the place of the source pointing to the destination
-            destination.RelativeSymlinkTo(source);
+            source.MoveTo(destination);
+            destination.CreateRelativeSymlinkOrCopy(source);
 
             return destination;
         }
@@ -355,39 +359,33 @@ namespace Isas.Shared
             return source.MoveAndLink(destination.GetFileLocation(source.Name));
         }
 
-        public static void HardlinkTo(IFileLocation source, IFileLocation destination)
-        {
-            source.HardlinkTo(destination);
-        }
-
         /// <summary>
-        /// Move a folder to the destination, then put a symlink in the original location
-        /// pointing to the destination copy.
+        /// A static delegate for IFileLocation.CreateHardlinkOrCopy
         /// </summary>
-        /// <param name="sourcePath"></param>
-        /// <param name="destinationPath"></param>
-        public static IDirectoryLocation MoveAndLink(this IDirectoryLocation source, IDirectoryLocation destination)
+        public static void CreateHardlinkOrCopy(IFileLocation source, IFileLocation linkLocation)
         {
-            // Move the file to the destination
-            source.MoveTo(destination);
-
-            // then symlink the original file to the destination
-            destination.SymlinkTo(source);
-
-            return destination;
+            source.CreateHardlinkOrCopy(linkLocation);
         }
 
         /// <summary>
-        /// Creates a relative symlink in <paramref name="destFolder"/> pointing to <paramref name="sourceFile"/>.
+        /// A static delegate for IFileLocation.CreateHardlinkAt
+        /// </summary>
+        public static void CreateHardlink(IFileLocation source, IFileLocation linkLocation)
+        {
+            source.CreateHardlinkAt(linkLocation);
+        }
+
+        /// <summary>
+        /// Creates a relative symlink in <paramref name="linkParentDirectory"/> pointing to <paramref name="sourceFile"/>.
         /// Symlinks in results should be relative to allow browsing with different mount-point (e.g. windows)
         /// </summary>
         /// <param name="sourceFile">Source file</param>
-        /// <param name="destFolder">Folder in which to create the relative symlink.</param>
+        /// <param name="linkParentDirectory">Folder in which to create the relative symlink.</param>
         /// <returns>IFileLocation representing the new symlink.</returns>
-        public static IFileLocation RelativeSymlinkTo(this IFileLocation sourceFile, IDirectoryLocation destFolder)
+        public static IFileLocation CreateRelativeSymlinkOrCopyIn(this IFileLocation sourceFile, IDirectoryLocation linkParentDirectory)
         {
-            IFileLocation dest = destFolder.GetFileLocation(sourceFile.Name);
-            return sourceFile.RelativeSymlinkTo(dest);
+            IFileLocation dest = linkParentDirectory.GetFileLocation(sourceFile.Name);
+            return sourceFile.CreateRelativeSymlinkOrCopy(dest);
         }
 
         public static IFileLocation ReplaceEnd(this IFileLocation file, string oldSuffix, string newSuffix)
@@ -395,10 +393,10 @@ namespace Isas.Shared
             return file.Directory.GetFileLocation(file.Name.ReplaceEnd(oldSuffix, newSuffix));
         }
 
-        public static IFileLocation SymlinkInto(this IFileLocation sourceFile, IDirectoryLocation destFolder)
+        public static IFileLocation CreateAbsoluteSymlinkOrCopyIn(this IFileLocation sourceFile, IDirectoryLocation destFolder)
         {
             IFileLocation dest = destFolder.GetFileLocation(sourceFile.Name);
-            return sourceFile.SymlinkTo(dest);
+            return sourceFile.CreateAbsoluteSymlinkOrCopy(dest);
         }
     }
 
@@ -503,7 +501,7 @@ namespace Isas.Shared
         }
 
         /// <summary>
-        /// Gets the full path of the directory or file.
+        /// Gets the full path of the directory or file that was used to contruct this FileLocation.
         /// </summary>
         /// <value>
         /// A string containing the full path.
@@ -511,6 +509,20 @@ namespace Isas.Shared
         public override string FullName
         {
             get { return _instance.FullName; }
+        }
+
+        /// <summary>
+        /// The real path to this file after following any symlinks and removing any intermediate relative paths (e.g. "/../" or "/./")
+        /// The actual file does not need to exist
+        /// </summary>
+        public string FullNameCanonical
+        {
+            get
+            {
+                if (!Exists)
+                    return Path.Combine(Directory.FullNameCanonical, Name);
+                return CrossPlatformLink.ReadLink(FullName);
+            }
         }
 
         /// <summary>
@@ -592,9 +604,14 @@ namespace Isas.Shared
         /// </returns>
         public IFileLocation CopyTo(IFileLocation destination)
         {
-            if (FullName.Equals(destination.FullName)) // Doesn't handle symlinks...
-                return this;
+            if (FullNameCanonical == destination.FullNameCanonical)
+            {
+                if (!Exists)
+                    throw new ApplicationException($"Source and destination are the same, but source doesn't exist at {FullName}");
+                return destination;
+            }
 
+            destination.Directory.Create();
             destination.Delete();
             File.Copy(FullName, destination.FullName);
             return destination;
@@ -609,9 +626,6 @@ namespace Isas.Shared
         /// </returns>
         public IFileLocation CopyInto(IDirectoryLocation destination)
         {
-            if (Directory.FullName.Equals(destination.FullName)) // Doesn't handle symlinks...
-                return this;
-
             var result = destination.GetFileLocation(Name);
             CopyTo(result);
             return result;
@@ -626,9 +640,6 @@ namespace Isas.Shared
         /// </returns>
         public IFileLocation MoveInto(IDirectoryLocation destination)
         {
-            if (Directory.FullName.Equals(destination.FullName)) // Doesn't handle symlinks...
-                return this;
-
             var result = destination.GetFileLocation(Name);
             MoveTo(result);
             return result;
@@ -644,14 +655,16 @@ namespace Isas.Shared
         /// </returns>
         public IFileLocation MoveTo(IFileLocation destination)
         {
-            if (FullName.Equals(destination.FullName)) // Doesn't handle symlinks...
-                return this;
+            if (FullNameCanonical == destination.FullNameCanonical)
+            {
+                if (!Exists)
+                    throw new ApplicationException($"Source and destination are the same, but source doesn't exist at {FullName}");
+                return destination;
+            }
 
-            if (destination.Directory != null)
-                destination.Directory.Create();
-            if (!Equals(destination))
-                destination.Delete();
-            File.Move(FullName, destination.FullName);
+            destination.Directory.Create();
+            destination.Delete();
+            File.Move(FullNameCanonical, destination.FullName);
             return destination;
         }
 
@@ -860,42 +873,118 @@ namespace Isas.Shared
             return fullName.GetHashCode();
         }
 
+        public bool TryCreateAbsoluteSymlinkAt(IFileLocation linkLocation, out Exception e)
+        {
+            e = null;
+            try
+            {
+                CreateAbsoluteSymlinkAt(linkLocation);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                e = ex;
+                return false;
+            }
+        }
+
+        public bool TryCreateRelativeSymlinkAt(IFileLocation linkLocation, out Exception e)
+        {
+            e = null;
+            try
+            {
+                CreateRelativeSymlinkAt(linkLocation);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                e = ex;
+                return false;
+            }
+        }
+
+        public bool TryCreateHardlinkAt(IFileLocation linkLocation, out Exception e)
+        {
+            e = null;
+            try
+            {
+                CreateHardlinkAt(linkLocation);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                e = ex;
+                return false;
+            }
+        }
+
+        public IFileLocation CreateAbsoluteSymlinkAt(IFileLocation linkLocation)
+        {
+            linkLocation.Delete();
+            CrossPlatformLink.Symlink(FullName, linkLocation.FullName);
+            return linkLocation;
+        }
+
+        public IFileLocation CreateRelativeSymlinkAt(IFileLocation linkLocation)
+        {
+            linkLocation.Delete();
+            CrossPlatformLink.Symlink(CrossPlatformLink.GetRelativePath(linkLocation.FullName, FullName), linkLocation.FullName);
+            return linkLocation;
+        }
+
+        public IFileLocation CreateHardlinkAt(IFileLocation linkLocation)
+        {
+            linkLocation.Directory.Create();
+            linkLocation.Delete();
+            CrossPlatformLink.Hardlink(FullName, linkLocation.FullName);
+            return linkLocation;
+        }
+
+        public IFileLocation CreateHardlinkIn(IDirectoryLocation directory)
+        {
+            var linkLocation = directory.GetFileLocation(Name);
+            return CreateHardlinkAt(linkLocation);
+        }
+
         /// <summary>
         /// Symlinks an existing file to a new location.
         /// If the symlink cannot be created (Windows may require elevated privileges to do this),
         ///  then a copy is created instead if <paramref name="copyOnFail"/> is true.
         /// </summary>
         /// <param name="sourceFile">The instance of IFileLocation this method extends</param>
-        /// <param name="destinationFile">The IFileLocation representing the symlink, 
+        /// <param name="linkLocation">The IFileLocation representing the symlink, 
         /// which points to <paramref name="sourceFile"/></param>
         /// <param name="copyOnFail">If true, copies the file if a symlink cannot be created.</param>
         /// <returns>An IFileLocation of the destination file, or null if the symlink failed and <paramref name="copyOnFail"/> is false.</returns>
-        public IFileLocation SymlinkTo(IFileLocation destinationFile, bool copyOnFail = true)
+        public IFileLocation CreateAbsoluteSymlinkOrCopy(IFileLocation linkLocation)
         {
-            return (Illumina.SecondaryAnalysis.Utilities.CreateSymbolicLink(destinationFile.FullName, FullName, copyOnFail))
-                    ? destinationFile : null;
+            Action a = () => CreateAbsoluteSymlinkAt(linkLocation);
+            if (!a.Try())
+                CopyTo(linkLocation);
+            return linkLocation;
         }
 
-        public IFileLocation HardlinkTo(IFileLocation destinationFile, bool copyOnFail = true)
+        public IFileLocation CreateHardlinkOrCopy(IFileLocation linkLocation)
         {
-            return (Illumina.SecondaryAnalysis.Utilities.CreateHardLink(destinationFile.FullName, FullName, copyOnFail))
-                    ? destinationFile : null;
+            Action a = () => CreateHardlinkAt(linkLocation);
+            if (!a.Try())
+                CopyTo(linkLocation);
+            return linkLocation;
         }
 
         /// <summary>
-        /// Creates a relative symlink at <paramref name="destFile"/> pointing to <paramref name="sourceFile"/>
+        /// Creates a relative symlink at <paramref name="linkLocation"/> pointing to <paramref name="sourceFile"/>
         /// Symlinks in results should be relative to allow browsing with different mount-point (e.g. windows)
         /// </summary>
         /// <param name="sourceFile">Source file</param>
-        /// <param name="destFile">Symbolic link to be created.</param>
+        /// <param name="linkLocation">Symbolic link to be created.</param>
         /// <returns>IFileLocation representing the new symlink.</returns>
-        public IFileLocation RelativeSymlinkTo(IFileLocation destFile)
+        public IFileLocation CreateRelativeSymlinkOrCopy(IFileLocation linkLocation)
         {
-            var destDir = new Uri(destFile.FullName);
-            var relSrcPath = destDir.MakeRelativeUri(new Uri(FullName));
-            if (!Illumina.SecondaryAnalysis.Utilities.CreateSymbolicLink(destFile.FullName, relSrcPath.ToString(), false))
-                CopyTo(destFile);
-            return destFile;
+            Action a = () => CreateRelativeSymlinkAt(linkLocation);
+            if (!a.Try())
+                CopyTo(linkLocation);
+            return linkLocation;
         }
     }
 }

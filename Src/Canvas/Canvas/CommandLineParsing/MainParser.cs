@@ -3,7 +3,8 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using Canvas.CommandLineParsing.CoreOptionTypes;
-using Isas.Shared.Utilities;
+using Canvas.CommandLineParsing.OptionProcessing;
+using ILMNcommon.Common;
 
 namespace Canvas.CommandLineParsing
 {

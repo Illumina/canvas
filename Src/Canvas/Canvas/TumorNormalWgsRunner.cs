@@ -2,8 +2,8 @@
 using Canvas.CommandLineParsing;
 using CanvasCommon;
 using Illumina.SecondaryAnalysis;
-using Illumina.SecondaryAnalysis.Workflow;
 using Isas.Shared;
+using Isas.Shared.Checkpointing;
 
 namespace Canvas
 {
@@ -18,7 +18,7 @@ namespace Canvas
             CommonOptions = commonOptions;
         }
 
-        public void Run(ILogger logger, ICheckpointRunner checkpointRunner, IWorkManager workManager)
+        public void Run(ILogger logger, ICheckpointRunnerAsync checkpointRunner, IWorkManager workManager)
         {
             CanvasRunner runner = new CanvasRunner(logger, workManager, checkpointRunner, true, CanvasCoverageMode.GCContentWeighted, 100, CommonOptions.CustomParams);
             var callset = GetCallset();

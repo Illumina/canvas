@@ -40,29 +40,33 @@ namespace SequencingFiles
 
         public BedEntry(string line)
         {
-            var parts = line.Split('\t');
-            int i = 0;
-            Chromosome = parts[i++];
-            Start = Int32.Parse(parts[i++]);
-            End = Int32.Parse(parts[i++]);
-            if (i < parts.Length)
-                Name = parts[i++];
-            if (i < parts.Length)
-                Score = Int32.Parse(parts[i++]);
-            if (i < parts.Length)
-                Strand = parts[i++][0] == '+' ? '+' : '-';
-            if (i < parts.Length)
-                ThickStart = Int32.Parse(parts[i++]);
-            if (i < parts.Length)
-                ThickEnd = Int32.Parse(parts[i++]);
-            if (i < parts.Length)
-                ItemRgb = Int32.Parse(parts[i++]);
-            if (i < parts.Length)
-                BlockCount = Int32.Parse(parts[i++]);
-            if (i < parts.Length && BlockCount > 0)
-                BlockSizes = parts[i++].Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries).Select(x => Int32.Parse(x)).ToArray();
-            if (i < parts.Length && BlockCount > 0)
-                BlockStarts = parts[i++].Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries).Select(x => Int32.Parse(x)).ToArray();
+            string[] parts = line.Split('\t');
+            int column = 0;
+            if (parts.Length < 3)
+            {
+                throw new Exception(string.Format("Invalid bed line '{0}' - Each line in the body of a .bed file must have at least 3 tab-delimited fields", line));
+            }
+            Chromosome = parts[column++];
+            Start = Int32.Parse(parts[column++]);
+            End = Int32.Parse(parts[column++]);
+            if (column < parts.Length)
+                Name = parts[column++];
+            if (column < parts.Length)
+                Score = Int32.Parse(parts[column++]);
+            if (column < parts.Length)
+                Strand = parts[column++][0] == '+' ? '+' : '-';
+            if (column < parts.Length)
+                ThickStart = Int32.Parse(parts[column++]);
+            if (column < parts.Length)
+                ThickEnd = Int32.Parse(parts[column++]);
+            if (column < parts.Length)
+                ItemRgb = Int32.Parse(parts[column++]);
+            if (column < parts.Length)
+                BlockCount = Int32.Parse(parts[column++]);
+            if (column < parts.Length && BlockCount > 0)
+                BlockSizes = parts[column++].Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries).Select(x => Int32.Parse(x)).ToArray();
+            if (column < parts.Length && BlockCount > 0)
+                BlockStarts = parts[column++].Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries).Select(x => Int32.Parse(x)).ToArray();
             if (BlockCount > 0 && (BlockSizes.Count != BlockCount || BlockStarts.Count != BlockCount))
                 throw new InvalidDataException("Mismatch of BlockCount and elements");
         }
@@ -96,32 +100,58 @@ namespace SequencingFiles
                 return BlockSizes.SequenceEqual(other.BlockSizes) && BlockStarts.SequenceEqual(other.BlockStarts);
             return result;
         }
+
+        public ReferenceInterval CreateReferenceInterval()
+        {
+            return new ReferenceInterval(Chromosome, new Interval(Start + 1, End));
+        }
     }
     public class BedReader : ClosableDisposable
     {
+        #region Members
         TextReader _reader;
-
         public IEnumerable<string> HeaderLines { get; }
+        private string BufferedLine;
+        #endregion
 
+        /// <summary>
+        /// Parse headers specially - lines beginning with "#" or "track" or "browser" are headers:
+        /// http://bedtools.readthedocs.org/en/latest/content/overview.html
+        /// (Note: This .bed convention would create problems if you ever had a FASTA file whose first 
+        /// contig started with #, track, or browser...)
+        /// </summary>
+        /// <param name="fileName"></param>
         public BedReader(string fileName) : this(File.OpenText(fileName))
         {
             var headerLines = new List<string>();
             while (true)
             {
-                int c = _reader.Peek();
-                if (c == -1 || c != '#') break;
-                headerLines.Add(_reader.ReadLine());
+                string fileLine = _reader.ReadLine();
+                if (fileLine == null) break;
+                if (fileLine.StartsWith("#") || fileLine.StartsWith("track") || fileLine.StartsWith("browser"))
+                {
+                    headerLines.Add(fileLine);
+                    continue;
+                }
+                BufferedLine = fileLine;
+                break;
             }
             HeaderLines = headerLines;
         }
 
-        public BedReader(TextReader input)
+        protected BedReader(TextReader input)
         {
             _reader = input;
         }
 
         public IEnumerable<BedEntry> GetEntries()
         {
+            if (BufferedLine != null)
+            {
+                BedEntry entry = new BedEntry(BufferedLine);
+                BufferedLine = null;
+                yield return entry;
+            }
             string line;
             while ((line = _reader.ReadLine()) != null)
                 yield return new BedEntry(line);

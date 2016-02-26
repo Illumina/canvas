@@ -72,6 +72,7 @@
     </Compile>
     <Compile Include="CanvasSegment.cs" />
     <Compile Include="CanvasVersionInfo.cs" />
+    <Compile Include="CnvType.cs" />
     <Compile Include="GaussianMixtureModel.cs" />
     <Compile Include="GenomicBin.cs" />
     <Compile Include="IO.cs" />

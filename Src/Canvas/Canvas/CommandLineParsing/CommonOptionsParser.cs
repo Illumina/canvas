@@ -22,7 +22,7 @@ namespace Canvas.CommandLineParsing
         {
             return new OptionCollection<CommonOptions>
             {
-                BAlleleSites, IsDbSnpVcf, PloidyBed, Output, KmerFasta, WholeGenomeFasta, FilterFile, SampleName, CustomParameters, //StartCheckpoint, StopCheckpoint
+                BAlleleSites, IsDbSnpVcf, PloidyBed, Output, KmerFasta, WholeGenomeFasta, FilterFile, SampleName, CustomParameters, StartCheckpoint, StopCheckpoint
             };
         }
 
@@ -37,8 +37,8 @@ namespace Canvas.CommandLineParsing
             var filterBed = parseInput.Get(FilterFile);
             var sampleName = parseInput.Get(SampleName);
             var customParameters = parseInput.Get(CustomParameters);
-            string startCheckpoint = null;//parseInput.Get(StartCheckpoint);
-            string stopCheckpoint = null;//parseInput.Get(StopCheckpoint);
+            string startCheckpoint = parseInput.Get(StartCheckpoint);
+            string stopCheckpoint = parseInput.Get(StopCheckpoint);
             return ParsingResult<CommonOptions>.SuccesfulResult(
                 new CommonOptions(
                     bAlleleSites,

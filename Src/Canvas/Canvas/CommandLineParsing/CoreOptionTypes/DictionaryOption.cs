@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using Canvas.CommandLineParsing.OptionProcessing;
-using Isas.Shared.Utilities;
+using ILMNcommon.Common;
 
 namespace Canvas.CommandLineParsing.CoreOptionTypes
 {

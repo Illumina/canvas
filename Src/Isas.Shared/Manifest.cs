@@ -169,13 +169,13 @@ namespace Isas.Shared
                 }
             }
 
-        public static NexteraManifest GetUpdatedNexteraManifestsWithNewRegions(NexteraManifest manifest, List<RegionStatistics> regionStats)
+        public static NexteraManifest GetUpdatedNexteraManifestsWithNewRegions(NexteraManifest manifest, List<EnrichmentStatistics.RegionStatistics> regionStats)
         {
             NexteraManifest nexteraManifestsWithNewRegions = new NexteraManifest(manifest);
 
             // create a dictionary for new regions
-            Dictionary<string, RegionStatistics> regionStatsLookup = new Dictionary<string, RegionStatistics>();
-            foreach (RegionStatistics regionStat in regionStats)
+            Dictionary<string, EnrichmentStatistics.RegionStatistics> regionStatsLookup = new Dictionary<string, EnrichmentStatistics.RegionStatistics>();
+            foreach (EnrichmentStatistics.RegionStatistics regionStat in regionStats)
             {
                 regionStatsLookup.Add(regionStat.RegionName, regionStat);
         }
@@ -264,6 +264,95 @@ namespace Isas.Shared
 
             return manifestLength;
         }
+
+        /// <summary>
+        /// Converts the targets found in an Amplicon manifest (used by various workflows) to a unique set of intervals. Used for GATK
+        /// variant calling in custom amplicon workflows.
+        /// Interval sets intervals are one-based, inclusive.
+        /// </summary>
+        public static IntervalSet[] ConvertAmpliconManifestsToIntervals(
+            AmpliconManifest[] caManifests, List<SampleSheet.Sample> Samples, List<GenomeMetadata> GenomeInfo, bool filterOffTarget)
+        {
+            // initialize
+            int numManifests = caManifests.Length;
+            int numSamples = Samples.Count;
+
+            IntervalSet[] targetSetsPerManifest = new IntervalSet[numManifests];
+
+            // process each manifest
+            for (int manifestIndex = 0; manifestIndex < numManifests; manifestIndex++)
+            {
+                // initialize
+                AmpliconManifest manifest = caManifests[manifestIndex];
+                targetSetsPerManifest[manifestIndex] = new IntervalSet();
+                HashSet<TargetInterval> targetSet = targetSetsPerManifest[manifestIndex].TargetIntervals;
+
+                targetSetsPerManifest[manifestIndex].ManifestName = manifest.Name;
+
+                // retrieve the genome associated with this manifest
+                string referencePath = string.Empty;
+
+                for (int sampleIndex = 0; sampleIndex < numSamples; sampleIndex++)
+                {
+                    if (Path.GetFileName(Samples[sampleIndex].ManifestFileName) == manifest.Name)
+                    {
+                        referencePath = Samples[sampleIndex].WholeGenomeFastaPath;
+                        break;
+                    }
+                }
+
+                if (string.IsNullOrEmpty(referencePath))
+                {
+                    throw new ApplicationException($"ERROR: Unable to find a sample that references this manifest ({manifest.Name})");
+                }
+
+                targetSetsPerManifest[manifestIndex].ReferencePath = referencePath;
+
+                // retrieve the associated genome
+                int genomeIndex = -1;
+
+                for (int currentGenomeIndex = 0; currentGenomeIndex < GenomeInfo.Count; currentGenomeIndex++)
+                {
+                    if (GenomeInfo[currentGenomeIndex].Sequences[0].FastaPath == referencePath)
+                    {
+                        genomeIndex = currentGenomeIndex;
+                        break;
+                    }
+                }
+
+                if (genomeIndex == -1)
+                {
+                    throw new ApplicationException($"ERROR: Unable to find a genome that uses the FASTA path ({referencePath})");
+                }
+
+                targetSetsPerManifest[manifestIndex].GenomeIndex = genomeIndex;
+
+                // add each target
+                foreach (ProbeSetTarget target in manifest.Targets)
+                {
+                    if (filterOffTarget && target.Index > 1)
+                        continue;
+                    GenomeMetadata.SequenceMetadata refSeq = GenomeInfo[genomeIndex].GetSequence(target.Chromosome);
+                    //exclude primer (ULSO and DLSO) sequence from intervals for variant calling
+                    int startPos;
+                    int endPos;
+                    if (target.ReverseStrand)
+                    {
+                        startPos = target.StartPosition + target.ProbeA.Read2Tag.Length;
+                        endPos = target.EndPosition - target.ProbeA.Read1Tag.Length;
+                    }
+                    else
+                    {
+                        startPos = target.StartPosition + target.ProbeA.Read1Tag.Length;
+                        endPos = target.EndPosition - target.ProbeA.Read2Tag.Length;
+                    }
+                    targetSet.Add(new TargetInterval(target.Chromosome, refSeq.Index, startPos, endPos));
+                }
+            }
+
+            return targetSetsPerManifest;
+        }
+
     }
 
     // Note: 2015-10-23: (ImplicitFields = ImplicitFields.AllFields, AsReferenceDefault = true)

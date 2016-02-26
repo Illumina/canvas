@@ -10,7 +10,7 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("Illumina")]
 [assembly: AssemblyProduct("EvaluateCNV")]
-[assembly: AssemblyCopyright("Copyright © Illumina 2016")]
+[assembly: AssemblyCopyright("Copyright © Illumina 2015")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 

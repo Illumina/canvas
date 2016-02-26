@@ -112,6 +112,14 @@ namespace Isas.Shared
                 inputs.Join(inputs2, (i1, i2) => new Tuple<T1, T2>(i1, i2)),
                 kvp => function(kvp.Key, kvp.Value.Item1, kvp.Value.Item2));
         }
+
+        public static void ParallelForEach<T1, T2, T3>(this IWorkManager manager,
+            SampleSet<T1> inputs, SampleSet<T2> inputs2, SampleSet<T3> inputs3, Action<SampleInfo, T1, T2, T3> function)
+        {
+            manager.ParallelForEach(
+                inputs.Join(inputs2, inputs3, (i1, i2, i3) => new Tuple<T1, T2, T3>(i1, i2, i3)),
+                kvp => function(kvp.Key, kvp.Value.Item1, kvp.Value.Item2, kvp.Value.Item3));
+        }
     }
 
     public class SGEWorkManager : IWorkManager

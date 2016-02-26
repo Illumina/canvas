@@ -335,24 +335,24 @@ namespace CanvasPartition
             // 5th component - end point of the UH vector.
             
             List<List<double>> tree = new List<List<double>>();
-            thresholdlower = 0;
             double smooth = 0;
+            List<double> ratio_list = new List<double>(ratio);
             FindBestUnbalancedHaarDecomposition(ratio, tree, smooth);
             // set threshold proportional to SD as and sample size as suggested in
             // Piotr Fryzlewicz, Journal of the American Statistical Association
             // Vol. 102, No. 480 (Dec., 2007), pp. 1318-1327
-            double sd = CanvasCommon.Utilities.StandardDeviation(ratio) * 2.0;
-            if (sd < thresholdlower)
+            double mad = CanvasCommon.Utilities.Mad(ratio_list) * 2.0;
+            if (mad < thresholdlower)
             {
-                sd = thresholdlower;
+                mad = thresholdlower;
             }
-            if (sd > thresholdupper)
+            if (mad > thresholdupper)
             {
-                sd = thresholdupper;
+                mad = thresholdupper;
             }
-            HardThresh(tree, sd, isGermline);
+            HardThresh(tree, mad, isGermline);
             Console.WriteLine("Wavelet threshold:");
-            Console.WriteLine(sd);
+            Console.WriteLine(mad);
             GetSegments(tree, smooth, breakpoints);
 
 

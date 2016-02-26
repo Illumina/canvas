@@ -6,13 +6,11 @@ namespace SequencingFiles
     public class FastqReader : FileCommon
     {
         #region member variables
-
         private GzipReader reader;
         private readonly Regex headerRegex;
         public bool SkipReadNameParsing { get; set; }
         //added as an option for reading SRA files with non standard headers
         public bool SkipAllReadNameParsing { get; set; }
-
         #endregion
 
         /// <summary>
@@ -25,7 +23,7 @@ namespace SequencingFiles
             SkipAllReadNameParsing = false;
             Open(filename);
         }
-        
+
         /// <summary>
         ///     Closes the file
         /// </summary>
@@ -57,7 +55,8 @@ namespace SequencingFiles
         public bool GetNextFastqEntry(ref BoltRead read)
         {
             // grab the next entry
-            bool foundProblem = false; string header;
+            bool foundProblem = false;
+            string header;
             if ((header = reader.ReadLine()) == null) return false;
             if ((read.Bases = reader.ReadLine()) == null) foundProblem = true;
             if ((reader.ReadLine()) == null) foundProblem = true;
@@ -71,11 +70,11 @@ namespace SequencingFiles
             }
 
             read.Header = header;
-            if (! SkipAllReadNameParsing)
+            if (!SkipAllReadNameParsing)
             {
                 // parse the secondary information
                 Match headerMatch = headerRegex.Match(header);
-                if (! headerMatch.Success)
+                if (!headerMatch.Success)
                 {
                     throw new ApplicationException(string.Format("Unexpected FastQ header {0}", header));
                 }
@@ -88,19 +87,16 @@ namespace SequencingFiles
                     read.IsFiltered = (headerMatch.Groups[3].Value[0] == 'Y');
                     read.Index = headerMatch.Groups[4].Value;
                 }
-                
+
                 // parse the read name
-                if (! SkipReadNameParsing)
-                {   
+                if (!SkipReadNameParsing)
+                {
                     if (headerMatch.Groups.Count != 5 || !read.ParseReadName())
                     {
                         throw new ApplicationException(string.Format("Invalid field count in FastQ header {0}", header));
                     }
                 }
-
             }
-
-
             return true;
         }
     }

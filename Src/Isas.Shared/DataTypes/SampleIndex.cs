@@ -1,9 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Isas.Shared.Utilities;
+using ILMNcommon.Common;
 
-namespace Illumina.SecondaryAnalysis
+namespace Isas.Shared
 {
     public class SampleIndex
     {

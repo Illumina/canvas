@@ -1,3 +1,5 @@
+using Canvas.CommandLineParsing.OptionProcessing;
+
 namespace Canvas.CommandLineParsing.CoreOptionTypes
 {
     public class StringOption : ValueOption<string>

@@ -3,11 +3,12 @@ using System.Collections.Generic;
 using System.Linq;
 using System.IO;
 using System.Text;
+using System.Threading.Tasks;
 using Isas.Shared;
 using SequencingFiles;
 using Canvas;
 using CanvasCommon;
-using Illumina.SecondaryAnalysis.Workflow;
+using Isas.Shared.Checkpointing;
 
 namespace Illumina.SecondaryAnalysis
 {
@@ -23,12 +24,12 @@ namespace Illumina.SecondaryAnalysis
         private readonly int _countsPerBin;
         private readonly ILogger _logger;
         private readonly IWorkManager _workManager;
-        private readonly ICheckpointRunner _checkpointRunner;
+        private readonly ICheckpointRunnerAsync _checkpointRunner;
         private readonly bool _isSomatic;
         private readonly Dictionary<string, string> _customParameters = new Dictionary<string, string>();
         #endregion
 
-        public CanvasRunner(ILogger logger, IWorkManager workManager, ICheckpointRunner checkpointRunner, bool isSomatic, CanvasCoverageMode coverageMode,
+        public CanvasRunner(ILogger logger, IWorkManager workManager, ICheckpointRunnerAsync checkpointRunner, bool isSomatic, CanvasCoverageMode coverageMode,
             int countsPerBin, Dictionary<string, string> customParameters = null)
         {
             _logger = logger;
@@ -38,7 +39,10 @@ namespace Illumina.SecondaryAnalysis
             _canvasFolder = Path.Combine(Utilities.GetAssemblyFolder(typeof(CanvasRunner)));
             _coverageMode = coverageMode;
             _countsPerBin = countsPerBin;
-            if (customParameters != null) { _customParameters = customParameters; }
+            if (customParameters != null)
+            {
+                _customParameters = new Dictionary<string, string>(customParameters, StringComparer.InvariantCultureIgnoreCase);
+            }
         }
 
         private string SmallestFile(List<string> paths)
@@ -407,14 +411,12 @@ namespace Illumina.SecondaryAnalysis
         protected void InvokeCanvasSnv(CanvasCallset callset)
         {
             List<UnitOfWork> jobList = new List<UnitOfWork>();
-            string canvasExecutablePath = Path.Combine(this._canvasFolder, "CanvasSNV.exe");
-            string executablePath = Utilities.GetMonoPath();
             List<string> outputPaths = new List<string>();
             GenomeMetadata genomeMetadata = callset.GenomeMetadata;
 
             string tumorBamPath = callset.Bam.BamFile.FullName;
             string normalVcfPath = callset.NormalVcfPath.FullName;
-            foreach (SequencingFiles.GenomeMetadata.SequenceMetadata chromosome in genomeMetadata.Sequences)
+            foreach (GenomeMetadata.SequenceMetadata chromosome in genomeMetadata.Sequences)
             {
                 // Only invoke for autosomes + allosomes;
                 // don't invoke it for mitochondrial chromosome or extra contigs or decoys
@@ -422,10 +424,20 @@ namespace Illumina.SecondaryAnalysis
                     continue;
 
                 UnitOfWork job = new UnitOfWork();
+                job.ExecutablePath = Path.Combine(_canvasFolder, "CanvasSNV.exe");
+                if (Utilities.IsThisMono())
+                {
+                    job.CommandLine = job.ExecutablePath;
+                    job.ExecutablePath = Utilities.GetMonoPath();
+                }
+
                 string outputPath = Path.Combine(callset.TempFolder, string.Format("{0}-{1}.SNV.txt.gz", chromosome.Name, callset.Id));
                 outputPaths.Add(outputPath);
-                job.CommandLine = string.Format("{0} {1} {2} {3} {4}", canvasExecutablePath, chromosome.Name, normalVcfPath, tumorBamPath, outputPath);
-                job.ExecutablePath = executablePath;
+                job.CommandLine += $" {chromosome.Name} {normalVcfPath} {tumorBamPath} {outputPath}";
+                if (_customParameters.ContainsKey("CanvasSNV"))
+                {
+                    job.CommandLine = Utilities.MergeCommandLineOptions(job.CommandLine, _customParameters["CanvasSNV"], true);
+                }
                 job.LoggingFolder = _workManager.LoggingFolder.FullName;
                 job.LoggingStub = string.Format("CanvasSNV-{0}-{1}", callset.Id, chromosome.Name);
                 jobList.Add(job);
@@ -466,6 +478,23 @@ namespace Illumina.SecondaryAnalysis
             }
         }
 
+        public class CanvasCleanOutput
+        {
+            public string CleanedPath { get; set; }
+            public string FfpePath { get; set; }
+
+            public CanvasCleanOutput(string cleanedPath, string ffpePath)
+            {
+                CleanedPath = cleanedPath;
+                FfpePath = ffpePath;
+            }
+        }
+
+        public void CallSample(CanvasCallset callset)
+        {
+            Task.Run(() => CallSampleInternal(callset)).GetAwaiter().GetResult();
+        }
+
         /// <summary>
         /// Germline workflow:
         /// - Run CanvasBin, CanvasClean, CanvasPartition, CanvasDiploidCaller
@@ -473,7 +502,7 @@ namespace Illumina.SecondaryAnalysis
         /// Somatic workflow:
         /// - Run CanvasBin, CanvasClean, CanvasPartition, CanvasSNV, CanvasSomaticCaller
         /// </summary>
-        public void CallSample(CanvasCallset callset)
+        private async Task CallSampleInternal(CanvasCallset callset)
         {
             Directory.CreateDirectory(callset.TempFolder);
             string canvasReferencePath = callset.KmerFasta.FullName;
@@ -487,60 +516,49 @@ namespace Illumina.SecondaryAnalysis
                 throw new ApplicationException(string.Format("Error: Missing filter bed file required for CNV calling at '{0}'", canvasBedPath));
             }
 
+            // CanvasSNV
+            var canvasSnvTask = _checkpointRunner.RunCheckpointAsync("CanvasSNV", () => InvokeCanvasSnv(callset));
+
             // Prepare ploidy file:
-            GenomeMetadata genomeMetadata = callset.GenomeMetadata;
             string ploidyBedPath = callset.PloidyBed?.FullName;
 
             // CanvasBin:
-            string binnedPath = InvokeCanvasBin(callset, canvasReferencePath, canvasBedPath, ploidyBedPath);
+            string binnedPath = _checkpointRunner.RunCheckpoint("CanvasBin", () => InvokeCanvasBin(callset, canvasReferencePath, canvasBedPath, ploidyBedPath));
             if (string.IsNullOrEmpty(binnedPath)) return;
 
             // CanvasClean:
-            StringBuilder commandLine = new StringBuilder();
-            commandLine.Length = 0;
-            string executablePath = Path.Combine(_canvasFolder, "CanvasClean.exe");
-            if (Utilities.IsThisMono())
-            {
-                commandLine.AppendFormat("{0} ", executablePath);
-                executablePath = Utilities.GetMonoPath();
-            }
-            commandLine.AppendFormat("-i \"{0}\" ", binnedPath);
-            string cleanedPath = Path.Combine(callset.TempFolder, string.Format("{0}.cleaned", callset.Id));
-            commandLine.AppendFormat("-o \"{0}\" ", cleanedPath);
-            commandLine.AppendFormat("-g");
+            var canvasCleanOutput = _checkpointRunner.RunCheckpoint("CanvasClean", () => InvokeCanvasClean(callset, binnedPath));
 
-            string ffpePath = null;
-
-            // TruSight Cancer has 1,737 targeted regions. The cut-off 2000 is somewhat arbitrary.
-            // TruSignt One has 62,309 targeted regions.
-            // Nextera Rapid Capture v1.1 has 411,513 targeted regions.
-            if (!callset.IsEnrichment || callset.Manifest.Regions.Count > 2000)
-            {
-                ffpePath = Path.Combine(callset.TempFolder, "FilterRegions.txt");
-                commandLine.AppendFormat(" -s -r -f \"{0}\"", ffpePath);
-            }
-            if (callset.IsEnrichment) // manifest
-            {
-                if (!File.Exists(callset.TempManifestPath)) { NexteraManifestUtils.WriteNexteraManifests(callset.Manifest, callset.TempManifestPath); }
-                commandLine.AppendFormat(" -t \"{0}\"", callset.TempManifestPath);
-            }
-            UnitOfWork cleanJob = new UnitOfWork()
-            {
-                ExecutablePath = executablePath,
-                LoggingFolder = _workManager.LoggingFolder.FullName,
-                LoggingStub = Path.GetFileName(cleanedPath),
-                CommandLine = commandLine.ToString()
-            };
-            if (_customParameters.ContainsKey("CanvasClean"))
-            {
-                cleanJob.CommandLine = Utilities.MergeCommandLineOptions(cleanJob.CommandLine, _customParameters["CanvasClean"], true);
-            }
-            _workManager.DoWorkSingleThread(cleanJob);
-
-            ////////////////////////////////////////////////////////
             // CanvasPartition:
-            commandLine.Length = 0;
-            executablePath = Path.Combine(_canvasFolder, "CanvasPartition.exe");
+            var partitionedPath = _checkpointRunner.RunCheckpoint("CanvasPartition", () => InvokeCanvasPartition(callset, canvasCleanOutput.CleanedPath, canvasBedPath));
+
+            // Intersect bins with manifest
+            if (callset.IsEnrichment)
+            {
+                partitionedPath = _checkpointRunner.RunCheckpoint("Intersect bins with manifest",
+                    () => IntersectBinsWithTargetedRegions(callset, partitionedPath));
+            }
+
+            await canvasSnvTask;
+
+            // Variant calling
+            _checkpointRunner.RunCheckpoint("Variant calling", () =>
+            {
+                if (_isSomatic)
+                {
+                    RunSomaticCalling(partitionedPath, callset, canvasBedPath, ploidyBedPath, canvasCleanOutput.FfpePath);
+                }
+                else
+                {
+                    RunGermlineCalling(partitionedPath, callset, ploidyBedPath);
+                }
+            });
+        }
+
+        private string InvokeCanvasPartition(CanvasCallset callset, string cleanedPath, string canvasBedPath)
+        {
+            StringBuilder commandLine = new StringBuilder();
+            string executablePath = Path.Combine(_canvasFolder, "CanvasPartition.exe");
             if (Utilities.IsThisMono())
             {
                 commandLine.AppendFormat("{0} ", executablePath);
@@ -560,28 +578,62 @@ namespace Illumina.SecondaryAnalysis
                 LoggingStub = Path.GetFileName(partitionedPath),
                 CommandLine = commandLine.ToString()
             };
+            if (_customParameters.ContainsKey("CanvasPartition"))
+            {
+                partitionJob.CommandLine = Utilities.MergeCommandLineOptions(partitionJob.CommandLine, _customParameters["CanvasPartition"], true);
+            }
             _workManager.DoWorkSingleThread(partitionJob);
+            return partitionedPath;
+        }
 
-            ////////////////////////////////////////////////////////
-            // CanvasSNV
-            // Prepare and run CanvasSNV jobs.  First create list of jobs:
-            InvokeCanvasSnv(callset);
+        private CanvasCleanOutput InvokeCanvasClean(CanvasCallset callset, string binnedPath)
+        {
+            StringBuilder commandLine = new StringBuilder();
+            commandLine.Length = 0;
+            string executablePath = Path.Combine(_canvasFolder, "CanvasClean.exe");
+            if (Utilities.IsThisMono())
+            {
+                commandLine.AppendFormat("{0} ", executablePath);
+                executablePath = Utilities.GetMonoPath();
+            }
+            commandLine.AppendFormat("-i \"{0}\" ", binnedPath);
+            string cleanedPath = Path.Combine(callset.TempFolder, string.Format("{0}.cleaned", callset.Id));
+            commandLine.AppendFormat("-o \"{0}\" ", cleanedPath);
+            commandLine.AppendFormat("-g");
 
-            ////////////////////////////////////////////////////////
-            // Variant calling:
-            if (callset.IsEnrichment)
-            {
-                partitionedPath = IntersectBinsWithTargetedRegions(callset, partitionedPath); // Intersect bins with manifest
-            }
+            string ffpePath = null;
 
-            if (_isSomatic)
+            // TruSight Cancer has 1,737 targeted regions. The cut-off 2000 is somewhat arbitrary.
+            // TruSight One has 62,309 targeted regions.
+            // Nextera Rapid Capture v1.1 has 411,513 targeted regions.
+            if (!callset.IsEnrichment || callset.Manifest.Regions.Count > 2000)
             {
-                RunSomaticCalling(partitionedPath, callset, canvasBedPath, ploidyBedPath, ffpePath);
+                ffpePath = Path.Combine(callset.TempFolder, "FilterRegions.txt");
+                commandLine.AppendFormat(" -s -r -f \"{0}\"", ffpePath);
             }
-            else
+            if (callset.IsEnrichment) // manifest
             {
-                RunGermlineCalling(partitionedPath, callset, ploidyBedPath);
+                if (!File.Exists(callset.TempManifestPath))
+                {
+                    NexteraManifestUtils.WriteNexteraManifests(callset.Manifest, callset.TempManifestPath);
+                }
+                commandLine.AppendFormat(" -t \"{0}\"", callset.TempManifestPath);
             }
+            UnitOfWork cleanJob = new UnitOfWork()
+            {
+                ExecutablePath = executablePath,
+                LoggingFolder = _workManager.LoggingFolder.FullName,
+                LoggingStub = Path.GetFileName(cleanedPath),
+                CommandLine = commandLine.ToString()
+            };
+            if (_customParameters.ContainsKey("CanvasClean"))
+            {
+                cleanJob.CommandLine = Utilities.MergeCommandLineOptions(cleanJob.CommandLine, _customParameters["CanvasClean"], true);
+            }
+            _workManager.DoWorkSingleThread(cleanJob);
+
+            var canvasCleanOutput = new CanvasCleanOutput(cleanedPath, ffpePath);
+            return canvasCleanOutput;
         }
 
         protected void RunSomaticCalling(string partitionedPath, CanvasCallset callset, string canvasBedPath,
@@ -594,9 +646,12 @@ namespace Illumina.SecondaryAnalysis
             // Prepare and run CanvasSomaticCaller job:
             UnitOfWork callerJob = new UnitOfWork();
             var cnvVcfPath = callset.OutputVcfPath;
-            callerJob.ExecutablePath = Utilities.GetMonoPath();
-            string executablePath = Path.Combine(this._canvasFolder, "CanvasSomaticCaller.exe");
-            callerJob.CommandLine = string.Format(executablePath);
+            callerJob.ExecutablePath = Path.Combine(this._canvasFolder, "CanvasSomaticCaller.exe");
+            if (Utilities.IsThisMono())
+            {
+                callerJob.CommandLine = callerJob.ExecutablePath;
+                callerJob.ExecutablePath = Utilities.GetMonoPath();
+            }
             callerJob.CommandLine += string.Format(" -v {0}", callset.VfSummaryPath);
             callerJob.CommandLine += string.Format(" -i {0}", partitionedPath);
             callerJob.CommandLine += string.Format(" -o {0}", cnvVcfPath);
@@ -605,9 +660,9 @@ namespace Illumina.SecondaryAnalysis
                 callerJob.CommandLine += string.Format(" -p {0}", ploidyBedPath);
             callerJob.CommandLine += string.Format(" -n {0}", callset.SampleName);
             if (callset.IsEnrichment)
-                callerJob.CommandLine += string.Format(" -e");
+                callerJob.CommandLine += " -e";
             if (callset.IsDbSnpVcf) // a dbSNP VCF file is used in place of the normal VCF file
-                callerJob.CommandLine += string.Format(" -d");
+                callerJob.CommandLine += " -d";
             // get localSD metric:
             if (!string.IsNullOrEmpty(ffpePath))
             {
@@ -626,6 +681,10 @@ namespace Illumina.SecondaryAnalysis
             if (!string.IsNullOrEmpty(somaticSnvPath))
                 callerJob.CommandLine += string.Format(" -s {0}", somaticSnvPath);
             callerJob.CommandLine += string.Format(" -r \"{0}\" ", callset.WholeGenomeFastaFolder);
+            if (_customParameters.ContainsKey("CanvasSomaticCaller"))
+            {
+                callerJob.CommandLine = Utilities.MergeCommandLineOptions(callerJob.CommandLine, _customParameters["CanvasSomaticCaller"], true);
+            }
             callerJob.LoggingFolder = _workManager.LoggingFolder.FullName;
             callerJob.LoggingStub = string.Format("SomaticCNV-{0}", callset.Id);
             _workManager.DoWorkSingleThread(callerJob);
@@ -662,6 +721,10 @@ namespace Illumina.SecondaryAnalysis
                 LoggingStub = cnvVcfPath.Name,
                 CommandLine = commandLine.ToString()
             };
+            if (_customParameters.ContainsKey("CanvasDiploidCaller"))
+            {
+                callJob.CommandLine = Utilities.MergeCommandLineOptions(callJob.CommandLine, _customParameters["CanvasDiploidCaller"], true);
+            }
             _workManager.DoWorkSingleThread(callJob);
         }
     }

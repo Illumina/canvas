@@ -517,7 +517,7 @@ namespace SequencingFiles
         public bool UpdateReferenceIndex(ref BamAlignment alignment, ulong offset)
         {
             // record the number of unaligned reads
-            if (alignment.RefID < 0) ++_numUnalignedWithoutCoordinates;
+            if (!alignment.HasPosition()) ++_numUnalignedWithoutCoordinates;
 
             // update the reference IDs and check that the alignment is sorted
             if (alignment.RefID != _lastRefID)

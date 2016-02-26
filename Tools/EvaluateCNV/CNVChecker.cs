@@ -2,9 +2,8 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.IO;
-using System.Text;
-using System.Threading.Tasks;
 using SequencingFiles;
+using SequencingFiles.Vcf;
 
 namespace EvaluateCNV
 {
@@ -36,7 +35,7 @@ namespace EvaluateCNV
             get { return End - Start; }
         }
 
-        public CNVCall(string chr, int start, int end, int cn) 
+        public CNVCall(string chr, int start, int end, int cn)
         {
             Chr = chr;
             Start = start;
@@ -243,9 +242,9 @@ namespace EvaluateCNV
         {
             int CN = -1;
             end = -1;
-            if (variant.Genotypes != null && variant.Genotypes.Count > 0)
+            if (variant.GenotypeColumns != null && variant.GenotypeColumns.Count > 0)
             {
-                Dictionary<string, string> genotype = variant.Genotypes[variant.Genotypes.Count - 1];
+                Dictionary<string, string> genotype = variant.GenotypeColumns[variant.GenotypeColumns.Count - 1];
                 if (genotype.ContainsKey("CN"))
                 {
                     CN = int.Parse(genotype["CN"]);
@@ -288,32 +287,34 @@ namespace EvaluateCNV
             }
         }
 
-        protected IEnumerable<CNVCall> GetCnvCallsFromVcf(string vcfPath) 
+        protected IEnumerable<CNVCall> GetCnvCallsFromVcf(string vcfPath, bool includePassingOnly)
         {
             using (VcfReader reader = new VcfReader(vcfPath, false))
             {
                 foreach (VcfVariant variant in reader.GetVariants())
                 {
+
                     int end;
                     int CN = GetCopyNumber(variant, out end);
+                    if (includePassingOnly && variant.Filters != "PASS") continue;
                     yield return new CNVCall(variant.ReferenceName, variant.ReferencePosition, end, CN);
                 }
             }
         }
 
-        protected IEnumerable<CNVCall> GetCnvCallsFromBed(string bedPath, int[] cnIndices = null) 
+        protected IEnumerable<CNVCall> GetCnvCallsFromBed(string bedPath, int[] cnIndices = null)
         {
             if (cnIndices == null) { cnIndices = new int[] { 3 }; }
             int maxCnIndex = cnIndices.Max();
-            using (StreamReader reader = new StreamReader(bedPath)) 
+            using (StreamReader reader = new StreamReader(bedPath))
             {
                 string line;
                 string[] toks;
-                while ((line = reader.ReadLine()) != null) 
+                while ((line = reader.ReadLine()) != null)
                 {
                     if (line.StartsWith("#")) { continue; } // skip comments
                     toks = line.Split('\t');
-                    if (toks.Length <= maxCnIndex) 
+                    if (toks.Length <= maxCnIndex)
                     {
                         Console.WriteLine("Error: Line has fewer than {0} columns: {1}", maxCnIndex + 1, line);
                         continue;
@@ -329,7 +330,7 @@ namespace EvaluateCNV
                         end = int.Parse(toks[2]);
                         cn = cnIndices.Sum(cnIndex => int.Parse(toks[cnIndex]));
                     }
-                    catch 
+                    catch
                     {
                         Console.WriteLine("Error: Failed to parse line: {0}", line);
                         continue;
@@ -339,7 +340,8 @@ namespace EvaluateCNV
             }
         }
 
-        protected void ComputeAccuracy(string truthSetPath, string cnvCallsPath, string outputPath)
+        protected void ComputeAccuracy(string truthSetPath, string cnvCallsPath, StreamWriter outputWriter,
+            bool includePassingOnly)
         {
             int totalVariants = 0;
             long totalVariantBases = 0;
@@ -353,8 +355,9 @@ namespace EvaluateCNV
             this.CountExcludedBasesInTruthSetIntervals();
 
             IEnumerable<CNVCall> calls = Path.GetFileName(cnvCallsPath).ToLower().Contains("vcf")
-                ? GetCnvCallsFromVcf(cnvCallsPath) : GetCnvCallsFromBed(cnvCallsPath);
-            foreach (CNVCall call in calls) 
+                ? GetCnvCallsFromVcf(cnvCallsPath, includePassingOnly)
+                : GetCnvCallsFromBed(cnvCallsPath);
+            foreach (CNVCall call in calls)
             {
                 int CN = call.CN;
                 if (CN < 0 || call.End < 0) continue; // Not a CNV call, apparently
@@ -472,7 +475,8 @@ namespace EvaluateCNV
                     totalBases += bases;
                     if (trueCN == callCN) totalBasesRight += bases;
                     if ((trueCN < 2 && callCN < 2) || (trueCN == 2 && callCN == 2) ||
-                        (trueCN > 2 && callCN > 2)) totalBasesRightDirection += bases;
+                        (trueCN > 2 && callCN > 2))
+                        totalBasesRightDirection += bases;
                     if (trueCN < 2) isLossBases += bases;
                     if (trueCN > 2) isGainBases += bases;
                     if (callCN < 2) callLossBases += bases;
@@ -500,34 +504,47 @@ namespace EvaluateCNV
             }
 
             // Report stats:
-            using (StreamWriter writer = new StreamWriter(outputPath))
+            if (includePassingOnly)
             {
-                writer.WriteLine("TruthSet\t{0}", truthSetPath);
-                writer.WriteLine("CNVCalls\t{0}", cnvCallsPath);
-                writer.WriteLine("Accuracy\t{0:F4}", 100 * totalBasesRight / (double)totalBases);
-                writer.WriteLine("DirectionAccuracy\t{0:F4}", 100 * totalBasesRightDirection / (double)totalBases);
-                writer.WriteLine("Recall\t{0:F4}", 100 * (isGainBasesCorrect + isLossBasesCorrect) / (double)(isGainBases + isLossBases));
-                writer.WriteLine("DirectionRecall\t{0:F4}", 100 * (isGainBasesCorrectDirection + isLossBasesCorrectDirection) / (double)(isGainBases + isLossBases));
-                writer.WriteLine("Precision\t{0:F4}", 100 * (isGainBasesCorrect + isLossBasesCorrect) / (double)(callGainBases + callLossBases));
-                writer.WriteLine("DirectionPrecision\t{0:F4}", 100 * (isGainBasesCorrectDirection + isLossBasesCorrectDirection) / (double)(callGainBases + callLossBases));
-                writer.WriteLine("GainRecall\t{0:F4}", 100 * (isGainBasesCorrect) / (double)(isGainBases));
-                writer.WriteLine("GainDirectionRecall\t{0:F4}", 100 * (isGainBasesCorrectDirection) / (double)(isGainBases));
-                writer.WriteLine("GainPrecision\t{0:F4}", 100 * (isGainBasesCorrect) / (double)(callGainBases));
-                writer.WriteLine("GainDirectionPrecision\t{0:F4}", 100 * (isGainBasesCorrectDirection) / (double)(callGainBases));
-                writer.WriteLine("LossRecall\t{0:F4}", 100 * (isLossBasesCorrect) / (double)(isLossBases));
-                writer.WriteLine("LossDirectionRecall\t{0:F4}", 100 * (isLossBasesCorrectDirection) / (double)(isLossBases));
-                writer.WriteLine("LossPrecision\t{0:F4}", 100 * (isLossBasesCorrect) / (double)(callLossBases));
-                writer.WriteLine("LossDirectionPrecision\t{0:F4}", 100 * (isLossBasesCorrectDirection) / (double)(callLossBases));
-                writer.WriteLine("MeanEventAccuracy\t{0:F4}", 100 * meanAccuracy);
-                writer.WriteLine("MedianEventAccuracy\t{0:F4}", 100 * medianAccuracy);
-                writer.WriteLine("VariantEventsCalled\t{0}", totalVariants);
-                writer.WriteLine("VariantBasesCalled\t{0}", totalVariantBases);
-                if (ROIBases > 0)
-                {
-                    writer.WriteLine("ROIAccuracy\t{0:F4}", 100 * ROIBasesCorrect / (double)ROIBases);
-                    writer.WriteLine("ROIDirectionAccuracy\t{0:F4}", 100 * ROIBasesCorrectDirection / (double)ROIBases);
-                }
+                outputWriter.WriteLine("Results for PASSing variants");
             }
+            else
+            {
+                outputWriter.WriteLine("Results for all variants");
+            }
+            outputWriter.WriteLine("TruthSet\t{0}", truthSetPath);
+            outputWriter.WriteLine("CNVCalls\t{0}", cnvCallsPath);
+            outputWriter.WriteLine("Accuracy\t{0:F4}", 100 * totalBasesRight / (double)totalBases);
+            outputWriter.WriteLine("DirectionAccuracy\t{0:F4}", 100 * totalBasesRightDirection / (double)totalBases);
+            outputWriter.WriteLine("Recall\t{0:F4}",
+                100 * (isGainBasesCorrect + isLossBasesCorrect) / (double)(isGainBases + isLossBases));
+            outputWriter.WriteLine("DirectionRecall\t{0:F4}",
+                100 * (isGainBasesCorrectDirection + isLossBasesCorrectDirection) / (double)(isGainBases + isLossBases));
+            outputWriter.WriteLine("Precision\t{0:F4}",
+                100 * (isGainBasesCorrect + isLossBasesCorrect) / (double)(callGainBases + callLossBases));
+            outputWriter.WriteLine("DirectionPrecision\t{0:F4}",
+                100 * (isGainBasesCorrectDirection + isLossBasesCorrectDirection) / (double)(callGainBases + callLossBases));
+            outputWriter.WriteLine("GainRecall\t{0:F4}", 100 * (isGainBasesCorrect) / (double)(isGainBases));
+            outputWriter.WriteLine("GainDirectionRecall\t{0:F4}", 100 * (isGainBasesCorrectDirection) / (double)(isGainBases));
+            outputWriter.WriteLine("GainPrecision\t{0:F4}", 100 * (isGainBasesCorrect) / (double)(callGainBases));
+            outputWriter.WriteLine("GainDirectionPrecision\t{0:F4}",
+                100 * (isGainBasesCorrectDirection) / (double)(callGainBases));
+            outputWriter.WriteLine("LossRecall\t{0:F4}", 100 * (isLossBasesCorrect) / (double)(isLossBases));
+            outputWriter.WriteLine("LossDirectionRecall\t{0:F4}", 100 * (isLossBasesCorrectDirection) / (double)(isLossBases));
+            outputWriter.WriteLine("LossPrecision\t{0:F4}", 100 * (isLossBasesCorrect) / (double)(callLossBases));
+            outputWriter.WriteLine("LossDirectionPrecision\t{0:F4}",
+                100 * (isLossBasesCorrectDirection) / (double)(callLossBases));
+            outputWriter.WriteLine("MeanEventAccuracy\t{0:F4}", 100 * meanAccuracy);
+            outputWriter.WriteLine("MedianEventAccuracy\t{0:F4}", 100 * medianAccuracy);
+            outputWriter.WriteLine("VariantEventsCalled\t{0}", totalVariants);
+            outputWriter.WriteLine("VariantBasesCalled\t{0}", totalVariantBases);
+            if (ROIBases > 0)
+            {
+                outputWriter.WriteLine("ROIAccuracy\t{0:F4}", 100 * ROIBasesCorrect / (double)ROIBases);
+                outputWriter.WriteLine("ROIDirectionAccuracy\t{0:F4}", 100 * ROIBasesCorrectDirection / (double)ROIBases);
+            }
+            // to separate passing and all variant results
+            outputWriter.WriteLine();
         }
 
         public void Evaluate(string truthSetPath, string cnvCallsPath, string excludedBed, string outputPath, string ROIBedPath)
@@ -546,7 +563,14 @@ namespace EvaluateCNV
             }
             Console.WriteLine("TruthSet\t{0}", truthSetPath);
             Console.WriteLine("CNVCalls\t{0}", cnvCallsPath);
-            ComputeAccuracy(truthSetPath, cnvCallsPath, outputPath);
+            using (StreamWriter outputWriter = new StreamWriter(outputPath))
+            {
+                if (Path.GetFileName(cnvCallsPath).ToLower().Contains("vcf"))
+                {
+                    ComputeAccuracy(truthSetPath, cnvCallsPath, outputWriter, true);
+                }
+                ComputeAccuracy(truthSetPath, cnvCallsPath, outputWriter, false);
+            }
             Console.WriteLine(">>>Done - results written to {0}", outputPath);
         }
     }

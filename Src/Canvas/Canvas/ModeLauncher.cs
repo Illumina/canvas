@@ -2,8 +2,8 @@
 using System.Collections.Generic;
 using Canvas.CommandLineParsing;
 using Illumina.SecondaryAnalysis;
-using Illumina.SecondaryAnalysis.Workflow;
 using Isas.Shared;
+using Isas.Shared.Checkpointing;
 using Isas.Shared.Utilities;
 using Newtonsoft.Json;
 
@@ -17,7 +17,7 @@ namespace Canvas
     public interface IModeRunner
     {
         CommonOptions CommonOptions { get; }
-        void Run(ILogger logger, ICheckpointRunner checkpointRunner, IWorkManager workManager);
+        void Run(ILogger logger, ICheckpointRunnerAsync checkpointRunner, IWorkManager workManager);
     }
 
     public class ModeLauncher : IModeLauncher
@@ -47,7 +47,7 @@ namespace Canvas
                 {
                     logger.Info($"Running Canvas {_mode} {_version}");
                     logger.Info($"Command-line arguments: {string.Join(" ", _args)}");
-                    using (ICheckpointRunner checkpointRunner =
+                    using (ICheckpointRunnerAsync checkpointRunner =
                         GetCheckpointRunner(
                             logger,
                             outFolder,
@@ -55,12 +55,13 @@ namespace Canvas
                             commonOptions.StopCheckpoint,
                             commonOptions.WholeGenomeFasta))
                     {
-                        IDirectoryLocation loggingFolder = outFolder.CreateSubdirectory(IsasFilePaths.LoggingFolderName);
+                        IDirectoryLocation loggingFolder = outFolder.CreateSubdirectory("Logging");
                         IsasConfiguration config = IsasConfiguration.GetConfiguration();
                         IWorkManager workManager = new LocalWorkManager(logger, loggingFolder, 0, config.MaximumMemoryGB, config.MaximumHoursPerProcess);
                         _modeRunner.Run(logger, checkpointRunner, workManager);
                     }
                 }
+                catch (StopCheckpointFoundException) { }
                 catch (Exception e)
                 {
                     logger.Error($"Canvas workflow error: {e}");
@@ -70,7 +71,7 @@ namespace Canvas
             return 0;
         }
 
-        private ICheckpointRunner GetCheckpointRunner(ILogger logger, IDirectoryLocation outputDirectory, string startCheckpoint, string stopCheckpoint, IDirectoryLocation wholeGenomeFastaFolder)
+        private ICheckpointRunnerAsync GetCheckpointRunner(ILogger logger, IDirectoryLocation outputDirectory, string startCheckpoint, string stopCheckpoint, IDirectoryLocation wholeGenomeFastaFolder)
         {
 
             var parentDirectories = new Dictionary<string, IDirectoryLocation>
@@ -83,17 +84,8 @@ namespace Canvas
 
             JsonConverter[] converters = { new FileSystemLocationConverter(parentDirectories) };
 
-            var settings = new JsonSerializerSettings
-            {
-                TypeNameHandling = TypeNameHandling.Auto,
-                MissingMemberHandling = MissingMemberHandling.Error,
-                Converters = converters,
-                ContractResolver = new WritablePropertiesOnlyResolver(),
-                ConstructorHandling = ConstructorHandling.AllowNonPublicDefaultConstructor,
-            };
-            ICheckpointSerializer serializer = new CheckpointJsonSerializer(settings, IsasFilePaths.GetCheckpointFolder(outputDirectory), logger);
-            ICheckpointManager manager = new CheckpointManager(logger, startCheckpoint, stopCheckpoint);
-            return new CheckpointRunner(logger, outputDirectory, manager, serializer, true);
+            ICheckpointSerializerAsync serializer = new CheckpointJsonSerializerAsync(CheckpointManagerFactory.GetCheckpointFolder(outputDirectory), logger, converters);
+            return CheckpointRunnerAsync.Create(serializer, logger, outputDirectory, startCheckpoint, stopCheckpoint, true);
         }
     }
 

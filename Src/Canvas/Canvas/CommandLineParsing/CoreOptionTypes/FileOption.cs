@@ -1,3 +1,4 @@
+using Canvas.CommandLineParsing.OptionProcessing;
 using Isas.Shared;
 
 namespace Canvas.CommandLineParsing.CoreOptionTypes

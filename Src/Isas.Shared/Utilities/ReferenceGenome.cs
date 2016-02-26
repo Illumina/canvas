@@ -59,14 +59,14 @@ namespace Isas.Shared.Utilities
             }
         }
 
-        public IFileLocation GetAnnotation(params string[] args)
+        public IFileLocation GetAnnotation(string first, params string[] args)
         {
-            return AnnotationDirectory.GetFileLocation(args);
+            return AnnotationDirectory.GetFileLocation(first, args);
         }
 
-        public IFileLocation GetSequence(params string[] args)
+        public IFileLocation GetSequence(string first, params string[] args)
         {
-            return SequenceDirectory.GetFileLocation(args);
+            return SequenceDirectory.GetFileLocation(first, args);
         }
 
         public ReferenceGenome(IDirectoryLocation buildDirectory)

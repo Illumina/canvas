@@ -3,7 +3,7 @@ using System.ComponentModel;
 using System.Globalization;
 using System.Text.RegularExpressions;
 
-namespace Illumina.SecondaryAnalysis
+namespace Isas.Shared
 {
 	/// <summary>
 	/// Provides Id and Name

@@ -1,14 +1,11 @@
-﻿using Illumina.SecondaryAnalysis;
-using System;
+﻿using Isas.Shared;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace SampleSettingsProcessing
 {
     public interface ISampleSettings
     {
+        // Someday we hope to get rid of this method, but we need it for now to make old and refactored workflows play nicely together
         string SampleSheetPath { get; }
 
         /// <summary>
@@ -35,6 +32,8 @@ namespace SampleSettingsProcessing
         SampleSet<SampleInfo> GetSamples();
 
         string GetManifest(string key);
+
+        List<string> GetSection(string sectionName);
 
         void CheckUnusedEntries();
 

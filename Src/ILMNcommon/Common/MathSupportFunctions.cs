@@ -1,6 +1,6 @@
 using System;
-using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace Illumina.Common
 {
@@ -52,7 +52,10 @@ namespace Illumina.Common
             float slope = 0;
             float offset = 0;
 
-            float[] returnValues = new float[] {0, 0};
+            float[] returnValues = new float[]
+            {
+                0, 0
+            };
 
             if (x != null && y != null)
             {
@@ -60,13 +63,13 @@ namespace Illumina.Common
                 {
                     for (int i = 0; i < x.Length; i++) sx += x[i];
                     for (int i = 0; i < x.Length; i++) sy += y[i];
-                    for (int i = 0; i < x.Length; i++) sxy += x[i]*y[i];
-                    for (int i = 0; i < x.Length; i++) sxx += x[i]*x[i];
-                    float denominator = (x.Length)*sxx - sx*sx;
+                    for (int i = 0; i < x.Length; i++) sxy += x[i] * y[i];
+                    for (int i = 0; i < x.Length; i++) sxx += x[i] * x[i];
+                    float denominator = (x.Length) * sxx - sx * sx;
                     if (denominator != 0)
                     {
-                        slope = (x.Length*sxy - sx*sy)/denominator;
-                        offset = (sy*sxx - sx*sxy)/denominator;
+                        slope = (x.Length * sxy - sx * sy) / denominator;
+                        offset = (sy * sxx - sx * sxy) / denominator;
                     }
                 }
             }
@@ -76,26 +79,26 @@ namespace Illumina.Common
         }
 
         public static bool SolveLinearEquation(out double pK1, out double pK2, out double pK3,
-                                               double a, double b, double c, double d, double e, double f,
-                                               double v1, double v2, double v3)
+            double a, double b, double c, double d, double e, double f,
+            double v1, double v2, double v3)
         {
             pK1 = pK2 = pK3 = 0;
 
-            double k1 = d*f - e*e;
-            double k2 = c*e - b*f;
-            double k3 = b*e - c*d;
-            double k4 = a*f - c*c;
-            double k5 = c*b - a*e;
-            double k6 = a*d - b*b;
+            double k1 = d * f - e * e;
+            double k2 = c * e - b * f;
+            double k3 = b * e - c * d;
+            double k4 = a * f - c * c;
+            double k5 = c * b - a * e;
+            double k6 = a * d - b * b;
 
-            double dd = a*k1 + b*k2 + c*k3;
+            double dd = a * k1 + b * k2 + c * k3;
 
             if (Math.Abs(dd) < 1e-4)
                 return false;
 
-            pK1 = k1*v1 + k2*v2 + k3*v3;
-            pK2 = k2*v1 + k4*v2 + k5*v3;
-            pK3 = k3*v1 + k5*v2 + k6*v3;
+            pK1 = k1 * v1 + k2 * v2 + k3 * v3;
+            pK2 = k2 * v1 + k4 * v2 + k5 * v3;
+            pK3 = k3 * v1 + k5 * v2 + k6 * v3;
 
             pK1 /= dd;
             pK2 /= dd;
@@ -109,7 +112,7 @@ namespace Illumina.Common
             if (vec.Length == 0) return float.NaN;
             double sum = 0;
             foreach (float f in vec) sum += f;
-            return (float) (sum/vec.Length);
+            return (float)(sum / vec.Length);
         }
 
         public static float Stdev(float[] vec, float meanval)
@@ -119,9 +122,9 @@ namespace Illumina.Common
             foreach (float f in vec)
             {
                 float val = f - meanval;
-                sum += val*val;
+                sum += val * val;
             }
-            return (float) Math.Sqrt(sum/(vec.Length - 1));
+            return (float)Math.Sqrt(sum / (vec.Length - 1));
         }
 
         public static float Stdev(float[] vec)
@@ -363,19 +366,39 @@ namespace Illumina.Common
             int n = vals.Length;
             if (n == 0)
                 return float.NaN;
-            int i1 = n*percentile/100;
-            float f = n*percentile/100.0f - i1;
+            int i1 = n * percentile / 100;
+            float f = n * percentile / 100.0f - i1;
             if (f < 0.5f) i1--;
             if (i1 < 0)
                 return vals[0];
             if (i1 >= n - 1)
                 return vals[n - 1];
-            float x1 = 100*(i1 + 0.5f)/n;
-            float x2 = 100*(i1 + 1 + 0.5f)/n;
+            float x1 = 100 * (i1 + 0.5f) / n;
+            float x2 = 100 * (i1 + 1 + 0.5f) / n;
             float y1 = vals[i1];
             float y2 = vals[i1 + 1];
-            float m = (y2 - y1)/(x2 - x1);
-            return y1 + m*(percentile - x1);
+            float m = (y2 - y1) / (x2 - x1);
+            return y1 + m * (percentile - x1);
+        }
+
+        public static double Median<TKey>(IEnumerable<KeyValuePair<TKey, long>> sortedHistogram) where TKey : struct
+        {
+            long totalValues = sortedHistogram.Sum(kvp => kvp.Value);
+            long cumulativeValuesCount = 0;
+            long lowerMedianValuesCount = (totalValues + 1) / 2;
+            bool evenNumberOfValues = totalValues % 2 == 0;
+            long upperMedianValuesCount = evenNumberOfValues ? lowerMedianValuesCount + 1 : lowerMedianValuesCount;
+            TKey? lowerMedian = null;
+            foreach (var histogramEntry in sortedHistogram)
+            {
+                var value = histogramEntry.Key;
+                cumulativeValuesCount += histogramEntry.Value;
+                if (!lowerMedian.HasValue && cumulativeValuesCount >= lowerMedianValuesCount)
+                    lowerMedian = value;
+                if (cumulativeValuesCount >= upperMedianValuesCount)
+                    return ((dynamic)lowerMedian + value) / 2.0;
+            }
+            throw new ApplicationException("Median is undefined");
         }
     }
 }

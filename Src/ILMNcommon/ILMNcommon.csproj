@@ -82,6 +82,7 @@
     <CodeAnalysisFailOnMissingRules>false</CodeAnalysisFailOnMissingRules>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="Microsoft.CSharp" />
     <Reference Include="System" />
     <Reference Include="System.Core">
       <RequiredTargetFramework>3.5</RequiredTargetFramework>
@@ -93,14 +94,19 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Common\ActionExtensions.cs" />
     <Compile Include="Common\CrossPlatform.cs" />
     <Compile Include="Common\ExceptionUtils.cs" />
     <Compile Include="Common\FloatPoint.cs" />
+    <Compile Include="Common\IDictionaryExtensions.cs" />
+    <Compile Include="Common\IEnumerableExtensions.cs" />
+    <Compile Include="Common\IListExtensions.cs" />
     <Compile Include="Common\MaPack.cs" />
     <Compile Include="Common\MathSupportFunctions.cs" />
     <Compile Include="Common\Options.cs" />
     <Compile Include="Common\OrderedDictionary.cs" />
     <Compile Include="Common\SimplePlot.cs" />
+    <Compile Include="Common\StringExtensions.cs" />
     <Compile Include="Properties\IsasVersionInfo.cs" />
     <Compile Include="Win32\Functions.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

@@ -37,7 +37,8 @@ namespace Isas.Shared
 			public string AppVersion;
 			public string AnalysisName;
 		    public string IsUseOnly = "RUO";
-		}
+            public string DatasetTypeId;
+        }
 
 		// ReSharper disable InconsistentNaming - prevents ReSharper from renaming serializeable members that are sensitive to being changed
 		public class AmpliconWorkflowSettings
@@ -203,8 +204,10 @@ namespace Isas.Shared
 			public float SomaticQScoreRecalibrationThreshold = 3f; // For Pisces only.  the threshold at which the recalibation alg decides to kick in.
 			//how reads are handled:
 			public bool StitchReads = false; // PISCES, only if XC tag present in bams
-			//output only
-			public bool OutputGenomeVcf = false;
+            public bool ThreadByChromosome = false; // PISCES, faster + more memory intensive option
+                                             
+            //output only
+            public bool OutputGenomeVcf = false;
 			public bool GVcfBlockCompression = true;
 		    public bool RetainIntermediateCNVFiles = false;
 		    // ReSharper restore InconsistentNaming

@@ -32,7 +32,9 @@ namespace Canvas.CommandLineParsing
     internal class TumorNormalOptionsParser : Option<TumorNormalOptions>
     {
         private static readonly FileOption TumorBam = FileOption.CreateRequired("tumor sample .bam file", "b", "bam");
-        private static readonly FileOption SomaticVcf = FileOption.CreateRequired(".vcf file of somatic small variants found in the tumor sample", "somatic-vcf");
+        private static readonly FileOption SomaticVcf = FileOption.Create(".vcf file of somatic small variants found in the tumor sample. " +
+                                                                          "Used as a fallback for estimating the reported tumor sample purity. " +
+                                                                          "This option has no effect on called CNVs", "somatic-vcf");
 
         public override OptionCollection<TumorNormalOptions> GetOptions()
         {

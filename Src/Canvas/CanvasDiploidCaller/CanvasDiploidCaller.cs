@@ -1,11 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
-using NDesk.Options;
 using System.IO;
-using SequencingFiles;
 using CanvasCommon;
 
 namespace CanvasDiploidCaller
@@ -334,7 +330,7 @@ namespace CanvasDiploidCaller
                 writer.Write("MafCount\tMafMean\tMafCv\tLogMafCv\tCopyNumber\tMCC\t");
                 writer.Write("DistanceRatio\tLogMafCount\t");
                 writer.Write("ModelPurity\tModelDeviation\t");
-                writer.Write("QScoreLinearFit\tQScoreGeneralizedLinearFit\tQScoreLogistic\tQScoreGermlineLogistic"); 
+                writer.Write("QScoreLinearFit\tQScoreGeneralizedLinearFit\tQScoreLogistic\tQScoreGermlineLogistic");
                 writer.WriteLine();
                 foreach (CanvasSegment segment in this.Segments)
                 {
@@ -405,12 +401,11 @@ namespace CanvasDiploidCaller
             if (this.Segments.Count == 0)
             {
                 Console.WriteLine("CanvasDiploidCaller: No segments loaded; no CNV calls will be made.");
-                CanvasSegment.WriteSegments(outFile, this.Segments, referenceFolder, sampleName, null, false, null, false);
+                CanvasSegment.WriteSegments(outFile, this.Segments, referenceFolder, sampleName, null, null);
                 return 0;
             }
             PloidyInfo ploidy = null;
             if (!string.IsNullOrEmpty(ploidyBedPath)) ploidy = PloidyInfo.LoadPloidyFromBedFile(ploidyBedPath);
-            double diploidCount = CanvasSegment.ExpectedCount(this.Segments);
 
             // load MAF
             this.MeanCoverage = CanvasIO.LoadVariantFrequencies(variantFrequencyFile, this.Segments);
@@ -486,7 +481,7 @@ namespace CanvasDiploidCaller
             }
 
             if (ploidy != null && !string.IsNullOrEmpty(ploidy.HeaderLine)) extraHeaders.Add(ploidy.HeaderLine);
-            CanvasSegment.WriteSegments(outFile, this.Segments, referenceFolder, sampleName, extraHeaders, true, ploidy, true, false);
+            CanvasSegment.WriteSegments(outFile, this.Segments, referenceFolder, sampleName, extraHeaders, ploidy);
             return 0;
         }
     }

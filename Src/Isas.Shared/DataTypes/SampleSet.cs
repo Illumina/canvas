@@ -1,11 +1,10 @@
-﻿using Isas.Shared;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using Illumina.SecondaryAnalysis.Workflow;
-using Isas.Shared.Utilities;
+using ILMNcommon.Common;
+using Isas.Shared.Checkpointing;
 
-namespace Illumina.SecondaryAnalysis
+namespace Isas.Shared
 {
     /// <summary>
     /// SampleSet is a container to hold data for a collection of uniquely identifiable samples

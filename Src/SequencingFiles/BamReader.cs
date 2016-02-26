@@ -315,7 +315,7 @@ namespace SequencingFiles
 				// look for the desired alignment
 				if (GetNextAlignment(ref alignment, false))
 				{
-					if (alignment.RefID == -1) break;
+					if (!alignment.HasPosition()) break;
 					currentOffset = Tell();
 				}
 				else

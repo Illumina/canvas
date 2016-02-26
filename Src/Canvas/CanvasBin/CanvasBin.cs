@@ -420,13 +420,13 @@ namespace CanvasBin
 
                     normalizationTasks.Add(new ThreadStart(() =>
                     {
-                    // contains GC content of the forward read at every position for current chr
-                    byte[] gcContent = new byte[fastaEntry.Bases.Length];
+                        // contains GC content of the forward read at every position for current chr
+                        byte[] gcContent = new byte[fastaEntry.Bases.Length];
 
-                        int gcCounter = 0;
+                        uint gcCounter = 0;
 
-                    // Iteratively calculate GC content of "reads" using fasta genome reference
-                    for (int pos = 0; pos < fastaEntry.Bases.Length - meanFragmentSize * meanFragmentCutoff - 1; pos++)
+                        // Iteratively calculate GC content of "reads" using fasta genome reference
+                        for (int pos = 0; pos < fastaEntry.Bases.Length - meanFragmentSize * meanFragmentCutoff - 1; pos++)
                         {
                             Int16 currentFragment = 0;
 
@@ -448,8 +448,6 @@ namespace CanvasBin
                                         break;
                                 }
                             }
-                            if (gcCounter < 0)
-                                gcCounter = 0;
                             gcContent[pos] = (byte)Math.Min(100 * gcCounter / currentFragment, gcCap);
                             gcCounter = 0;
                         }

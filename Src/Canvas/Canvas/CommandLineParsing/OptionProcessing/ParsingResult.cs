@@ -1,7 +1,7 @@
 ﻿using System;
-using Isas.Shared.Utilities;
+using ILMNcommon.Common;
 
-namespace Canvas.CommandLineParsing
+namespace Canvas.CommandLineParsing.OptionProcessing
 {
     public interface IParsingResult
     {

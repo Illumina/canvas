@@ -4,7 +4,6 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Reflection;
-using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
@@ -13,8 +12,8 @@ using System.Xml.Serialization;
 using System.Runtime.Serialization.Formatters.Binary;
 using Illumina.Common;
 using Illumina.Zlib;
+using ILMNcommon.Common;
 using Isas.Shared;
-using Isas.Shared.Utilities;
 
 namespace Illumina.SecondaryAnalysis
 {
@@ -144,15 +143,40 @@ namespace Illumina.SecondaryAnalysis
             return Type.GetType("Mono.Runtime") != null;
         }
 
-        /// <summary>
-        /// Create a tabix index for a gzipped vcf file
-        /// If filePath does not end with extension .gz nothing is done! We may want to consider throwing an error though
-        /// </summary>
-        public static void BuildTabixIndex(string filePath, string preset = "vcf", ErrorHandler onLog = null, ErrorHandler onError = null)
+        static public void BuildTabixIndex(string vcfFile, string logFolder)
         {
-            if (!filePath.EndsWith(".gz")) return;
-            string tabixExecutable = Utilities.GetExecutablePath("tabix", null);
-            Utilities.ExecuteCommand(tabixExecutable, String.Format(" -f -p {0} \"{1}\" ", preset, filePath), onLog, onError);
+            BuildTabixIndex(new List<string> { vcfFile }, logFolder);
+        }
+
+        static public void BuildTabixIndex(List<string> vcfFiles, string logFolder)
+        {
+            // Look for tabix in worker folder, then in $PATH:
+            string tabixExecutable = null;
+            try
+            {
+                tabixExecutable = Utilities.GetExecutablePath("tabix", null);
+            }
+            catch
+            {
+                string exeName = Utilities.IsThisMono() ? "tabix" : "tabix.exe";
+                tabixExecutable = Utilities.CheckForExecutableInPath(exeName);
+            }
+
+            List<UnitOfWork> jobs = new List<UnitOfWork>();
+            foreach (string fn in vcfFiles)
+            {
+                if (!File.Exists(fn)) { continue; }
+                string cmd = String.Format(" -p vcf -f {0}", ShellExtensions.WrapWithShellQuote(fn));
+                jobs.Add(new UnitOfWork
+                {
+                    ExecutablePath = tabixExecutable,
+                    LoggingFolder = logFolder,
+                    LoggingStub = "tabix-" + Path.GetFileName(fn), // Note: Assume we only need the most recent logging if we end up tabix-ing the same file 2+ times
+                    CommandLine = cmd
+                });
+            }
+            Benchmark variantIndexingBenchmark = new Benchmark();
+            DoWorkParallel(IsasConfiguration.GetConfiguration(), Console.WriteLine, Console.Error.WriteLine, jobs, new TaskResourceRequirements(1, 4));
         }
 
         public static string GetJavaExecutable()
@@ -533,37 +557,41 @@ namespace Illumina.SecondaryAnalysis
         /// Return the platform-aware executable path for a given root filename. A simple sanity
         /// check is also performed to make sure that the file exists and if not an exception is thrown
         /// </summary>
-        public static string GetExecutablePath(string filenameRoot, Dictionary<string, string> customPaths, string workerRelativeBinDirectory = "")
+        public static string GetExecutablePath(string fileName, Dictionary<string, string> customPaths, string workerRelativeBinDirectory = "")
         {
             string executableDirectory = Path.Combine(Utilities.GetAssemblyFolder(typeof(Utilities)), workerRelativeBinDirectory);
-            return GetExecutablePath(filenameRoot, executableDirectory, customPaths);
+            return GetExecutablePath(fileName, executableDirectory, customPaths);
         }
 
         /// <summary>
-        /// Return the platform-aware executable path for a given root filename. A simple sanity
+        /// Return the platform-aware executable path for a given file name. A simple sanity
         /// check is also performed to make sure that the file exists and if not an exception is thrown
         /// </summary>
-        public static string GetExecutablePath(string filenameRoot, string executableDirectory, Dictionary<string, string> customPaths)
+        public static string GetExecutablePath(string fileName, string executableDirectory, Dictionary<string, string> customPaths)
         {
-            string lowerName = filenameRoot.ToLowerInvariant();
-            if (customPaths != null && customPaths.ContainsKey(lowerName))
+            string lowerName = fileName.ToLowerInvariant();
+            string lowerNameRoot = lowerName.ReplaceEnd(".exe", "");
+            if (customPaths != null &&
+                (customPaths.ContainsKey(lowerName) ||
+                 customPaths.ContainsKey(lowerNameRoot)))
             {
-                string overridePath = customPaths[lowerName];
+                string overridePath = customPaths.ContainsKey(lowerName) ? customPaths[lowerName] : customPaths[lowerNameRoot];
+
                 if (!File.Exists(overridePath))
                 {
-                    throw new Exception(string.Format("ERROR: Could not find the user-specified custom executable path location for the {0} executable at '{1}'.", filenameRoot, overridePath));
+                    throw new Exception(string.Format("ERROR: Could not find the user-specified custom executable path location for the {0} executable at '{1}'.", fileName, overridePath));
                 }
                 Console.WriteLine("* Warning: Overriding executable path to '{0}'.  Custom executable paths are not officially supported and may lead to errors now or later in the workflow.",
                     overridePath);
                 return overridePath;
             }
-            string executablePath = Path.Combine(executableDirectory, filenameRoot);
+            string executablePath = Path.Combine(executableDirectory, fileName);
 
             if (!IsThisMono() && !executablePath.EndsWith(".exe") && !executablePath.EndsWith(".jar")) executablePath += ".exe";
 
             if (!File.Exists(executablePath))
             {
-                throw new Exception(string.Format("ERROR: Could not find the {0} executable ({1}).", filenameRoot, executablePath));
+                throw new Exception(string.Format("ERROR: Could not find the {0} executable ({1}).", fileName, executablePath));
             }
             return executablePath;
         }
@@ -714,110 +742,51 @@ namespace Illumina.SecondaryAnalysis
             return returnVals.ToArray();
         }
 
-        [DllImport("Kernel32.dll", CharSet = CharSet.Unicode)]
-        private static extern bool CreateHardLink(
-            string lpFileName,
-            string lpExistingFileName,
-            IntPtr lpSecurityAttributes
-            );
-
-        /// <summary>
-        ///     Create a hard link to a file so that another process monitoring an output folder can start copying it
-        ///     hard links looks like files but are just links, so no copying is necessary to create them.
-        /// </summary>
-        public static bool CreateHardLink(string linkPath, string sourcePath, bool copyOnFail = true)
+        public static void CreateSymbolicLinkOrCopy(string linkPath, string sourcePath)
         {
-            if (File.Exists(linkPath)) File.Delete(linkPath); // remove any stale link.
-            if (IsThisMono())
+            if (!Path.IsPathRooted(sourcePath))
             {
-                // we need to issue a shell command
-                Utilities.ExecuteShellCommand(string.Format("ln \"{0}\" \"{1}\"", sourcePath, linkPath));
-                return true;
+                if (Directory.Exists(sourcePath))
+                {
+                    sourcePath = Path.Combine(linkPath, sourcePath);
+                    new DirectoryLocation(sourcePath).CreateRelativeSymlinkOrCopy(new DirectoryLocation(linkPath));
+                }
+                else
+                {
+                    sourcePath = Path.Combine(Path.GetDirectoryName(linkPath), sourcePath);
+                    new FileLocation(sourcePath).CreateRelativeSymlinkOrCopy(new FileLocation(linkPath));
+                }
             }
-
-            // invoke win32 command
-            if (CreateHardLink(linkPath, sourcePath, IntPtr.Zero)) return true;
-
-            if (!copyOnFail) return false;
-
-            File.Copy(sourcePath, linkPath);
-            return true;
-        }
-
-        [DllImport("kernel32.dll", SetLastError = true)]
-        private static extern bool CreateSymbolicLink(string lpSymlinkFileName, string lpTargetFileName, int dwFlags);
-
-        public static bool CreateSymbolicLink(string linkPath, string sourcePath, bool copyOnFail = true)
-        {
-            if (File.Exists(linkPath)) File.Delete(linkPath); // remove any stale link.
-            if (Directory.Exists(linkPath)) Directory.Delete(linkPath, true);
-            if (IsThisMono())
+            else if (Directory.Exists(sourcePath))
             {
-                // we need to issue a shell command
-                Utilities.ExecuteShellCommand(string.Format("ln -s \"{0}\" \"{1}\"", sourcePath, linkPath));
-                return true;
-            }
-
-            // invoke win32 command
-            if (CreateSymbolicLink(linkPath, sourcePath, 0)) return true;
-
-            if (!copyOnFail) return false;
-
-            // note: windows requires elevated privileges to create symlinks. The best we can do is create a copy :(
-            if (Directory.Exists(sourcePath))
-                DirectoryCopy(sourcePath, linkPath, true);
-            else
-                File.Copy(sourcePath, linkPath);
-            return true;
-        }
-
-        [DllImport("kernel32.dll", SetLastError = true)]
-        static extern int GetFinalPathNameByHandle(IntPtr handle, [In, Out] StringBuilder path, int bufLen, int flags);
-
-        private static readonly StringBuilder ReadLinkPath = new StringBuilder(32767);
-
-        /// <summary>
-        ///     Read symbolic link 
-        ///     On Linux we are using Mono library for this. There are many more useful system calls 
-        ///     in this library
-        ///     Mono.Posix, Version=4.0.0.0, Culture=neutral, PublicKeyToken=0738eb9f132ed756
-        /// </summary>
-        public static string ReadLink(string path)
-        {
-            ReadLinkPath.Clear();
-            if (IsThisMono())
-            {
-                return ReadLinkMono(path);
+                new DirectoryLocation(sourcePath).CreateAbsoluteSymlinkOrCopy(new DirectoryLocation(linkPath));
             }
             else
             {
-                try
-                {
-                    using (FileStream fs = File.OpenRead(path))
-                    {
-                        ReadLinkPath.Clear();
-                        GetFinalPathNameByHandle(fs.SafeFileHandle.DangerousGetHandle(), ReadLinkPath, ReadLinkPath.Capacity, 0);
-                        // this method returns some weird prefix that we need to fix:
-                        // network path: \\?\UNC\sd-isilon\bioinfoSD --> \\sd-isilon\bioinfoSD 
-                        // local path: \\?\C:\Projects --> C:\Projects
-                        return ReadLinkPath.ToString().ReplaceStart(@"\\?\UNC\", @"\\").ReplaceStart(@"\\?\", "");
-                    }
-                }
-                catch
-                {
-                    //path does not exist
-                    return null;
-                }
+                new FileLocation(sourcePath).CreateAbsoluteSymlinkAt(new FileLocation(linkPath));
             }
         }
 
         /// <summary>
-        /// This is placed in a separate method call so that the CLR does not attempt to load the Mono.Posix assembly on Windows.
-        /// We don't include the Mono.Posix assembly as part of the build. It is provided automatically When running under mono
+        /// The real path to this file/directory after following any symlinks and removing any intermediate relative paths (e.g. "/../" or "/./")
+        /// The actual file/directory does not need to exist
+        /// NOTE: This method is deprecated. You should use the FullNameCanonical properties of IDirectoryLocation and IFileLocation
         /// </summary>
-        private static string ReadLinkMono(string path)
+        public static string GetCanonicalPath(string path)
         {
-            return Mono.Unix.UnixPath.GetCanonicalPath(path);
+            if (File.Exists(path))
+            {
+                return new FileLocation(path).FullNameCanonical;
+            }
+            else if (Directory.Exists(path))
+            {
+                return new DirectoryLocation(path).FullNameCanonical;
+            }
+            else
+            {
+                var parentDirectory = new DirectoryLocation(Path.GetDirectoryName(path));
+                return Path.Combine(parentDirectory.FullNameCanonical, Path.GetFileName(path));
+            }
         }
 
         /// <summary>
@@ -901,9 +870,11 @@ namespace Illumina.SecondaryAnalysis
 
         /// <summary>
         ///     Takes an input command line and merges in arbitrary options. Returns the updated command line
-        ///     If the option already exists in the command line then the value is overridden.
-        ///     If the option does not exist in the command line then the option and value are added after any other updated options
-        ///     If there are no other updated options then we insert at end or beginning which is controlled by insertAtEnd parameter
+        ///     - If the option already exists in the command line, then the value is overridden.
+        ///     - If the option does not exist in the command line, then the option and value are added after any other updated options
+        ///     - If there are no other updated options then we insert at end or beginning which is controlled by insertAtEnd parameter
+        ///     - Additional option #foo means: remove option foo if it's in the command-line now, otherwise do nothing.
+        ///       (Remove "-foo" or "--foo" or "-foo bar" or "--foo bar")
         ///     "-param -4","--param -4" "--param=-4" and "-p-4" are all supported. 
         /// </summary>
         public static string MergeCommandLineOptions(string commandLineWithOptions, string moreOptions, bool insertAtEnd = false)
@@ -948,23 +919,7 @@ namespace Illumina.SecondaryAnalysis
             }
 
             //now we finally do the updating
-            int lastUpdatedOptionIndex = -1;
-            foreach (KeyValuePair<string, string> newOption in prioritizedNewOptions)
-            {
-                int newOptionIndex = updatedOptions.FindIndex(kvp => kvp.Key == newOption.Key);
-                if (newOptionIndex != -1)
-                {
-                    updatedOptions[newOptionIndex] = newOption;
-                }
-                else if (lastUpdatedOptionIndex != -1)
-                    updatedOptions.Insert(lastUpdatedOptionIndex + 1, newOption);
-                else if (insertAtEnd)
-                    updatedOptions.Add(newOption);
-                else
-                    updatedOptions.Insert(0, newOption);
-
-                lastUpdatedOptionIndex = updatedOptions.IndexOf(newOption);
-            }
+            UpdateCommandOptions(updatedOptions, prioritizedNewOptions, insertAtEnd);
 
             //build up the final command that includes the update options
             StringBuilder updatedCommand = new StringBuilder(beforeFirstOption);
@@ -975,6 +930,45 @@ namespace Illumina.SecondaryAnalysis
             }
             updatedCommand.AppendWithSpace(afterLastOption);
             return updatedCommand.ToString();
+        }
+
+        public static void UpdateCommandOptions(List<KeyValuePair<string, string>> originalOptions, List<KeyValuePair<string, string>> newOptions, bool insertAtEnd)
+        {
+            int lastUpdatedOptionIndex = -1;
+            foreach (KeyValuePair<string, string> newOption in newOptions)
+            {
+                // Handle option removals:
+                if (newOption.Key.StartsWith("#"))
+                {
+                    List<KeyValuePair<string, string>> removals = new List<KeyValuePair<string, string>>();
+                    for (int index = 0; index < originalOptions.Count; index++)
+                    {
+                        var option = originalOptions[index];
+                        if (option.Key.TrimStart('-') == newOption.Key.Substring(1))
+                        {
+                            removals.Add(option);
+                            if (lastUpdatedOptionIndex >= index) lastUpdatedOptionIndex--;
+                        }
+                    }
+                    foreach (var removal in removals) originalOptions.Remove(removal);
+                    continue;
+                }
+
+                // Handle option overrides and insertions:
+                int newOptionIndex = originalOptions.FindIndex(kvp => kvp.Key == newOption.Key);
+                if (newOptionIndex != -1)
+                {
+                    originalOptions[newOptionIndex] = newOption;
+                }
+                else if (lastUpdatedOptionIndex != -1)
+                    originalOptions.Insert(lastUpdatedOptionIndex + 1, newOption);
+                else if (insertAtEnd)
+                    originalOptions.Add(newOption);
+                else
+                    originalOptions.Insert(0, newOption);
+
+                lastUpdatedOptionIndex = originalOptions.IndexOf(newOption);
+            }
         }
 
         //count the number of values in the expectedValues string and grab the corresponding number of values from the currentValues string.
@@ -996,13 +990,13 @@ namespace Illumina.SecondaryAnalysis
         }
 
         //split the command into option key/value pairs and separately save anything that comes before the first option 
-        private static List<KeyValuePair<string, string>> GetCommandOptions(string command, out string beforeFirstOption)
+        public static List<KeyValuePair<string, string>> GetCommandOptions(string command, out string beforeFirstOption)
         {
             //this regex is the meat of this feature. We want to capture all valid options from the command
             //each option must happen after white space or at the beginning of the command
             //the option must start with a hyphen and then may contain more hyphens only if they are followed by a non-digit
             //the end of the option is identified by an = character or whitespace or a hyphen followed by a digit or the end of the string 
-            Regex optionRegex = new Regex(@"(?<=\A|\s)(--?[a-zA-Z](?:\-(?=\D)|[_a-zA-Z])*)(?=[=\s]|\-?\d|\z)");
+            Regex optionRegex = new Regex(@"(?<=\A|\s)(((--?)|(#))[a-zA-Z](?:\-(?=\D)|[_a-zA-Z])*)(?=[=\s]|\-?\d|\z)");
             List<KeyValuePair<string, string>> options = new List<KeyValuePair<string, string>>();
             Match m = optionRegex.Match(command);
             if (m.Success)

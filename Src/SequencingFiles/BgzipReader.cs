@@ -164,7 +164,7 @@ namespace SequencingFiles
                     int readBytes = this.ReadBlock();
                     if (BlockLength == 0)
                     {
-                        throw new Exception(string.Format("Error: Attempted to read beyond the end of a bgzipped file; file may be truncated",
+                        throw new Exception(string.Format("Error: Attempted to read beyond the end of a bgzipped file at position {0} ; file may be truncated",
                             this.Position()));
                     }
                 }

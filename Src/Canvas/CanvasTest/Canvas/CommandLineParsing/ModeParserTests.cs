@@ -1,9 +1,8 @@
-﻿using System.Collections.Generic;
-using System.IO;
-using System.Linq;
+﻿using System.IO;
 using Canvas;
 using Canvas.CommandLineParsing;
 using Canvas.CommandLineParsing.CoreOptionTypes;
+using Canvas.CommandLineParsing.OptionProcessing;
 using Isas.Shared;
 using Ploeh.AutoFixture.Xunit2;
 using UnitTests;

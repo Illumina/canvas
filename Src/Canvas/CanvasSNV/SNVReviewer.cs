@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.IO;
 using SequencingFiles;
+using SequencingFiles.Vcf;
 
 namespace CanvasSNV
 {
@@ -72,17 +73,17 @@ namespace CanvasSNV
                     // Single-allele SNVs only:
                     if (variant.VariantAlleles.Length != 1 || variant.VariantAlleles[0].Length != 1 || variant.ReferenceAllele.Length != 1) continue;
                     // PF variants only:
-                    if ((variant.Genotypes != null && variant.Genotypes.Any()) && variant.Filters != "PASS") continue; // FILTER may not say PASS for a dbSNP VCF file
-                    if (variant.Genotypes != null && variant.Genotypes.Any()) // not available if we use a dbSNP VCF file
+                    if ((variant.GenotypeColumns != null && variant.GenotypeColumns.Any()) && variant.Filters != "PASS") continue; // FILTER may not say PASS for a dbSNP VCF file
+                    if (variant.GenotypeColumns != null && variant.GenotypeColumns.Any()) // not available if we use a dbSNP VCF file
                     {
-                        if (!variant.Genotypes[0].ContainsKey("GT")) continue; // no genotype - we don't know if it's a het SNV.
-                        string genotype = variant.Genotypes[0]["GT"];
+                        if (!variant.GenotypeColumns[0].ContainsKey("GT")) continue; // no genotype - we don't know if it's a het SNV.
+                        string genotype = variant.GenotypeColumns[0]["GT"];
                         if (genotype != "0/1" && genotype != "1/0") continue;
 
                         // Also require they have a high enough quality score:
-                        if (variant.Genotypes[0].ContainsKey("GQX")) // Note: Allow no GQX field, in case we want to use another caller (e.g. Pisces) and not crash
+                        if (variant.GenotypeColumns[0].ContainsKey("GQX")) // Note: Allow no GQX field, in case we want to use another caller (e.g. Pisces) and not crash
                         {
-                            float GQX = float.Parse(variant.Genotypes[0]["GQX"]);
+                            float GQX = float.Parse(variant.GenotypeColumns[0]["GQX"]);
                             if (GQX < 30) continue;
                         }
                     }
@@ -119,7 +120,7 @@ namespace CanvasSNV
                 {
                     bool result = reader.GetNextAlignment(ref read, false);
                     if (!result) break;
-                    if (read.RefID < 0 || read.RefID > refID) break; // We're past our chromosome of interest.
+                    if (!read.HasPosition() || read.RefID > refID) break; // We're past our chromosome of interest.
                     if (read.RefID < refID) continue; // We're not yet on our chromosome of interest.
                     overallCount++;
                     if (overallCount % 1000000 == 0)
