@@ -1468,7 +1468,7 @@ namespace CanvasSomaticCaller
             if (this.userPloidy != null && this.userPurity != null)
             {
                 CoveragePurityModel bestModel = new CoveragePurityModel();
-                bestModel.DiploidCoverage = medianCoverageLevel * Convert.ToDouble(this.userPloidy) / 2.0;
+                bestModel.DiploidCoverage = GetDiploidCoverage(medianCoverageLevel, this.userPloidy.Value);
                 bestModel.Purity = Convert.ToDouble(this.userPurity);
 
                 this.ModelDeviation(bestModel, usableSegments, bestNumClusters);
@@ -1481,12 +1481,22 @@ namespace CanvasSomaticCaller
                 // Coarse search: Consider various (coverage, purity) tuples.  
                 int minCoverage = (int)Math.Max(10, medianCoverageLevel / 2.5);
                 int maxCoverage = (int)Math.Max(10, medianCoverageLevel * 2.5);
+                int minPercentPurity = 20;
+                int maxPercentPurity = 100;
+                if (this.userPloidy != null)
+                {
+                    minCoverage = maxCoverage = (int)GetDiploidCoverage(medianCoverageLevel, this.userPloidy.Value);
+                }
+                if (this.userPurity != null)
+                {
+                    minPercentPurity = maxPercentPurity = (int)(this.userPurity.Value * 100);
+                }
                 int coverageStep = Math.Max(1, (maxCoverage - minCoverage) / 80);
                 Console.WriteLine(">>>DiploidCoverage: Consider {0}...{1} step {2}", minCoverage, maxCoverage, coverageStep);
                 for (int coverage = minCoverage; coverage < maxCoverage; coverage += coverageStep)
                 {
                     // iterate over purity range 
-                    for (int percentPurity = 20; percentPurity <= 100; percentPurity += 5)
+                    for (int percentPurity = minPercentPurity; percentPurity <= maxPercentPurity; percentPurity += 5)
                     {
                         CoveragePurityModel model = new CoveragePurityModel();
                         model.DiploidCoverage = coverage;
@@ -1612,16 +1622,29 @@ namespace CanvasSomaticCaller
                         bestModel.DiploidCoverage, 100 * bestModel.Purity, bestModel.PercentCN[2]);
 
                 // Refine search: Smaller step sizes in the neighborhood of the initial model.
-                minCoverage = (int)Math.Round(bestModel.DiploidCoverage) - 5;
-                maxCoverage = (int)Math.Round(bestModel.DiploidCoverage) + 5;
-                int minPurity = Math.Max(20, (int)Math.Round(bestModel.Purity * 100) - 10);
-                int maxPurity = Math.Min(100, (int)Math.Round(bestModel.Purity * 100) + 10); // %%% magic numbers
+                if (this.userPloidy != null)
+                {
+                    minCoverage = maxCoverage = (int)GetDiploidCoverage(medianCoverageLevel, this.userPloidy.Value);
+                }
+                else
+                {
+                    minCoverage = (int)Math.Round(bestModel.DiploidCoverage) - 5;
+                    maxCoverage = (int)Math.Round(bestModel.DiploidCoverage) + 5;
+                }
+                if (this.userPurity != null)
+                {
+                    minPercentPurity = maxPercentPurity = (int)(this.userPurity.Value * 100);
+                }
+                else
+                {
+                    minPercentPurity = Math.Max(20, (int)Math.Round(bestModel.Purity * 100) - 10);
+                    maxPercentPurity = Math.Min(100, (int)Math.Round(bestModel.Purity * 100) + 10); // %%% magic numbers
+                }
                 bestDeviation = double.MaxValue;
-
                 bestModel = null;
                 for (int coverage = minCoverage; coverage <= maxCoverage; coverage++)
                 {
-                    for (int percentPurity = minPurity; percentPurity <= maxPurity; percentPurity++)
+                    for (int percentPurity = minPercentPurity; percentPurity <= maxPercentPurity; percentPurity++)
                     {
                         CoveragePurityModel model = new CoveragePurityModel();
                         model.DiploidCoverage = coverage;
@@ -1657,6 +1680,11 @@ namespace CanvasSomaticCaller
                 }
                 return bestModel;
             }
+        }
+
+        private static double GetDiploidCoverage(int medianCoverageLevel, float ploidy)
+        {
+            return medianCoverageLevel / ploidy * 2.0;
         }
 
         /// <summary>
