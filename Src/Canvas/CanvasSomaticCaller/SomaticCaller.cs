@@ -1684,7 +1684,7 @@ namespace CanvasSomaticCaller
 
         private static double GetDiploidCoverage(int medianCoverageLevel, float ploidy)
         {
-            return medianCoverageLevel / Convert.ToDouble(ploidy) * 2.0;
+            return medianCoverageLevel / ploidy * 2.0;
         }
 
         /// <summary>
