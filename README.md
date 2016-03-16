@@ -14,7 +14,7 @@ For more information on Canvas, see the [software design description] [SDD] for 
 License
 -------
 
-Copyright (c) 2013-2015 Illumina, Inc. All rights reserved.
+Copyright (c) 2013-2016 Illumina, Inc. All rights reserved.
 
 This software is provided under the terms and conditions of the GNU GENERAL PUBLIC LICENSE Version 3
 
