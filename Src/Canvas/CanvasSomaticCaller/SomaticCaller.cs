@@ -1041,7 +1041,7 @@ namespace CanvasSomaticCaller
             List<ModelPoint> modelPoints = InitializeModelPoints(model);
             double precisionDeviation = 0;
             this.RefineDiploidMAF(segments, modelPoints);
-
+            
             /////////////////////////////////////////////
             // Cluster our segments:
             Array.Clear(model.PercentCN, 0, model.PercentCN.Length);
@@ -1207,20 +1207,27 @@ namespace CanvasSomaticCaller
             public double? HeterogeneityIndex;
         }
 
-        static public List<SegmentInfo> GetUsableSegmentsForModeling(List<CanvasSegment> segments)
+        static public List<SegmentInfo> GetUsableSegmentsForModeling(List<CanvasSegment> segments, bool IsEnrichment)
         {
             // Get the average count everwhere.  Exclude segments whose coverage is >2x this average.
-            float overallMean = 0;
-            int overallCount = 0;
+            List<float> tempCountsList = new List<float>();
             foreach (CanvasSegment segment in segments)
             {
-                foreach (float value in segment.Counts)
+                if (IsEnrichment)
                 {
-                    overallCount++;
-                    overallMean += value;
+                    tempCountsList.Add(Convert.ToSingle(CanvasCommon.Utilities.Median(segment.Counts)));
+                }                   
+                else
+                {
+                    foreach (float value in segment.Counts)
+                    {
+                        tempCountsList.Add(value);
+                    }
                 }
             }
-            overallMean /= Math.Max(1, overallCount);
+
+            Tuple<float, float, float> coverageQuartiles = CanvasCommon.Utilities.Quartiles(tempCountsList);
+            float overallMedian = coverageQuartiles.Item2;
 
             List<SegmentInfo> usableSegments = new List<SegmentInfo>();
             foreach (CanvasSegment segment in segments)
@@ -1243,7 +1250,7 @@ namespace CanvasSomaticCaller
                     info.MAF = MAF[MAF.Count / 2];
                 }
                 info.Coverage = CanvasCommon.Utilities.Median(segment.Counts);
-                if (info.Coverage > overallMean * 2) continue;
+                if (info.Coverage > overallMedian * 2) continue;
                 if (segments.Count > 100)
                 {
                     info.Weight = segment.End - segment.Begin;
@@ -1384,7 +1391,7 @@ namespace CanvasSomaticCaller
             int validMAFCount = 0;
             while (true)
             {
-                usableSegments = GetUsableSegmentsForModeling(this.Segments);
+                usableSegments = GetUsableSegmentsForModeling(this.Segments, IsEnrichment);
                 validMAFCount = usableSegments.Count(x => x.MAF >= 0);
                 if (validMAFCount > Math.Min(20, this.Segments.Count)) break; // We have enough usable segments with nonnull MAF
                 if (MinimumVariantFrequenciesForInformativeSegment <= 5) break; // Give up on modeling
