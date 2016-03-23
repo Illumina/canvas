@@ -74,6 +74,10 @@
     <None Include="App.config" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\..\Src\Canvas\CanvasCommon\CanvasCommon.csproj">
+      <Project>{ec8755f1-74bd-4a1f-9b82-5133d2f6a93b}</Project>
+      <Name>CanvasCommon</Name>
+    </ProjectReference>
     <ProjectReference Include="..\..\Src\SequencingFiles\SequencingFiles.csproj">
       <Project>{3eae6805-e445-4102-87c1-f57e20677778}</Project>
       <Name>SequencingFiles</Name>
