@@ -11,6 +11,9 @@ For more information on Canvas, see the [software design description] [SDD] for 
 
 [SDD]:Docs/CanvasSoftwareDesignDescription.pdf
 
+The publication "Canvas: versatile and scalable detection of copy number variants" describes the operation of Canvas and provides accuracy on several germline and somatic data-sets: http://bioinformatics.oxfordjournals.org/content/early/2016/03/24/bioinformatics.btw163.abstract
+
+
 License
 -------
 
