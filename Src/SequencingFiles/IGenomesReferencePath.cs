@@ -75,10 +75,7 @@ namespace SequencingFiles
                 Provider = Bits[Bits.Length - offset + 1];
                 Build = Bits[Bits.Length - offset + 2];
             }
-            else
-            {
-                throw new ArgumentException("Reference path not in iGenomes format ...\\{species}\\{provider}\\{version}\\Sequence\\WholeGenomeFasta or ...\\{species}\\{provider}\\{version}\\Sequence\\WholeGenomeFasta\\genome.fa." + string.Format("Input was: {0}", referencePath));
-            }
+
         }
 
         public string Species { get; private set; }

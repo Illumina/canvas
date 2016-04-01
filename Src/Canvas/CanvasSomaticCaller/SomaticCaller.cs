@@ -1418,51 +1418,52 @@ namespace CanvasSomaticCaller
             int medianCoverageLevel = Convert.ToInt32(coverageQuartiles.Item2);
             this.CoverageWeightingFactor = this.CoverageWeighting / medianCoverageLevel;
             int bestNumClusters = 0;
-
+            string clusterMethod = "Density";
             // Need  large number of segments for cluster analysis
             if (usableSegments.Count > 100 && validMAFCount > 100)
             {
-                List<float> tempMAFList = new List<float>();
-                foreach (SegmentInfo info in usableSegments) tempMAFList.Add(Convert.ToSingle(info.MAF));
-                Tuple<float, float, float> MAFQuartiles = CanvasCommon.Utilities.Quartiles(tempMAFList);
-                double minMAF = Math.Max(Convert.ToDouble(MAFQuartiles.Item1) - 0.05, 0.01);
-                double maxMAF = Math.Min(Convert.ToDouble(MAFQuartiles.Item3) + 0.05, 0.46);
-
-                // Step1: Find outliers
-                double knearestNeighbourCutoff = KnearestNeighbourCutoff(usableSegments);
-
-                // Step2: Find the best CoverageWeightingFactor 
-                double bestCoverageWeightingFactor = BestCoverageWeightingFactor(usableSegments, maxCoverageLevel, medianCoverageLevel, knearestNeighbourCutoff);
-
-                // Step3: Find the optimal number of clusters
-                List<ModelPoint> modelPoints = BestNumClusters(usableSegments, medianCoverageLevel, bestCoverageWeightingFactor, knearestNeighbourCutoff);
-                bestNumClusters = modelPoints.Count;
-
-                // Step4: Find segment clusters using the final model
-                GaussianMixtureModel gmm = new GaussianMixtureModel(modelPoints, usableSegments, medianCoverageLevel, bestCoverageWeightingFactor, knearestNeighbourCutoff);
-                double likelihood = gmm.runExpectationMaximization();
-
-                // Step5: Write results
-                string debugPathClusterModel = Path.Combine(this.TempFolder, "ClusteringModel.txt");
-                if (!string.IsNullOrEmpty(debugPathClusterModel))
+                if (clusterMethod == "GaussianMixture")
                 {
-                    using (StreamWriter debugWriter = new StreamWriter(debugPathClusterModel))
-                    {
-                        debugWriter.WriteLine("#MAF\tCoverage\tClusterID");
-                        foreach (ModelPoint modelPoint in modelPoints)
-                        {
-                            debugWriter.WriteLine("{0}\t{1}\t{2}", modelPoint.Ploidy.Mu[0], modelPoint.Ploidy.Mu[1], modelPoint.Cluster);
-                        }
-                        debugWriter.WriteLine();
-                        debugWriter.WriteLine("#MAF\tCoverage\tBestDistance\tClusterID");
-                        foreach (SegmentInfo info in usableSegments)
-                        {
+                    // Step1: Find outliers
+                    double knearestNeighbourCutoff = KnearestNeighbourCutoff(usableSegments);
 
-                            debugWriter.Write("{0}\t{1}\t{2}", info.MAF, info.Coverage, info.Cluster);
-                            debugWriter.WriteLine();
+                    // Step2: Find the best CoverageWeightingFactor 
+                    double bestCoverageWeightingFactor = BestCoverageWeightingFactor(usableSegments, maxCoverageLevel, medianCoverageLevel, knearestNeighbourCutoff);
+
+                    // Step3: Find the optimal number of clusters
+                    List<ModelPoint> modelPoints = BestNumClusters(usableSegments, medianCoverageLevel, bestCoverageWeightingFactor, knearestNeighbourCutoff);
+                    bestNumClusters = modelPoints.Count;
+
+                    // Step4: Find segment clusters using the final model
+                    GaussianMixtureModel gmm = new GaussianMixtureModel(modelPoints, usableSegments, medianCoverageLevel, bestCoverageWeightingFactor, knearestNeighbourCutoff);
+                    double likelihood = gmm.runExpectationMaximization();
+                }
+                else
+                {
+                    DensityClusteringModel dc = new DensityClusteringModel(usableSegments, medianCoverageLevel, CoverageWeightingFactor);
+                    dc.EstimateDistance();
+                    double distanceThreshold = dc.estimateDc();
+                    dc.gaussianLocalDensity(distanceThreshold);
+                    dc.distanceToPeak();
+                    bestNumClusters = dc.findClusters();
+                    string debugPathClusterModel = Path.Combine(this.TempFolder, "ClusteringModel.txt");
+                    if (!string.IsNullOrEmpty(debugPathClusterModel))
+                    {
+                        using (StreamWriter debugWriter = new StreamWriter(debugPathClusterModel))
+                        {
+                            debugWriter.WriteLine("#MAF\tCoverage\tClusterID");
+                            for (int i = 0; i < dc.Segments.Count; i++)
+                            {
+
+                                debugWriter.Write("{0}\t{1}\t{2}\t{3}\t{4}", dc.Segments[i].MAF, dc.Segments[i].Coverage, dc.Segments[i].Cluster, dc.Peaks[i], dc.Rho[i]);
+                                debugWriter.WriteLine();
+                            }
                         }
                     }
                 }
+
+                // Write clustering results
+
             }
 
             // Note: Don't consider purity below 20 (at this point), becuase that creates a model that is very noise-sensitive.

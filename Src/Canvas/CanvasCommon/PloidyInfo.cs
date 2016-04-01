@@ -136,6 +136,7 @@ namespace CanvasCommon
     {
         public CanvasSegment Segment;
         public Dictionary<ModelPoint, double> PosteriorProbs;
+
     }
 
     public class CoverageModel
