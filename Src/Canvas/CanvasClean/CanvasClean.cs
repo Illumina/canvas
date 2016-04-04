@@ -115,11 +115,11 @@ namespace CanvasClean
             // Divide each count by the median count of bins with the same GC content
             foreach (GenomicBin bin in bins)
             {
-                var iqrScalingFactor = 0.8f;
-                if (globalIQR >= localIQR[bin.GC] * iqrScalingFactor) continue;
+                var scaledLocalIqr = localIQR[bin.GC] * 0.8f;
+                if (globalIQR >= scaledLocalIqr) continue;
 
                 // ratio of GC bins and global IQRs
-                float ratioIqrScalingFactor = iqrScalingFactor * localIQR[bin.GC] / globalIQR;
+                float ratioIqrScalingFactor = scaledLocalIqr / globalIQR;
                 var medianGCCount = localQuartiles[bin.GC].Item2;
                 bin.Count = medianGCCount + (bin.Count - medianGCCount) / ratioIqrScalingFactor;
             }
