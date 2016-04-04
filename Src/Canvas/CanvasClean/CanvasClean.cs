@@ -87,13 +87,13 @@ namespace CanvasClean
                 }
                 else if (countsByGC[i].Count >= defaultMinNumberOfBinsPerGC)
                 {
-                    localQuartiles.Add(CanvasCommon.Utilities.Quartiles(countsByGC[i]));
+                    localQuartiles.Add(Utilities.Quartiles(countsByGC[i]));
                     localIQR.Add(localQuartiles[i].Item3 - localQuartiles[i].Item1);
                 }
                 else
                 {
                     List<Tuple<float, float>> weightedCounts = GetWeightedCounts(countsByGC, i);
-                    double[] quartiles = CanvasCommon.Utilities.WeightedQuantiles(weightedCounts, new List<float>() { 0.25f, 0.5f, 0.75f });
+                    double[] quartiles = Utilities.WeightedQuantiles(weightedCounts, new List<float>() { 0.25f, 0.5f, 0.75f });
                     localQuartiles.Add(new Tuple<float, float, float>((float)quartiles[0], (float)quartiles[1], (float)quartiles[2]));
                     localIQR.Add((float)(quartiles[2] - quartiles[0]));
                 }
@@ -202,7 +202,7 @@ namespace CanvasClean
             List<float> counts;
             EnrichmentUtilities.GetCountsByGC(bins, manifest, out countsByGC, out counts);
 
-            double globalMedian = CanvasCommon.Utilities.Median(counts);
+            double globalMedian = Utilities.Median(counts);
             double?[] medians = new double?[countsByGC.Length];
 
             // Compute the median count for each GC bin
@@ -210,12 +210,12 @@ namespace CanvasClean
             {
                 if (countsByGC[gcBinIndex].Count >= defaultMinNumberOfBinsPerGC)
                 {
-                    medians[gcBinIndex] = CanvasCommon.Utilities.Median(countsByGC[gcBinIndex]);
+                    medians[gcBinIndex] = Utilities.Median(countsByGC[gcBinIndex]);
                 }
                 else
                 {
                     List<Tuple<float, float>> weightedCounts = GetWeightedCounts(countsByGC, gcBinIndex);
-                    medians[gcBinIndex] = CanvasCommon.Utilities.WeightedMedian(weightedCounts);
+                    medians[gcBinIndex] = Utilities.WeightedMedian(weightedCounts);
                 }
             }
 
@@ -283,11 +283,11 @@ namespace CanvasClean
                 if (chromosome[i] != chromosome[iStart])
                 {
                     int iEnd = i; // 0-based, exclusive
-                    medianAbsoluteDeviations.Add(CanvasCommon.Utilities.Mad(list, iStart, iEnd));
+                    medianAbsoluteDeviations.Add(Utilities.Mad(list, iStart, iEnd));
                     iStart = i;
                 }
             }
-            medianAbsoluteDeviations.Add(CanvasCommon.Utilities.Mad(list, iStart, list.Count));
+            medianAbsoluteDeviations.Add(Utilities.Mad(list, iStart, list.Count));
             return medianAbsoluteDeviations.Average();
         }
 
@@ -306,7 +306,7 @@ namespace CanvasClean
 
             for (int binIndex = 0; binIndex < bins.Count - 1; binIndex++)
             {
-                countsDiffs[binIndex] = System.Convert.ToDouble(bins[binIndex + 1].Count - bins[binIndex].Count);
+                countsDiffs[binIndex] = Convert.ToDouble(bins[binIndex + 1].Count - bins[binIndex].Count);
             }
 
             // holder of local SD values (SDs of 20 bins)
@@ -317,7 +317,7 @@ namespace CanvasClean
             int windowSize = 20;
             for (int windowEnd = windowSize, windowStart = 0; windowEnd < countsDiffs.Length; windowStart += windowSize, windowEnd += windowSize)
             {
-                double localSD = CanvasCommon.Utilities.StandardDeviation(countsDiffs, windowStart, windowEnd);
+                double localSD = Utilities.StandardDeviation(countsDiffs, windowStart, windowEnd);
                 localSDs.Add(localSD);
                 chromosomeBin.Add(bins[windowStart].Chromosome);
                 for (int binIndex = windowStart; binIndex < windowEnd; binIndex += 1)
@@ -448,7 +448,7 @@ namespace CanvasClean
 
         static int Main(string[] args)
         {
-            CanvasCommon.Utilities.LogCommandLine(args);
+            Utilities.LogCommandLine(args);
             string inFile = null;
             string outFile = null;
             bool doGCnorm = false;
@@ -456,7 +456,7 @@ namespace CanvasClean
             bool doOutlierRemoval = false;
             string ffpeOutliersFile = null;
             string manifestFile = null;
-            CanvasCommon.CanvasGCNormalizationMode gcNormalizationMode = CanvasGCNormalizationMode.MedianByGC;
+            CanvasGCNormalizationMode gcNormalizationMode = CanvasGCNormalizationMode.MedianByGC;
             string modeDescription = String.Format("gc normalization mode. Available modes: {0}. Default: {1}",
                 String.Join(", ", Enum.GetValues(typeof(CanvasGCNormalizationMode)).Cast<CanvasGCNormalizationMode>()),
                 gcNormalizationMode);
@@ -472,7 +472,7 @@ namespace CanvasClean
                 { "f|ffpeoutliers=",   "filter regions of FFPE biases",                   v => ffpeOutliersFile = v },
                 { "t|manifest=",      "Nextera manifest file",                            v => manifestFile = v },
                 { "w|weightedmedian=", "Minimum number of bins per GC required to calculate weighted median", v => minNumberOfBinsPerGCForWeightedMedian = int.Parse(v) },
-                { "m|mode=",          modeDescription,                                    v => gcNormalizationMode = CanvasCommon.Utilities.ParseCanvasGCNormalizationMode(v) },
+                { "m|mode=",          modeDescription,                                    v => gcNormalizationMode = Utilities.ParseCanvasGCNormalizationMode(v) },
                 { "h|help",           "show this message and exit",                       v => needHelp = v != null },
             };
 
