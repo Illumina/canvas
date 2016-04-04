@@ -119,9 +119,9 @@ namespace CanvasClean
                 if (globalIQR >= scaledLocalIqr) continue;
 
                 // ratio of GC bins and global IQRs
-                float ratioIqrScalingFactor = scaledLocalIqr / globalIQR;
+                float iqrRatio = scaledLocalIqr / globalIQR;
                 var medianGCCount = localQuartiles[bin.GC].Item2;
-                bin.Count = medianGCCount + (bin.Count - medianGCCount) / ratioIqrScalingFactor;
+                bin.Count = medianGCCount + (bin.Count - medianGCCount) / iqrRatio;
             }
 
             // DebugPrintCountsByGC(bins, "CountsByGCVariance-After.txt");
