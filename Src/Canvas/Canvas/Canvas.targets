@@ -3,7 +3,7 @@
   <ItemGroup>
     <NativeLibs Include="$(MSBuildThisFileDirectory)**\*.dll" />
     <Content Include="@(NativeLibs)">
-      <Link>%(RecursiveDir)%(FileName)%(Extension)</Link>
+      <Link>Canvas\%(RecursiveDir)%(FileName)%(Extension)</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
   </ItemGroup>
