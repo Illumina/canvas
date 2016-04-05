@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using System.Threading.Tasks;
 
 namespace Isas.Shared.Checkpointing
@@ -13,16 +14,21 @@ namespace Isas.Shared.Checkpointing
         /// <param name="runner"></param>
         /// <param name="name"></param>
         /// <param name="a"></param>
-        public static async Task RunCheckpointAsync(this ICheckpointRunnerAsync runner, string name, Action a)
+        public static Task RunCheckpointAsync(this ICheckpointRunnerAsync runner, string name, Action a)
         {
             string result = $"{name} complete. No output from this checkpoint";
-            Func<string> func = () =>
+            return runner.RunCheckpointAsync(name, a, result);
+        }
+
+        public static Task<T> RunCheckpointAsync<T>(this ICheckpointRunnerAsync runner, string name, Action a, T result) where T : class
+        {
+            Func<T> func = () =>
             {
                 a.Invoke();
                 return result;
             };
-            ISandboxedCheckpoint<string, string> sandboxedCheckpoint = new LegacyCheckpointRunner.NullSandboxedCheckpoint<string, string>(func);
-            await runner.RunCheckpointAsync(name, sandboxedCheckpoint, null, new LegacyCheckpointRunner.NullLoadingConvention<string, string>(result));
+            ISandboxedCheckpoint<string, T> sandboxedCheckpoint = new LegacyCheckpointRunner.NullSandboxedCheckpoint<string, T>(func);
+            return runner.RunCheckpointAsync(name, sandboxedCheckpoint, null, new LegacyCheckpointRunner.NullLoadingConvention<string, T>(result));
         }
     }
 }

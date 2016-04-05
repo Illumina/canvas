@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Isas.Shared.Utilities
+namespace Isas.Shared
 {
     public interface IGtfAnnotationResource
     {

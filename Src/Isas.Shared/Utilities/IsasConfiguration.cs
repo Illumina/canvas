@@ -1,10 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Configuration;
+using System.Diagnostics;
 using System.IO;
-using Isas.Shared;
+using System.Reflection;
 
-namespace Illumina.SecondaryAnalysis
+namespace Isas.Shared
 {
 	/// <summary>
 	///     IsasConfiguration stores the configuration for Isas.  Various default settings are provided, and can
@@ -249,7 +250,7 @@ namespace Illumina.SecondaryAnalysis
 			RetainTempFiles = GetBooleanSetting("RetainTempFiles", RetainTempFiles);
 			ReportIndelRepeatCount = GetBooleanSetting("ReportIndelRepeatCount", ReportIndelRepeatCount);
 			RunGATKForSingleSamples = GetBooleanSetting("RunGATKForSingleSamples", RunGATKForSingleSamples);
-			Utilities.RunProcessesWithLowPriority = GetBooleanSetting("RunProcessesWithLowPriority", Utilities.RunProcessesWithLowPriority);
+            Utilities.RunProcessesWithLowPriority = GetBooleanSetting("RunProcessesWithLowPriority", Utilities.RunProcessesWithLowPriority);
 
 			if (_dictionaryConfig.ContainsKey("SVAnnotation"))
 			{
@@ -410,5 +411,10 @@ namespace Illumina.SecondaryAnalysis
 			}
 			return value;
 		}
-	}
+
+        public static string GetVersionString()
+        {
+            return FileVersionInfo.GetVersionInfo(Assembly.GetExecutingAssembly().Location).ProductVersion;
+        }
+    }
 }

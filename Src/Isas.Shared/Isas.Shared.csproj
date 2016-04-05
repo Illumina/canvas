@@ -88,17 +88,16 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="Microsoft.CSharp" />
-    <Reference Include="Mono.Posix, Version=4.0.0.0, Culture=neutral, PublicKeyToken=0738eb9f132ed756, processorArchitecture=MSIL">
-      <HintPath>..\Canvas\Canvas\packages\Mono.Posix.4.0.0.0\lib\net40\Mono.Posix.dll</HintPath>
-      <Private>True</Private>
+    <Reference Include="Mono.Posix">
+      <HintPath>..\packages\mono\Mono.Posix.dll</HintPath>
+      <Private>False</Private>
     </Reference>
-    <Reference Include="Newtonsoft.Json, Version=8.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
-      <HintPath>..\Canvas\Canvas\packages\Newtonsoft.Json.8.0.2\lib\net45\Newtonsoft.Json.dll</HintPath>
-      <Private>True</Private>
+    <Reference Include="Newtonsoft.Json">
+      <HintPath>..\packages\JsonNet\Newtonsoft.Json.dll</HintPath>
     </Reference>
     <Reference Include="protobuf-net, Version=2.0.0.668, Culture=neutral, PublicKeyToken=257b51d87d2e4d67, processorArchitecture=MSIL">
-      <HintPath>..\Canvas\Canvas\packages\protobuf-net.2.0.0.668\lib\net40\protobuf-net.dll</HintPath>
-      <Private>True</Private>
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\packages\Protobuf\protobuf-net.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.configuration" />
@@ -107,9 +106,6 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="..\ILMNcommon\Properties\IsasVersionInfo.cs">
-      <Link>Properties\IsisVersionInfo.cs</Link>
-    </Compile>
     <Compile Include="Checkpointing\CheckpointRunnerAsync.cs" />
     <Compile Include="Checkpointing\Checkpoint.cs" />
     <Compile Include="Checkpointing\CheckpointManagerAsync.cs" />
@@ -157,7 +153,7 @@
     <Compile Include="Utilities\ILogger.cs" />
     <Compile Include="Utilities\ISampleSettings.cs" />
     <Compile Include="Utilities\IsasConfiguration.cs" />
-    <Compile Include="Utilities\IsisFilePaths.cs" />
+    <Compile Include="Utilities\IsasFilePaths.cs" />
     <Compile Include="Utilities\IWorkManager.cs" />
     <Compile Include="Utilities\JobManager.cs" />
     <Compile Include="Utilities\Logger.cs" />
@@ -180,14 +176,16 @@
       <Project>{6848DA28-BACA-4E4D-9E1D-BAD1E7CB9CDE}</Project>
       <Name>ILMNcommon</Name>
     </ProjectReference>
+    <ProjectReference Include="..\SampleSheet\SampleSheet.csproj">
+      <Project>{f310b4ef-80ca-4486-93a3-7e028edcd8b3}</Project>
+      <Name>SampleSheet</Name>
+    </ProjectReference>
     <ProjectReference Include="..\SequencingFiles\SequencingFiles.csproj">
       <Project>{3eae6805-e445-4102-87c1-f57e20677778}</Project>
       <Name>SequencingFiles</Name>
     </ProjectReference>
   </ItemGroup>
-  <ItemGroup>
-    <None Include="packages.config" />
-  </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

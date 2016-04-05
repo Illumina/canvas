@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using Illumina.SecondaryAnalysis;
 using Isas.Shared;
 using SequencingFiles;
 
@@ -14,6 +13,7 @@ namespace SampleSettingsProcessing
         {
             return processor.GetSetting(setting) ?? _default;
         }
+
         public static IFileLocation GetFileLocationSetting(this ISampleSettings processor, string setting, IFileLocation _default)
         {
             string value = processor.GetStringSetting(setting, null);
@@ -117,7 +117,7 @@ namespace SampleSettingsProcessing
             // If it's not set to anything we recognize, report an error!
             if (!boolvalue.HasValue)
             {
-                throw new Exception(string.Format("Errror: Sample sheet setting '{0} = {1}' not understood; use true or false (or 1 or 0) for this setting", setting, value));
+                throw new Exception($"Error: Sample sheet setting '{setting} = {value}' not understood; use true or false (or 1 or 0) for this setting");
             }
             return boolvalue.Value;
         }

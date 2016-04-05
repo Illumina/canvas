@@ -8,9 +8,7 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyTitle("EvaluateCNV")]
 [assembly: AssemblyDescription("")]
 [assembly: AssemblyConfiguration("")]
-[assembly: AssemblyCompany("Illumina")]
 [assembly: AssemblyProduct("EvaluateCNV")]
-[assembly: AssemblyCopyright("Copyright © Illumina 2016")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 
@@ -32,5 +30,8 @@ using System.Runtime.InteropServices;
 // You can specify all the values or you can default the Build and Revision Numbers 
 // by using the '*' as shown below:
 // [assembly: AssemblyVersion("1.0.*")]
-[assembly: AssemblyVersion(CanvasCommon.CanvasVersionInfo.VersionString)]
-[assembly: AssemblyFileVersion(CanvasCommon.CanvasVersionInfo.VersionString)]
+[assembly: AssemblyVersion("0.0.0.0")] // AssemblyVersion,AssemblyFileVersion,AssemblyCompany,AssemblyCopyright are auto-populated by TeamCtiy build
+[assembly: AssemblyFileVersion("0.0.0.0")]
+[assembly: AssemblyInformationalVersion("0.0.0.0")]
+[assembly: AssemblyCompany("")]
+[assembly: AssemblyCopyright("")]

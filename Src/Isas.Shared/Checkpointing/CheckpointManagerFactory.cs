@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using Illumina.SecondaryAnalysis;
 using Newtonsoft.Json;
 using SampleSettingsProcessing;
 
@@ -24,9 +23,14 @@ namespace Isas.Shared.Checkpointing
         public ICheckpointRunner GetCheckpointManager(IDirectoryLocation analysisFolder,
             string startingCheckpointName, string stopCheckpointName)
         {
+            ICheckpointManager manager = new CheckpointManager(_logger, GetStartingCheckpointName(startingCheckpointName), stopCheckpointName);
+            return GetCheckpointManager(analysisFolder, manager);
+        }
+
+        public ICheckpointRunner GetCheckpointManager(IDirectoryLocation analysisFolder, ICheckpointManager manager)
+        {
             // Checkpoint Manager
             ICheckpointSerializer serializer = new CheckpointJsonSerializer(GetCheckpointFolder(analysisFolder), _logger, GetJsonConverters(analysisFolder));
-            ICheckpointManager manager = new CheckpointManager(_logger, GetStartingCheckpointName(startingCheckpointName), stopCheckpointName);
             return new CheckpointRunner(_logger, analysisFolder, manager, serializer, _retainTemps);
         }
 

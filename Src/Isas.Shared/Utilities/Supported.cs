@@ -57,7 +57,8 @@ namespace Isas.Shared
     {
         None = 0,
         GATK,
-        Somatic,
+        PiscesSomatic,
+        PiscesGermline,
         Starling,
         Samtools,
         Strelka

@@ -59,6 +59,13 @@ namespace Isas.Shared
         public long? ParseAdapterBases()
         {
             long? result = null;
+
+            if (!File.Exists(XmlPath.FullName))
+            {
+                // Return null if the .bam.xml file does not exist (e.g. if we resumed a workflow)
+                Console.Error.Write("Warning: xml file not found at '{0}'", XmlPath.FullName);
+                return result;
+            }
             Regex adapterBasesRegex = new Regex(@"<AdapterBases>(\d+)</AdapterBases>");
             try
             {

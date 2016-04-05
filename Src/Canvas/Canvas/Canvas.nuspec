@@ -1,0 +1,37 @@
+<?xml version="1.0"?>
+<package>
+
+  <metadata>
+    <id>IsasMain</id>
+    <version>$version$</version>
+    <title>Isas Main Libraries</title>
+    <authors>Illumina</authors>
+    <owners>Illumina</owners>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <description>Main Isas libraries</description>
+    <copyright>Copyright 2016</copyright>
+    <tags>Isas</tags>	
+  </metadata>
+  
+  <files>
+    <file src="..\Algorithms\bin\x64\Release\Algorithms.dll" target="lib/net451" />
+	<file src="..\AnalysisLauncher\bin\x64\Release\AnalysisLauncher.dll" target="lib/net451" />
+	<file src="..\ILMNcommon\bin\x64\Release\ILMNcommon.dll" target="lib/net451" />	
+	<file src="..\IsasCommandLine\bin\x64\Release\IsasCommandLine.dll" target="lib/net451" />
+	<file src="..\Isas.Shared\bin\x64\Release\Isas.Shared.dll" target="lib/net451" />
+	<file src="..\IsasWorkerInterface\bin\x64\Release\IsisWorkerInterface.dll" target="lib/net451" />
+	<file src="..\NumericalAnalysis\bin\x64\Release\NumericalAnalysis.dll" target="lib/net451" />
+	<file src="..\SampleSheet\bin\x64\Release\SampleSheet.dll" target="lib/net451" />
+	<file src="..\SampleSheetProcessor\bin\x64\Release\SampleSheetProcessor.dll" target="lib/net451" />		
+	<file src="..\SecondaryAnalysis\bin\x64\Release\SecondaryAnalysis.dll" target="lib/net451" />
+	<file src="..\SequencingFiles\bin\x64\Release\SequencingFiles.dll" target="lib/net451" />	
+	<file src="..\UMI\UMIAnalysis\bin\x64\Release\UMIAnalysis.dll" target="lib/net451" />
+	<file src="..\Factories\Workflows\WorkflowFactory\bin\x64\Release\WorkflowFactory.dll" target="lib/net451" />	
+
+	<file src="..\x64\Release\FileCompression.dll" target="build" />	
+	<file src="..\x64\Release\Newtonsoft.Json.dll" target="build" />
+	<file src="..\x64\Release\protobuf-net.dll" target="build" />
+    <file src="Isas.targets" target="build/IsasMain.targets" />	
+  </files>	
+
+</package>

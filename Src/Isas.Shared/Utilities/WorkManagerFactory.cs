@@ -1,5 +1,4 @@
-﻿using Illumina.SecondaryAnalysis;
-using SampleSettingsProcessing;
+﻿using SampleSettingsProcessing;
 
 namespace Isas.Shared
 {

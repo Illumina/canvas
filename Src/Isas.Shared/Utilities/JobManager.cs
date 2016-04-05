@@ -7,7 +7,7 @@ using System.Runtime.CompilerServices;
 using System.Runtime.Serialization;
 using System.Threading;
 
-namespace Illumina.SecondaryAnalysis
+namespace Isas.Shared
 {
     /// <summary>
     /// JobManager is responsible for launching external processes. It handles output redirection,

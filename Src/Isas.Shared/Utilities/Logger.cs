@@ -4,9 +4,8 @@ using System.Collections.Generic;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
-using Illumina.SecondaryAnalysis;
 
-namespace Isas.Shared.Utilities
+namespace Isas.Shared
 {
     public class Logger : ILogger
     {

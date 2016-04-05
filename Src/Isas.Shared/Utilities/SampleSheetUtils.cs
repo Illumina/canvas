@@ -32,18 +32,15 @@ namespace Isas.Shared
         public const string FilterOffTargetVariants = "filterofftargetvariants";
         public const string FindAdaptersWithIndels = "findadapterswithindels";
         public const string FilterOutSingleStrandVariants = "filteroutsinglestrandvariants";
-        public const string FilterPCRDuplicates = "filterpcrduplicates"; // Deprecated synonym of FlagPCRDuplicates; supported for back-compatibility with old sheets
         public const string FlagPCRDuplicates = "flagpcrduplicates";
         public const string GVcfBlockCompression = "gvcfblockcompression";
         public const string IndelRealignment = "indelrealignment";
         public const string IndelRepeatFilterCutoff = "indelrepeatfiltercutoff";
-        public const string IsaacSeedLength = "isaacseedlength";
         public const string ManifestName = "manifestname";
         public const string MinimumCoverageDepth = "minimumcoveragedepth";
         public const string MinQScore = "minqscore";
         public const string MaximumThreadCount = "maximumthreadcount";
         public const string MaximumMemoryGB = "maximummemorygb";
-        public const string OutputGenomeVCF = "outputgenomevcf";
         public const string PostRunCommand = "postruncommand";
         public const string PumaArrayVcf = "arrayvcf";
         public const string PumaBamModule = "pumabammodule";
@@ -75,9 +72,14 @@ namespace Isas.Shared
         public const string VariantCallerQScoreRecalibrationThreshold = "variantcallersomaticqscorerecalibrationthreshold";
         public const string VariantCallerUseSomaticQScoreRecalibration = "variantcallerusesomaticqscorerecalibration";
         public const string VariantCallerStitchReads = "variantcallerstitchreads";
+        public const string VariantCallCrushVcf = "variantcallcrushvcf";
+        public const string VariantCallPloidy = "variantcallploidy";
+        public const string VariantCallConverageMethod = "variantcallcoveragemethod";
         public const string VariantCallMaxLengthPhasedSNP = "variantcallphasedsnp_maxlength";
         public const string VariantCallMaxGapPhasedSNP = "variantcallphasedsnp_maxgap";
         public const string VariantCallPhasedSNP = "variantcallphasedsnp";
+        public const string VariantCallThreadByChr = "variantcallthreadbychr";
+        public const string VariantFilterRMxN = "variantfilterrmxn";
         public const string VariantFilterQualityCutoff = "variantfilterqualitycutoff"; // For back-compatibility
         public const string VariantFrequencyEmitCutoff = "variantfrequencyemitcutoff";
         public const string VariantFrequencyFilterCutoff = "variantfrequencyfiltercutoff";
@@ -122,18 +124,15 @@ namespace Isas.Shared
                 case FilterOffTargetVariants:
                 case FindAdaptersWithIndels:
                 case FilterOutSingleStrandVariants:
-                case FilterPCRDuplicates:
                 case FlagPCRDuplicates:
                 case GVcfBlockCompression:
                 case IndelRealignment:
                 case IndelRepeatFilterCutoff:
-                case IsaacSeedLength:
                 case MinimumCoverageDepth:
                 case MinQScore:
                 case ManifestName:
                 case MaximumThreadCount:
                 case MaximumMemoryGB:
-                case OutputGenomeVCF:
                 case PostRunCommand:
                 case PumaArrayVcf:
                 case PumaBamModule:
@@ -158,8 +157,22 @@ namespace Isas.Shared
                 case TranscriptSource:
                 case TrimFastq:
                 case VariantAnnotation:
+                case VariantCallConverageMethod:
+                case VariantCallCrushVcf:
                 case VariantCaller:
+                case VariantCallerOnlyUseProperPairs:
+                case VariantCallerQScoreRecalibrationThreshold:
+                case VariantCallerQualityModel:
+                case VariantCallerReportNoCalls:
+                case VariantCallerStitchReads:
+                case VariantCallerUseSomaticQScoreRecalibration:
+                case VariantCallMaxGapPhasedSNP:
+                case VariantCallMaxLengthPhasedSNP:
+                case VariantCallPhasedSNP:
+                case VariantCallPloidy:
+                case VariantCallThreadByChr:
                 case VariantFilterQualityCutoff: // For back-compatibility
+                case VariantFilterRMxN:
                 case VariantFrequencyEmitCutoff:
                 case VariantFrequencyFilterCutoff:
                 case VariantMinimumGQCutoff:
@@ -168,10 +181,6 @@ namespace Isas.Shared
                 case VariantMinimumQDCutoff:
                 case VariantMinimumQualCutoff:
                 case VariantQualityEmitCutoff:
-                case VariantCallerQualityModel:
-                case VariantCallPhasedSNP:
-                case VariantCallMaxLengthPhasedSNP:
-                case VariantCallerOnlyUseProperPairs:
                 case "customindexprimermix": // Ignore this MCS option which sneaked its way into [Settings] :(
                 case "customread1primermix": // Ignore this MCS option which sneaked its way into [Settings] :(
                 case "customread2primermix": // Ignore this MCS option which sneaked its way into [Settings] :(

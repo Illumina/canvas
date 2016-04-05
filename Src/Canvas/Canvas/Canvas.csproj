@@ -91,9 +91,6 @@
     <Reference Include="System.XML" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="..\..\ILMNcommon\Properties\IsasVersionInfo.cs">
-      <Link>Properties\IsasVersionInfo.cs</Link>
-    </Compile>
     <Compile Include="CanvasCallset.cs" />
     <Compile Include="CanvasRunner.cs" />
     <Compile Include="CommandLineParsing\TumorNormalEnrichmentModeParser.cs" />

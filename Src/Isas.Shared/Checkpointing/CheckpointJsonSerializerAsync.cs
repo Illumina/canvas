@@ -1,6 +1,5 @@
 using System;
 using System.IO;
-using Illumina.SecondaryAnalysis;
 using ILMNcommon.Common;
 using Newtonsoft.Json;
 

@@ -1,10 +1,13 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using Canvas.CommandLineParsing.CoreOptionTypes;
 using Canvas.CommandLineParsing.OptionProcessing;
 using ILMNcommon.Common;
+using Isas.Shared;
 
 namespace Canvas.CommandLineParsing
 {
@@ -80,7 +83,7 @@ namespace Canvas.CommandLineParsing
 
         private void ShowHelp(TextWriter writer, ModeParser specifiedMode = null)
         {
-            writer.WriteLine($"Canvas {GetVersion()} {Illumina.Shared.Version.VersionInfo.AssemblyCopyright}");
+            writer.WriteLine($"Canvas {GetVersion()} {GetCopyright()}");
             writer.WriteLine();
             string modeName = specifiedMode?.Name ?? "[MODE]";
             if (specifiedMode != null)
@@ -114,7 +117,12 @@ namespace Canvas.CommandLineParsing
 
         private string GetVersion()
         {
-            return typeof(MainParser).Assembly.GetName().Version.ToString();
+            return FileVersionInfo.GetVersionInfo(typeof(MainParser).Assembly.Location).ProductVersion;
+        }
+
+        private string GetCopyright()
+        {
+            return FileVersionInfo.GetVersionInfo(typeof(MainParser).Assembly.Location).LegalCopyright;
         }
     }
 }

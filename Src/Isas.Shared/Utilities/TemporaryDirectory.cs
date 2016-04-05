@@ -1,11 +1,6 @@
-﻿using Isas.Shared;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System;
 
-namespace Illumina.SecondaryAnalysis
+namespace Isas.Shared
 {
     public class TemporaryDirectory : DirectoryLocation, IDisposable
     {

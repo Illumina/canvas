@@ -4,7 +4,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
 
-namespace Illumina.SecondaryAnalysis
+namespace Isas.Shared
 {
     public static class MachineInfo
     {

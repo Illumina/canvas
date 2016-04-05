@@ -47,6 +47,8 @@ namespace Isas.Shared.Checkpointing
 
         TOut RunCheckpoint<TIn, TOut>(string key, Func<ICheckpointRunner, TIn, IDirectoryLocation, TOut> run,
             TIn input, ILoadingConvention<TIn, TOut> loadingConvention);
+
+        Checkpoint CurrentCheckpoint { get; }
     }
 
     /// <summary>

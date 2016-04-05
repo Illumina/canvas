@@ -101,9 +101,6 @@
     </Otherwise>
   </Choose>
   <ItemGroup>
-    <Compile Include="..\..\ILMNcommon\Properties\IsasVersionInfo.cs">
-      <Link>Properties\IsasVersionInfo.cs</Link>
-    </Compile>
     <Compile Include="Canvas\CommandLineParsing\ModeParserTests.cs" />
     <Compile Include="InlineAutoNSubstituteDataAttribute.cs" />
     <Compile Include="TestLoessInterpolator.cs" />

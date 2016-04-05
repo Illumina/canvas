@@ -9,6 +9,7 @@ using SequencingFiles;
 using Canvas;
 using CanvasCommon;
 using Isas.Shared.Checkpointing;
+using Utilities = Isas.Shared.Utilities;
 
 namespace Illumina.SecondaryAnalysis
 {
