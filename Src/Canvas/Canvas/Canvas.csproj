@@ -174,7 +174,7 @@
   <PropertyGroup>
     <PostBuildEvent>SET PDB2MDB=$(SolutionDir)packages\Mono.pdb2mdb\pdb2mdb.exe
 cd $(SolutionDir)\x64\Release
-powershell -Command "Get-ChildItem -File -Recurse -Include *.dll, *.exe -Exclude FileCompression.dll, protobuf-net.dll, Mono.Posix.dll, Newtonsoft.Json.dll, MathNet.Numerics.dll | Foreach {%25PDB2MDB%25 $_.fullname}"
+powershell -Command "Get-ChildItem -Recurse -Include *.dll, *.exe -Exclude FileCompression.dll, protobuf-net.dll, Mono.Posix.dll, Newtonsoft.Json.dll, MathNet.Numerics.dll | Foreach {%25PDB2MDB%25 $_.fullname}"
 
 if ERRORLEVEL 1 (
     exit /b 1
