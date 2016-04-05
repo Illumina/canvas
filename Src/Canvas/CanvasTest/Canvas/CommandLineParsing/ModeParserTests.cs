@@ -136,8 +136,7 @@ namespace CanvasTest.Canvas.CommandLineParsing
 
             // assert
             Assert.True(result.Success);
-            string version = typeof(Program).Assembly.GetName().Version.ToString();
-            Assert.Contains(version, output);
+            Assert.Contains("0.0.0.0", output);
             Assert.Empty(errorWriter.ToString());
         }
 
