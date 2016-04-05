@@ -1,25 +1,36 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.IO;
 using System.Text;
 using System.Threading.Tasks;
 
 namespace CanvasCommon
 {
 
+    ///<summary>
+    /// This class implements Density Clustering algorithm introduced in 
+    /// Rodriguez, Alex, and Alessandro Laio. "Clustering by fast search and find of density peaks." Science 344.6191 (2014): 1492-1496.
+    /// The principle class members are Peaks (Delta in paper) and Rho that are defined as follows:
+    /// fiven distance matric d[i,j] and distanceThreshold, for each data point i compure 
+    /// Rho(i) = total number of data points within distanceThreshold
+    /// Peaks(i) = distance	of the closes data point of	higher density (min(d[i,j] for all j:=Rho(j)>Rho(i)))
+    ///</summary>
     public class DensityClusteringModel
     {
         #region Members
         public List<SegmentInfo> Segments;
-        public List<double> Distance;
+        public List<double?> Distance;
         public List<double> Peaks;
         public List<double> Rho;
         private double MeanCoverage;
         private double CoverageWeightingFactor;
 
         // parameters
-        private const double RhoCutoff = 2; // Controls whether a segment contributes to Mu and Sigma estimates
-        private const double DeltaCutoff = 0.1; // Controls when to update means
+        // RhoCutoff and PeaksCutoff estimated from running density clustering on 70 HapMix tumour samples https://git.illumina.com/Bioinformatics/HapMix/
+        // and visually inspecting validity of clusters
+        private const double RhoCutoff = 2; 
+        private const double PeaksCutoff = 0.1; 
         private const double NeighborRateLow = 0.01;
         private const double NeighborRateHigh = 0.02;
         #endregion
@@ -32,17 +43,9 @@ namespace CanvasCommon
             CoverageWeightingFactor = coverageWeightingFactor;
         }
 
-        public DensityClusteringModel(List<SegmentInfo> segments,
-            double meanCoverage, double coverageWeightingFactor, List<double> distance,
-            List<double> peaks)
-        {
-            Segments = segments;
-            MeanCoverage = meanCoverage;
-            CoverageWeightingFactor = coverageWeightingFactor;
-            Distance = distance;
-            Peaks = peaks;
-        }
-
+        /// <summary>
+        /// Only use segments with non-null MAF values
+        /// </summary>
         public int GetSegmentsForClustering(List<SegmentInfo> segments)
         {
             int segmentCounts = 0;
@@ -53,6 +56,7 @@ namespace CanvasCommon
             }
             return segmentCounts;
         }
+
 
         /// <summary>
         /// Return the squared euclidean distance between (coverage, maf) and (coverage2, maf2) in scaled coverage/MAF space.
@@ -67,20 +71,19 @@ namespace CanvasCommon
         }
 
         /// <summary>
-        /// neighborRate 
-        /// average of number of elements of comb per row that are less than dc minus 1 divided by size
+        /// neighborRate = average of number of elements of comb per row that are less than dc minus 1 divided by size
         /// </summary>
         public double estimateDc(double neighborRateLow = NeighborRateLow, double neighborRateHigh = NeighborRateHigh)
         {
 
             double tmpLow = Double.MaxValue;
             double tmpHigh = Double.MinValue;
-            foreach (double element in this.Distance)
+            foreach (double? element in this.Distance)
             {
-                if (element > 0 && element < tmpLow)
-                    tmpLow = element;
-                else if (element > 0 && element > tmpHigh)
-                    tmpHigh = element;
+                if (element.HasValue && element < tmpLow && element > 0)
+                    tmpLow = (double) element;
+                else if (element.HasValue && element > tmpHigh)
+                    tmpHigh = (double) element;
             }
 
             double neighborRateTmp = 0;
@@ -90,8 +93,8 @@ namespace CanvasCommon
             while (true)
             {
                 distanceThreshold = (tmpLow + tmpHigh) / 2;
-                foreach (double element in this.Distance)
-                    if (element < distanceThreshold && element > 0)
+                foreach (double? element in this.Distance)
+                    if (element < distanceThreshold && element.HasValue)
                         neighborRateTmp++;
                 if (distanceThreshold > 0)
                     neighborRateTmp = neighborRateTmp + segmentsLength;
@@ -127,10 +130,13 @@ namespace CanvasCommon
             {
                 for (int row = col + 1; row < nrow; row++)
                 {
-                    if (this.Distance[i] < distanceThreshold && this.Distance[i] > 0)
+                    if (this.Distance[i].HasValue)
                     {
-                        this.Rho[row] += 1;
-                        this.Rho[col] += 1;
+                        if (this.Distance[i] < distanceThreshold)
+                        {
+                            this.Rho[row] += 1;
+                            this.Rho[col] += 1;
+                        }
                     }
                     i++;
                 }
@@ -145,9 +151,9 @@ namespace CanvasCommon
                 half.Add(0);
             for (int index = 0; index < distanceLength; index++)
             {
-                if (this.Distance[index] > 0)
+                if (this.Distance[index].HasValue)
                 {
-                    double combOver = this.Distance[index] / distanceThreshold;
+                    double combOver = (double)this.Distance[index] / distanceThreshold;
                     double negSq = Math.Pow(combOver, 2) * -1;
                     half[index] = Math.Exp(negSq);
                 }
@@ -172,31 +178,30 @@ namespace CanvasCommon
         }
 
         /// <summary>
-        /// The lower triangle of the distance matrix stored by columns in a vector. If n is the number of observations, i.e., 
-        /// then for i < j <= n, the dissimilarity between (row) i and j is retrieved from index [n*(i-1) - i*(i-1)/2 + j-i]. 
-        /// The length of the vector is n*(n-1)/2.
+        /// Compute lower triangle of the distance matrix stored by columns in a vector. If n is the number of observations, 
+        /// then for i < j <= n, the dissimilarity between (column) i and (row) j is retrieved from index [n*i - i*(i+1)/2 + j-i+1]. 
+        /// The length of the distance vector is n*(n-1)/2.
         /// </summary>
         public void EstimateDistance()
         {
-
             int segmentsLength = this.Segments.Count;
-            this.Distance = new List<double>(segmentsLength * (segmentsLength - 1) / 2);
+            this.Distance = new List<double?>(segmentsLength * (segmentsLength - 1) / 2);
             for (int col = 0; col < segmentsLength; col++)
             {
                 for (int row = col + 1; row < segmentsLength; row++)
                 {
+                    double? tmp = null;                  
                     if (this.Segments[col].MAF >= 0 && this.Segments[row].MAF >= 0)
-                        this.Distance.Add(GetEuclideanDistance(this.Segments[col].Coverage, this.Segments[row].Coverage, this.Segments[col].MAF, this.Segments[row].MAF));
-                    else
-                        this.Distance.Add(-1);
+                        tmp = GetEuclideanDistance(this.Segments[col].Coverage, this.Segments[row].Coverage, this.Segments[col].MAF, this.Segments[row].MAF);
+                    this.Distance.Add(tmp);
                 }
             }
-
         }
 
 
         /// <summary>
-        /// Return the squared euclidean distance between (coverage, maf) and (coverage2, maf2) in scaled coverage/MAF space.
+        /// Estimate Peaks value as
+        /// Peaks(i) = distance	of the closes data point of	higher density (min(d[i,j] for all j:=Rho(j)>Rho(i)))
         /// </summary>
         public void distanceToPeak()
         {
@@ -212,12 +217,12 @@ namespace CanvasCommon
             {
                 for (int row = col + 1; row < segmentsLength; row++)
                 {
-                    if (this.Distance[i] <= 0)
+                    if (!this.Distance[i].HasValue)
                     {
                         i++;
                         continue;
                     }
-                    double newValue = this.Distance[i];
+                    double newValue = (double) this.Distance[i];
                     double rhoRow = this.Rho[row];
                     double rhoCol = this.Rho[col];
 
@@ -256,16 +261,11 @@ namespace CanvasCommon
                 {
                     this.Peaks[j] = maximum[j];
                 }
-                else {
-                    // do nothing, peaks is already min
-                }
             }
         }
 
-        /// <summary>
-        /// Return the squared euclidean distance between (coverage, maf) and (coverage2, maf2) in scaled coverage/MAF space.
-        /// </summary>
-        public int findClusters(double rhoCutoff = RhoCutoff, double deltaCutoff = DeltaCutoff)
+
+        public int findClusters(double rhoCutoff = RhoCutoff, double PeaksCutoff = PeaksCutoff)
         {
 
             int segmentsLength = this.Segments.Count;
@@ -273,7 +273,7 @@ namespace CanvasCommon
 
             List<int> peaksIndex = new List<int>(segmentsLength);
             for (int segmentIndex = 0; segmentIndex < segmentsLength; segmentIndex++)
-                if (this.Rho[segmentIndex] > rhoCutoff && this.Peaks[segmentIndex] > deltaCutoff &&  this.Segments[segmentIndex].MAF >= 0)
+                if (this.Rho[segmentIndex] > rhoCutoff && this.Peaks[segmentIndex] > PeaksCutoff &&  this.Segments[segmentIndex].MAF >= 0)
                     peaksIndex.Add(segmentIndex);
 
 
@@ -290,34 +290,34 @@ namespace CanvasCommon
                 }
                 else
                 {
-                    double tmpDistance = Double.MaxValue;
+                    double? tmpDistance = null;
                     double minDistance = Double.MaxValue;
                     int minRhoElementIndex = 0;
                     for (int tmpIndex = 0; tmpIndex < segmentsLength; tmpIndex++)
                     {
                         if (Rho[tmpIndex] > Rho[runOrderIndex] && this.Segments[tmpIndex].MAF >= 0)
                         {
+                            if (tmpIndex < runOrderIndex)
+                            {
+                                // the dissimilarity between (column) i and j is retrieved from index [n*i - i*(i+1)/2 + j-i-1].
+                                tmpDistance = this.Distance[segmentsLength * tmpIndex - (tmpIndex * (tmpIndex + 1)) / 2 + runOrderIndex - tmpIndex - 1];
+                            }
+                            else if (tmpIndex > runOrderIndex)
+                            {
+                                tmpDistance = this.Distance[segmentsLength * runOrderIndex - (runOrderIndex * (runOrderIndex + 1)) / 2 + tmpIndex - runOrderIndex -1];
+                            }
 
-                            if (tmpIndex > runOrderIndex)
+                            if (tmpDistance.HasValue)
                             {
-                                
-                                tmpDistance = this.Distance[segmentsLength * runOrderIndex - runOrderIndex * runOrderIndex / 2 + tmpIndex - runOrderIndex];
-                            }
-                            else if (tmpIndex < runOrderIndex)
-                            {
-                                tmpDistance = this.Distance[segmentsLength * tmpIndex - tmpIndex * tmpIndex / 2 + runOrderIndex - tmpIndex];
-                            }
-                            else
-                            {
-                                tmpDistance = Double.MaxValue;
-                            }
-                            if (tmpDistance < minDistance && tmpDistance > 0)
-                            {
-                                minRhoElementIndex = tmpIndex;
-                                minDistance = tmpDistance;
+                                if (tmpDistance < minDistance)
+                                {
+                                    minRhoElementIndex = tmpIndex;
+                                    minDistance = (double)tmpDistance;
+                                }
                             }
                         }
                     }
+                    // populate clusters
                     if (this.Segments[runOrderIndex].MAF >= 0)
                         this.Segments[runOrderIndex].Cluster = this.Segments[minRhoElementIndex].Cluster;
                 }

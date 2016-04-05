@@ -27,6 +27,12 @@ namespace CanvasCommon
         LOESS // Smooth by (global median) + count - (fitted count). Counts are transformed by sqrt.
     }
 
+    public enum CanvasSomaticClusteringMode
+    {
+        GaussianMixture, 
+        Density 
+    }
+
     public static class Utilities
     {
         #region Members
@@ -96,6 +102,19 @@ namespace CanvasCommon
                     return CanvasGCNormalizationMode.LOESS;
                 default:
                     throw new Exception(string.Format("Invalid CanvasClean mode '{0}'", mode));
+            }
+        }
+
+        static public CanvasSomaticClusteringMode ParseCanvasSomaticClusteringMode(string mode)
+        {
+            switch (mode.ToLowerInvariant().Trim())
+            {
+                case "gaussianmixture":
+                    return CanvasSomaticClusteringMode.GaussianMixture;
+                case "density":
+                    return CanvasSomaticClusteringMode.Density;
+                default:
+                    throw new Exception(string.Format("Invalid CanvasSomatic clustering mode '{0}'", mode));
             }
         }
 

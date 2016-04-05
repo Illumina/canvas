@@ -369,7 +369,7 @@ namespace CanvasSomaticCaller
             this.ExcludedIntervals = CanvasCommon.Utilities.LoadBedFile(bedPath);
         }
 
-        public int CallVariants(string inFile, string variantFrequencyFile, string outputVCFPath, string referenceFolder, string name, double? localSDmertic)
+        public int CallVariants(string inFile, string variantFrequencyFile, string outputVCFPath, string referenceFolder, string name, double? localSDmertic, CanvasSomaticClusteringMode clusteringMode)
         {
             this.OutputFolder = Path.GetDirectoryName(outputVCFPath);
             this.TempFolder = Path.GetDirectoryName(inFile);
@@ -401,7 +401,7 @@ namespace CanvasSomaticCaller
             List<string> ExtraHeaders = new List<string>();
             try
             {
-                ExtraHeaders = CallCNVUsingSNVFrequency(localSDmertic, referenceFolder);
+                ExtraHeaders = CallCNVUsingSNVFrequency(localSDmertic, referenceFolder, clusteringMode);
             }
             catch (UncallableDataException e)
             {
@@ -1383,7 +1383,7 @@ namespace CanvasSomaticCaller
         /// and then a fine-grained search), and for each one, measure the distortion - the average distance (weighted 
         /// by segment length) between actual and modeled (MAF, Coverage) coordinate.
         /// </summary>
-        protected CoveragePurityModel ModelOverallCoverageAndPurity(long genomeLength)
+        protected CoveragePurityModel ModelOverallCoverageAndPurity(long genomeLength, CanvasSomaticClusteringMode clusteringMode)
         {
             List<SegmentInfo> usableSegments;
             // Identify usable segments using our MinimumVariantFrequenciesForInformativeSegment cutoff, 
@@ -1418,52 +1418,53 @@ namespace CanvasSomaticCaller
             int medianCoverageLevel = Convert.ToInt32(coverageQuartiles.Item2);
             this.CoverageWeightingFactor = this.CoverageWeighting / medianCoverageLevel;
             int bestNumClusters = 0;
-            string clusterMethod = "Density";
             // Need  large number of segments for cluster analysis
             if (usableSegments.Count > 100 && validMAFCount > 100)
             {
-                if (clusterMethod == "GaussianMixture")
+                switch (clusteringMode)
                 {
-                    // Step1: Find outliers
-                    double knearestNeighbourCutoff = KnearestNeighbourCutoff(usableSegments);
+                    case CanvasSomaticClusteringMode.GaussianMixture:
+                        // Step1: Find outliers
+                        double knearestNeighbourCutoff = KnearestNeighbourCutoff(usableSegments);
 
-                    // Step2: Find the best CoverageWeightingFactor 
-                    double bestCoverageWeightingFactor = BestCoverageWeightingFactor(usableSegments, maxCoverageLevel, medianCoverageLevel, knearestNeighbourCutoff);
+                        // Step2: Find the best CoverageWeightingFactor 
+                        double bestCoverageWeightingFactor = BestCoverageWeightingFactor(usableSegments, maxCoverageLevel, medianCoverageLevel, knearestNeighbourCutoff);
 
-                    // Step3: Find the optimal number of clusters
-                    List<ModelPoint> modelPoints = BestNumClusters(usableSegments, medianCoverageLevel, bestCoverageWeightingFactor, knearestNeighbourCutoff);
-                    bestNumClusters = modelPoints.Count;
+                        // Step3: Find the optimal number of clusters
+                        List<ModelPoint> modelPoints = BestNumClusters(usableSegments, medianCoverageLevel, bestCoverageWeightingFactor, knearestNeighbourCutoff);
+                        bestNumClusters = modelPoints.Count;
 
-                    // Step4: Find segment clusters using the final model
-                    GaussianMixtureModel gmm = new GaussianMixtureModel(modelPoints, usableSegments, medianCoverageLevel, bestCoverageWeightingFactor, knearestNeighbourCutoff);
-                    double likelihood = gmm.runExpectationMaximization();
+                        // Step4: Find segment clusters using the final model
+                        GaussianMixtureModel gmm = new GaussianMixtureModel(modelPoints, usableSegments, medianCoverageLevel, bestCoverageWeightingFactor, knearestNeighbourCutoff);
+                        double likelihood = gmm.runExpectationMaximization();
+                        break;
+
+                    case CanvasSomaticClusteringMode.Density:
+                        DensityClusteringModel dc = new DensityClusteringModel(usableSegments, medianCoverageLevel, CoverageWeightingFactor);
+                        dc.EstimateDistance();
+                        double distanceThreshold = dc.estimateDc();
+                        dc.gaussianLocalDensity(distanceThreshold);
+                        dc.distanceToPeak();
+                        bestNumClusters = dc.findClusters();
+                        break;
+                    default:
+                        throw new ApplicationException("Unsupported CanvasSomatic clustering mode: " + clusteringMode.ToString());
                 }
-                else
+                // Write clustering results
+                string debugPathClusterModel = Path.Combine(this.TempFolder, "ClusteringModel.txt");
+                if (!string.IsNullOrEmpty(debugPathClusterModel))
                 {
-                    DensityClusteringModel dc = new DensityClusteringModel(usableSegments, medianCoverageLevel, CoverageWeightingFactor);
-                    dc.EstimateDistance();
-                    double distanceThreshold = dc.estimateDc();
-                    dc.gaussianLocalDensity(distanceThreshold);
-                    dc.distanceToPeak();
-                    bestNumClusters = dc.findClusters();
-                    string debugPathClusterModel = Path.Combine(this.TempFolder, "ClusteringModel.txt");
-                    if (!string.IsNullOrEmpty(debugPathClusterModel))
+                    using (StreamWriter debugWriter = new StreamWriter(debugPathClusterModel))
                     {
-                        using (StreamWriter debugWriter = new StreamWriter(debugPathClusterModel))
+                        debugWriter.WriteLine("#MAF\tCoverage\tClusterID");
+                        for (int i = 0; i < usableSegments.Count; i++)
                         {
-                            debugWriter.WriteLine("#MAF\tCoverage\tClusterID");
-                            for (int i = 0; i < dc.Segments.Count; i++)
-                            {
 
-                                debugWriter.Write("{0}\t{1}\t{2}\t{3}\t{4}", dc.Segments[i].MAF, dc.Segments[i].Coverage, dc.Segments[i].Cluster, dc.Peaks[i], dc.Rho[i]);
-                                debugWriter.WriteLine();
-                            }
+                            debugWriter.Write("{0}\t{1}\t{2}", usableSegments[i].MAF, usableSegments[i].Coverage, usableSegments[i].Cluster);
+                            debugWriter.WriteLine();
                         }
                     }
                 }
-
-                // Write clustering results
-
             }
 
             // Note: Don't consider purity below 20 (at this point), becuase that creates a model that is very noise-sensitive.
@@ -1843,7 +1844,7 @@ namespace CanvasSomaticCaller
         /// Assign copy number calls to segments.  And, produce extra headers for the CNV vcf file, giving the 
         /// overall estimated purity and ploidy.
         /// </summary>
-        protected List<string> CallCNVUsingSNVFrequency(double? localSDmertic, string referenceFolder)
+        protected List<string> CallCNVUsingSNVFrequency(double? localSDmertic, string referenceFolder, CanvasSomaticClusteringMode clusteringMode)
         {
             List<string> Headers = new List<string>();
             if (this.CNOracle != null)
@@ -1857,7 +1858,7 @@ namespace CanvasSomaticCaller
             genomeMetaData.Deserialize(Path.Combine(referenceFolder, "GenomeSize.xml"));
 
             // Derive a model of diploid coverage, and overall tumor purity:
-            this.Model = ModelOverallCoverageAndPurity(genomeMetaData.Length);
+            this.Model = ModelOverallCoverageAndPurity(genomeMetaData.Length, clusteringMode);
 
             // Make preliminary ploidy calls for all segments.  For those segments which fit their ploidy reasonably well,
             // accumulate information about the MAF by site and coverage by bin.  
