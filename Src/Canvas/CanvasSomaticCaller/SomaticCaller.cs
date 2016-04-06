@@ -1440,12 +1440,12 @@ namespace CanvasSomaticCaller
                         break;
 
                     case CanvasSomaticClusteringMode.Density:
-                        DensityClusteringModel dc = new DensityClusteringModel(usableSegments, medianCoverageLevel, CoverageWeightingFactor);
+                        DensityClusteringModel dc = new DensityClusteringModel(usableSegments, CoverageWeightingFactor);
                         dc.EstimateDistance();
-                        double distanceThreshold = dc.estimateDc();
-                        dc.gaussianLocalDensity(distanceThreshold);
-                        dc.distanceToPeak();
-                        bestNumClusters = dc.findClusters();
+                        double distanceThreshold = dc.EstimateDc();
+                        dc.GaussianLocalDensity(distanceThreshold);
+                        dc.FindCentroids();
+                        bestNumClusters = dc.FindClusters();
                         break;
                     default:
                         throw new ApplicationException("Unsupported CanvasSomatic clustering mode: " + clusteringMode.ToString());
