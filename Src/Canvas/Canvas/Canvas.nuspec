@@ -14,7 +14,7 @@
   </metadata>
   
   <files>
-    <file src="..\x64\Release\*" target="lib/net451" />
+    <file src="..\x64\Release\*" target="build" />
     <file src="Canvas.targets" target="build/Canvas.targets" />	
   </files>	
 
