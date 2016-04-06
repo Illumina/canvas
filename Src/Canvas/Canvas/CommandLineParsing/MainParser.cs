@@ -3,21 +3,23 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Reflection;
 using Canvas.CommandLineParsing.CoreOptionTypes;
 using Canvas.CommandLineParsing.OptionProcessing;
 using ILMNcommon.Common;
-using Isas.Shared;
 
 namespace Canvas.CommandLineParsing
 {
     public class MainParser
     {
+        private readonly string _version;
+        private readonly string _copyright;
         private static readonly BaseOptionsParser BaseOptionsParser = new BaseOptionsParser();
         private readonly Dictionary<string, ModeParser> _modeParsers;
 
-        public MainParser(params ModeParser[] modeParsers)
+        public MainParser(string version, string copyright, params ModeParser[] modeParsers)
         {
+            _version = version;
+            _copyright = copyright;
             _modeParsers = modeParsers.ToDictionary(modeParser => modeParser.Name, modeParser => modeParser, StringComparer.OrdinalIgnoreCase);
         }
 
@@ -117,12 +119,12 @@ namespace Canvas.CommandLineParsing
 
         private string GetVersion()
         {
-            return FileVersionInfo.GetVersionInfo(typeof(MainParser).Assembly.Location).ProductVersion;
+            return _version;
         }
 
         private string GetCopyright()
         {
-            return FileVersionInfo.GetVersionInfo(typeof(MainParser).Assembly.Location).LegalCopyright;
+            return _copyright;
         }
     }
 }
