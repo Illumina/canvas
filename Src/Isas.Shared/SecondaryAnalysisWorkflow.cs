@@ -82,7 +82,9 @@ namespace Isas.Shared
 		        Default,
 		        Services,
 		        GEL,
-		        Dx
+                IUO,
+                IVD,
+                RUO
 		    }
 
 		    public enum FastqOption
@@ -193,28 +195,32 @@ namespace Isas.Shared
 		{
 			//filters only
 			public VariantCallingFilterSettings Filters = new VariantCallingFilterSettings();
-			public VariantCallingCombinePoolSettings HowToCombineVariantsAcrossPools = new VariantCallingCombinePoolSettings(); //Dual Strand workflows only.
+
+            public VariantCallingCombinePoolSettings HowToCombineVariantsAcrossPools = new VariantCallingCombinePoolSettings(); //Dual Strand workflows only.
 			public SupportedVariantAnnotators Annotation = SupportedVariantAnnotators.None; //default set in IsasConfiguration
 			public SupportedVariantAnnotators SVAnnotation = SupportedVariantAnnotators.None; //default set in IsasConfiguration
 			public string TranscriptSource = "Ensembl"; // For Nirvana: "Ensembl" or "RefSeq"
 			public string AnnotationDatabaseVersion; // Lock this down for a particular Isas version so results are consistent even if the service adds newer database versions. 
-			public string IONAAnnotationDatabaseVersion; // Lock this down for a particular Isas version so results are consistent even if the service adds newer database versions. 
 			public List<string> SkipAnnotationForVariantFilter; //annotation will be skipped for variants with these filters
 			public bool UseSomaticQScoreRecalibration = false; // For Pisces only: True/false
 			public float SomaticQScoreRecalibrationThreshold = 3f; // For Pisces only.  the threshold at which the recalibation alg decides to kick in.
-			//how reads are handled:
-			public bool StitchReads = false; // PISCES, only if XC tag present in bams
-            public bool ThreadByChromosome = false; // PISCES, faster + more memory intensive option
-                                             
+			public bool ThreadByChromosome = false; // PISCES, faster + more memory intensive option. currently a bit crashy...
+            public string Ploidy; // PISCES, "somatic" or "diploid"  . somatic if left unset.
+            public string CoverageMethod; // PISCES, 'approximate' or 'exact' , "exact" being a new method under dev. 'approximate' is legacy method that averages over indels and MNVs.
+
+            //how reads are handled:
+            public bool StitchReads = false; // PISCES, only if XC tag present in bams
+            
             //output only
-            public bool OutputGenomeVcf = false;
 			public bool GVcfBlockCompression = true;
 		    public bool RetainIntermediateCNVFiles = false;
-		    // ReSharper restore InconsistentNaming
-		}
+            public bool CrushVcf = false; // PISCES, normally we output a somatic-style vcf. but we can crush it into a standard one-line-per-loci vcf format if you want.
 
-		// ReSharper disable InconsistentNaming - prevents ReSharper from renaming serializeable members that are sensitive to being changed
-		public class WholeGenomeRnaSeqWorkflowSettings
+            // ReSharper restore InconsistentNaming
+        }
+
+        // ReSharper disable InconsistentNaming - prevents ReSharper from renaming serializeable members that are sensitive to being changed
+        public class WholeGenomeRnaSeqWorkflowSettings
 		{
 			public enum Aligner { STAR, TopHat };
 			public Aligner aligner = Aligner.TopHat;

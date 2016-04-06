@@ -91,9 +91,6 @@
     <Reference Include="System.XML" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="..\..\ILMNcommon\Properties\IsasVersionInfo.cs">
-      <Link>Properties\IsasVersionInfo.cs</Link>
-    </Compile>
     <Compile Include="CanvasCallset.cs" />
     <Compile Include="CanvasRunner.cs" />
     <Compile Include="CommandLineParsing\TumorNormalEnrichmentModeParser.cs" />
@@ -175,8 +172,13 @@
   <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
-    <PostBuildEvent>
-    </PostBuildEvent>
+    <PostBuildEvent>SET PDB2MDB=$(SolutionDir)packages\Mono.pdb2mdb\pdb2mdb.exe
+cd $(SolutionDir)\x64\Release
+powershell -Command "Get-ChildItem -Recurse -Include *.dll, *.exe -Exclude FileCompression.dll, protobuf-net.dll, Mono.Posix.dll, Newtonsoft.Json.dll, MathNet.Numerics.dll | Foreach {%25PDB2MDB%25 $_.fullname}"
+
+if ERRORLEVEL 1 (
+    exit /b 1
+)</PostBuildEvent>
   </PropertyGroup>
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

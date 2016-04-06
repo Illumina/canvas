@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Linq;
-using Illumina.SecondaryAnalysis;
 using ILMNcommon.Common;
 
 namespace Isas.Shared.Checkpointing
@@ -26,6 +25,8 @@ namespace Isas.Shared.Checkpointing
             _serializer = serializer;
             _retainTemps = retainTemps;
         }
+
+        public Checkpoint CurrentCheckpoint => _manager.CurrentCheckpoint;
 
         public TOut RunCheckpoint<TOut>(string key, Func<TOut> function)
         {

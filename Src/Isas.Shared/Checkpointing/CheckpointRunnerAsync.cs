@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Illumina.SecondaryAnalysis;
 using ILMNcommon.Common;
 
 namespace Isas.Shared.Checkpointing
@@ -34,6 +33,8 @@ namespace Isas.Shared.Checkpointing
             _forceSynchronous = forceSynchronous;
             _parentCheckpoints = parentCheckpoints ?? new List<Checkpoint>();
         }
+
+        public Checkpoint CurrentCheckpoint => _manager.CurrentCheckpoint;
 
         private CheckpointHelper<T> CreateCheckpoint<T>(Checkpoint checkpoint, Func<T> func)
         {

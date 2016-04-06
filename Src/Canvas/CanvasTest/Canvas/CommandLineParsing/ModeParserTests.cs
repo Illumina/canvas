@@ -1,5 +1,4 @@
 ﻿using System.IO;
-using Canvas;
 using Canvas.CommandLineParsing;
 using Canvas.CommandLineParsing.CoreOptionTypes;
 using Canvas.CommandLineParsing.OptionProcessing;
@@ -12,6 +11,8 @@ namespace CanvasTest.Canvas.CommandLineParsing
 {
     public class ModeParserTests
     {
+        private const string Version = "Version";
+        private const string Copyright = "Copyright";
 
         [Theory]
         [InlineAutoNSubstituteData("Error: no mode specified")]
@@ -25,7 +26,7 @@ namespace CanvasTest.Canvas.CommandLineParsing
         {
             // arrange
             GermlineWgsModeParser germlineWgsModeParser = new GermlineWgsModeParser(name, description);
-            MainParser parser = new MainParser(germlineWgsModeParser);
+            MainParser parser = GetMainParser(germlineWgsModeParser);
             string[] noArgs =
             {
             };
@@ -40,6 +41,12 @@ namespace CanvasTest.Canvas.CommandLineParsing
             Assert.Empty(standardWriter.ToString());
         }
 
+        private static MainParser GetMainParser(GermlineWgsModeParser germlineWgsModeParser)
+        {
+
+            return new MainParser(Version, Copyright, germlineWgsModeParser);
+        }
+
         [Theory]
         [InlineAutoNSubstituteData("Available modes:")]
         [InlineAutoNSubstituteData("ModeName - ModeDescription", "ModeName", "ModeDescription")]
@@ -51,7 +58,7 @@ namespace CanvasTest.Canvas.CommandLineParsing
         {
             // arrange
             GermlineWgsModeParser germlineWgsModeParser = new GermlineWgsModeParser(name, description);
-            MainParser parser = new MainParser(germlineWgsModeParser);
+            MainParser parser = GetMainParser(germlineWgsModeParser);
             string[] args =
             {
                 "-h"
@@ -79,7 +86,7 @@ namespace CanvasTest.Canvas.CommandLineParsing
         {
             // arrange
             GermlineWgsModeParser germlineWgsModeParser = new GermlineWgsModeParser(name, description);
-            MainParser parser = new MainParser(germlineWgsModeParser);
+            MainParser parser = GetMainParser(germlineWgsModeParser);
             string[] args =
             {
                 "-h", "--unknown-option"
@@ -102,7 +109,7 @@ namespace CanvasTest.Canvas.CommandLineParsing
         {
             // arrange
             GermlineWgsModeParser germlineWgsModeParser = new GermlineWgsModeParser("WGS", "Run Canvas from WGS data");
-            MainParser parser = new MainParser(germlineWgsModeParser);
+            MainParser parser = GetMainParser(germlineWgsModeParser);
             string[] modeArgs =
             {
                 "WGS"
@@ -124,7 +131,7 @@ namespace CanvasTest.Canvas.CommandLineParsing
         {
             // arrange
             GermlineWgsModeParser germlineWgsModeParser = new GermlineWgsModeParser("WGS", "Run Canvas from WGS data");
-            MainParser parser = new MainParser(germlineWgsModeParser);
+            MainParser parser = GetMainParser(germlineWgsModeParser);
             string[] modeArgs =
             {
                 "WGS", "-v"
@@ -132,12 +139,11 @@ namespace CanvasTest.Canvas.CommandLineParsing
 
             // act
             var result = parser.Parse(modeArgs, standardWriter, errorWriter);
-            string output = standardWriter.ToString();
+            string output = standardWriter.ToString().Trim();
 
             // assert
             Assert.True(result.Success);
-            string version = typeof(Program).Assembly.GetName().Version.ToString();
-            Assert.Contains(version, output);
+            Assert.Equal(Version, output);
             Assert.Empty(errorWriter.ToString());
         }
 
@@ -269,7 +275,7 @@ namespace CanvasTest.Canvas.CommandLineParsing
         {
             // arrange
             GermlineWgsModeParser germlineWgsModeParser = new GermlineWgsModeParser(name, description);
-            MainParser parser = new MainParser(germlineWgsModeParser);
+            MainParser parser = GetMainParser(germlineWgsModeParser);
             string[] args =
             {
                 "-h"

@@ -2,7 +2,7 @@
 using System.IO;
 using System.Security.AccessControl;
 using ILMNcommon.Common;
-using Isas.Shared.Utilities.FileSystem;
+using Isas.Shared.FileSystem;
 
 namespace Isas.Shared
 {
@@ -864,12 +864,12 @@ namespace Isas.Shared
         {
             var item = obj as IFileLocation;
             if (item == null) return false;
-            return FullName.Equals(item.FullName, Illumina.SecondaryAnalysis.Utilities.IsThisMono() ? StringComparison.Ordinal : StringComparison.OrdinalIgnoreCase);
+            return FullName.Equals(item.FullName, Utilities.IsThisMono() ? StringComparison.Ordinal : StringComparison.OrdinalIgnoreCase);
         }
 
         public override int GetHashCode()
         {
-            string fullName = Illumina.SecondaryAnalysis.Utilities.IsThisMono() ? FullName : FullName.ToUpper();
+            string fullName = Utilities.IsThisMono() ? FullName : FullName.ToUpper();
             return fullName.GetHashCode();
         }
 

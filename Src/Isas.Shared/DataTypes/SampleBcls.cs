@@ -107,7 +107,7 @@ namespace Isas.Shared
         public static SampleSet<SampleBcls> GetSampleBclsForRunFolder(SampleSet<IEnumerable<SampleBcls>> sampleBcls, BclRunFolder bclRunFolder)
         {
             return sampleBcls.SelectData(bcls => bcls.First(
-                b => b.BclRunFolder.RunFolder.FullName.Equals(bclRunFolder.RunFolder.FullName, Illumina.SecondaryAnalysis.Utilities.IsThisMono() ? StringComparison.Ordinal : StringComparison.OrdinalIgnoreCase)));
+                b => b.BclRunFolder.RunFolder.FullName.Equals(bclRunFolder.RunFolder.FullName, Utilities.IsThisMono() ? StringComparison.Ordinal : StringComparison.OrdinalIgnoreCase)));
         }
 
         public static IEnumerable<IDirectoryLocation> GetRunFolders(SampleSet<IEnumerable<SampleBcls>> samples)

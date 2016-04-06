@@ -5,7 +5,7 @@ using System.Linq;
 using System.Security.AccessControl;
 using System.Threading;
 using ILMNcommon.Common;
-using Isas.Shared.Utilities.FileSystem;
+using Isas.Shared.FileSystem;
 
 namespace Isas.Shared
 {
@@ -1138,7 +1138,7 @@ namespace Isas.Shared
         {
             if (typeof(IDirectoryLocation).IsAssignableFrom(obj.GetType()))
             {
-                return FullName.Equals(((IDirectoryLocation)obj).FullName, Illumina.SecondaryAnalysis.Utilities.IsThisMono() ? StringComparison.Ordinal : StringComparison.OrdinalIgnoreCase);
+                return FullName.Equals(((IDirectoryLocation)obj).FullName, Utilities.IsThisMono() ? StringComparison.Ordinal : StringComparison.OrdinalIgnoreCase);
             }
             else
             {
@@ -1148,7 +1148,7 @@ namespace Isas.Shared
 
         public override int GetHashCode()
         {
-            string fullName = Illumina.SecondaryAnalysis.Utilities.IsThisMono() ? FullName : FullName.ToUpper();
+            string fullName = Utilities.IsThisMono() ? FullName : FullName.ToUpper();
             return fullName.GetHashCode();
         }
     }

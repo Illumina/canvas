@@ -106,7 +106,7 @@ namespace CanvasPartition
 
                 }));
             }
-            Illumina.SecondaryAnalysis.Utilities.DoWorkParallelThreads(tasks);
+            Isas.Shared.Utilities.DoWorkParallelThreads(tasks);
             // Quick sanity-check: If we don't have any segments, then return a dummy result.
             int n = 0;
             foreach (var list in finiteScoresByChr.Values)
@@ -201,7 +201,7 @@ namespace CanvasPartition
 
             }
             Console.WriteLine("{0} Launching wavelet tasks", DateTime.Now);
-            Illumina.SecondaryAnalysis.Utilities.DoWorkParallelThreads(tasks);
+            Isas.Shared.Utilities.DoWorkParallelThreads(tasks);
             Console.WriteLine("{0} Completed wavelet tasks", DateTime.Now);
             this.SegmentationResults = new GenomeSegmentationResults(segmentByChr);
             Console.WriteLine("{0} Segmentation results complete", DateTime.Now);
@@ -274,7 +274,7 @@ namespace CanvasPartition
                 }));
             }
             //Parallel.ForEach(tasks, t => { t.Invoke(); });
-            Illumina.SecondaryAnalysis.Utilities.DoWorkParallelThreads(tasks);
+            Isas.Shared.Utilities.DoWorkParallelThreads(tasks);
             // Quick sanity-check: If we don't have any segments, then return a dummy result.
             int n = 0;
             foreach (var list in finiteScoresByChr.Values)
@@ -334,7 +334,7 @@ namespace CanvasPartition
             }
 
             //Parallel.ForEach(tasks, t => { t.Invoke(); });
-            Illumina.SecondaryAnalysis.Utilities.DoWorkParallelThreads(tasks);
+            Isas.Shared.Utilities.DoWorkParallelThreads(tasks);
             this.SegmentationResults = new GenomeSegmentationResults(segmentByChr);
         }
 

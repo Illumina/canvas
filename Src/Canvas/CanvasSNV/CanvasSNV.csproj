@@ -66,9 +66,6 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="..\..\ILMNcommon\Properties\IsasVersionInfo.cs">
-      <Link>Properties\IsasVersionInfo.cs</Link>
-    </Compile>
     <Compile Include="HistogramVF.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

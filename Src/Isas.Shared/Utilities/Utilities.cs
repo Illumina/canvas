@@ -13,9 +13,8 @@ using System.Runtime.Serialization.Formatters.Binary;
 using Illumina.Common;
 using Illumina.Zlib;
 using ILMNcommon.Common;
-using Isas.Shared;
 
-namespace Illumina.SecondaryAnalysis
+namespace Isas.Shared
 {
     public static class CommandLineTokens
     {
@@ -143,30 +142,64 @@ namespace Illumina.SecondaryAnalysis
             return Type.GetType("Mono.Runtime") != null;
         }
 
-        static public void BuildTabixIndex(string vcfFile, string logFolder)
+        public enum TabixFileType
         {
-            BuildTabixIndex(new List<string> { vcfFile }, logFolder);
+            Bed,
+            Vcf
         }
 
-        static public void BuildTabixIndex(List<string> vcfFiles, string logFolder)
+        public static string Preset(this TabixFileType type)
+        {
+            switch (type)
+            {
+                case TabixFileType.Bed:
+                    return "bed";
+                case TabixFileType.Vcf:
+                    return "vcf";
+                default:
+                    throw new ArgumentException($"Unsupported tabix file type {type}");
+            }
+        }
+
+        public static void BuildBedTabixIndex(string bedPath, string logFolder)
+        {
+            BuildBedTabixIndex(bedPath.ToSingleItemEnumerable(), logFolder);
+        }
+
+        public static void BuildBedTabixIndex(IEnumerable<string> bedPaths, string logFolder)
+        {
+            BuildTabixIndex(bedPaths, logFolder, TabixFileType.Bed);
+        }
+
+        public static void BuildVcfTabixIndex(string vcfFile, string logFolder)
+        {
+            BuildVcfTabixIndex(vcfFile.ToSingleItemEnumerable(), logFolder);
+        }
+
+        public static void BuildVcfTabixIndex(IEnumerable<string> vcfFiles, string logFolder)
+        {
+            BuildTabixIndex(vcfFiles, logFolder, TabixFileType.Vcf);
+        }
+
+        private static void BuildTabixIndex(IEnumerable<string> files, string logFolder, TabixFileType type)
         {
             // Look for tabix in worker folder, then in $PATH:
-            string tabixExecutable = null;
+            string tabixExecutable;
             try
             {
-                tabixExecutable = Utilities.GetExecutablePath("tabix", null);
+                tabixExecutable = GetExecutablePath("tabix", null);
             }
             catch
             {
-                string exeName = Utilities.IsThisMono() ? "tabix" : "tabix.exe";
-                tabixExecutable = Utilities.CheckForExecutableInPath(exeName);
+                string exeName = IsThisMono() ? "tabix" : "tabix.exe";
+                tabixExecutable = CheckForExecutableInPath(exeName);
             }
 
             List<UnitOfWork> jobs = new List<UnitOfWork>();
-            foreach (string fn in vcfFiles)
+            foreach (string fn in files)
             {
                 if (!File.Exists(fn)) { continue; }
-                string cmd = String.Format(" -p vcf -f {0}", ShellExtensions.WrapWithShellQuote(fn));
+                string cmd = $" -p {type.Preset()} -f {fn.WrapWithShellQuote()}";
                 jobs.Add(new UnitOfWork
                 {
                     ExecutablePath = tabixExecutable,
@@ -177,6 +210,7 @@ namespace Illumina.SecondaryAnalysis
             }
             Benchmark variantIndexingBenchmark = new Benchmark();
             DoWorkParallel(IsasConfiguration.GetConfiguration(), Console.WriteLine, Console.Error.WriteLine, jobs, new TaskResourceRequirements(1, 4));
+            Console.WriteLine($"Total time to create tabix indexes for {files.Count()} files: {variantIndexingBenchmark.GetElapsedTime()}");
         }
 
         public static string GetJavaExecutable()

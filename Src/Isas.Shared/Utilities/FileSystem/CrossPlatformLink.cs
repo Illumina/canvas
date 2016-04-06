@@ -7,7 +7,7 @@ using Microsoft.Win32.SafeHandles;
 using Mono.Unix;
 using Mono.Unix.Native;
 
-namespace Isas.Shared.Utilities.FileSystem
+namespace Isas.Shared.FileSystem
 {
     public static class CrossPlatformLink
     {
@@ -54,7 +54,7 @@ namespace Isas.Shared.Utilities.FileSystem
 
         public static void Symlink(string source, string linkLocation)
         {
-            if (Illumina.SecondaryAnalysis.Utilities.IsThisMono())
+            if (Utilities.IsThisMono())
                 SymlinkUnix(source, linkLocation);
             else
                 SymlinkWindows(source, linkLocation);
@@ -62,7 +62,7 @@ namespace Isas.Shared.Utilities.FileSystem
 
         public static void Hardlink(string source, string linkLocation)
         {
-            if (Illumina.SecondaryAnalysis.Utilities.IsThisMono())
+            if (Utilities.IsThisMono())
                 HardlinkUnix(source, linkLocation);
             else
                 HardlinkWindows(source, linkLocation);
@@ -70,7 +70,7 @@ namespace Isas.Shared.Utilities.FileSystem
 
         public static string ReadLink(string path)
         {
-            if (Illumina.SecondaryAnalysis.Utilities.IsThisMono())
+            if (Utilities.IsThisMono())
                 return ReadLinkUnix(path);
             else
                 return ReadLinkWindows(path);
@@ -97,13 +97,13 @@ namespace Isas.Shared.Utilities.FileSystem
         private const int FILE_FLAG_BACKUP_SEMANTICS = 0x02000000;
         [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
         private static extern int GetFinalPathNameByHandle(IntPtr handle, [In, Out] StringBuilder path, int bufLen, int flags);
-        private static readonly StringBuilder ReadLinkPath = new StringBuilder(32767);
         [DllImport("kernel32.dll", EntryPoint = "CreateFileW", CharSet = CharSet.Unicode, SetLastError = true)]
         private static extern SafeFileHandle CreateFile(string lpFileName, int dwDesiredAccess, int dwShareMode,
  IntPtr securityAttributes, int dwCreationDisposition, int dwFlagsAndAttributes, IntPtr hTemplateFile);
         private static string ReadLinkWindows(string path)
         {
-            ReadLinkPath.Clear();
+            int maxReadLinkPathCapacity = 32767;
+            var readLinkPath = new StringBuilder(512, maxReadLinkPathCapacity);
             int returnedLength;
             using (
                 SafeFileHandle handle = CreateFile(path, 0, FILE_SHARE_WRITE, IntPtr.Zero, CREATION_DISPOSITION_OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS,
@@ -111,20 +111,22 @@ namespace Isas.Shared.Utilities.FileSystem
             {
                 if (handle == null || handle.IsInvalid)
                     throw new InvalidOperationException($"Could not get handle to path at '{path}'", CrossPlatform.GetLastWin32Exception());
-                returnedLength = GetFinalPathNameByHandle(handle.DangerousGetHandle(), ReadLinkPath, ReadLinkPath.Capacity, 0);
+                returnedLength = GetFinalPathNameByHandle(handle.DangerousGetHandle(), readLinkPath, maxReadLinkPathCapacity, 0);
             }
-            if (returnedLength <= 0 || returnedLength - 1 > ReadLinkPath.Capacity)
+            if (returnedLength <= 0 || returnedLength - 1 > maxReadLinkPathCapacity)
                 throw new InvalidOperationException($"Readlink error. Could not get full path for '{path}'", CrossPlatform.GetLastWin32Exception());
+
             // this method returns some weird prefix that we need to fix:
             // network path: \\?\UNC\sd-isilon\bioinfoSD --> \\sd-isilon\bioinfoSD 
             // local path: \\?\C:\Projects --> C:\Projects
-            string readLinkResult = ReadLinkPath.ToString();
-            string cleanedReadLinkResult = readLinkResult.ReplaceStart(@"\\?\UNC\", @"\\");
-            if (cleanedReadLinkResult.Length == readLinkResult.Length)
-                cleanedReadLinkResult = readLinkResult.ReplaceStart(@"\\?\", "");
-            if (cleanedReadLinkResult.Length == 0)
-                throw new InvalidOperationException($"Readlink returned empty string for input {path}. Returned length: {returnedLength}");
-            return cleanedReadLinkResult;
+            string readLinkResult = readLinkPath.ToString();
+            string localPrefix = @"\\?\";
+            string networkPrefix = localPrefix + @"UNC\";
+            if (readLinkResult.StartsWith(networkPrefix))
+                return $@"\\{readLinkResult.Substring(networkPrefix.Length)}";
+            if (readLinkResult.StartsWith(localPrefix))
+                return readLinkResult.Substring(localPrefix.Length);
+            return readLinkResult;
         }
 
         public static string GetRelativePath(string startingPath, string endingPath)

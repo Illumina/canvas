@@ -1,5 +1,4 @@
 using System;
-using Illumina.SecondaryAnalysis;
 using ILMNcommon.Common;
 
 namespace Isas.Shared.Checkpointing
@@ -13,6 +12,7 @@ namespace Isas.Shared.Checkpointing
         private int _currentCheckpointNumber;
         private bool _stopCheckpointFound;
         private bool _disposed;
+        private Checkpoint _currentCheckpoint;
 
         public CheckpointManagerAsync(ILogger logger, string startCheckpoint = null, string stopCheckpoint = null)
         {
@@ -45,6 +45,8 @@ namespace Isas.Shared.Checkpointing
             return true;
         }
 
+        public Checkpoint CurrentCheckpoint => _currentCheckpoint;
+
         public Checkpoint CreateCheckpoint(string checkpoint)
         {
             if (_disposed) throw new ObjectDisposedException(GetType().FullName);
@@ -68,7 +70,8 @@ namespace Isas.Shared.Checkpointing
 
             bool startCheckpointExists = _startCheckpoint != null;
             bool beforeStartCheckpoint = startCheckpointExists && !_startCheckpointFound;
-            return new Checkpoint(_currentCheckpointNumber, checkpoint, beforeStartCheckpoint, startCheckpointExists, isStartCheckpoint, _stopCheckpointFound);
+            _currentCheckpoint = new Checkpoint(_currentCheckpointNumber, checkpoint, beforeStartCheckpoint, startCheckpointExists, isStartCheckpoint, _stopCheckpointFound);
+            return _currentCheckpoint;
         }
 
         private static bool IsMatchingCheckpoint(string queryCheckpointName, int queryCheckpointNumber, string checkpointNameOrNumber)

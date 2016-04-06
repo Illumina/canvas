@@ -4,7 +4,6 @@ using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
-using Illumina.SecondaryAnalysis;
 
 namespace Isas.Shared.DataTypes
 {
@@ -17,6 +16,8 @@ namespace Isas.Shared.DataTypes
         public Vcf() { }
         public Vcf(IFileLocation vcfFile)
         {
+            if (vcfFile == null)
+                throw new ArgumentNullException(nameof(vcfFile));
             if (!vcfFile.Name.EndsWith(Extension))
                 throw new ArgumentException($"Invalid vcf path {vcfFile}. Path must end with .vcf.gz");
             VcfFile = vcfFile;

@@ -1,15 +1,14 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
-using Illumina.SecondaryAnalysis;
 
 namespace Isas.Shared
 { 
     public static class ShellExtensions
     { 
-        public static char ShellQuote => Illumina.SecondaryAnalysis.Utilities.IsThisMono() ? '\'' : '"';
-        public static string ShellCommandSwitch => Illumina.SecondaryAnalysis.Utilities.IsThisMono() ? "-o pipefail -c" : "/C";
-        public static string ShellTab => Illumina.SecondaryAnalysis.Utilities.IsThisMono() ? "\t" : "\\t";
-        public static string ShellExecutable => Illumina.SecondaryAnalysis.Utilities.IsThisMono() ? "bash" : "cmd";
+        public static char ShellQuote => Utilities.IsThisMono() ? '\'' : '"';
+        public static string ShellCommandSwitch => Utilities.IsThisMono() ? "-o pipefail -c" : "/C";
+        public static string ShellTab => Utilities.IsThisMono() ? "\t" : "\\t";
+        public static string ShellExecutable => Utilities.IsThisMono() ? "bash" : "cmd";
 
         public static string WrapWithShellQuote(this IFileLocation s, string quoteString = null)
         {

@@ -7,9 +7,10 @@ namespace Isas.Shared
     // ReSharper disable InconsistentNaming - prevents ReSharper from renaming serializeable members that are sensitive to being changed
     public class VariantCallingFilterSettings
     {
-        public bool FilterOutSingleProbePoolVariants = false; // PISCES (unused!)
+        public bool FilterOutSingleProbePoolVariants = false; // PISCES (unused by Isas! but used by other apps)
         public bool FilterOutSingleStrandVariants = false; // PISCES, GATK
-        public int IndelRepeatFilterCutoff = -1; // All.  Used in MiSeq and with starling.
+        public string FilterOutRMxNVariantsInRepeatRegions = "5,9"; // PISCES, filter out variants (indels or not) bookened by suspicious elements that are in repetitive region of the genome.
+        public int IndelRepeatFilterCutoff = -1; // PISCES, filter out indels that are exactly the repetitive element of a repetitive region of the genome.
         public int MinQScore = -1; // Starling; a basecall-level (not variant-level) filter
         public int MinimumCoverageDepthEmitCutoff = -1; // PISCES
         public int MinimumDepthCutoff = -1; // All.
@@ -53,7 +54,7 @@ namespace Isas.Shared
             SupportedVariantCallers variantCaller, int configMinimumGQ, int configIndelRepeat)
         {
             // Pisces applies the single-strand filter by default...except for TSCA, where some bases truly should be covered on just one strand.
-            if (secondaryAnalysisWorkflow.WorkflowSettings.VariantCaller == SupportedVariantCallers.Somatic)
+            if (secondaryAnalysisWorkflow.WorkflowSettings.VariantCaller == SupportedVariantCallers.PiscesSomatic)
             {
                 FilterOutSingleStrandVariants = true;
             }
@@ -65,7 +66,7 @@ namespace Isas.Shared
             }
 
             // Default for Pisces:
-            if ((MinimumQualityEmitCutoff < 0) && (variantCaller == SupportedVariantCallers.Somatic))
+            if ((MinimumQualityEmitCutoff < 0) && ((variantCaller == SupportedVariantCallers.PiscesSomatic) || (variantCaller == SupportedVariantCallers.PiscesGermline)))
             {
                 MinimumQualityEmitCutoff = 20; //only Pisces uses this 
             }
@@ -81,9 +82,10 @@ namespace Isas.Shared
                 {
                     case SupportedVariantCallers.None:
                     case SupportedVariantCallers.Starling:
+                    case SupportedVariantCallers.PiscesGermline:
                         MinimumGQCutoff = 0;
                         break;
-                    case SupportedVariantCallers.Somatic:
+                    case SupportedVariantCallers.PiscesSomatic:
                         MinimumGQCutoff = 30;
                         break;
                     case SupportedVariantCallers.GATK:
@@ -96,14 +98,9 @@ namespace Isas.Shared
 
             if (configIndelRepeat < 0) // -1 means "set a default for me":
             {
-                if (variantCaller == SupportedVariantCallers.Somatic)
-                {
-                    IndelRepeatFilterCutoff = 8;
-                }
-                else
-                {
-                    IndelRepeatFilterCutoff = 0;
-                }
+                //tjd +
+                //used to be on for the Somatic caller. now turned off in favor of the Pisces RMxN filter, that is on by default for Pisces.
+                IndelRepeatFilterCutoff = 0;
             }
             else
             {
@@ -118,7 +115,8 @@ namespace Isas.Shared
                 case SupportedVariantCallers.GATK:
                     VariantFrequencyFilterCutoff = 0;
                     break;
-                case SupportedVariantCallers.Somatic:
+                case SupportedVariantCallers.PiscesGermline://unused by Pisces Germline, but it doesnt need to crash
+                case SupportedVariantCallers.PiscesSomatic:
                     VariantFrequencyFilterCutoff = 0.01;
                     break;
                 default:
@@ -137,7 +135,8 @@ namespace Isas.Shared
                     case SupportedVariantCallers.GATK:
                         VariantFrequencyEmitCutoff = 0.00;
                         break;
-                    case SupportedVariantCallers.Somatic:
+                    case SupportedVariantCallers.PiscesGermline://unused by Pisces Germline, but it doesnt need to crash
+                    case SupportedVariantCallers.PiscesSomatic: 
                         VariantFrequencyEmitCutoff = 0.01;
                         break;
                     default:
@@ -145,9 +144,12 @@ namespace Isas.Shared
                 }
             }
 
-            if (MinimumCoverageDepthEmitCutoff < 0 && variantCaller == SupportedVariantCallers.Somatic)
+            if (MinimumCoverageDepthEmitCutoff < 0)
             {
-                MinimumCoverageDepthEmitCutoff = 10;
+                if ((variantCaller == SupportedVariantCallers.PiscesSomatic) || (variantCaller == SupportedVariantCallers.PiscesGermline))
+                {
+                    MinimumCoverageDepthEmitCutoff = 10;
+                }
             }
 
             if (MinimumQDCutoff < 0)
@@ -185,7 +187,7 @@ namespace Isas.Shared
             }
 
             // Default strand bias for Pisces:
-            if (variantCaller == SupportedVariantCallers.Somatic)
+            if ((variantCaller == SupportedVariantCallers.PiscesSomatic) || (variantCaller == SupportedVariantCallers.PiscesGermline))
             {
                 StrandBiasFilterCutoff = 0.5f;
             }
@@ -198,12 +200,28 @@ namespace Isas.Shared
                 case SupportedVariantCallers.Starling:
                     MinQScore = 17;
                     break;
-                case SupportedVariantCallers.Somatic:
+                case SupportedVariantCallers.PiscesGermline:
+                case SupportedVariantCallers.PiscesSomatic:
                     MinQScore = 20;
                     break;
                 default:
                     MinQScore = 0; // not used by gatk, anyway!
                     break;
+            }
+
+            //special setting for Pisces in germline mode:
+            if (variantCaller == SupportedVariantCallers.PiscesGermline)
+            {
+                //still experimental with Germline caller. default to off.
+                CallPhasedSNVs = false; 
+                secondaryAnalysisWorkflow.WorkflowSettings.VarCallerSettings.UseSomaticQScoreRecalibration = false;
+                secondaryAnalysisWorkflow.WorkflowSettings.VarCallerSettings.Filters.ReportPercentNoCalls = true;
+                secondaryAnalysisWorkflow.WorkflowSettings.VarCallerSettings.Filters.VariantFrequencyFilterCutoff = -1;
+                secondaryAnalysisWorkflow.WorkflowSettings.VarCallerSettings.Filters.MinimumDepthCutoff = 200;
+
+                //needed to output a vcf in standard germline vcf format
+                secondaryAnalysisWorkflow.WorkflowSettings.VarCallerSettings.CrushVcf = true;
+                secondaryAnalysisWorkflow.WorkflowSettings.VarCallerSettings.Ploidy = "diploid";
             }
         }
     }

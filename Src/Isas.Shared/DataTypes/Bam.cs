@@ -1,6 +1,5 @@
 ﻿using SequencingFiles;
 using System;
-using Illumina.SecondaryAnalysis;
 
 namespace Isas.Shared
 {
@@ -130,7 +129,7 @@ namespace Isas.Shared
 
         public Bam Move(IFileLocation newPath)
         {
-            Illumina.SecondaryAnalysis.Utilities.Move(BamFile.FullName, newPath.FullName);
+            Utilities.Move(BamFile.FullName, newPath.FullName);
             Bam movedBam = new Bam(newPath, _readLength, _isPairedEnd);
             if (Index.Exists)
                 Index.MoveTo(movedBam.Index);

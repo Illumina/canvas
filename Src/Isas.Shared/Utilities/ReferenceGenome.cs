@@ -2,7 +2,7 @@
 using SequencingFiles;
 using System.IO;
 
-namespace Isas.Shared.Utilities
+namespace Isas.Shared
 {
     /// <summary>
     /// Provides methods for navigating the IGenomes directory tree

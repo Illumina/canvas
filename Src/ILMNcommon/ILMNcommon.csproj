@@ -107,7 +107,6 @@
     <Compile Include="Common\OrderedDictionary.cs" />
     <Compile Include="Common\SimplePlot.cs" />
     <Compile Include="Common\StringExtensions.cs" />
-    <Compile Include="Properties\IsasVersionInfo.cs" />
     <Compile Include="Win32\Functions.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>

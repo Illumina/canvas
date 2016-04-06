@@ -1,5 +1,4 @@
 ﻿using Drmaa;
-using Illumina.SecondaryAnalysis;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;

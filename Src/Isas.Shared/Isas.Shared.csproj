@@ -107,9 +107,6 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="..\ILMNcommon\Properties\IsasVersionInfo.cs">
-      <Link>Properties\IsisVersionInfo.cs</Link>
-    </Compile>
     <Compile Include="Checkpointing\CheckpointRunnerAsync.cs" />
     <Compile Include="Checkpointing\Checkpoint.cs" />
     <Compile Include="Checkpointing\CheckpointManagerAsync.cs" />
@@ -157,7 +154,7 @@
     <Compile Include="Utilities\ILogger.cs" />
     <Compile Include="Utilities\ISampleSettings.cs" />
     <Compile Include="Utilities\IsasConfiguration.cs" />
-    <Compile Include="Utilities\IsisFilePaths.cs" />
+    <Compile Include="Utilities\IsasFilePaths.cs" />
     <Compile Include="Utilities\IWorkManager.cs" />
     <Compile Include="Utilities\JobManager.cs" />
     <Compile Include="Utilities\Logger.cs" />
@@ -185,9 +182,7 @@
       <Name>SequencingFiles</Name>
     </ProjectReference>
   </ItemGroup>
-  <ItemGroup>
-    <None Include="packages.config" />
-  </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

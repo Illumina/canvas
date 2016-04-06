@@ -1,0 +1,21 @@
+<?xml version="1.0"?>
+<package>
+
+  <metadata>
+    <id>Canvas</id>
+    <version>$version$</version>
+    <title>Canvas</title>
+    <authors>Illumina</authors>
+    <owners>Illumina</owners>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <description>Canvas</description>
+    <copyright>Copyright 2016</copyright>
+    <tags>Canvas</tags>	
+  </metadata>
+  
+  <files>
+    <file src="..\x64\Release\*" target="build" />
+    <file src="Canvas.targets" target="build/Canvas.targets" />	
+  </files>	
+
+</package>

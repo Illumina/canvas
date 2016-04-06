@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.Serialization;
-using Illumina.SecondaryAnalysis;
 using ILMNcommon.Common;
 
 namespace Isas.Shared.Checkpointing
@@ -30,6 +29,7 @@ namespace Isas.Shared.Checkpointing
     {
         void BeginCheckpoint(string key);
         CheckpointStatus GetCheckpointStatus(bool hasRunBefore);
+        Checkpoint CurrentCheckpoint { get; }
         List<string> CheckpointNames { get; }
         List<int> CheckpointNumbers { get; }
         void EndCheckpoint();
@@ -85,7 +85,10 @@ namespace Isas.Shared.Checkpointing
             get
             {
                 if (_disposed) throw new ObjectDisposedException(GetType().FullName);
-                return _checkpointNames;
+                lock (_checkpointLock)
+                {
+                    return _checkpointNames;
+                }
             }
         }
 
@@ -95,7 +98,23 @@ namespace Isas.Shared.Checkpointing
             get
             {
                 if (_disposed) throw new ObjectDisposedException(GetType().FullName);
-                return _checkpointNumbers;
+                lock (_checkpointLock)
+                {
+                    return _checkpointNumbers;
+                }
+            }
+        }
+
+        private readonly object _checkpointLock = new Object();
+        public Checkpoint CurrentCheckpoint
+        {
+            get
+            {
+                lock (_checkpointLock)
+                {
+                    if (!_checkpointNumbers.Any()) return null;
+                    return new Checkpoint(_checkpointNumbers.First(), _checkpointNames.First(), false, false, false, false);
+                }
             }
         }
 
