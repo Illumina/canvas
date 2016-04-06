@@ -40,6 +40,7 @@ namespace CanvasSomaticCaller
             double precisionWeightingFactor = SomaticCaller.DefaultPrecisionWeightingFactor;
             float? userPurity = null;
             float? userPloidy = null;
+            CanvasCommon.CanvasSomaticClusteringMode somaticClusteringMode = CanvasCommon.CanvasSomaticClusteringMode.Density;
 
             SomaticCaller caller = new SomaticCaller();
             OptionSet p = new OptionSet()
@@ -127,7 +128,7 @@ namespace CanvasSomaticCaller
                 localSDmetric = CanvasCommon.CanvasIO.ReadLocalSDFromTextFile(ffpeOutliersPath);
             }
             caller.LoadBedFile(bedPath);
-            return caller.CallVariants(inFile, variantFrequencyFile, outFile, referenceFolder, name, localSDmetric);
+            return caller.CallVariants(inFile, variantFrequencyFile, outFile, referenceFolder, name, localSDmetric, somaticClusteringMode);
         }
     }
 }
