@@ -69,10 +69,10 @@ namespace CanvasBin
 
             // Aggregate bins
             List<GenomicBin> finalBins = new List<GenomicBin>();
-            foreach (string chr in chromosomes)
+            foreach (string chrom in chromosomes)
             {
-                if (!predefinedBins.ContainsKey(chr)) { continue; }
-                finalBins.AddRange(predefinedBins[chr]);
+                if (!predefinedBins.ContainsKey(chrom)) { continue; }
+                finalBins.AddRange(predefinedBins[chrom]);
             }
 
             // Output!
