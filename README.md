@@ -46,7 +46,7 @@ Canvas is known to run under the following Linux distributions:
 - CentOS 5, 6 (Mono 3.10.0, Mono 4.0.2)
 - Ubuntu 14.04 (Mono 4.0.2)
 
-Other Linux distributions and other recent Mono versions are likely to work as well but have not been explicitly tested.
+Other Linux distributions and other recent Mono versions are likely to work as well but have not been explicitly tested. To install mono see http://www.mono-project.com/download/#download-lin
 
 #### Windows
 Canvas is known to run on Windows 7 or Windows 8 systems using .NET 4.5.1
