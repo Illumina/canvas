@@ -123,7 +123,7 @@ namespace CanvasBin
             public void DoIt()
             {
                 // Initialize bins by setting Count = 0
-                initializeBins();
+                InitializeBins();
 
                 // Populate GC for each bin if not available
                 if (!isBinGCAvailable()) { populateBinGC(); }
@@ -135,7 +135,7 @@ namespace CanvasBin
             /// <summary>
             /// Sets bin counts to 0.
             /// </summary>
-            private void initializeBins()
+            private void InitializeBins()
             {
                 Console.WriteLine("Initializing bin counts to 0 for {0}...", Chromosome);
                 foreach (GenomicBin bin in Bins) { bin.Count = 0; }
@@ -211,6 +211,7 @@ namespace CanvasBin
                     }
 
                     Dictionary<string, int> readNameToBinIndex = new Dictionary<string, int>();
+                    HashSet<string> samePositionReadNames = new HashSet<string>();
                     int binIndexStart = 0;
                     int prevPosition = -1;
                     BamAlignment alignment = new BamAlignment();
@@ -235,7 +236,7 @@ namespace CanvasBin
                         if (alignment.IsPaired()) { pairedAlignmentCount++; }
 
                         BinOneAlignment(alignment, FragmentBinnerConstants.MappingQualityThreshold, readNameToBinIndex,
-                            ref usableFragmentCount, Bins, ref binIndexStart);
+                            samePositionReadNames, ref usableFragmentCount, Bins, ref binIndexStart);
                     }
                 }
                 if (pairedAlignmentCount == 0)
@@ -255,7 +256,7 @@ namespace CanvasBin
             /// <param name="bins">predefined bins</param>
             /// <param name="binIndexStart">bin index from which to start searching for the best bin</param>
             public static void BinOneAlignment(BamAlignment alignment, uint qualityThreshold, Dictionary<string, int> readNameToBinIndex,
-                ref long usableFragmentCount, List<GenomicBin> bins, ref int binIndexStart)
+                HashSet<string> samePositionReadNames, ref long usableFragmentCount, List<GenomicBin> bins, ref int binIndexStart)
             {
                 if (!alignment.IsMapped()) { return; }
                 if (!alignment.IsMateMapped()) { return; }
@@ -265,7 +266,7 @@ namespace CanvasBin
                 bool duplicateFailedQCLowQuality = IsDuplicateFailedQCLowQuality(alignment, qualityThreshold);
 
                 // Check whether we have binned the fragment using the mate
-                if (IsSecondReadInPair(alignment) && readNameToBinIndex.ContainsKey(alignment.Name))
+                if (readNameToBinIndex.ContainsKey(alignment.Name))
                 {
                     // Undo binning when one of the reads is a duplicate, fails QC or has low mapping quality
                     if (duplicateFailedQCLowQuality)
@@ -274,12 +275,23 @@ namespace CanvasBin
                         bins[readNameToBinIndex[alignment.Name]].Count--;
                     }
                     readNameToBinIndex.Remove(alignment.Name); // clean up
+                    return;
                 }
                 if (duplicateFailedQCLowQuality) { return; }
 
                 if (alignment.RefID != alignment.MateRefID) { return; } // does this ever happen?
 
-                if (IsSecondReadInPair(alignment)) { return; } // look at only one read of the pair
+                if (IsRightMostInPair(alignment)) { return; } // look at only one read of the pair
+                // handle the case where alignment.Position == alignment.MatePosition
+                if (alignment.Position == alignment.MatePosition)
+                {
+                    if (samePositionReadNames.Contains(alignment.Name))
+                    {
+                        samePositionReadNames.Remove(alignment.Name);
+                        return;
+                    }
+                    samePositionReadNames.Add(alignment.Name);
+                }
                 if (alignment.FragmentLength == 0) { return; } // Janus-SRS-190: 0 when the information is unavailable
 
                 // Try to bin the fragment
@@ -323,11 +335,11 @@ namespace CanvasBin
             }
 
             /// <summary>
-            /// Is the read the second one (by genomic position) in a pair?
+            /// Is the read the right-most one (by genomic position) in a pair?
             /// </summary>
             /// <param name="alignment"></param>
             /// <returns></returns>
-            public static bool IsSecondReadInPair(BamAlignment alignment)
+            public static bool IsRightMostInPair(BamAlignment alignment)
             {
                 return alignment.Position > alignment.MatePosition;
             }

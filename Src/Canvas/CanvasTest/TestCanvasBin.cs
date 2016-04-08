@@ -13,11 +13,11 @@ namespace CanvasTest
     [TestClass]
     public class TestCanvasBin
     {
-        [TestMethod]
-        public void TestBinOneAlignment()
+        public void TestBinOneAlignment(int pos1, int pos2)
         {
             uint qualityThreshold = 3;
             Dictionary<string, int> readNameToBinIndex = new Dictionary<string, int>();
+            HashSet<string> samePositionReadNames = new HashSet<string>();
             long usableFragmentCount = 0;
             List<GenomicBin> bins = new List<GenomicBin>()
             {
@@ -30,42 +30,62 @@ namespace CanvasTest
             alignment1.Name = alignment2.Name = "ReadName";
             alignment1.AlignmentFlag = 0x1 | 0x2;
             alignment2.AlignmentFlag = 0x1 | 0x2;
-            alignment1.Position = 100;
-            alignment1.MatePosition = 120;
+            alignment1.Position = pos1;
+            alignment1.MatePosition = pos2;
             alignment1.FragmentLength = 100;
-            alignment2.Position = 120;
-            alignment2.MatePosition = 100;
+            alignment2.Position = pos2;
+            alignment2.MatePosition = pos1;
             alignment2.FragmentLength = -100;
             alignment1.MapQuality = 10;
             alignment2.MapQuality = 10;
 
             // Both reads pass filters
-            FragmentBinner.BinTask.BinOneAlignment(alignment1, qualityThreshold, readNameToBinIndex, ref usableFragmentCount, bins, ref binIndexStart);
-            FragmentBinner.BinTask.BinOneAlignment(alignment2, qualityThreshold, readNameToBinIndex, ref usableFragmentCount, bins, ref binIndexStart);
+            FragmentBinner.BinTask.BinOneAlignment(alignment1, qualityThreshold, readNameToBinIndex, samePositionReadNames,
+                ref usableFragmentCount, bins, ref binIndexStart);
+            FragmentBinner.BinTask.BinOneAlignment(alignment2, qualityThreshold, readNameToBinIndex, samePositionReadNames,
+                ref usableFragmentCount, bins, ref binIndexStart);
             Assert.AreEqual(bins[0].Count, 1);
 
             // First read passes filters
             bins[0].Count = 0; // reset bin count
             alignment2.MapQuality = 2; // below quality threshold of 3
-            FragmentBinner.BinTask.BinOneAlignment(alignment1, qualityThreshold, readNameToBinIndex, ref usableFragmentCount, bins, ref binIndexStart);
-            FragmentBinner.BinTask.BinOneAlignment(alignment2, qualityThreshold, readNameToBinIndex, ref usableFragmentCount, bins, ref binIndexStart);
+            FragmentBinner.BinTask.BinOneAlignment(alignment1, qualityThreshold, readNameToBinIndex, samePositionReadNames,
+                ref usableFragmentCount, bins, ref binIndexStart);
+            FragmentBinner.BinTask.BinOneAlignment(alignment2, qualityThreshold, readNameToBinIndex, samePositionReadNames,
+                ref usableFragmentCount, bins, ref binIndexStart);
             Assert.AreEqual(bins[0].Count, 0);
 
             // Second read passes filters
             bins[0].Count = 0; // reset bin count
             alignment1.MapQuality = 2; // below quality threshold of 3
             alignment2.MapQuality = 10;
-            FragmentBinner.BinTask.BinOneAlignment(alignment1, qualityThreshold, readNameToBinIndex, ref usableFragmentCount, bins, ref binIndexStart);
-            FragmentBinner.BinTask.BinOneAlignment(alignment2, qualityThreshold, readNameToBinIndex, ref usableFragmentCount, bins, ref binIndexStart);
+            FragmentBinner.BinTask.BinOneAlignment(alignment1, qualityThreshold, readNameToBinIndex, samePositionReadNames,
+                ref usableFragmentCount, bins, ref binIndexStart);
+            FragmentBinner.BinTask.BinOneAlignment(alignment2, qualityThreshold, readNameToBinIndex, samePositionReadNames,
+                ref usableFragmentCount, bins, ref binIndexStart);
             Assert.AreEqual(bins[0].Count, 0);
 
             // Both fail filters
             bins[0].Count = 0; // reset bin count
             alignment1.MapQuality = 2; // below quality threshold of 3
             alignment2.MapQuality = 2; // below quality threshold of 3
-            FragmentBinner.BinTask.BinOneAlignment(alignment1, qualityThreshold, readNameToBinIndex, ref usableFragmentCount, bins, ref binIndexStart);
-            FragmentBinner.BinTask.BinOneAlignment(alignment2, qualityThreshold, readNameToBinIndex, ref usableFragmentCount, bins, ref binIndexStart);
+            FragmentBinner.BinTask.BinOneAlignment(alignment1, qualityThreshold, readNameToBinIndex, samePositionReadNames,
+                ref usableFragmentCount, bins, ref binIndexStart);
+            FragmentBinner.BinTask.BinOneAlignment(alignment2, qualityThreshold, readNameToBinIndex, samePositionReadNames,
+                ref usableFragmentCount, bins, ref binIndexStart);
             Assert.AreEqual(bins[0].Count, 0);
+        }
+
+        [TestMethod]
+        public void TestBinOneAlignment()
+        {
+            TestBinOneAlignment(100, 120);
+        }
+
+        [TestMethod]
+        public void TestBinOneAlignmentSamePosition()
+        {
+            TestBinOneAlignment(100, 100);
         }
 
         [TestMethod]
