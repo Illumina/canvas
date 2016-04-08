@@ -97,8 +97,7 @@ namespace CanvasBin
         {
             public string FastaFile { get; private set; }
             public string Chromosome { get; private set; }
-            public string BamFile { get; private set; }
-            public string BamIndexFile { get { return BamFile + FragmentBinnerConstants.BamIndexExtension; } }
+            public Isas.Shared.Bam Bam { get; private set; }
             public List<GenomicBin> Bins { get; private set; }
             public long UsableFragmentCount { get { return usableFragmentCount; } } // Passing-filter fragments overlapping bins
             private long usableFragmentCount;
@@ -114,7 +113,7 @@ namespace CanvasBin
             {
                 FastaFile = fastaFile;
                 Chromosome = chrom;
-                BamFile = bamFile;
+                Bam = new Isas.Shared.Bam(new Isas.Shared.FileLocation(bamFile));
                 Bins = bins;
             }
 
@@ -187,21 +186,21 @@ namespace CanvasBin
             private void binFragments()
             {
                 // Sanity check: The BAM index file must exist, in order for us to seek to our target chromosome!
-                if (!File.Exists(BamIndexFile))
+                if (!Bam.Index.Exists)
                 {
-                    throw new Exception(string.Format("Fatal error: Bam index not found at {0}", BamIndexFile));
+                    throw new Exception(string.Format("Fatal error: Bam index not found at {0}", Bam.Index.FullName));
                 }
 
                 long pairedAlignmentCount = 0; // keep track of paired alignments
                 usableFragmentCount = 0;
-                using (BamReader reader = new BamReader(BamFile))
+                using (BamReader reader = new BamReader(Bam.BamFile.FullName))
                 {
                     int desiredRefIndex = -1;
                     desiredRefIndex = reader.GetReferenceIndex(Chromosome);
                     if (desiredRefIndex == -1)
                     {
                         throw new ApplicationException(
-                            string.Format("Unable to retrieve the reference sequence index for {0} in {1}.", Chromosome, BamFile));
+                            string.Format("Unable to retrieve the reference sequence index for {0} in {1}.", Chromosome, Bam.BamFile.FullName));
                     }
                     bool result = reader.Jump(desiredRefIndex, 0);
                     if (!result)
@@ -229,7 +228,7 @@ namespace CanvasBin
                         if (alignment.Position < prevPosition) // Make sure the BAM is properly sorted
                         {
                             throw new ApplicationException(
-                                string.Format("The alignment on {0} are not properly sorted in {1}: {2}", Chromosome, BamFile, alignment.Name));
+                                string.Format("The alignment on {0} are not properly sorted in {1}: {2}", Chromosome, Bam.BamFile.FullName, alignment.Name));
                         }
                         prevPosition = alignment.Position;
 
@@ -241,7 +240,7 @@ namespace CanvasBin
                 }
                 if (pairedAlignmentCount == 0)
                 {
-                    throw new ApplicationException(string.Format("No paired alignments found for {0} in {1}", Chromosome, BamFile));
+                    throw new ApplicationException(string.Format("No paired alignments found for {0} in {1}", Chromosome, Bam.BamFile.FullName));
                 }
             }
 
