@@ -23,5 +23,15 @@ namespace CanvasTest
             res = Utilities.GoldenSectionSearch(x => x * x, -5, 0);
             Assert.IsTrue(Math.Abs(res) < 0.001);
         }
+
+        [TestMethod()]
+        public void TestIsSubset()
+        {
+            string[] a = new string[] { "1", "2" };
+            string[] b = new string[] { "1", "2", "3" };
+
+            Assert.IsTrue(Utilities.IsSubset(a, b));
+            Assert.IsFalse(Utilities.IsSubset(b, a));
+        }
     }
 }

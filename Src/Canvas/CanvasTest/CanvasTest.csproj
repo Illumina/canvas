@@ -103,6 +103,7 @@
   <ItemGroup>
     <Compile Include="Canvas\CommandLineParsing\ModeParserTests.cs" />
     <Compile Include="InlineAutoNSubstituteDataAttribute.cs" />
+    <Compile Include="TestCanvasBin.cs" />
     <Compile Include="TestLoessInterpolator.cs" />
     <Compile Include="TemporaryDirectoryFixture.cs" />
     <Compile Include="TestCanvasSomatic.cs" />
@@ -118,6 +119,10 @@
     <ProjectReference Include="..\..\Isas.Shared\Isas.Shared.csproj">
       <Project>{f2063ff3-61a7-4084-845d-da591011e36f}</Project>
       <Name>Isas.Shared</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\SequencingFiles\SequencingFiles.csproj">
+      <Project>{3eae6805-e445-4102-87c1-f57e20677778}</Project>
+      <Name>SequencingFiles</Name>
     </ProjectReference>
     <ProjectReference Include="..\CanvasBin\CanvasBin.csproj">
       <Project>{4fe7dc26-bb44-4a6e-b02b-785328c41260}</Project>
@@ -154,6 +159,18 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="app.config" />
+    <None Include="Data\bins_chrM.bed">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="Data\bins_chrU.bed">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="Data\single-end.bam">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="Data\single-end.bam.bai">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
     <None Include="packages.config" />
   </ItemGroup>
   <Choose>

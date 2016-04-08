@@ -88,6 +88,8 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="CanvasBin.cs" />
+    <Compile Include="FragmentBinner.cs" />
+    <Compile Include="FragmentBinnerConstants.cs" />
     <Compile Include="HitArray.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
