@@ -38,7 +38,7 @@ namespace CanvasBin
             Dictionary<string, List<GenomicBin>> predefinedBins = Utilities.LoadBedFile(parameters.predefinedBinsFile, gcIndex: 3);
             List<string> chromosomes = GetChromosomesInBam(); // used to order chromosomes
 
-            if (!predefinedBins.Keys.All(chrom => chromosomes.Contains(chrom)))
+            if (!Utilities.IsSubset(predefinedBins.Keys, chromosomes))
             {
                 throw new ApplicationException(
                     String.Format("Not all chromosomes in {0} are found in {1}.", parameters.predefinedBinsFile, parameters.bamFile));

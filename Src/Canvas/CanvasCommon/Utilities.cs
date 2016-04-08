@@ -770,6 +770,18 @@ namespace CanvasCommon
                 default: return false;
             }
         }
+
+        /// <summary>
+        /// Is a a subset of b?
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="a"></param>
+        /// <param name="b"></param>
+        /// <returns></returns>
+        public static bool IsSubset<T>(IEnumerable<T> a, IEnumerable<T> b)
+        {
+            return !a.Except(b).Any();
+        }
     }
 
 }
