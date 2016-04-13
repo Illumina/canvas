@@ -10,7 +10,7 @@ namespace CanvasSNV
             CanvasCommon.Utilities.LogCommandLine(arguments);
             if (arguments.Length < 4)
             {
-                Console.WriteLine("Usage: Chromosome NormalVCFPath TumorBAMPath OutputPath");
+                Console.WriteLine("Usage: Chromosome NormalVCFPath TumorBAMPath OutputPath [MinMapQ]");
                 return 1;
             }
             
@@ -18,6 +18,11 @@ namespace CanvasSNV
             string vcfPath = arguments[1];
             string bamPath = arguments[2];
             string outputPath = arguments[3];
+            int minMapQ = 0; // only use reads with MAPQ greater than this number
+            if (arguments.Length > 4)
+            {
+                minMapQ = int.Parse(arguments[4]);
+            }
 
             // Handle some special cases, if the "chromosome" is a special string:
             switch (chromosome.ToLowerInvariant())
@@ -32,9 +37,8 @@ namespace CanvasSNV
             }
 
             // Standard logic: Process one chromosome, write output to the specified file path:
-            SNVReviewer processor = new SNVReviewer();
-            processor.Chromosome = chromosome;
-            return processor.Main(vcfPath, bamPath, outputPath);
+            SNVReviewer processor = new SNVReviewer(chromosome, vcfPath, bamPath, outputPath, minMapQ);
+            return processor.Run();
         }
 
         static void OnLog(string message)
