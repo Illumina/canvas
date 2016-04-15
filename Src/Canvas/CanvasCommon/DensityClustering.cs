@@ -23,22 +23,27 @@ namespace CanvasCommon
         private List<double?> Distance;
         private List<double> Centroids;
         private List<double> Rho;
+        private List<double> CentroidsMAFs;
+        private List<double> CentroidsCoverage;
         private double _coverageWeightingFactor;
+        private double _knearestNeighbourCutoff;
+        private double CentroidsCutoff;
 
         // parameters
         // RhoCutoff and CentroidsCutoff estimated from running density clustering on 70 HapMix tumour samples https://git.illumina.com/Bioinformatics/HapMix/
         // and visually inspecting validity of clusters
-        private const double RhoCutoff = 2; 
-        private const double CentroidsCutoff = 0.1; 
-        private const double NeighborRateLow = 0.01;
-        private const double NeighborRateHigh = 0.02;
+        private const double RhoCutoff = 2.0; 
+        private const double NeighborRateLow = 0.02;
+        private const double NeighborRateHigh = 0.03;
         #endregion
 
 
-        public DensityClusteringModel(List<SegmentInfo> segments, double coverageWeightingFactor)
+        public DensityClusteringModel(List<SegmentInfo> segments, double coverageWeightingFactor, double knearestNeighbourCutoff, double centroidsCutoff)
         {
             Segments = segments;
             _coverageWeightingFactor = coverageWeightingFactor;
+            _knearestNeighbourCutoff = knearestNeighbourCutoff;
+            CentroidsCutoff = centroidsCutoff;
         }
 
         /// <summary>
@@ -55,6 +60,16 @@ namespace CanvasCommon
             return segmentCounts;
         }
 
+
+        public List<double> GetCentroidsMAF()
+        {
+            return this.CentroidsMAFs;
+        }
+
+        public List<double> GetCentroidsCoverage()
+        {
+            return this.CentroidsCoverage;
+        }
 
         /// <summary>
         /// Return the squared euclidean distance between (coverage, maf) and (coverage2, maf2) in scaled coverage/MAF space.
@@ -284,17 +299,26 @@ namespace CanvasCommon
         }
         
 
-        public int FindClusters(double rhoCutoff = RhoCutoff, double CentroidsCutoff = CentroidsCutoff)
+        public int FindClusters(double rhoCutoff = RhoCutoff)
         {
 
+            CentroidsMAFs = new List<double>();
+            CentroidsCoverage = new List<double>();
             int segmentsLength = this.Segments.Count;
             List<int> CentroidsIndex = new List<int>(segmentsLength);
             for (int segmentIndex = 0; segmentIndex < segmentsLength; segmentIndex++)
-                if (this.Rho[segmentIndex] > rhoCutoff && this.Centroids[segmentIndex] > CentroidsCutoff &&  this.Segments[segmentIndex].MAF >= 0)
+            {
+                if (this.Rho[segmentIndex] > rhoCutoff && this.Centroids[segmentIndex] > CentroidsCutoff && this.Segments[segmentIndex].MAF >= 0)
+                {
                     CentroidsIndex.Add(segmentIndex);
+                    CentroidsMAFs.Add(this.Segments[segmentIndex].MAF);
+                    CentroidsCoverage.Add(this.Segments[segmentIndex].Coverage);
+                }
+            }
 
-            // sort list and return indices
-            List<int> runOrder = new List<int>();
+
+        // sort list and return indices
+        List<int> runOrder = new List<int>();
             var sortedScores = Rho.Select((x, i) => new KeyValuePair<double, int>(x, i)).OrderByDescending(x => x.Key).ToList();
             runOrder = sortedScores.Select(x => x.Value).ToList();
 
@@ -330,7 +354,7 @@ namespace CanvasCommon
                     // populate clusters
                     if (this.Segments[runOrderIndex].MAF >= 0)
                         this.Segments[runOrderIndex].Cluster = this.Segments[minRhoElementIndex].Cluster;
-                    if (!this.Segments[runOrderIndex].Cluster.HasValue || this.Segments[runOrderIndex].MAF < 0)
+                    if (!this.Segments[runOrderIndex].Cluster.HasValue || this.Segments[runOrderIndex].MAF < 0 || this.Segments[runOrderIndex].KnearestNeighbour > this._knearestNeighbourCutoff)
                         this.Segments[runOrderIndex].Cluster = -1;
                 }
             }

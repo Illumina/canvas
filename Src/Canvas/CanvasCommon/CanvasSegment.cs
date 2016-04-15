@@ -14,6 +14,7 @@ namespace CanvasCommon
         #region Members
         public List<float> Counts;
         private int copyNumber;
+        private int secondBestCopyNumber;
         public List<float> VariantFrequencies = new List<float>();
         public List<int> VariantTotalCoverage = new List<int>();
         public int? MajorChromosomeCount;
@@ -70,6 +71,8 @@ namespace CanvasCommon
             this.End = end;
             this.Counts = new List<float>(counts);
             this.copyNumber = -1;
+            this.secondBestCopyNumber = -1;
+
         }
 
         public string Chr { get; private set; }
@@ -103,6 +106,18 @@ namespace CanvasCommon
             set
             {
                 copyNumber = value;
+            }
+        }
+
+        public int SecondBestCopyNumber
+        {
+            get
+            {
+                return secondBestCopyNumber;
+            }
+            set
+            {
+                secondBestCopyNumber = value;
             }
         }
 
