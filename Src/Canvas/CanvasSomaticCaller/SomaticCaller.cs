@@ -7,19 +7,14 @@ using SequencingFiles;
 using CanvasCommon;
 using SequencingFiles.Vcf;
 
-namespace CanvasSomaticCaller
+namespace somaticCallerParameters
 {
     public class SomaticCaller
     {
+
+
         #region Members
         // Static:
-        public static readonly float DefaultDeviationFactor = 1.75f;
-        public static readonly int DefaultDeviationIndexCutoff = 18;
-        public static readonly double DefaultCoverageWeighting = 0.4;
-        public static readonly int DefaultMinimumCallSize = 50000;
-        public static readonly double DefaultPrecisionWeightingFactor = 0.5;
-        static private int MaximumCopyNumber = 10;
-        static private int MaximumRelatedModels = 5;
 
         // Data:
         List<CanvasSegment> Segments;
@@ -45,12 +40,6 @@ namespace CanvasSomaticCaller
         //public double DiploidDistanceScoreWeightingFactor = 0.25;
         // New weights - incrementally better separation between top-scoring true model
         // and the next runner-up:
-        public double PercentNormal2WeightingFactor = 0.275;
-        public double DeviationScoreWeightingFactor = 0.275;
-        public double CN2WeightingFactor = 0.375;
-        public double DiploidDistanceScoreWeightingFactor = 0.225;
-        public double HeterogeneityScoreWeightingFactor = 0.275;
-
 
 
         // Parameters:
@@ -58,17 +47,10 @@ namespace CanvasSomaticCaller
         public float? userPurity;
         protected float MeanCoverage = 30;
         private double CoverageWeightingFactor; // Computed from CoverageWeighting
-        public float DeviationFactor = DefaultDeviationFactor;
-        public int DeviationIndexCutoff = DefaultDeviationIndexCutoff;
-        public double CoverageWeighting = DefaultCoverageWeighting;
-        public int MinimumCallSize = DefaultMinimumCallSize;
-        static protected int MinimumVariantFrequenciesForInformativeSegment = 50;
-        public double PrecisionWeightingFactor = 0.3333333333f;
         public bool IsEnrichment = false;
         public bool IsDbsnpVcf = false;
         protected PloidyInfo ReferencePloidy;
-        public float MinAllowedPloidy = 0.5f;
-        public float MaxAllowedPloidy = 5.0f;
+        public SomaticCallerParameters somaticCallerParameters;
 
 
         public bool FFPEMode = false; // Assume MAF and Coverage are independent/uncorrelated in FFPEMode (always false for now)
@@ -97,7 +79,7 @@ namespace CanvasSomaticCaller
             Console.WriteLine("{0} Initialize ploidy models...", DateTime.Now);
             this.AllPloidies = new List<SegmentPloidy>();
             double diploidPredictedMAF = CanvasCommon.Utilities.EstimateDiploidMAF(2, this.MeanCoverage);
-            for (int copyNumber = 0; copyNumber <= MaximumCopyNumber; copyNumber++)
+            for (int copyNumber = 0; copyNumber <= somaticCallerParameters.MaximumCopyNumber; copyNumber++)
             {
                 for (int majorCount = copyNumber; majorCount * 2 >= copyNumber; majorCount--)
                 {
@@ -145,7 +127,7 @@ namespace CanvasSomaticCaller
                     {
                         MAF.Add(VF > 0.5 ? 1 - VF : VF);
                     }
-                    if (MAF.Count < MinimumVariantFrequenciesForInformativeSegment) continue;
+                    if (MAF.Count < somaticCallerParameters.MinimumVariantFrequenciesForInformativeSegment) continue;
                     MAF.Sort();
                     float MedianMAF = MAF[MAF.Count / 2];
                     int medianCoverage = (int)Math.Round(CanvasCommon.Utilities.Median(segment.Counts));
@@ -382,7 +364,7 @@ namespace CanvasSomaticCaller
 
             // Special logic: Increase the allowed model deviation for targeted data.
             if (this.Segments.Count < 500)
-                this.DeviationFactor = 2.0f;
+                somaticCallerParameters.DeviationFactor = 2.0f;
 
             // Some debugging output, for developer usage:
             if (!string.IsNullOrEmpty(this.TruthDataPath))
@@ -398,7 +380,12 @@ namespace CanvasSomaticCaller
 
             this.MeanCoverage = CanvasIO.LoadVariantFrequencies(variantFrequencyFile, this.Segments);
             if (this.IsDbsnpVcf)
-                CanvasCommon.Utilities.PruneVariantFrequencies(this.Segments, this.TempFolder, ref MinimumVariantFrequenciesForInformativeSegment);
+            {
+                int tmpMinimumVariantFreq = somaticCallerParameters.MinimumVariantFrequenciesForInformativeSegment;
+                CanvasCommon.Utilities.PruneVariantFrequencies(this.Segments, this.TempFolder, ref tmpMinimumVariantFreq);
+                somaticCallerParameters.MinimumVariantFrequenciesForInformativeSegment = tmpMinimumVariantFreq;
+            }
+
             this.InitializePloidies();
 
             if (this.CNOracle != null) this.DebugModelSegmentsByPloidy();
@@ -407,7 +394,7 @@ namespace CanvasSomaticCaller
             {
                 ExtraHeaders = CallCNVUsingSNVFrequency(localSDmertic, referenceFolder, clusteringMode);
             }
-            catch (UncallableDataException e)
+            catch (SomaticCaller.UncallableDataException e)
             {
                 Console.WriteLine("Not calling any CNVs. Reason: {0}", e.Message);
                 Segments.Clear();
@@ -428,11 +415,11 @@ namespace CanvasSomaticCaller
             // jump across non-manifest intervals.
             if (this.IsEnrichment)
             {
-                CanvasSegment.MergeSegments(ref this.Segments, MinimumCallSize, 1);
+                CanvasSegment.MergeSegments(ref this.Segments, somaticCallerParameters.MinimumCallSize, 1);
             }
             else
             {
-                CanvasSegment.MergeSegmentsUsingExcludedIntervals(ref this.Segments, MinimumCallSize, ExcludedIntervals);
+                CanvasSegment.MergeSegmentsUsingExcludedIntervals(ref this.Segments, somaticCallerParameters.MinimumCallSize, ExcludedIntervals);
             }
 
             if (this.CNOracle != null)
@@ -466,7 +453,7 @@ namespace CanvasSomaticCaller
                 int CN = this.GetKnownCNForSegment(segment);
                 // Require the segment have a known CN and reasonably large number of variants:
                 if (CN < 0) continue;
-                if (segment.VariantFrequencies.Count < MinimumVariantFrequenciesForInformativeSegment) continue;
+                if (segment.VariantFrequencies.Count < somaticCallerParameters.MinimumVariantFrequenciesForInformativeSegment) continue;
 
                 List<float> MAF = new List<float>();
                 foreach (float VF in segment.VariantFrequencies)
@@ -547,9 +534,9 @@ namespace CanvasSomaticCaller
         /// Compute the expected bin counts for each copy number, given a specified bin count for CN=2 regions, and assuming
         /// pure tumor data.  
         /// </summary>
-        protected static double[] GetProjectedMeanCoverage(double diploidCoverage)
+        protected static double[] GetProjectedMeanCoverage(double diploidCoverage, int maximumCopyNumber)
         {
-            double[] mu = new double[MaximumCopyNumber + 1];
+            double[] mu = new double[maximumCopyNumber + 1];
             for (int count = 0; count < mu.Length; count++)
             {
                 mu[count] = diploidCoverage * count / 2f;
@@ -613,11 +600,11 @@ namespace CanvasSomaticCaller
         protected List<ModelPoint> InitializeModelPoints(List<SegmentInfo> segments, double coverage, int percentPurity, int numClusters)
         {
             List<ModelPoint> modelPoints = new List<ModelPoint>();
-            CoveragePurityModel model = new CoveragePurityModel();
+            SomaticCaller.CoveragePurityModel model = new SomaticCaller.CoveragePurityModel(somaticCallerParameters.MaximumCopyNumber);
             model.DiploidCoverage = coverage;
             model.Purity = percentPurity / 100f;
 
-            double[] mu = GetProjectedMeanCoverage(model.DiploidCoverage);
+            double[] mu = GetProjectedMeanCoverage(model.DiploidCoverage, somaticCallerParameters.MaximumCopyNumber);
             double diploidMAF = this.AllPloidies[3].MinorAlleleFrequency; /// %%% Magic number!
 
 
@@ -680,11 +667,11 @@ namespace CanvasSomaticCaller
 
 
         // Initialize model points given expected ploidy and purity values 
-        protected List<ModelPoint> InitializeModelPoints(CoveragePurityModel model)
+        protected List<ModelPoint> InitializeModelPoints(SomaticCaller.CoveragePurityModel model)
         {
             List<ModelPoint> modelPoints = new List<ModelPoint>();
 
-            double[] mu = GetProjectedMeanCoverage(model.DiploidCoverage);
+            double[] mu = GetProjectedMeanCoverage(model.DiploidCoverage, somaticCallerParameters.MaximumCopyNumber);
             double diploidMAF = this.AllPloidies[3].MinorAlleleFrequency; /// %%% Magic number!
 
 
@@ -728,7 +715,7 @@ namespace CanvasSomaticCaller
         /// <param name="segments"></param>
         /// <param name="debugPath"></param>
         /// <returns></returns>
-        protected double FitGaussians(CoveragePurityModel model, List<SegmentInfo> segments, string debugPath = null, double knearestNeighbourCutoff = Int32.MaxValue)
+        protected double FitGaussians(SomaticCaller.CoveragePurityModel model, List<SegmentInfo> segments, string debugPath = null, double knearestNeighbourCutoff = Int32.MaxValue)
         {
             List<ModelPoint> modelPoints = InitializeModelPoints(model);
 
@@ -779,12 +766,12 @@ namespace CanvasSomaticCaller
         ///     2)	Cumulative PercentCN of 80% and more for copy number bins > 2 indicate possible genome doubling. 
         ///     Assign score of 1 for genome doubling event. Use copy number 4 baseline instead of 2 and count events as in step 1.
         /// </summary>
-        protected double DiploidModelDistance(CoveragePurityModel model, List<SegmentInfo> usableSegments, long genomeLength)
+        protected double DiploidModelDistance(SomaticCaller.CoveragePurityModel model, List<SegmentInfo> usableSegments, long genomeLength)
         {
             double totalCNevents = 0;
             int modelBaseline = 2;
             double amplificationPercentCN = 0;
-            for (int copyNumber = 3; copyNumber < MaximumCopyNumber; copyNumber++)
+            for (int copyNumber = 3; copyNumber < somaticCallerParameters.MaximumCopyNumber; copyNumber++)
                 amplificationPercentCN += model.PercentCN[copyNumber];
             if (amplificationPercentCN > 0.8)
             {
@@ -802,7 +789,7 @@ namespace CanvasSomaticCaller
         /// <summary>
         /// Estimate genome distance between two purity models (weighted absolute difference between copy number profiles)
         /// /// </summary>
-        protected double CalculateModelDistance(CoveragePurityModel model1, CoveragePurityModel model2, List<SegmentInfo> usableSegments, long genomeLength)
+        protected double CalculateModelDistance(SomaticCaller.CoveragePurityModel model1, SomaticCaller.CoveragePurityModel model2, List<SegmentInfo> usableSegments, long genomeLength)
         {
             double genomeDistance = 0;
             // every model should have the same number of segments
@@ -882,8 +869,8 @@ namespace CanvasSomaticCaller
         protected void RefineDiploidMAF(List<SegmentInfo> segments, List<ModelPoint> modelPoints)
         {
             // First pass: Find segments assigned to even copy number (no LOH), get the mean MAF, and use that to refine our MAF model:
-            double[] diploidMAF = new double[1 + MaximumCopyNumber / 2];
-            double[] diploidMAFWeight = new double[1 + MaximumCopyNumber / 2];
+            double[] diploidMAF = new double[1 + somaticCallerParameters.MaximumCopyNumber / 2];
+            double[] diploidMAFWeight = new double[1 + somaticCallerParameters.MaximumCopyNumber / 2];
 
             // Seed the model with 10 megabases of coverage at the "expected" MAF, so that we don't end up with silly values
             // based on one or two point:
@@ -935,7 +922,7 @@ namespace CanvasSomaticCaller
         /// Helper function for ModelDeviation. Outputs
         /// estimates of average cluster deviation.
         /// </summary>
-        protected double ClusterDeviation(CoveragePurityModel model, List<ModelPoint> modelPoints, List<double> centroidMAFs, List<double> centroidCoverage, List<SegmentInfo> segments, int numClusters, double tempDeviation, out int heterogeneousClusters, out double heterogeneityIndex, bool bestModel, string debugPathClusterInfo = null)
+        protected double ClusterDeviation(SomaticCaller.CoveragePurityModel model, List<ModelPoint> modelPoints, List<double> centroidMAFs, List<double> centroidCoverage, List<SegmentInfo> segments, int numClusters, double tempDeviation, out int heterogeneousClusters, out double heterogeneityIndex, bool bestModel, string debugPathClusterInfo = null)
         {
             // compute average deviation for each cluster (clusterDeviation)
             List<ClusterModel> clusterDeviations = new List<ClusterModel>();
@@ -1049,7 +1036,7 @@ namespace CanvasSomaticCaller
         /// AccuracyDeviation is the weighted average of the distance from the segment centroid 
         /// and the corresponding ploidy.
         /// </summary>
-        protected double ModelDeviation(List<double> centroidMAFs, List<double> centroidCoverage, CoveragePurityModel model, List<SegmentInfo> segments, int numClusters, string debugPathClusterInfo = null, bool bestModel = false, string debugPath = null)
+        protected double ModelDeviation(List<double> centroidMAFs, List<double> centroidCoverage, SomaticCaller.CoveragePurityModel model, List<SegmentInfo> segments, int numClusters, string debugPathClusterInfo = null, bool bestModel = false, string debugPath = null)
         {
             List<ModelPoint> modelPoints = InitializeModelPoints(model);
             double precisionDeviation = 0;
@@ -1150,7 +1137,7 @@ namespace CanvasSomaticCaller
             // compute total deviation
             double totalDeviation;
             if (heterogeneousClusters > 100)
-                totalDeviation = PrecisionWeightingFactor * precisionDeviation + PrecisionWeightingFactor * accuracyDeviation + PrecisionWeightingFactor * clusterDeviation;
+                totalDeviation = somaticCallerParameters.PrecisionWeightingFactor * precisionDeviation + somaticCallerParameters.PrecisionWeightingFactor * accuracyDeviation + somaticCallerParameters.PrecisionWeightingFactor * clusterDeviation;
             else
                 totalDeviation = tempDeviation;
 
@@ -1213,16 +1200,22 @@ namespace CanvasSomaticCaller
         protected class CoveragePurityModel : CoverageModel
         {
             public double Purity;
-            public double[] PercentCN = new double[MaximumCopyNumber + 1];
             public double PercentNormal; // Percentage of bases called as CN=2, MajorChromosomeCount=1 (no LOH)
             public double DiploidDistance;
             public double? InterModelDistance;
             public double? HeterogeneityIndex;
             public double? ClusterDeviation;
+            public double[] PercentCN;
+
+            public CoveragePurityModel(int maximumCopyNumber)
+            {
+                 PercentCN = new double[maximumCopyNumber + 1];
+            }
+
 
         }
 
-        static public List<SegmentInfo> GetUsableSegmentsForModeling(List<CanvasSegment> segments, bool IsEnrichment)
+        static public List<SegmentInfo> GetUsableSegmentsForModeling(List<CanvasSegment> segments, bool IsEnrichment, int minimumVariantFrequenciesForInformativeSegment)
         {
             // Get the average count everwhere.  Exclude segments whose coverage is >2x this average.
             List<float> tempCountsList = new List<float>();
@@ -1253,7 +1246,7 @@ namespace CanvasSomaticCaller
                 // If the segment has few or no variants, then don't use the MAF for this segment - set to -1 (no frequency)
                 // Typically a segment will have no variants if it's on chrX or chrY and starling knows not to call a
                 // heterozygous variant there (other than in the PAR regions).
-                if (segment.VariantFrequencies.Count < MinimumVariantFrequenciesForInformativeSegment)
+                if (segment.VariantFrequencies.Count < minimumVariantFrequenciesForInformativeSegment)
                 {
                     info.MAF = -1;
                 }
@@ -1374,7 +1367,7 @@ namespace CanvasSomaticCaller
             double bestLikelihood = double.MinValue;
             double bestCoverageWeightingFactor = 0;
             // magic-scaling for now - keep small to penalize coverage, tested on 50+ groundtruth corpus
-            double maxCoverageWeightingFactor = this.CoverageWeighting / medianCoverageLevel;
+            double maxCoverageWeightingFactor = somaticCallerParameters.CoverageWeighting / medianCoverageLevel;
             double minCoverageWeightingFactor = 0.1 / maxCoverageLevel;
             double stepCoverageWeightingFactor = Math.Max(0.00001, (maxCoverageWeightingFactor - minCoverageWeightingFactor) / 10);
 
@@ -1398,7 +1391,7 @@ namespace CanvasSomaticCaller
         /// and then a fine-grained search), and for each one, measure the distortion - the average distance (weighted 
         /// by segment length) between actual and modeled (MAF, Coverage) coordinate.
         /// </summary>
-        protected CoveragePurityModel ModelOverallCoverageAndPurity(long genomeLength, CanvasSomaticClusteringMode clusteringMode)
+        protected SomaticCaller.CoveragePurityModel ModelOverallCoverageAndPurity(long genomeLength, CanvasSomaticClusteringMode clusteringMode)
         {
             List<SegmentInfo> usableSegments;
             // Identify usable segments using our MinimumVariantFrequenciesForInformativeSegment cutoff, 
@@ -1406,15 +1399,15 @@ namespace CanvasSomaticCaller
             int validMAFCount = 0;
             while (true)
             {
-                usableSegments = GetUsableSegmentsForModeling(this.Segments, IsEnrichment);
+                usableSegments = GetUsableSegmentsForModeling(this.Segments, IsEnrichment, somaticCallerParameters.MinimumVariantFrequenciesForInformativeSegment);
                 validMAFCount = usableSegments.Count(x => x.MAF >= 0);
                 if (validMAFCount > Math.Min(20, this.Segments.Count)) break; // We have enough usable segments with nonnull MAF
-                if (MinimumVariantFrequenciesForInformativeSegment <= 5) break; // Give up on modeling
-                MinimumVariantFrequenciesForInformativeSegment -= 15;
+                if (somaticCallerParameters.MinimumVariantFrequenciesForInformativeSegment <= 5) break; // Give up on modeling
+                somaticCallerParameters.MinimumVariantFrequenciesForInformativeSegment -= 15;
             }
             Console.WriteLine("Modeling overall coverage/purity across {0} segments", usableSegments.Count);
             if (usableSegments.Count < 10)
-                throw new UncallableDataException("Cannot model coverage/purity with less than 10 segments.");
+                throw new SomaticCaller.UncallableDataException("Cannot model coverage/purity with less than 10 segments.");
 
             // When computing distances between model and actual points, we want to provide roughly equal weight
             // to coverage (which covers a large range) and MAF, which falls in the range (0, 0.5).  
@@ -1431,7 +1424,7 @@ namespace CanvasSomaticCaller
             int minCoverageLevel = Convert.ToInt32(coverageQuartiles.Item1);
             int maxCoverageLevel = Convert.ToInt32(coverageQuartiles.Item3);
             int medianCoverageLevel = Convert.ToInt32(coverageQuartiles.Item2);
-            this.CoverageWeightingFactor = this.CoverageWeighting / medianCoverageLevel;
+            this.CoverageWeightingFactor = somaticCallerParameters.CoverageWeighting / medianCoverageLevel;
             int bestNumClusters = 0;
             double knearestNeighbourCutoff = 0;
             List<double> centroidsMAF = new List<double>();
@@ -1463,18 +1456,25 @@ namespace CanvasSomaticCaller
                         // Step2: Density clustering 
                         double centroidCutoff = 0;
                         int nClusters = 0;
-                        List <double> centroidCutoffs = new List<double>{ 0.06, 0.05, 0.04, 0.03, 0.02, 0.01, 0.009, 0.008};
                         List<int> numNumClusters = new List<int>();
-                        foreach (double cutoff in centroidCutoffs)
+                        List<double> centroidCutoffs = new List<double>(); 
+                        double centoridStep = (somaticCallerParameters.UpperCentroidCutoff - somaticCallerParameters.LowerCentroidCutoff) / somaticCallerParameters.CentroidCutoffStep;
+                        for (double centoridCutoff = somaticCallerParameters.LowerCentroidCutoff;
+                            centoridCutoff < somaticCallerParameters.UpperCentroidCutoff;
+                            centoridCutoff += centoridStep)
+                            centroidCutoffs.Add(centoridCutoff);
+                        centroidCutoffs.Reverse();
+
+                        foreach (double centoridCutoff in centroidCutoffs)
                         {
-                            DensityClusteringModel dc = new DensityClusteringModel(usableSegments, CoverageWeightingFactor, knearestNeighbourCutoff, cutoff);
+                            DensityClusteringModel dc = new DensityClusteringModel(usableSegments, CoverageWeightingFactor, knearestNeighbourCutoff, centoridCutoff);
                             dc.EstimateDistance();
                             double distanceThreshold = dc.EstimateDc();
                             dc.GaussianLocalDensity(distanceThreshold);
                             dc.FindCentroids();
                             nClusters = dc.FindClusters();
                             numNumClusters.Add(nClusters);
-                            Console.WriteLine(">>> Running density clustering for cutoff {0:F5} , number of clusters {1}", cutoff, nClusters);
+                            Console.WriteLine(">>> Running density clustering for cutoff {0:F5} , number of clusters {1}", centoridCutoff, nClusters);
                         }
                         var modeClustersValues = numNumClusters
                             .GroupBy(x => x)
@@ -1500,7 +1500,7 @@ namespace CanvasSomaticCaller
                         }
                         else
                         {
-                            centroidCutoff = 0.03;
+                            centroidCutoff = somaticCallerParameters.DefaultCentroidCutoff;
                             nClusters = numNumClusters[centroidCutoffs.FindIndex(x => x == centroidCutoff)];
                         }
 
@@ -1524,11 +1524,11 @@ namespace CanvasSomaticCaller
             // purity 5% and make lots of (bogus) calls which fit the noise in coverage and MAF.
 
             double bestDeviation = double.MaxValue;
-            List<CoveragePurityModel> allModels = new List<CoveragePurityModel>();
+            List<SomaticCaller.CoveragePurityModel> allModels = new List<SomaticCaller.CoveragePurityModel>();
             // set best somatic model to pre-specified  ploidy and purity values
             if (this.userPloidy != null && this.userPurity != null)
             {
-                CoveragePurityModel bestModel = new CoveragePurityModel();
+                SomaticCaller.CoveragePurityModel bestModel = new SomaticCaller.CoveragePurityModel(somaticCallerParameters.MaximumCopyNumber);
                 bestModel.DiploidCoverage = GetDiploidCoverage(medianCoverageLevel, this.userPloidy.Value);
                 bestModel.Purity = Convert.ToDouble(this.userPurity);
 
@@ -1540,8 +1540,8 @@ namespace CanvasSomaticCaller
             else
             {
                 // Coarse search: Consider various (coverage, purity) tuples.  
-                int minCoverage = (int)Math.Max(10, medianCoverageLevel / 2.5);
-                int maxCoverage = (int)Math.Max(10, medianCoverageLevel * 2.5);
+                int minCoverage = (int)Math.Max(10, medianCoverageLevel / somaticCallerParameters.LowerCoverageLevelWeightingFactor);
+                int maxCoverage = (int)Math.Max(10, medianCoverageLevel * somaticCallerParameters.UpperCoverageLevelWeightingFactor);
                 int minPercentPurity = 20;
                 int maxPercentPurity = 100;
                 if (this.userPloidy != null)
@@ -1552,24 +1552,25 @@ namespace CanvasSomaticCaller
                 {
                     minPercentPurity = maxPercentPurity = (int)(this.userPurity.Value * 100);
                 }
-                int coverageStep = Math.Max(1, (maxCoverage - minCoverage) / 80);
+                int coverageStep = Math.Max(1, (maxCoverage - minCoverage) / somaticCallerParameters.CoverageLevelWeightingFactorLevels);
                 Console.WriteLine(">>>DiploidCoverage: Consider {0}...{1} step {2}", minCoverage, maxCoverage, coverageStep);
                 for (int coverage = minCoverage; coverage < maxCoverage; coverage += coverageStep)
                 {
                     // iterate over purity range 
                     for (int percentPurity = minPercentPurity; percentPurity <= maxPercentPurity; percentPurity += 5)
                     {
-                        CoveragePurityModel model = new CoveragePurityModel();
+                        SomaticCaller.CoveragePurityModel model = new SomaticCaller.CoveragePurityModel(somaticCallerParameters.MaximumCopyNumber
+);
                         model.DiploidCoverage = coverage;
                         model.Purity = percentPurity / 100f;
                         this.ModelDeviation(centroidsMAF, centroidsCoverage, model, usableSegments, bestNumClusters);
                         this.DiploidModelDistance(model, usableSegments, genomeLength);
-                        if (model.Deviation < bestDeviation && model.Ploidy < this.MaxAllowedPloidy && model.Ploidy > this.MinAllowedPloidy)
+                        if (model.Deviation < bestDeviation && model.Ploidy < somaticCallerParameters.MaxAllowedPloidy && model.Ploidy > somaticCallerParameters.MinAllowedPloidy)
                         {
                             bestDeviation = model.Deviation;
                         }
                         // exluce models with unrealistic genome ploidies
-                        if (model.Ploidy < this.MaxAllowedPloidy && model.Ploidy > this.MinAllowedPloidy)
+                        if (model.Ploidy < somaticCallerParameters.MaxAllowedPloidy && model.Ploidy > somaticCallerParameters.MinAllowedPloidy)
                             allModels.Add(model);
                     }
                 }
@@ -1582,7 +1583,7 @@ namespace CanvasSomaticCaller
                 //   for PercentCN2.  And similarly for DeviationScore: BestDeviation=1, WorstAllowedDeviation=0
                 // - Choose a model (with acceptable deviation) which maximizes a score of the form:
                 //   PercentNormal + a * PercentCN2 + b * DeviationScore
-                double worstAllowedDeviation = bestDeviation * this.DeviationFactor;
+                double worstAllowedDeviation = bestDeviation * somaticCallerParameters.DeviationFactor;
                 double bestCN2 = 0;
                 double bestCN2Normal = 0;
                 double bestDiploidDistance = 0;
@@ -1591,21 +1592,21 @@ namespace CanvasSomaticCaller
                 // derive max values for scaling
                 int counter = 0;
                 List<double> deviations = new List<double>();
-                foreach (CoveragePurityModel model in allModels)
+                foreach (SomaticCaller.CoveragePurityModel model in allModels)
                 {
                     if (model.Deviation < worstAllowedDeviation) counter++;
                     deviations.Add(model.Deviation);
                 }
                 deviations.Sort();
-                if (counter < this.DeviationIndexCutoff)
+                if (counter < somaticCallerParameters.DeviationIndexCutoff)
                 {
-                    worstAllowedDeviation = deviations[Math.Min(this.DeviationIndexCutoff, deviations.Count - 1)];
+                    worstAllowedDeviation = deviations[Math.Min(somaticCallerParameters.DeviationIndexCutoff, deviations.Count - 1)];
                 }
 
                 double bestAccuracyDeviation = double.MaxValue;
                 double bestPrecisionDeviation = double.MaxValue;
                 // derive max values for scaling
-                foreach (CoveragePurityModel model in allModels)
+                foreach (SomaticCaller.CoveragePurityModel model in allModels)
                 {
                     bestAccuracyDeviation = Math.Min(bestAccuracyDeviation, model.AccuracyDeviation);
                     bestPrecisionDeviation = Math.Min(bestPrecisionDeviation, model.PrecisionDeviation);
@@ -1616,8 +1617,8 @@ namespace CanvasSomaticCaller
                 }
 
                 // coarse search to find best ploidy and purity model  
-                List<CoveragePurityModel> bestModels = new List<CoveragePurityModel>();
-                CoveragePurityModel bestModel = null;
+                List<SomaticCaller.CoveragePurityModel> bestModels = new List<SomaticCaller.CoveragePurityModel>();
+                SomaticCaller.CoveragePurityModel bestModel = null;
                 double bestScore = 0;
                 // holds scores for all models
                 List<double> scores = new List<double>();
@@ -1632,7 +1633,7 @@ namespace CanvasSomaticCaller
                     debugWriter.Write("DiploidDistance\tDiploidDistance/Best\t");
                     debugWriter.Write("HeterogeneityIndex\tClusterDeviation");
                     debugWriter.WriteLine();
-                    foreach (CoveragePurityModel model in allModels)
+                    foreach (SomaticCaller.CoveragePurityModel model in allModels)
                     {
 
                         // Filter models with unacceptable deviation:
@@ -1641,17 +1642,17 @@ namespace CanvasSomaticCaller
                         // (1.5 - 0.5) = minmax range of the new weighting scale; (1.0 - 0.2) = minmax range of the purity values 
                         // This transformation leads a maximal lowPurityWeightingFactor value of 1.5 for the lowest purity model and a minimal value of 0.75 for the highest purity model 
                         double lowPurityWeightingFactor = 1.5 / ((1.5 - 0.5) / (1.0 - 0.2) * (model.Purity - 0.2) + 1.0);
-                        double score = this.PercentNormal2WeightingFactor * model.PercentNormal / Math.Max(0.01, bestCN2Normal);
+                        double score = somaticCallerParameters.PercentNormal2WeightingFactor * model.PercentNormal / Math.Max(0.01, bestCN2Normal);
                         if (model.HeterogeneityIndex.HasValue && this.IsEnrichment)
                         {
                             heterogeneityIndex = Math.Max(0.5, Math.Min(4.0,(double)model.HeterogeneityIndex));
                             heterogeneityIndex = Math.Min(1.0,(double)model.HeterogeneityIndex)/ Math.Max(1.0, (double)model.HeterogeneityIndex);
                         }
                             
-                        score += lowPurityWeightingFactor * this.CN2WeightingFactor * model.PercentCN[2] / Math.Max(0.01, bestCN2);
-                        score += this.DeviationScoreWeightingFactor * (worstAllowedDeviation - model.Deviation) / (worstAllowedDeviation - bestDeviation);
-                        score += this.DiploidDistanceScoreWeightingFactor * model.DiploidDistance / Math.Max(0.01, bestDiploidDistance);
-                        score += this.HeterogeneityScoreWeightingFactor * heterogeneityIndex;
+                        score += lowPurityWeightingFactor * somaticCallerParameters.CN2WeightingFactor * model.PercentCN[2] / Math.Max(0.01, bestCN2);
+                        score += somaticCallerParameters.DeviationScoreWeightingFactor * (worstAllowedDeviation - model.Deviation) / (worstAllowedDeviation - bestDeviation);
+                        score += somaticCallerParameters.DiploidDistanceScoreWeightingFactor * model.DiploidDistance / Math.Max(0.01, bestDiploidDistance);
+                        score += somaticCallerParameters.HeterogeneityScoreWeightingFactor * heterogeneityIndex;
                         scores.Add(score);
 
                         bestModels.Add(model);
@@ -1683,11 +1684,11 @@ namespace CanvasSomaticCaller
                 // the overall modeling approach might be more unstable.
                 double interModelDistance = 0;
                 // start at one since model #0 is the highest scoring model to compare to
-                for (int i = 1; i < MaximumRelatedModels; i++)
+                for (int i = 1; i < SomaticCallerParameters.MaximumRelatedModels; i++)
                 {
                     interModelDistance += CalculateModelDistance(bestModels[scoresIndex[0]], bestModels[scoresIndex[i]], usableSegments, genomeLength);
                 }
-                interModelDistance /= (double)MaximumRelatedModels;
+                interModelDistance /= (double) SomaticCallerParameters.MaximumRelatedModels;
 
                 Console.WriteLine(">>> Initial model: Deviation {0:F5}, coverage {1}, purity {2:F1}%, CN2 {3:F2}", bestModel.Deviation,
                         bestModel.DiploidCoverage, 100 * bestModel.Purity, bestModel.PercentCN[2]);
@@ -1717,7 +1718,7 @@ namespace CanvasSomaticCaller
                 {
                     for (int percentPurity = minPercentPurity; percentPurity <= maxPercentPurity; percentPurity++)
                     {
-                        CoveragePurityModel model = new CoveragePurityModel();
+                        SomaticCaller.CoveragePurityModel model = new SomaticCaller.CoveragePurityModel(somaticCallerParameters.MaximumCopyNumber);
                         model.DiploidCoverage = coverage;
                         model.Purity = percentPurity / 100f;
                         this.ModelDeviation(centroidsMAF, centroidsCoverage, model, usableSegments, bestNumClusters);
@@ -1818,7 +1819,7 @@ namespace CanvasSomaticCaller
 
                 // Special logic for extra-high coverage: Adjust our copy number call to be scaled by coverage,
                 // and adjust our model distance as well.
-                if (segment.CopyNumber == MaximumCopyNumber)
+                if (segment.CopyNumber == somaticCallerParameters.MaximumCopyNumber)
                 {
                     double coverageRatio = segment.MeanCount / Model.DiploidCoverage;
                     int referenceCN = 2;
@@ -1827,7 +1828,7 @@ namespace CanvasSomaticCaller
                     // 2*coverageRatio = ObservedCopyNumber = Purity*TumorCopyNumber + (1-Purity)*ReferenceCopyNumber
                     double estimateCopyNumber = (2 * coverageRatio - referenceCN * (1 - Model.Purity)) / Model.Purity;
                     int estimateCN = (int)Math.Round(estimateCopyNumber);
-                    if (estimateCN > MaximumCopyNumber)
+                    if (estimateCN > somaticCallerParameters.MaximumCopyNumber)
                     {
                         segment.CopyNumber = estimateCN;
                         segment.MajorChromosomeCount = null;
@@ -2011,7 +2012,7 @@ namespace CanvasSomaticCaller
         /// </summary>
         private double EstimateChromosomeCount()
         {
-            int[] baseCountByCopyNumber = new int[MaximumCopyNumber + 1];
+            int[] baseCountByCopyNumber = new int[somaticCallerParameters.MaximumCopyNumber + 1];
             string currentChromosome = null;
             double overallCount = 0;
             foreach (CanvasSegment segment in this.Segments)
@@ -2023,7 +2024,7 @@ namespace CanvasSomaticCaller
                     Array.Clear(baseCountByCopyNumber, 0, baseCountByCopyNumber.Length);
                     currentChromosome = segment.Chr;
                 }
-                baseCountByCopyNumber[Math.Min(segment.CopyNumber, MaximumCopyNumber)] += (segment.End - segment.Begin);
+                baseCountByCopyNumber[Math.Min(segment.CopyNumber, somaticCallerParameters.MaximumCopyNumber)] += (segment.End - segment.Begin);
             }
             overallCount += GetWeightedChromosomeCount(baseCountByCopyNumber);
             return overallCount;
