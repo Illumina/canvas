@@ -7,7 +7,7 @@ using SequencingFiles;
 using CanvasCommon;
 using SequencingFiles.Vcf;
 
-namespace somaticCallerParameters
+namespace CanvasSomaticCaller
 {
     public class SomaticCaller
     {

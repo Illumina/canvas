@@ -6,7 +6,7 @@ using NDesk.Options;
 using System.Runtime.Serialization;
 using System.Runtime.Serialization.Json;
 
-namespace somaticCallerParameters
+namespace CanvasSomaticCaller
 {
     class Program
     {

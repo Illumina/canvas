@@ -2,7 +2,7 @@ using System.Runtime.Serialization;
 using System.Runtime.Serialization.Json;
 using System.Security.Policy;
 
-namespace somaticCallerParameters
+namespace CanvasSomaticCaller
 {
     public class SomaticCallerParameters
     {
