@@ -45,7 +45,7 @@ namespace CanvasDiploidCaller
                 { "r|reference=",     "reference genome folder that contains GenomeSize.xml",                                           v => referenceFolder = v },
                 { "n|sampleName=",    "sample name for output VCF header (optional)",                                                   v => sampleName = v },
                 { "p|ploidyBed=",     "bed file specifying reference ploidy (e.g. for sex chromosomes) (optional)",                     v => ploidyBedPath = v },
-                { "d|dbsnpvcf", "flag indicating a dbSNP VCF file is used to generate the variant frequency file", v => isDbsnpVcf = v != null },
+                { "d|dbsnpvcf", "flag indicating a dbSNP VCF file is used to generate the variant frequency file",                      v => isDbsnpVcf = v != null },
                 { "h|help",           "show this message and exit",                                                                     v => needHelp = v != null },
                 { "t|truth=", "path to vcf/bed with CNV truth data (optional)", v => truthDataPath = v },
             };
