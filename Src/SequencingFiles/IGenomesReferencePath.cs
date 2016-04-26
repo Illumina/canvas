@@ -77,7 +77,7 @@ namespace SequencingFiles
             }
             else
             {
-                throw new ArgumentException("Reference path not in iGenomes format ...\\{species}\\{provider}\\{version}\\Sequence\\WholeGenomeFasta or ...\\{species}\\{provider}\\{version}\\Sequence\\WholeGenomeFasta\\genome.fa." + string.Format("Input was: {0}", referencePath));
+            throw new ArgumentException("Reference path not in iGenomes format ...\\{species}\\{provider}\\{version}\\Sequence\\WholeGenomeFasta or ...\\{species}\\{provider}\\{version}\\Sequence\\WholeGenomeFasta\\genome.fa." + string.Format("Input was: {0}", referencePath));
             }
 
         }

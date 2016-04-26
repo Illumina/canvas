@@ -130,6 +130,10 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
+    <None Include="Canvas.nuspec">
+      <SubType>Designer</SubType>
+    </None>
+    <None Include="Canvas.targets" />
     <None Include="packages.config">
       <SubType>Designer</SubType>
     </None>

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Diagnostics;
 using Canvas.CommandLineParsing;
+using CanvasCommon;
 
 namespace Canvas
 {
@@ -8,9 +9,7 @@ namespace Canvas
     {
         public static int Main(string[] args)
         {
-            var version = FileVersionInfo.GetVersionInfo(typeof(MainParser).Assembly.Location).ProductVersion;
-            var copyright = FileVersionInfo.GetVersionInfo(typeof(MainParser).Assembly.Location).LegalCopyright;
-            var modeParser = new MainParser(version, copyright,
+            var modeParser = new MainParser(CanvasVersionInfo.VersionString, CanvasVersionInfo.CopyrightString,
                 new GermlineWgsModeParser("Germline-WGS", "CNV calling of a germline sample from whole genome sequencing data"),
                 new SomaticEnrichmentModeParser("Somatic-Enrichment", "CNV calling of a somatic sample from targeted sequencing data"),
                 new TumorNormalWgsModeParser("Somatic-WGS", "CNV calling of a somatic sample from whole genome sequencing data"),

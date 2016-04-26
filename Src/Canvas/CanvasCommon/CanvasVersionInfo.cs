@@ -1,14 +1,12 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Diagnostics;
+using System.Reflection;
 
 namespace CanvasCommon
 {
     public class CanvasVersionInfo
     {
         public const string NameString = "Canvas";
-        public const string VersionString = "1.3.9";
+        public static string VersionString => FileVersionInfo.GetVersionInfo(Assembly.GetExecutingAssembly().Location).ProductVersion;
+        public static string CopyrightString => FileVersionInfo.GetVersionInfo(Assembly.GetExecutingAssembly().Location).LegalCopyright;
     }
 }

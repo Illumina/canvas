@@ -2,8 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.IO;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace CanvasCommon
 {
@@ -12,7 +10,8 @@ namespace CanvasCommon
     {
         Binary = 0, // Count 0 or 1 hits per kmer; not used any more!
         TruncatedDynamicRange, // was 3
-        GCContentWeighted // was 5
+        GCContentWeighted, // was 5
+        Fragment // Count fragments not unique 35-mers
     }
 
     public enum CanvasNormalizeMode
@@ -74,6 +73,8 @@ namespace CanvasCommon
                 case "5":
                 case "gccontentweighted":
                     return CanvasCoverageMode.GCContentWeighted;
+                case "fragment":
+                    return CanvasCoverageMode.Fragment;
                 default:
                     throw new Exception(string.Format("Invalid canvas coverage mode '{0}'", mode));
             }
@@ -613,7 +614,7 @@ namespace CanvasCommon
 
         }
 
-        static public Dictionary<string, List<GenomicBin>> LoadBedFile(string bedPath)
+        public static Dictionary<string, List<GenomicBin>> LoadBedFile(string bedPath, int? gcIndex = null)
         {
             Dictionary<string, List<GenomicBin>> excludedIntervals = new Dictionary<string, List<GenomicBin>>();
             int count = 0;
@@ -627,13 +628,26 @@ namespace CanvasCommon
                     string chr = bits[0];
                     if (!excludedIntervals.ContainsKey(chr)) excludedIntervals[chr] = new List<GenomicBin>();
                     GenomicBin interval = new GenomicBin();
+                    interval.Chromosome = chr;
                     interval.Start = int.Parse(bits[1]);
                     interval.Stop = int.Parse(bits[2]);
+                    if (interval.Start < 0)
+                    {
+                        throw new ApplicationException(String.Format("Start must be non-negative in a BED file: {0}", fileLine));
+                    }
+                    if (interval.Start >= interval.Stop) // Do not allow empty intervals
+                    {
+                        throw new ApplicationException(String.Format("Start must be less than Stop in a BED file: {0}", fileLine));
+                    }
+                    if (gcIndex.HasValue && gcIndex.Value < bits.Length)
+                    {
+                        interval.GC = int.Parse(bits[gcIndex.Value]);
+                    }
                     excludedIntervals[chr].Add(interval);
                     count++;
                 }
             }
-            Console.WriteLine(">>> Loaded {0} excluded intervals for {1} sequences", count, excludedIntervals.Keys.Count);
+            Console.WriteLine(">>> Loaded {0} intervals for {1} sequences", count, excludedIntervals.Keys.Count);
             return excludedIntervals;
         }
 
@@ -739,6 +753,34 @@ namespace CanvasCommon
             }
 
             return (b + a) / 2;
+        }
+        /// <summary>
+        /// Returns true if a character is an upper or lower case G or C.
+        /// </summary>
+        /// <param name="c">Character to check.</param>
+        /// <returns>True if c is a G or a C (case-insensitive).</returns>
+        public static bool IsGC(char c)
+        {
+            switch (c)
+            {
+                case 'C': return true;
+                case 'G': return true;
+                case 'c': return true;
+                case 'g': return true;
+                default: return false;
+            }
+        }
+
+        /// <summary>
+        /// Is a a subset of b?
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="a"></param>
+        /// <param name="b"></param>
+        /// <returns></returns>
+        public static bool IsSubset<T>(IEnumerable<T> a, IEnumerable<T> b)
+        {
+            return !a.Except(b).Any();
         }
     }
 

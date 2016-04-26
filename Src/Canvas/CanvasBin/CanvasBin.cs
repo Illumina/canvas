@@ -60,24 +60,6 @@ namespace CanvasBin
         }
 
         /// <summary>
-        /// Returns true if a character is an upper or lower case G or C.
-        /// </summary>
-        /// <param name="c">Character to check.</param>
-        /// <returns>True if c is a G or a C (case-insensitive).</returns>
-        static bool IsGC(char c)
-        {
-            switch (c)
-            {
-                case 'C': return true;
-                case 'G': return true;
-                case 'c': return true;
-                case 'g': return true;
-                default: return false;
-            }
-        }
-
-
-        /// <summary>
         /// Estimate mean fragment length of read pairs.
         /// </summary>
         /// <param name="c">Dictionary of fragment length arrays for each chromosome.</param>
@@ -555,7 +537,7 @@ namespace CanvasBin
                     currentBin.NucleotideCount++;
 
 
-                //if (IsGC(fastaEntry.Bases[pos]))
+                //if (Utilities.IsGC(fastaEntry.Bases[pos]))
                 //    currentBin.GCCount++;
                 switch (fastaEntry.Bases[pos])
                 {
@@ -654,45 +636,6 @@ namespace CanvasBin
                 }
             }
 
-        }
-
-        /// <summary>
-        /// Read predefined bins from a BED file. Assume the bins are sorted by genomic coordinates.
-        /// </summary>
-        /// <param name="predefinedBinsFile">input BED file</param>
-        /// <returns>predefined bins by chromosome</returns>
-        static Dictionary<string, List<GenomicBin>> ReadPredefinedBins(string predefinedBinsFile)
-        {
-            Dictionary<string, List<GenomicBin>> predefinedBins = new Dictionary<string, List<GenomicBin>>();
-            if (!File.Exists(predefinedBinsFile)) { return predefinedBins; }
-
-            using (StreamReader reader = new StreamReader(predefinedBinsFile))
-            {
-                string row;
-
-                while ((row = reader.ReadLine()) != null)
-                {
-                    try
-                    {
-                        if (row.StartsWith("#")) { continue; } // ignore comments
-                        string[] fields = row.Split('\t');
-                        if (fields.Length < 3) { continue; }
-
-                        string chr = fields[0];
-                        int start = Convert.ToInt32(fields[1]);
-                        int stop = Convert.ToInt32(fields[2]);
-                        GenomicBin bin = new GenomicBin(chr, start, stop, 0, 0);
-                        if (!predefinedBins.ContainsKey(chr)) { predefinedBins[chr] = new List<GenomicBin>(); }
-                        predefinedBins[chr].Add(bin);
-                    }
-                    catch (Exception e)
-                    {
-                        throw new Exception(String.Format("Failed to parse {0}; Line: {1}", predefinedBinsFile, row), e);
-                    }
-                }
-            }
-
-            return predefinedBins;
         }
 
         /// <summary>
@@ -816,8 +759,6 @@ namespace CanvasBin
             // A value at a given index will represents fragment length of the read starting at that index
             Dictionary<string, Int16[]> fragmentLengths = new Dictionary<string, Int16[]>();
 
-            Console.WriteLine("{0} Parsed command-line", DateTime.Now);
-
             if (parameters.intermediatePaths.Count == 0)
             {
                 BinOneGenomicInterval(parameters, possibleAlignments, observedAlignments, fragmentLengths);
@@ -877,7 +818,7 @@ namespace CanvasBin
             if (parameters.predefinedBinsFile != null)
             {
                 // Read predefined bins
-                predefinedBins = ReadPredefinedBins(parameters.predefinedBinsFile);
+                predefinedBins = Utilities.LoadBedFile(parameters.predefinedBinsFile);
             }
 
             // Bin alignments.
