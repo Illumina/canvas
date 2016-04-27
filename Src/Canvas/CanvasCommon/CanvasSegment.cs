@@ -287,8 +287,7 @@ namespace CanvasCommon
                         int position = (alternateAllele.StartsWith("<") && alternateAllele.EndsWith(">")) ? segment.Begin : segment.Begin + 1;
                         writer.Write($"{segment.Chr}\t{position}\tCanvas:{cnvType.ToVcfId()}:{segment.Chr}:{segment.Begin + 1}-{segment.End}\t");
 
-                        var filter = segment.GetFilter(qualityThreshold, qualityFilter);
-                        writer.Write($"N\t{alternateAllele}\t{segment.QScore}\t{filter}\t", alternateAllele, segment.QScore, filter);
+                        writer.Write($"N\t{alternateAllele}\t{segment.QScore}\t{segment.Filter}\t", alternateAllele, segment.QScore, segment.Filter);
 
                         if (cnvType != CnvType.Reference)
                             writer.Write($"SVTYPE={cnvType.ToSvType()};");
@@ -311,23 +310,6 @@ namespace CanvasCommon
                     }
                 }
             }
-        }
-
-        private string GetFilter(int qualityThreshold, string qualityFilter)
-        {
-            string filter = null;
-            if (QScore < qualityThreshold)
-                filter = qualityFilter;
-            if (End - Begin < 10000)
-            {
-                if (filter != null)
-                    filter = filter + ";L10kb";
-                else
-                    filter = "L10kb";
-            }
-            if (filter == null)
-                filter = "PASS";
-            return filter;
         }
 
         static public Dictionary<string, List<CanvasSegment>> GetSegmentsByChromosome(List<CanvasSegment> segments)

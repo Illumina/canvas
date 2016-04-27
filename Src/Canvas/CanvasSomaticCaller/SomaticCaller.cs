@@ -439,7 +439,7 @@ namespace CanvasSomaticCaller
         /// </summary>
         protected void FilterCNVCalls()
         {
-            string qualityFilter = "Q";
+            string qualityFilter = $"q{QualityFilterThreshold}";
             foreach (var segment in this.Segments)
             {
                 string filter = null;
