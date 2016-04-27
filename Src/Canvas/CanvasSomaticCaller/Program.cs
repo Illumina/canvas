@@ -6,6 +6,8 @@ using NDesk.Options;
 using System.Runtime.Serialization;
 using System.Runtime.Serialization.Json;
 
+using Isas.Shared;
+
 namespace CanvasSomaticCaller
 {
     class Program
@@ -42,7 +44,7 @@ namespace CanvasSomaticCaller
             float? userPurity = null;
             float? userPloidy = null;
             CanvasCommon.CanvasSomaticClusteringMode somaticClusteringMode = CanvasCommon.CanvasSomaticClusteringMode.Density;
-            string parameterconfigPath = Path.Combine(System.IO.Directory.GetCurrentDirectory(), "SomaticCallerParameters.json");
+            string parameterconfigPath = Path.Combine(Utilities.GetAssemblyFolder(typeof(Program)), "SomaticCallerParameters.json");
 
             OptionSet p = new OptionSet()
             {
@@ -80,7 +82,7 @@ namespace CanvasSomaticCaller
                 return 0;
             }
 
-            if (inFile == null || outFile == null || referenceFolder == null)
+            if (inFile == null || variantFrequencyFile == null || outFile == null || referenceFolder == null)
             {
                 ShowHelp(p);
                 return 0;
