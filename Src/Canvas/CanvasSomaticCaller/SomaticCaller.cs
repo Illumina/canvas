@@ -12,7 +12,6 @@ namespace CanvasSomaticCaller
     public class SomaticCaller
     {
 
-
         #region Members
         // Static:
 
@@ -23,7 +22,6 @@ namespace CanvasSomaticCaller
         CoveragePurityModel Model;
         Dictionary<string, List<GenomicBin>> ExcludedIntervals = new Dictionary<string, List<GenomicBin>>();
         List<long> HeterogeneousSegmentsSignature = new List<long>();
- 
 
         // File paths:
         public string TruthDataPath;
@@ -41,7 +39,6 @@ namespace CanvasSomaticCaller
         // New weights - incrementally better separation between top-scoring true model
         // and the next runner-up:
 
-
         // Parameters:
         public float? userPloidy;
         public float? userPurity;
@@ -51,7 +48,6 @@ namespace CanvasSomaticCaller
         public bool IsDbsnpVcf = false;
         protected PloidyInfo ReferencePloidy;
         public SomaticCallerParameters somaticCallerParameters;
-
 
         public bool FFPEMode = false; // Assume MAF and Coverage are independent/uncorrelated in FFPEMode (always false for now)
         private const double EMPosteriorProbThres = 0.01; // Controls whether a segment contributes to Mu and Sigma estimates
@@ -409,6 +405,7 @@ namespace CanvasSomaticCaller
             }
 
             CanvasSegment.AssignQualityScores(this.Segments, CanvasSegment.QScoreMethod.Logistic);
+            this.FilterCNVCalls();
 
             // Merge *neighboring* segments that got the same copy number call.
             // Enrichment is not allowed to merge non-adjacent segments, since many of those merges would
@@ -428,10 +425,38 @@ namespace CanvasSomaticCaller
                 this.GenerateReportVersusKnownCN();
                 this.GenerateExtendedReportVersusKnownCN();
             }
+
+            ExtraHeaders.Add(string.Format("##EstimatedChromosomeCount={0:F2}", this.EstimateChromosomeCount()));
+
             // Write out results:
             CanvasSegment.WriteSegments(outputVCFPath, this.Segments, referenceFolder, name, ExtraHeaders, this.ReferencePloidy, QualityFilterThreshold);
 
             return 0;
+        }
+
+        /// <summary>
+        /// Set segment.Filter for each of our segments.
+        /// </summary>
+        protected void FilterCNVCalls()
+        {
+            string qualityFilter = "Q";
+            foreach (var segment in this.Segments)
+            {
+                string filter = null;
+                if (segment.QScore < QualityFilterThreshold)
+                {
+                    filter = qualityFilter;
+                }
+                if (segment.End - segment.Begin < 10000)
+                {
+                    if (filter != null)
+                        filter = filter + ";L10kb";
+                    else
+                        filter = "L10kb";
+                }
+                if (filter == null)
+                    filter = "PASS";
+            }
         }
 
         /// <summary>
@@ -967,16 +992,16 @@ namespace CanvasSomaticCaller
                 clusterOverenrichment += clusterDistance[i].Count();
             }
             clusterDeviation /= numClusters;
-            heterogeneityIndex =  clusterOverenrichment / numClusters;
+            heterogeneityIndex = clusterOverenrichment / numClusters;
 
             if (tmpClusterDistance.Count == 0)
             {
                 heterogeneousClusters = int.MaxValue;
                 return Double.MaxValue;
             }
-                
+
             double medianClusterDistance = CanvasCommon.Utilities.Median(tmpClusterDistance);
- 
+
             // compute cluster mean and standard deviation
             for (int clusterID = 0; clusterID < numClusters; clusterID++)
             {
@@ -1015,9 +1040,9 @@ namespace CanvasSomaticCaller
                     for (int i = 0; i < segments.Count; i++)
                     {
                         debugWriter.Write("{0}\t{1}\t{2}\t", segments[i].MAF, segments[i].Coverage, segments[i].Cluster);
-                        if (segments[i].Cluster.HasValue && segments[i].Cluster > 0 )
+                        if (segments[i].Cluster.HasValue && segments[i].Cluster > 0)
                         {
-                            int cluster = (int) segments[i].Cluster - 1;
+                            int cluster = (int)segments[i].Cluster - 1;
                             debugWriter.Write("{0}", clusterDeviations[cluster].ClusterMedianDistance);
                         }
                         debugWriter.WriteLine();
@@ -1041,7 +1066,7 @@ namespace CanvasSomaticCaller
             List<ModelPoint> modelPoints = InitializeModelPoints(model);
             double precisionDeviation = 0;
             this.RefineDiploidMAF(segments, modelPoints);
-            
+
             /////////////////////////////////////////////
             // Cluster our segments:
             Array.Clear(model.PercentCN, 0, model.PercentCN.Length);
@@ -1209,7 +1234,7 @@ namespace CanvasSomaticCaller
 
             public CoveragePurityModel(int maximumCopyNumber)
             {
-                 PercentCN = new double[maximumCopyNumber + 1];
+                PercentCN = new double[maximumCopyNumber + 1];
             }
 
 
@@ -1224,7 +1249,7 @@ namespace CanvasSomaticCaller
                 if (IsEnrichment)
                 {
                     tempCountsList.Add(Convert.ToSingle(CanvasCommon.Utilities.Median(segment.Counts)));
-                }                   
+                }
                 else
                 {
                     foreach (float value in segment.Counts)
@@ -1458,7 +1483,7 @@ namespace CanvasSomaticCaller
                         double centroidCutoff = 0;
                         int nClusters = 0;
                         List<int> numNumClusters = new List<int>();
-                        List<double> centroidCutoffs = new List<double>(); 
+                        List<double> centroidCutoffs = new List<double>();
                         double centoridStep = (somaticCallerParameters.UpperCentroidCutoff - somaticCallerParameters.LowerCentroidCutoff) / somaticCallerParameters.CentroidCutoffStep;
                         for (double centoridCutoff = somaticCallerParameters.LowerCentroidCutoff;
                             centoridCutoff < somaticCallerParameters.UpperCentroidCutoff;
@@ -1561,7 +1586,7 @@ namespace CanvasSomaticCaller
                     for (int percentPurity = minPercentPurity; percentPurity <= maxPercentPurity; percentPurity += 5)
                     {
                         SomaticCaller.CoveragePurityModel model = new SomaticCaller.CoveragePurityModel(somaticCallerParameters.MaximumCopyNumber
-);
+    );
                         model.DiploidCoverage = coverage;
                         model.Purity = percentPurity / 100f;
                         this.ModelDeviation(centroidsMAF, centroidsCoverage, model, usableSegments, bestNumClusters);
@@ -1646,10 +1671,10 @@ namespace CanvasSomaticCaller
                         double score = somaticCallerParameters.PercentNormal2WeightingFactor * model.PercentNormal / Math.Max(0.01, bestCN2Normal);
                         if (model.HeterogeneityIndex.HasValue && this.IsEnrichment)
                         {
-                            heterogeneityIndex = Math.Max(0.5, Math.Min(4.0,(double)model.HeterogeneityIndex));
-                            heterogeneityIndex = Math.Min(1.0,(double)model.HeterogeneityIndex)/ Math.Max(1.0, (double)model.HeterogeneityIndex);
+                            heterogeneityIndex = Math.Max(0.5, Math.Min(4.0, (double)model.HeterogeneityIndex));
+                            heterogeneityIndex = Math.Min(1.0, (double)model.HeterogeneityIndex) / Math.Max(1.0, (double)model.HeterogeneityIndex);
                         }
-                            
+
                         score += lowPurityWeightingFactor * somaticCallerParameters.CN2WeightingFactor * model.PercentCN[2] / Math.Max(0.01, bestCN2);
                         score += somaticCallerParameters.DeviationScoreWeightingFactor * (worstAllowedDeviation - model.Deviation) / (worstAllowedDeviation - bestDeviation);
                         score += somaticCallerParameters.DiploidDistanceScoreWeightingFactor * model.DiploidDistance / Math.Max(0.01, bestDiploidDistance);
@@ -1689,7 +1714,7 @@ namespace CanvasSomaticCaller
                 {
                     interModelDistance += CalculateModelDistance(bestModels[scoresIndex[0]], bestModels[scoresIndex[i]], usableSegments, genomeLength);
                 }
-                interModelDistance /= (double) SomaticCallerParameters.MaximumRelatedModels;
+                interModelDistance /= (double)SomaticCallerParameters.MaximumRelatedModels;
 
                 Console.WriteLine(">>> Initial model: Deviation {0:F5}, coverage {1}, purity {2:F1}%, CN2 {3:F2}", bestModel.Deviation,
                         bestModel.DiploidCoverage, 100 * bestModel.Purity, bestModel.PercentCN[2]);
@@ -1875,7 +1900,7 @@ namespace CanvasSomaticCaller
                     else
                         distanceRatioElement = segment.ModelDistance / segment.RunnerUpModelDistance;
 
-                    if (segment.CopyNumber == 2 && (segment.SecondBestCopyNumber == 1 || segment.SecondBestCopyNumber == 3) && distanceRatioElement < medianDistanceRatio/2.0)
+                    if (segment.CopyNumber == 2 && (segment.SecondBestCopyNumber == 1 || segment.SecondBestCopyNumber == 3) && distanceRatioElement < medianDistanceRatio / 2.0)
                     {
                         tmpCopyNumber = segment.SecondBestCopyNumber;
                         segment.SecondBestCopyNumber = segment.CopyNumber;
@@ -2001,7 +2026,6 @@ namespace CanvasSomaticCaller
             Headers.Add(string.Format("##OverallPloidy={0:F2}", totalPloidy / Math.Max(1, totalWeight)));
             Headers.Add(string.Format("##PurityModelFit={0:F4}", this.Model.Deviation));
             Headers.Add(string.Format("##InterModelDistance={0:F4}", this.Model.InterModelDistance));
-            Headers.Add(string.Format("##EstimatedChromosomeCount={0:F2}", this.EstimateChromosomeCount()));
             Headers.Add(string.Format("##LocalSDmetric={0:F2}", localSDmertic));
             Headers.Add(string.Format("##Heterogeneity={0:F2}", this.Model.HeterogeneityIndex));
             return Headers;
@@ -2009,7 +2033,7 @@ namespace CanvasSomaticCaller
 
         /// <summary>
         /// Provide an estimated chromosome count: Sum up the total number of autosomes and allosomes after taking into 
-        /// account CNV calls.
+        /// account all the PF CNV calls.
         /// </summary>
         private double EstimateChromosomeCount()
         {
@@ -2025,6 +2049,7 @@ namespace CanvasSomaticCaller
                     Array.Clear(baseCountByCopyNumber, 0, baseCountByCopyNumber.Length);
                     currentChromosome = segment.Chr;
                 }
+                if (segment.Filter != "PASS") continue;
                 baseCountByCopyNumber[Math.Min(segment.CopyNumber, somaticCallerParameters.MaximumCopyNumber)] += (segment.End - segment.Begin);
             }
             overallCount += GetWeightedChromosomeCount(baseCountByCopyNumber);

@@ -22,6 +22,7 @@ namespace CanvasCommon
         public double ModelDistance;
         public double RunnerUpModelDistance;
         private static readonly int NumberVariantFrequencyBins = 100;
+        public string Filter = "PASS";
         #endregion
 
         /// <summary>
