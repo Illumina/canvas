@@ -394,14 +394,16 @@ namespace CanvasSomaticCaller
             {
                 ExtraHeaders = CallCNVUsingSNVFrequency(localSDmertic, referenceFolder, clusteringMode);
             }
-            catch (SomaticCaller.UncallableDataException e)
+            catch (Exception e)
             {
                 Console.WriteLine("Not calling any CNVs. Reason: {0}", e.Message);
                 Segments.Clear();
+                CanvasSegment.WriteSegments(outputVCFPath, this.Segments, referenceFolder, name, ExtraHeaders, this.ReferencePloidy, QualityFilterThreshold);
+                Environment.Exit(0);
             }
 
             string coverageOutputPath = CanvasCommon.Utilities.GetCoverageAndVariantFrequencyOutputPath(outputVCFPath);
-            CanvasSegment.WriteCoveragePlotData(this.Segments, this.Model?.DiploidCoverage, this.ReferencePloidy, coverageOutputPath, referenceFolder);
+            // CanvasSegment.WriteCoveragePlotData(this.Segments, this.Model?.DiploidCoverage, this.ReferencePloidy, coverageOutputPath, referenceFolder);
 
             if (this.ReferencePloidy != null && !string.IsNullOrEmpty(this.ReferencePloidy.HeaderLine))
             {
@@ -1136,7 +1138,7 @@ namespace CanvasSomaticCaller
 
             // compute total deviation
             double totalDeviation;
-            if (heterogeneousClusters > 100)
+            if (heterogeneousClusters > 1)
                 totalDeviation = somaticCallerParameters.PrecisionWeightingFactor * precisionDeviation + somaticCallerParameters.PrecisionWeightingFactor * accuracyDeviation + somaticCallerParameters.PrecisionWeightingFactor * clusterDeviation;
             else
                 totalDeviation = tempDeviation;
