@@ -23,6 +23,7 @@ namespace CanvasDiploidCaller
         private double CoverageWeightingFactor; // Computed from CoverageWeighting
         public bool IsDbsnpVcf = false;
         static protected int MinimumVariantFrequenciesForInformativeSegment = 50;
+        protected int MedianHetSnpsDistance = 463; // based on NA12878 VFResults.txt.gz file
         CopyNumberOracle CNOracle = null;
 
         // File paths:
@@ -162,37 +163,24 @@ namespace CanvasDiploidCaller
         private void AssignPloidyCallsDistance(CoverageModel model, List<SegmentInfo> segments, int medianVariantCoverage)
         {
             List<ModelPoint> modelPoints = InitializeModelPoints(model);
-
             foreach (CanvasSegment segment in this.Segments)
             {
                 // Compute (MAF, Coverage) for this segment:
                 List<double> MAF = new List<double>();
                 foreach (float VF in segment.VariantFrequencies) MAF.Add(VF > 0.5 ? 1 - VF : VF);
+                int expectedSnpDensityCutoff = (segment.End - segment.Begin) / MedianHetSnpsDistance / 2;
+
+
                 List<Tuple<float, float>> weightedVariantFrequencies = new List<Tuple<float, float>>();
                 double medianCoverage = CanvasCommon.Utilities.Median(segment.Counts);
-                for (int i = 0; i < MAF.Count; i++)
-                {
-                    // for now penalize only low-coverage regions 
-                    float variantWeight = 0;
-                    if (segment.VariantTotalCoverage[i] < medianVariantCoverage)
-                    {
-                        variantWeight = Convert.ToSingle(segment.VariantTotalCoverage[i] / medianVariantCoverage);
-                    }
-                    else
-                    {
-                        variantWeight = 1;
-                    }
-
-                    weightedVariantFrequencies.Add(Tuple.Create(Convert.ToSingle(MAF[i]), variantWeight));
-                }
 
                 double medianMAF = -1;
 
                 SegmentPloidy bestPloidy = null;
 
-                if (MAF.Count >= 10)
+                if (MAF.Count >= Math.Max(10, expectedSnpDensityCutoff))
                 {
-                    medianMAF = Utilities.WeightedMedian(weightedVariantFrequencies);
+                    medianMAF = Utilities.Median(MAF);
                 }
 
                 double bestDistance = double.MaxValue;
@@ -202,7 +190,7 @@ namespace CanvasDiploidCaller
                 {
                     double diff = (ploidy.MixedCoverage - medianCoverage) * CoverageWeightingFactor;
                     double distance = diff * diff;
-                    if (MAF.Count >= 10)
+                    if (MAF.Count >= Math.Max(10, expectedSnpDensityCutoff))
                     {
                         diff = ploidy.MixedMinorAlleleFrequency - medianMAF;
                         distance += diff * diff;
