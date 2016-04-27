@@ -120,7 +120,7 @@ namespace Illumina.SecondaryAnalysis
         /// <summary>
         /// Invoke CanvasBin.  Return null if this fails and we need to abort CNV calling for this sample.
         /// </summary>
-        protected string InvokeCanvasBin(CanvasCallset callset, string canvasReferencePath, string canvasBedPath, string ploidyBedPath)
+        protected IFileLocation InvokeCanvasBin(CanvasCallset callset, string canvasReferencePath, string canvasBedPath, string ploidyBedPath)
         {
             StringBuilder commandLine = new StringBuilder();
             string canvasBinPath = Path.Combine(_canvasFolder, "CanvasBin.exe");
@@ -259,7 +259,7 @@ namespace Illumina.SecondaryAnalysis
                 outputPath = InvokeCanvasNormalize(callset, tumorBinnedPath, bamToBinned, ploidyBedPath);
             }
 
-            return outputPath;
+            return new FileLocation(outputPath);
         }
 
         /// <summary>
@@ -337,12 +337,12 @@ namespace Illumina.SecondaryAnalysis
         /// <param name="callset"></param>
         /// <param name="partitionedPath">Output of CanvasPartition. Bins are assumed to be sorted</param>
         /// <returns></returns>
-        private string IntersectBinsWithTargetedRegions(CanvasCallset callset, string partitionedPath)
+        private IFileLocation IntersectBinsWithTargetedRegions(CanvasCallset callset, IFileLocation partitionedPath)
         {
-            if (!File.Exists(partitionedPath)) { return partitionedPath; }
-            string rawPartitionedPath = partitionedPath + ".raw";
-            if (File.Exists(rawPartitionedPath)) { File.Delete(rawPartitionedPath); }
-            File.Move(partitionedPath, rawPartitionedPath);
+            if (!partitionedPath.Exists) { return partitionedPath; }
+            var rawPartitionedPath = partitionedPath.AppendName(".raw");
+            if (rawPartitionedPath.Exists) { rawPartitionedPath.Delete(); }
+            partitionedPath.MoveTo(rawPartitionedPath);
 
             //callset.Manifest
             Dictionary<string, List<NexteraManifest.ManifestRegion>> manifestRegionsByChrom = callset.Manifest.GetManifestRegionsByChromosome();
@@ -353,8 +353,8 @@ namespace Illumina.SecondaryAnalysis
             // Manifest
             //   start: 1-based, inclusive
             //   end: 1-based, inclusive
-            using (GzipReader reader = new GzipReader(rawPartitionedPath))
-            using (GzipWriter writer = new GzipWriter(partitionedPath))
+            using (GzipReader reader = new GzipReader(rawPartitionedPath.FullName))
+            using (GzipWriter writer = new GzipWriter(partitionedPath.FullName))
             {
                 string currentChrom = null;
                 int manifestRegionIdx = 0;
@@ -481,10 +481,10 @@ namespace Illumina.SecondaryAnalysis
 
         public class CanvasCleanOutput
         {
-            public string CleanedPath { get; set; }
-            public string FfpePath { get; set; }
+            public IFileLocation CleanedPath { get; set; }
+            public IFileLocation FfpePath { get; set; }
 
-            public CanvasCleanOutput(string cleanedPath, string ffpePath)
+            public CanvasCleanOutput(IFileLocation cleanedPath, IFileLocation ffpePath)
             {
                 CleanedPath = cleanedPath;
                 FfpePath = ffpePath;
@@ -524,8 +524,8 @@ namespace Illumina.SecondaryAnalysis
             string ploidyBedPath = callset.PloidyBed?.FullName;
 
             // CanvasBin:
-            string binnedPath = _checkpointRunner.RunCheckpoint("CanvasBin", () => InvokeCanvasBin(callset, canvasReferencePath, canvasBedPath, ploidyBedPath));
-            if (string.IsNullOrEmpty(binnedPath)) return;
+            var binnedPath = _checkpointRunner.RunCheckpoint("CanvasBin", () => InvokeCanvasBin(callset, canvasReferencePath, canvasBedPath, ploidyBedPath));
+            if (binnedPath == null) return;
 
             // CanvasClean:
             var canvasCleanOutput = _checkpointRunner.RunCheckpoint("CanvasClean", () => InvokeCanvasClean(callset, binnedPath));
@@ -556,7 +556,7 @@ namespace Illumina.SecondaryAnalysis
             });
         }
 
-        private string InvokeCanvasPartition(CanvasCallset callset, string cleanedPath, string canvasBedPath)
+        private IFileLocation InvokeCanvasPartition(CanvasCallset callset, IFileLocation cleanedPath, string canvasBedPath)
         {
             StringBuilder commandLine = new StringBuilder();
             string executablePath = Path.Combine(_canvasFolder, "CanvasPartition.exe");
@@ -584,10 +584,10 @@ namespace Illumina.SecondaryAnalysis
                 partitionJob.CommandLine = Utilities.MergeCommandLineOptions(partitionJob.CommandLine, _customParameters["CanvasPartition"], true);
             }
             _workManager.DoWorkSingleThread(partitionJob);
-            return partitionedPath;
+            return new FileLocation(partitionedPath);
         }
 
-        private CanvasCleanOutput InvokeCanvasClean(CanvasCallset callset, string binnedPath)
+        private CanvasCleanOutput InvokeCanvasClean(CanvasCallset callset, IFileLocation binnedPath)
         {
             StringBuilder commandLine = new StringBuilder();
             commandLine.Length = 0;
@@ -633,12 +633,12 @@ namespace Illumina.SecondaryAnalysis
             }
             _workManager.DoWorkSingleThread(cleanJob);
 
-            var canvasCleanOutput = new CanvasCleanOutput(cleanedPath, ffpePath);
+            var canvasCleanOutput = new CanvasCleanOutput(new FileLocation(cleanedPath), new FileLocation(ffpePath));
             return canvasCleanOutput;
         }
 
-        protected void RunSomaticCalling(string partitionedPath, CanvasCallset callset, string canvasBedPath,
-            string ploidyBedPath, string ffpePath)
+        protected void RunSomaticCalling(IFileLocation partitionedPath, CanvasCallset callset, string canvasBedPath,
+            string ploidyBedPath, IFileLocation ffpePath)
         {
 
             // get somatic SNV output:
@@ -665,11 +665,11 @@ namespace Illumina.SecondaryAnalysis
             if (callset.IsDbSnpVcf) // a dbSNP VCF file is used in place of the normal VCF file
                 callerJob.CommandLine += " -d";
             // get localSD metric:
-            if (!string.IsNullOrEmpty(ffpePath))
+            if (ffpePath != null)
             {
                 // Sanity-check: CanvasClean does not always write this file. 
                 // If it's not present, just carry on:
-                if (File.Exists(ffpePath))
+                if (ffpePath.Exists)
                 {
                     callerJob.CommandLine += string.Format(" -f \"{0}\"", ffpePath);
                 }
@@ -691,7 +691,7 @@ namespace Illumina.SecondaryAnalysis
             _workManager.DoWorkSingleThread(callerJob);
         }
 
-        protected void RunGermlineCalling(string partitionedPath, CanvasCallset callset, string ploidyBedPath)
+        protected void RunGermlineCalling(IFileLocation partitionedPath, CanvasCallset callset, string ploidyBedPath)
         {
             StringBuilder commandLine = new StringBuilder();
             ////////////////////////////////////////////////////////
