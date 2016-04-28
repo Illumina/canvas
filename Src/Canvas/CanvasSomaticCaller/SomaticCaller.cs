@@ -1406,6 +1406,7 @@ namespace CanvasSomaticCaller
                 if (validMAFCount > Math.Min(20, this.Segments.Count)) break; // We have enough usable segments with nonnull MAF
                 if (somaticCallerParameters.MinimumVariantFrequenciesForInformativeSegment <= 5) break; // Give up on modeling
                 somaticCallerParameters.MinimumVariantFrequenciesForInformativeSegment -= 15;
+                somaticCallerParameters.MinimumVariantFrequenciesForInformativeSegment = Math.Max(5, somaticCallerParameters.MinimumVariantFrequenciesForInformativeSegment);
             }
             Console.WriteLine("Modeling overall coverage/purity across {0} segments", usableSegments.Count);
             if (usableSegments.Count < 10)
@@ -1686,7 +1687,7 @@ namespace CanvasSomaticCaller
                 // the overall modeling approach might be more unstable.
                 double interModelDistance = 0;
                 // start at one since model #0 is the highest scoring model to compare to
-                for (int i = 1; i < SomaticCallerParameters.MaximumRelatedModels; i++)
+                for (int i = 1; i < Math.Min(scoresIndex.Count, SomaticCallerParameters.MaximumRelatedModels); i++)
                 {
                     interModelDistance += CalculateModelDistance(bestModels[scoresIndex[0]], bestModels[scoresIndex[i]], usableSegments, genomeLength);
                 }
