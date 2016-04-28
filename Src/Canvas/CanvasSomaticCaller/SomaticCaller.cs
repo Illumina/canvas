@@ -994,7 +994,7 @@ namespace CanvasSomaticCaller
             // these clusters locate far from expected model centroids and most likely represent segments coming from heterogeneous variants 
             List<double> heterogeneousClusterID = new List<double>();
             foreach (ClusterModel clusterInfo in clusterDeviations)
-                if (clusterInfo.ClusterMedianDistance > medianClusterDistance * 1.25f)
+                if (clusterInfo.ClusterMedianDistance > medianClusterDistance * somaticCallerParameters.HeterogeneousClusterMedianCutoff)
                     heterogeneousClusterID.Add((int)clusterInfo.ClusterID);
 
             // store signatures of potential heterogeneous variants 
@@ -1138,7 +1138,7 @@ namespace CanvasSomaticCaller
 
             // compute total deviation
             double totalDeviation;
-            if (heterogeneousClusters > 1)
+            if (heterogeneousClusters > somaticCallerParameters.HeterogeneousClustersCutoff)
                 totalDeviation = somaticCallerParameters.PrecisionWeightingFactor * precisionDeviation + somaticCallerParameters.PrecisionWeightingFactor * accuracyDeviation + somaticCallerParameters.PrecisionWeightingFactor * clusterDeviation;
             else
                 totalDeviation = tempDeviation;
@@ -1867,14 +1867,23 @@ namespace CanvasSomaticCaller
             double medianDistanceRatio = CanvasCommon.Utilities.Median(distanceRatio);
             int tmpCopyNumber = 0;
 
+            Console.WriteLine();
+            Console.WriteLine(">>> HeterogeneousSegmentsSignature: {0}", HeterogeneousSegmentsSignature.Count);
+            Console.WriteLine();
+
             foreach (CanvasSegment segment in this.Segments)
             {
-                if (this.HeterogeneousSegmentsSignature.BinarySearch(segment.Begin + segment.End + segment.Counts.Count) >= 0 && Model.Purity > 0.5f)
+                if (this.HeterogeneousSegmentsSignature.BinarySearch(segment.Begin + segment.End + segment.Counts.Count) >= 0 && Model.Purity > 0.2f)
                 {
+                    Console.WriteLine();
+                    Console.WriteLine(">>> distanceRatioElement: {0:F5}, medianDistanceRatio {2:F5}", distanceRatioElement, medianDistanceRatio);
+                    Console.WriteLine();
+
                     if (segment.RunnerUpModelDistance == 0)
                         distanceRatioElement = 0;
                     else
                         distanceRatioElement = segment.ModelDistance / segment.RunnerUpModelDistance;
+
 
                     if (segment.CopyNumber == 2 && (segment.SecondBestCopyNumber == 1 || segment.SecondBestCopyNumber == 3) && distanceRatioElement < medianDistanceRatio/2.0)
                     {

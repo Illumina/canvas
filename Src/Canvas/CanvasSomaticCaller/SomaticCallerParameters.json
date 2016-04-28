@@ -20,5 +20,7 @@
     "UpperCentroidCutoff" : "0.06",
     "LowerCentroidCutoff" : "0.008",
     "CentroidCutoffStep" : "10",
-    "DefaultCentroidCutoff" : "0.03"
+    "DefaultCentroidCutoff": "0.03",
+    "HeterogeneousClusterMedianCutoff": "1.25",
+    "HeterogeneousClustersCutoff": "1"
 }

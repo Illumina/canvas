@@ -58,7 +58,7 @@ namespace EvaluateCNV
         /// So, copy number is the sum of the last 2 fields, major chromosome count is the max of the last 2 fields.
         /// </summary>
         /// <param name="oracleBedPath"></param>
-        protected Dictionary<string, List<CNInterval>> LoadIntervalsFromBed(string oracleBedPath, bool getCN)
+        protected Dictionary<string, List<CNInterval>> LoadIntervalsFromBed(string oracleBedPath, bool getCN, double heterogeneityFraction)
         {
             bool stripChr = false;
             int count = 0;
@@ -81,6 +81,9 @@ namespace EvaluateCNV
                     interval.End = int.Parse(bits[2]);
                     if (getCN) // bits.Length >= 5)
                     {
+                        if (heterogeneityFraction < 1 && bits.Length > 5)
+                            if (heterogeneityFraction > double.Parse(bits[5]))
+                                continue;
                         interval.CN = int.Parse(bits[3]) + int.Parse(bits[4]);
                     }
                     totalBases += interval.Length;
@@ -168,7 +171,7 @@ namespace EvaluateCNV
             {
                 throw new ArgumentException(string.Format("* Error: ROI bed file not found at '{0}'", bedPath));
             }
-            this.RegionsOfInterest = this.LoadIntervalsFromBed(bedPath, false);
+            this.RegionsOfInterest = this.LoadIntervalsFromBed(bedPath, false, 1.0);
             List<string> keys = this.RegionsOfInterest.Keys.ToList();
             foreach (string key in keys)
             {
@@ -176,7 +179,7 @@ namespace EvaluateCNV
             }
         }
 
-        protected void LoadKnownCN(string oraclePath)
+        protected void LoadKnownCN(string oraclePath, double heterogeneityFraction)
         {
             if (!File.Exists(oraclePath))
             {
@@ -185,7 +188,7 @@ namespace EvaluateCNV
 
             if (oraclePath.EndsWith(".bed"))
             {
-                this.KnownCN = this.LoadIntervalsFromBed(oraclePath, true);
+                this.KnownCN = this.LoadIntervalsFromBed(oraclePath, true, heterogeneityFraction);
                 return;
             }
             LoadKnownCNVCF(oraclePath);
@@ -547,13 +550,13 @@ namespace EvaluateCNV
             outputWriter.WriteLine();
         }
 
-        public void Evaluate(string truthSetPath, string cnvCallsPath, string excludedBed, string outputPath, string ROIBedPath)
+        public void Evaluate(string truthSetPath, string cnvCallsPath, string excludedBed, string outputPath, string ROIBedPath, double heterogeneityFraction)
         {
-            LoadKnownCN(truthSetPath);
-            LoadRegionsOfInterest(ROIBedPath);
+            LoadKnownCN(truthSetPath, heterogeneityFraction);
+            // LoadRegionsOfInterest(ROIBedPath);
             if (!string.IsNullOrEmpty(excludedBed))
             {
-                this.ExcludeIntervals = LoadIntervalsFromBed(excludedBed, false);
+                this.ExcludeIntervals = LoadIntervalsFromBed(excludedBed, false, 1.0);
                 // cheesy logic to handle different chromosome names:
                 List<string> keys = this.ExcludeIntervals.Keys.ToList();
                 foreach (string key in keys)
