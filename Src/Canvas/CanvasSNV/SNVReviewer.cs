@@ -72,7 +72,7 @@ namespace CanvasSNV
                 VcfVariant variant = new VcfVariant();
                 while (true)
                 {
-                    bool result = reader.GetNextVariant(variant);
+                    bool result = reader.GetNextVariant(out variant);
                     if (!result) break;
                     overallCount++; 
                     if (variant.ReferenceName != this.Chromosome)
