@@ -70,8 +70,8 @@
       <HintPath>..\Canvas\packages\protobuf-net.2.0.0.668\lib\net40\protobuf-net.dll</HintPath>
       <Private>True</Private>
     </Reference>
-    <Reference Include="SequencingFiles, Version=0.0.0.0, Culture=neutral, processorArchitecture=AMD64">
-      <HintPath>..\Canvas\packages\Isas.SequencingFiles.2.12.0-dev201604272100\lib\net451\SequencingFiles.dll</HintPath>
+    <Reference Include="SequencingFiles, Version=2.12.0.0, Culture=neutral, processorArchitecture=AMD64">
+      <HintPath>..\Canvas\packages\Isas.SequencingFiles.2.12.0\lib\net451\SequencingFiles.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="System" />

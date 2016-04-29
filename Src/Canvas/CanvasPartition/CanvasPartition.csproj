@@ -76,8 +76,8 @@
       <HintPath>..\Canvas\packages\IlluminaCommon.1.5.0\lib\net40\IlluminaCommon.dll</HintPath>
       <Private>True</Private>
     </Reference>
-    <Reference Include="Isas.Shared, Version=0.0.0.0, Culture=neutral, processorArchitecture=AMD64">
-      <HintPath>..\Canvas\packages\Isas.Shared.2.12.0-dev201604272100\lib\net451\Isas.Shared.dll</HintPath>
+    <Reference Include="Isas.Shared, Version=2.12.0.0, Culture=neutral, processorArchitecture=AMD64">
+      <HintPath>..\Canvas\packages\Isas.Shared.2.12.0\lib\net451\Isas.Shared.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="MathNet.Numerics, Version=3.10.0.0, Culture=neutral, processorArchitecture=MSIL">
@@ -88,16 +88,16 @@
       <HintPath>..\Canvas\packages\Newtonsoft.Json.8.0.3\lib\net45\Newtonsoft.Json.dll</HintPath>
       <Private>True</Private>
     </Reference>
-    <Reference Include="NumericalAnalysis, Version=0.0.0.0, Culture=neutral, processorArchitecture=AMD64">
-      <HintPath>..\Canvas\packages\Isas.NumericalAnalysis.2.12.0-dev201604272100\lib\net451\NumericalAnalysis.dll</HintPath>
+    <Reference Include="NumericalAnalysis, Version=2.12.0.0, Culture=neutral, processorArchitecture=AMD64">
+      <HintPath>..\Canvas\packages\Isas.NumericalAnalysis.2.12.0\lib\net451\NumericalAnalysis.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="protobuf-net, Version=2.0.0.668, Culture=neutral, PublicKeyToken=257b51d87d2e4d67, processorArchitecture=MSIL">
       <HintPath>..\Canvas\packages\protobuf-net.2.0.0.668\lib\net40\protobuf-net.dll</HintPath>
       <Private>True</Private>
     </Reference>
-    <Reference Include="SequencingFiles, Version=0.0.0.0, Culture=neutral, processorArchitecture=AMD64">
-      <HintPath>..\Canvas\packages\Isas.SequencingFiles.2.12.0-dev201604272100\lib\net451\SequencingFiles.dll</HintPath>
+    <Reference Include="SequencingFiles, Version=2.12.0.0, Culture=neutral, processorArchitecture=AMD64">
+      <HintPath>..\Canvas\packages\Isas.SequencingFiles.2.12.0\lib\net451\SequencingFiles.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="System" />

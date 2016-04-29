@@ -71,8 +71,8 @@
       <HintPath>..\..\Src\Canvas\Canvas\packages\protobuf-net.2.0.0.668\lib\net40\protobuf-net.dll</HintPath>
       <Private>True</Private>
     </Reference>
-    <Reference Include="SequencingFiles, Version=0.0.0.0, Culture=neutral, processorArchitecture=AMD64">
-      <HintPath>..\..\Src\Canvas\Canvas\packages\Isas.SequencingFiles.2.12.0-dev201604272100\lib\net451\SequencingFiles.dll</HintPath>
+    <Reference Include="SequencingFiles, Version=2.12.0.0, Culture=neutral, processorArchitecture=AMD64">
+      <HintPath>..\..\Src\Canvas\Canvas\packages\Isas.SequencingFiles.2.12.0\lib\net451\SequencingFiles.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="System" />
@@ -103,12 +103,12 @@
     <PostBuildEvent>
     </PostBuildEvent>
   </PropertyGroup>
-  <Import Project="..\..\Src\Canvas\Canvas\packages\Isas.FileCompression.2.12.0-dev201604272100\build\Isas.FileCompression.targets" Condition="Exists('..\..\Src\Canvas\Canvas\packages\Isas.FileCompression.2.12.0-dev201604272100\build\Isas.FileCompression.targets')" />
+  <Import Project="..\..\Src\Canvas\Canvas\packages\Isas.FileCompression.2.12.0\build\Isas.FileCompression.targets" Condition="Exists('..\..\Src\Canvas\Canvas\packages\Isas.FileCompression.2.12.0\build\Isas.FileCompression.targets')" />
   <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
     <PropertyGroup>
       <ErrorText>This project references NuGet package(s) that are missing on this computer. Use NuGet Package Restore to download them.  For more information, see http://go.microsoft.com/fwlink/?LinkID=322105. The missing file is {0}.</ErrorText>
     </PropertyGroup>
-    <Error Condition="!Exists('..\..\Src\Canvas\Canvas\packages\Isas.FileCompression.2.12.0-dev201604272100\build\Isas.FileCompression.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\..\Src\Canvas\Canvas\packages\Isas.FileCompression.2.12.0-dev201604272100\build\Isas.FileCompression.targets'))" />
+    <Error Condition="!Exists('..\..\Src\Canvas\Canvas\packages\Isas.FileCompression.2.12.0\build\Isas.FileCompression.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\..\Src\Canvas\Canvas\packages\Isas.FileCompression.2.12.0\build\Isas.FileCompression.targets'))" />
   </Target>
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
