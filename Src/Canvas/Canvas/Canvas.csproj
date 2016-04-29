@@ -75,12 +75,24 @@
     <Prefer32Bit>true</Prefer32Bit>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="IlluminaCommon, Version=1.5.0.0, Culture=neutral, processorArchitecture=AMD64">
+      <HintPath>packages\IlluminaCommon.1.5.0\lib\net40\IlluminaCommon.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Isas.Shared, Version=2.12.0.0, Culture=neutral, processorArchitecture=AMD64">
+      <HintPath>packages\Isas.Shared.2.12.0\lib\net451\Isas.Shared.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
     <Reference Include="Newtonsoft.Json, Version=8.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
-      <HintPath>packages\Newtonsoft.Json.8.0.2\lib\net45\Newtonsoft.Json.dll</HintPath>
+      <HintPath>packages\Newtonsoft.Json.8.0.3\lib\net45\Newtonsoft.Json.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="protobuf-net, Version=2.0.0.668, Culture=neutral, PublicKeyToken=257b51d87d2e4d67, processorArchitecture=MSIL">
       <HintPath>packages\protobuf-net.2.0.0.668\lib\net40\protobuf-net.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="SequencingFiles, Version=2.12.0.0, Culture=neutral, processorArchitecture=AMD64">
+      <HintPath>packages\Isas.SequencingFiles.2.12.0\lib\net451\SequencingFiles.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="System" />
@@ -139,18 +151,6 @@
     </None>
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\ILMNcommon\ILMNcommon.csproj">
-      <Project>{6848da28-baca-4e4d-9e1d-bad1e7cb9cde}</Project>
-      <Name>ILMNcommon</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\..\Isas.Shared\Isas.Shared.csproj">
-      <Project>{f2063ff3-61a7-4084-845d-da591011e36f}</Project>
-      <Name>Isas.Shared</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\..\SequencingFiles\SequencingFiles.csproj">
-      <Project>{3eae6805-e445-4102-87c1-f57e20677778}</Project>
-      <Name>SequencingFiles</Name>
-    </ProjectReference>
     <ProjectReference Include="..\CanvasCommon\CanvasCommon.csproj">
       <Project>{ec8755f1-74bd-4a1f-9b82-5133d2f6a93b}</Project>
       <Name>CanvasCommon</Name>
@@ -176,7 +176,7 @@
   <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
-    <PostBuildEvent>SET PDB2MDB=$(SolutionDir)packages\Mono.pdb2mdb\pdb2mdb.exe
+    <PostBuildEvent>SET PDB2MDB=$(SolutionDir)Mono.pdb2mdb\pdb2mdb.exe
 cd $(SolutionDir)\x64\Release
 powershell -Command "Get-ChildItem -Recurse -Include *.dll, *.exe -Exclude FileCompression.dll, protobuf-net.dll, Mono.Posix.dll, Newtonsoft.Json.dll, MathNet.Numerics.dll | Foreach {%25PDB2MDB%25 $_.fullname}"
 

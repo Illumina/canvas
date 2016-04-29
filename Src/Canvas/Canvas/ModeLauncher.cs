@@ -45,18 +45,20 @@ namespace Canvas
                 {
                     logger.Info($"Running Canvas {_mode} {_version}");
                     logger.Info($"Command-line arguments: {string.Join(" ", _args)}");
-                    using (ICheckpointRunnerAsync checkpointRunner =
+                    var checkpointRunner =
                         GetCheckpointRunner(
                             logger,
                             outFolder,
                             commonOptions.StartCheckpoint,
                             commonOptions.StopCheckpoint,
-                            commonOptions.WholeGenomeFasta))
+                            commonOptions.WholeGenomeFasta);
+                    using (var manager = checkpointRunner.Manager)
                     {
                         IDirectoryLocation loggingFolder = outFolder.CreateSubdirectory("Logging");
                         IsasConfiguration config = IsasConfiguration.GetConfiguration();
                         IWorkManager workManager = new LocalWorkManager(logger, loggingFolder, 0, config.MaximumMemoryGB, config.MaximumHoursPerProcess);
                         _modeRunner.Run(logger, checkpointRunner, workManager);
+                        manager.CheckFinalState();
                     }
                 }
                 catch (StopCheckpointFoundException) { }
@@ -69,7 +71,7 @@ namespace Canvas
             return 0;
         }
 
-        private ICheckpointRunnerAsync GetCheckpointRunner(ILogger logger, IDirectoryLocation outputDirectory, string startCheckpoint, string stopCheckpoint, IDirectoryLocation wholeGenomeFastaFolder)
+        private CheckpointRunnerAsync GetCheckpointRunner(ILogger logger, IDirectoryLocation outputDirectory, string startCheckpoint, string stopCheckpoint, IDirectoryLocation wholeGenomeFastaFolder)
         {
 
             var parentDirectories = new Dictionary<string, IDirectoryLocation>

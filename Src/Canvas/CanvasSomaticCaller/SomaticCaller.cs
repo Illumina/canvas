@@ -427,6 +427,19 @@ namespace CanvasSomaticCaller
             }
 
             ExtraHeaders.Add(string.Format("##EstimatedChromosomeCount={0:F2}", this.EstimateChromosomeCount()));
+            double totalPloidy = 0;
+            double totalWeight = 0;
+            foreach (CanvasSegment segment in this.Segments) 
+            {
+                if (segment.Filter == "PASS")
+                {
+                    totalWeight += segment.End - segment.Begin;
+                    totalPloidy += segment.CopyNumber * (segment.End - segment.Begin);
+                }
+            }
+            if (totalWeight > 0)
+                ExtraHeaders.Add(string.Format("##OverallPloidy={0:F2}", totalPloidy / totalWeight));
+
 
             // Write out results:
             CanvasSegment.WriteSegments(outputVCFPath, this.Segments, referenceFolder, name, ExtraHeaders, this.ReferencePloidy, QualityFilterThreshold);
@@ -2016,14 +2029,6 @@ namespace CanvasSomaticCaller
 
             // Add some extra information to the vcf file header:
             Headers.Add(string.Format("##EstimatedTumorPurity={0:F2}", this.Model.Purity));
-            double totalPloidy = 0;
-            double totalWeight = 0;
-            foreach (CanvasSegment segment in this.Segments)
-            {
-                totalWeight += segment.End - segment.Begin;
-                totalPloidy += segment.CopyNumber * (segment.End - segment.Begin);
-            }
-            Headers.Add(string.Format("##OverallPloidy={0:F2}", totalPloidy / Math.Max(1, totalWeight)));
             Headers.Add(string.Format("##PurityModelFit={0:F4}", this.Model.Deviation));
             Headers.Add(string.Format("##InterModelDistance={0:F4}", this.Model.InterModelDistance));
             Headers.Add(string.Format("##LocalSDmetric={0:F2}", localSDmertic));
