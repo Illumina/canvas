@@ -16,6 +16,8 @@
     <SccAuxPath>SAK</SccAuxPath>
     <SccProvider>SAK</SccProvider>
     <TargetFrameworkProfile />
+    <NuGetPackageImportStamp>
+    </NuGetPackageImportStamp>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <PlatformTarget>AnyCPU</PlatformTarget>
@@ -57,6 +59,22 @@
     <Prefer32Bit>true</Prefer32Bit>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="IlluminaCommon, Version=1.5.0.0, Culture=neutral, processorArchitecture=AMD64">
+      <HintPath>..\..\Src\Canvas\Canvas\packages\IlluminaCommon.1.5.0\lib\net40\IlluminaCommon.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Newtonsoft.Json, Version=8.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
+      <HintPath>..\..\Src\Canvas\Canvas\packages\Newtonsoft.Json.8.0.3\lib\net45\Newtonsoft.Json.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="protobuf-net, Version=2.0.0.668, Culture=neutral, PublicKeyToken=257b51d87d2e4d67, processorArchitecture=MSIL">
+      <HintPath>..\..\Src\Canvas\Canvas\packages\protobuf-net.2.0.0.668\lib\net40\protobuf-net.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="SequencingFiles, Version=2.12.0.0, Culture=neutral, processorArchitecture=AMD64">
+      <HintPath>..\..\Src\Canvas\Canvas\packages\Isas.SequencingFiles.2.12.0\lib\net451\SequencingFiles.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.Xml.Linq" />
@@ -72,23 +90,26 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
+    <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\Src\Canvas\CanvasCommon\CanvasCommon.csproj">
       <Project>{ec8755f1-74bd-4a1f-9b82-5133d2f6a93b}</Project>
       <Name>CanvasCommon</Name>
     </ProjectReference>
-    <ProjectReference Include="..\..\Src\SequencingFiles\SequencingFiles.csproj">
-      <Project>{3eae6805-e445-4102-87c1-f57e20677778}</Project>
-      <Name>SequencingFiles</Name>
-    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
-    <PostBuildEvent>copy /y "$(SolutionDir)..\..\Compression\$(Platform)\$(Configuration)\FileCompression.dll" $(TargetDir)
-copy /y "$(SolutionDir)..\..\Compression\$(Platform)\$(Configuration)\FileCompression.pdb" $(TargetDir)
-copy /y "$(SolutionDir)..\..\Compression\libFileCompression.so" $(TargetDir)</PostBuildEvent>
+    <PostBuildEvent>
+    </PostBuildEvent>
   </PropertyGroup>
+  <Import Project="..\..\Src\Canvas\Canvas\packages\Isas.FileCompression.2.12.0\build\Isas.FileCompression.targets" Condition="Exists('..\..\Src\Canvas\Canvas\packages\Isas.FileCompression.2.12.0\build\Isas.FileCompression.targets')" />
+  <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
+    <PropertyGroup>
+      <ErrorText>This project references NuGet package(s) that are missing on this computer. Use NuGet Package Restore to download them.  For more information, see http://go.microsoft.com/fwlink/?LinkID=322105. The missing file is {0}.</ErrorText>
+    </PropertyGroup>
+    <Error Condition="!Exists('..\..\Src\Canvas\Canvas\packages\Isas.FileCompression.2.12.0\build\Isas.FileCompression.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\..\Src\Canvas\Canvas\packages\Isas.FileCompression.2.12.0\build\Isas.FileCompression.targets'))" />
+  </Target>
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
   <Target Name="BeforeBuild">
