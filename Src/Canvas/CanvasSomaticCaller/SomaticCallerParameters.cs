@@ -60,6 +60,8 @@ namespace CanvasSomaticCaller
         public double HeterogeneousClusterMedianCutoff { get; set; } = 1.25;
         [DataMember(Name = "HeterogeneousClustersCutoff", EmitDefaultValue = true, IsRequired = true)]
         public int HeterogeneousClustersCutoff { get; set; } = 1;
-   
+        [DataMember(Name = "DistanceRatio", EmitDefaultValue = true, IsRequired = true)]
+        public double DistanceRatio { get; set; } = 0.3;
+
     }
 }

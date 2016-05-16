@@ -46,6 +46,7 @@ namespace CanvasSomaticCaller
         private double CoverageWeightingFactor; // Computed from CoverageWeighting
         public bool IsEnrichment = false;
         public bool IsDbsnpVcf = false;
+        public bool IsTrainingMode = false;
         protected PloidyInfo ReferencePloidy;
         public SomaticCallerParameters somaticCallerParameters;
 
@@ -390,12 +391,32 @@ namespace CanvasSomaticCaller
             {
                 ExtraHeaders = CallCNVUsingSNVFrequency(localSDmertic, referenceFolder, clusteringMode);
             }
+ 
+            
             catch (Exception e)
             {
-                Console.WriteLine("Not calling any CNVs. Reason: {0}", e.Message);
-                Segments.Clear();
-                CanvasSegment.WriteSegments(outputVCFPath, this.Segments, referenceFolder, name, ExtraHeaders, this.ReferencePloidy, QualityFilterThreshold);
-                Environment.Exit(0);
+                // In a training mode (INTERNAL) somatic model is initialized with a large number of parameter trials. 
+                // Some of them might lead to exception as they would fall outside testable range. 
+                // For such cases when the IsTrainingMode is set, the program will terminate normally but will produce an empty vcf file. 
+                // This will penalize a parameter combination that lead to exception thereby preventing it from creeping into default SomaticCallerParameters.json.
+
+                if (this.IsTrainingMode)
+                {
+                    Console.WriteLine("Not calling any CNVs. Reason: {0}", e.Message);
+                    Segments.Clear();
+                    CanvasSegment.WriteSegments(outputVCFPath, this.Segments, referenceFolder, name, ExtraHeaders,
+                        this.ReferencePloidy, QualityFilterThreshold);
+                    Environment.Exit(0);
+                }
+                else
+                {
+                    if (e is SomaticCaller.UncallableDataException)
+                    {
+                        Console.WriteLine("Not calling any CNVs. Reason: {0}", e.Message);
+                        Segments.Clear();
+                    }
+
+                }
             }
 
             string coverageOutputPath = CanvasCommon.Utilities.GetCoverageAndVariantFrequencyOutputPath(outputVCFPath);
@@ -1019,8 +1040,9 @@ namespace CanvasSomaticCaller
             // these clusters locate far from expected model centroids and most likely represent segments coming from heterogeneous variants 
             List<double> heterogeneousClusterID = new List<double>();
             foreach (ClusterModel clusterInfo in clusterDeviations)
-                if (clusterInfo.ClusterMedianDistance > medianClusterDistance * somaticCallerParameters.HeterogeneousClusterMedianCutoff)
+                 if (clusterInfo.ClusterMedianDistance > medianClusterDistance * somaticCallerParameters.HeterogeneousClusterMedianCutoff)
                     heterogeneousClusterID.Add((int)clusterInfo.ClusterID);
+
 
             // store signatures of potential heterogeneous variants 
             if (heterogeneousClusterID.Count > 0 && bestModel)
@@ -1517,6 +1539,7 @@ namespace CanvasSomaticCaller
                         {
                             nClusters = modesList[0];
                             centroidCutoff = centroidCutoffs[numNumClusters.FindIndex(x => x == nClusters)];
+
                         }
                         else if (modesList.Count == 2 || modesList.Count == 3)
                         {
@@ -1530,9 +1553,10 @@ namespace CanvasSomaticCaller
                         {
                             centroidCutoff = somaticCallerParameters.DefaultCentroidCutoff;
                             nClusters = numNumClusters[centroidCutoffs.FindIndex(x => x == centroidCutoff)];
+
                         }
 
-                        Console.WriteLine(">>> Running density selected cutoff {0:F3}", centroidCutoff);
+                        Console.WriteLine(">>> Running density selected cutoff {0:F5}", centroidCutoff);
                         DensityClusteringModel finalDc = new DensityClusteringModel(usableSegments, CoverageWeightingFactor, knearestNeighbourCutoff, centroidCutoff);
                         finalDc.EstimateDistance();
                         double finalDistanceThreshold = finalDc.EstimateDc();
@@ -1879,19 +1903,6 @@ namespace CanvasSomaticCaller
         protected void AdjustPloidyCalls()
         {
 
-            List<double> distanceRatio = new List<double>();
-            double distanceRatioElement = 0;
-
-            foreach (CanvasSegment segment in this.Segments)
-            {
-                if (segment.RunnerUpModelDistance == 0)
-                    distanceRatio.Add(0);
-                else
-                    distanceRatio.Add(segment.ModelDistance / segment.RunnerUpModelDistance);
-            }
-
-            double medianDistanceRatio = CanvasCommon.Utilities.Median(distanceRatio);
-            int tmpCopyNumber = 0;
 
             Console.WriteLine();
             Console.WriteLine(">>> HeterogeneousSegmentsSignature: {0}", HeterogeneousSegmentsSignature.Count);
@@ -1899,25 +1910,18 @@ namespace CanvasSomaticCaller
 
             foreach (CanvasSegment segment in this.Segments)
             {
-                if (this.HeterogeneousSegmentsSignature.BinarySearch(segment.Begin + segment.End + segment.Counts.Count) >= 0 && Model.Purity > 0.2f)
+                if (this.HeterogeneousSegmentsSignature.BinarySearch(segment.Begin + segment.End + segment.Counts.Count) >= 0 && Model.Purity > 0.2f && Math.Max(segment.ModelDistance, Double.MinValue) / segment.RunnerUpModelDistance > somaticCallerParameters.DistanceRatio)
                 {
-                    Console.WriteLine();
-                    Console.WriteLine(">>> distanceRatioElement: {0:F5}, medianDistanceRatio {2:F5}", distanceRatioElement, medianDistanceRatio);
-                    Console.WriteLine();
-
-                    if (segment.RunnerUpModelDistance == 0)
-                        distanceRatioElement = 0;
-                    else
-                        distanceRatioElement = segment.ModelDistance / segment.RunnerUpModelDistance;
-
-                    if (segment.CopyNumber == 2 && (segment.SecondBestCopyNumber == 1 || segment.SecondBestCopyNumber == 3) && distanceRatioElement < medianDistanceRatio / 2.0)
+                    if (segment.CopyNumber == 2 && (segment.SecondBestCopyNumber == 1 || segment.SecondBestCopyNumber == 3))
                     {
-                        tmpCopyNumber = segment.SecondBestCopyNumber;
-                        segment.SecondBestCopyNumber = segment.CopyNumber;
+
+                        int tmpCopyNumber = segment.SecondBestCopyNumber;
+                        segment.SecondBestCopyNumber = segment.CopyNumber; // indicator that CNs have swapped
                         segment.CopyNumber = tmpCopyNumber;
+                        segment.cnSwaped = "Y";
+
                     }
                 }
-
             }
         }
 
@@ -2165,7 +2169,7 @@ namespace CanvasSomaticCaller
             string debugPath = Path.Combine(this.TempFolder, "CallsVersusKnownCN.txt");
             using (StreamWriter writer = new StreamWriter(debugPath))
             {
-                writer.Write("#Chr\tBegin\tEnd\tTruthSetCN\t");
+                writer.Write("#Chr\tBegin\tEnd\tTruthSetCN\tTruthSetClonality\tBestCN\tSecondBestCN\tisCNswapped\t");
                 writer.Write("Accurate\tDirectionAccurate\t");
                 writer.Write("LogLength\tLogBinCount\tBinCount\tBinCV\tModelDistance\tRunnerUpModelDistance\t");
                 writer.Write("MafCount\tMafMean\tMafCv\tLogMafCv\tCopyNumber\tMCC\t");
@@ -2176,6 +2180,7 @@ namespace CanvasSomaticCaller
                 foreach (CanvasSegment segment in this.Segments)
                 {
                     int CN = this.GetKnownCNForSegment(segment);
+                    double Heterogeneity = this.GetKnownClonalityForSegment(segment);
                     if (CN < 0) continue;
                     if (segment.End - segment.Begin < 5000) continue;
                     List<float> MAF = new List<float>();
@@ -2195,7 +2200,7 @@ namespace CanvasSomaticCaller
                         (CN == 2 && segment.CopyNumber == 2) ||
                         (CN > 2 && segment.CopyNumber > 2))
                         directionAccurateFlag = "Y";
-                    writer.Write("{0}\t{1}\t{2}\t{3}\t", segment.Chr, segment.Begin, segment.End, CN);
+                    writer.Write("{0}\t{1}\t{2}\t{3}\t{4}\t{5}\t{6}\t{7}\t", segment.Chr, segment.Begin, segment.End, CN, Heterogeneity, segment.CopyNumber, segment.SecondBestCopyNumber, segment.cnSwaped);
                     writer.Write("{0}\t{1}\t", accurateFlag, directionAccurateFlag);
                     writer.Write("{0}\t", Math.Log(segment.End - segment.Begin));
                     writer.Write("{0}\t", segment.GetQScorePredictor(CanvasSegment.QScorePredictor.LogBinCount));
@@ -2564,6 +2569,12 @@ namespace CanvasSomaticCaller
         {
             if (this.CNOracle == null) return -1;
             return this.CNOracle.GetKnownCNForSegment(segment);
+        }
+
+        protected double GetKnownClonalityForSegment(CanvasSegment segment)
+        {
+            if (this.CNOracle == null) return -1;
+            return this.CNOracle.GetKnownClonalityForSegment(segment);
         }
 
         class UncallableDataException : Exception

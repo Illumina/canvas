@@ -81,7 +81,7 @@ namespace EvaluateCNV
                     interval.End = int.Parse(bits[2]);
                     if (getCN) // bits.Length >= 5)
                     {
-                        if (heterogeneityFraction < 1 && bits.Length > 5)
+                        if (heterogeneityFraction < 1 && bits.Length > 5 && int.Parse(bits[3]) == 1 && int.Parse(bits[4]) == 1)
                             if (heterogeneityFraction > double.Parse(bits[5]))
                                 continue;
                         interval.CN = int.Parse(bits[3]) + int.Parse(bits[4]);
