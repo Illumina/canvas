@@ -1485,10 +1485,6 @@ namespace CanvasSomaticCaller
             int minCoverageLevel = Convert.ToInt32(coverageQuartiles.Item1);
             int maxCoverageLevel = Convert.ToInt32(coverageQuartiles.Item3);
             int medianCoverageLevel = Convert.ToInt32(coverageQuartiles.Item2);
-            if (medianCoverageLevel < 10)
-            {
-                throw new ArgumentException(string.Format("Error with CNV detection - median coverage {0:F2} is lower than 10x; aborting", medianCoverageLevel));
-            }
             this.CoverageWeightingFactor = somaticCallerParameters.CoverageWeighting / medianCoverageLevel;
             int bestNumClusters = 0;
             double knearestNeighbourCutoff = 0;
@@ -1520,7 +1516,7 @@ namespace CanvasSomaticCaller
                         knearestNeighbourCutoff = KnearestNeighbourCutoff(usableSegments);
                         // Step2: Density clustering 
                         double centroidCutoff = 0;
-                        int nClusters = 0;
+                        int clusterCount = 0;
                         List<int> numNumClusters = new List<int>();
                         List<double> centroidCutoffs = new List<double>();
                         double centoridStep = (somaticCallerParameters.UpperCentroidCutoff - somaticCallerParameters.LowerCentroidCutoff) / somaticCallerParameters.CentroidCutoffStep;
@@ -1532,14 +1528,14 @@ namespace CanvasSomaticCaller
 
                         foreach (double centoridCutoff in centroidCutoffs)
                         {
-                            DensityClusteringModel dc = new DensityClusteringModel(usableSegments, CoverageWeightingFactor, knearestNeighbourCutoff, centoridCutoff);
-                            dc.EstimateDistance();
-                            double distanceThreshold = dc.EstimateDc();
-                            dc.GaussianLocalDensity(distanceThreshold);
-                            dc.FindCentroids();
-                            nClusters = dc.FindClusters();
-                            numNumClusters.Add(nClusters);
-                            Console.WriteLine(">>> Running density clustering for cutoff {0:F5} , number of clusters {1}", centoridCutoff, nClusters);
+                            DensityClusteringModel densityClustering = new DensityClusteringModel(usableSegments, CoverageWeightingFactor, knearestNeighbourCutoff, centoridCutoff);
+                            densityClustering.EstimateDistance();
+                            double distanceThreshold = densityClustering.EstimateDc();
+                            densityClustering.GaussianLocalDensity(distanceThreshold);
+                            densityClustering.FindCentroids();
+                            clusterCount = densityClustering.FindClusters();
+                            numNumClusters.Add(clusterCount);
+                            Console.WriteLine(">>> Running density clustering for cutoff {0:F5} , number of clusters {1}", centoridCutoff, clusterCount);
                         }
                         var modeClustersValues = numNumClusters
                             .GroupBy(x => x)
@@ -1552,22 +1548,22 @@ namespace CanvasSomaticCaller
                         List<int> modesList = modes.ToList();
                         if (modesList.Count == 1)
                         {
-                            nClusters = modesList[0];
-                            centroidCutoff = centroidCutoffs[numNumClusters.FindIndex(x => x == nClusters)];
+                            clusterCount = modesList[0];
+                            centroidCutoff = centroidCutoffs[numNumClusters.FindIndex(x => x == clusterCount)];
 
                         }
                         else if (modesList.Count == 2 || modesList.Count == 3)
                         {
                             if (modesList[1] < 7)
-                                nClusters = modesList[1];
+                                clusterCount = modesList[1];
                             else
-                                nClusters = modesList[0];
-                            centroidCutoff = centroidCutoffs[numNumClusters.FindIndex(x => x == nClusters)];
+                                clusterCount = modesList[0];
+                            centroidCutoff = centroidCutoffs[numNumClusters.FindIndex(x => x == clusterCount)];
                         }
                         else
                         {
                             centroidCutoff = somaticCallerParameters.DefaultCentroidCutoff;
-                            nClusters = numNumClusters[centroidCutoffs.FindIndex(x => x == centroidCutoff)];
+                            clusterCount = numNumClusters[centroidCutoffs.FindIndex(x => x == centroidCutoff)];
 
                         }
 
@@ -1621,7 +1617,7 @@ namespace CanvasSomaticCaller
                 }
                 int coverageStep = Math.Max(1, (maxCoverage - minCoverage) / somaticCallerParameters.CoverageLevelWeightingFactorLevels);
                 Console.WriteLine(">>>DiploidCoverage: Consider {0}...{1} step {2}", minCoverage, maxCoverage, coverageStep);
-                for (int coverage = minCoverage; coverage < maxCoverage; coverage += coverageStep)
+                for (int coverage = minCoverage; coverage <= maxCoverage; coverage += coverageStep)
                 {
                     // iterate over purity range 
                     for (int percentPurity = minPercentPurity; percentPurity <= maxPercentPurity; percentPurity += 5)
@@ -1639,6 +1635,10 @@ namespace CanvasSomaticCaller
                         if (model.Ploidy < somaticCallerParameters.MaxAllowedPloidy && model.Ploidy > somaticCallerParameters.MinAllowedPloidy)
                             allModels.Add(model);
                     }
+                }
+                if (allModels.Count == 0)
+                {
+                    throw new UncallableDataException(string.Format("Error with CNV detection - unable to find any viable purity/ploidy model."));
                 }
 
                 // New logic for model selection:
@@ -1780,7 +1780,7 @@ namespace CanvasSomaticCaller
                 }
                 bestDeviation = double.MaxValue;
                 bestModel = null;
-                for (int coverage = minCoverage; coverage <= maxCoverage; coverage++)
+                for (int coverage = minCoverage; coverage < maxCoverage; coverage++)
                 {
                     for (int percentPurity = minPercentPurity; percentPurity <= maxPercentPurity; percentPurity++)
                     {
