@@ -14,6 +14,7 @@ namespace CanvasCommon
         public int Start;
         public int End;
         public int CN;
+        public double Heterogeneity;
     }
 
     /// <summary>
@@ -66,6 +67,10 @@ namespace CanvasCommon
                     interval.Start = int.Parse(bits[1]);
                     interval.End = int.Parse(bits[2]);
                     interval.CN = int.Parse(bits[3]) + int.Parse(bits[4]);
+                    if (bits.Length > 5)
+                        interval.Heterogeneity = double.Parse(bits[5]);
+                    else
+                        interval.Heterogeneity = -1.0;
                     KnownCN[chromosome].Add(interval);
                     count++;
                 }
@@ -100,6 +105,35 @@ namespace CanvasCommon
                 }
             }
             return CN;
+        }
+
+        public double GetKnownClonalityForSegment(CanvasSegment segment)
+        {
+            // Handle switched chromosome naming convention transparently:
+            string chr = segment.Chr;
+            if (!this.KnownCN.ContainsKey(segment.Chr))
+            {
+                chr = segment.Chr.Replace("chr", "");
+                if (!this.KnownCN.ContainsKey(chr))
+                {
+                    chr = "chr" + segment.Chr;
+                    if (!this.KnownCN.ContainsKey(chr)) return -1;
+                }
+            }
+            double Clonality = -1;
+            foreach (CNInterval interval in this.KnownCN[chr])
+            {
+                if (interval.End < segment.Begin) continue;
+                if (interval.Start > segment.End) continue;
+                int start = Math.Max(segment.Begin, interval.Start);
+                int end = Math.Min(segment.End, interval.End);
+                if ((end - start) * 2 >= (segment.End - segment.Begin))
+                {
+                    Clonality = interval.Heterogeneity;
+                    break;
+                }
+            }
+            return Clonality;
         }
 
         protected void LoadKnownCNVCF(string oracleVCFPath)

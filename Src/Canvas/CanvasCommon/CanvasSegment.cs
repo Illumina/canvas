@@ -21,6 +21,7 @@ namespace CanvasCommon
         public double QScore;
         public double ModelDistance;
         public double RunnerUpModelDistance;
+        public string cnSwaped = "N";
         private static readonly int NumberVariantFrequencyBins = 100;
         public string Filter = "PASS";
         #endregion

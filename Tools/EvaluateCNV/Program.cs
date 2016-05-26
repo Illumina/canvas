@@ -22,8 +22,10 @@ namespace EvaluateCNV
             }
             CNVChecker checker = new CNVChecker();
             string ROIBed = null;
+            double heterogeneityFraction = 1;
             if (args.Length > 4) ROIBed = args[4];
-            checker.Evaluate(args[0], args[1], args[2], args[3], ROIBed);
+            if (args.Length > 5) heterogeneityFraction = double.Parse(args[5]);
+            checker.Evaluate(args[0], args[1], args[2], args[3], ROIBed, heterogeneityFraction);
         }
     }
 }
