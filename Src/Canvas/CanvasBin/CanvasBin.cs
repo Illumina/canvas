@@ -442,7 +442,6 @@ namespace CanvasBin
 
                 Console.WriteLine("{0} Launching normalization tasks.", DateTime.Now);
                 Console.Out.Flush();
-                //Parallel.ForEach(normalizationTasks, t => { t.Invoke(); });
                 Isas.Shared.Utilities.DoWorkParallelThreads(normalizationTasks);
                 Console.WriteLine("{0} Normalization tasks complete.", DateTime.Now);
                 Console.Out.Flush();
