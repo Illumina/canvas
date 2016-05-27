@@ -1780,7 +1780,7 @@ namespace CanvasSomaticCaller
                 }
                 bestDeviation = double.MaxValue;
                 bestModel = null;
-                for (int coverage = minCoverage; coverage < maxCoverage; coverage++)
+                for (int coverage = minCoverage; coverage <= maxCoverage; coverage++)
                 {
                     for (int percentPurity = minPercentPurity; percentPurity <= maxPercentPurity; percentPurity++)
                     {
