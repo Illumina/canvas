@@ -6,8 +6,6 @@ using NDesk.Options;
 using System.Runtime.Serialization;
 using System.Runtime.Serialization.Json;
 
-using Isas.Shared;
-
 namespace CanvasSomaticCaller
 {
     class Program
@@ -40,11 +38,12 @@ namespace CanvasSomaticCaller
             double? localSDmetric = null;
             double minimumCallSize;
             int qualityFilterThreshold = 0;
-            // Parameters, for parameter-sweep:
+            // Parameters, for parameter-sweep, somatic model training:
+            bool isTrainMode = false;
             float? userPurity = null;
             float? userPloidy = null;
             CanvasCommon.CanvasSomaticClusteringMode somaticClusteringMode = CanvasCommon.CanvasSomaticClusteringMode.Density;
-            string parameterconfigPath = Path.Combine(Utilities.GetAssemblyFolder(typeof(Program)), "SomaticCallerParameters.json");
+            string parameterconfigPath = Path.Combine(Isas.Shared.Utilities.GetAssemblyFolder(typeof(Program)), "SomaticCallerParameters.json");
 
             OptionSet p = new OptionSet()
             {
@@ -65,7 +64,8 @@ namespace CanvasSomaticCaller
                 { "q|qualitythreshold=", $"quality filter threshold (default {qualityFilterThreshold})", v => qualityFilterThreshold = int.Parse(v) },
                 { "c|parameterconfig=", $"parameter configuration path (default {parameterconfigPath})", v => parameterconfigPath = v },
                 { "u|definedpurity=", "INTERNAL: user pre-defined purity", v => userPurity = float.Parse(v) },
-                { "l|definedploidy=", "INTERNAL: user pre-defined ploidy", v => userPloidy = float.Parse(v) }
+                { "l|definedploidy=", "INTERNAL: user pre-defined ploidy", v => userPloidy = float.Parse(v) },
+                { "a|trainmodel=", "INTERNAL: user pre-defined ploidy", v => isTrainMode = v != null }
             };
 
             List<string> extraArgs = p.Parse(args);
@@ -82,7 +82,7 @@ namespace CanvasSomaticCaller
                 return 0;
             }
 
-            if (inFile == null || variantFrequencyFile == null || outFile == null || referenceFolder == null)
+            if (inFile == null || outFile == null || referenceFolder == null)
             {
                 ShowHelp(p);
                 return 0;
@@ -128,6 +128,7 @@ namespace CanvasSomaticCaller
             caller.IsDbsnpVcf = isDbsnpVcf;
             caller.userPurity = userPurity;
             caller.userPloidy = userPloidy;
+            caller.IsTrainingMode = isTrainMode;
             caller.QualityFilterThreshold = qualityFilterThreshold;
 
             // Set parameters:

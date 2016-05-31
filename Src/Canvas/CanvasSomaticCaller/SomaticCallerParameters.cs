@@ -56,5 +56,12 @@ namespace CanvasSomaticCaller
         public int CentroidCutoffStep { get; set; } = 80;
         [DataMember(Name = "DefaultCentroidCutoff", EmitDefaultValue = true, IsRequired = true)]
         public double DefaultCentroidCutoff { get; set; } = 0.03;
+        [DataMember(Name = "HeterogeneousClustersCutoff", EmitDefaultValue = true, IsRequired = true)]
+        public double HeterogeneousClusterMedianCutoff { get; set; } = 1.25;
+        [DataMember(Name = "HeterogeneousClustersCutoff", EmitDefaultValue = true, IsRequired = true)]
+        public int HeterogeneousClustersCutoff { get; set; } = 1;
+        [DataMember(Name = "DistanceRatio", EmitDefaultValue = true, IsRequired = true)]
+        public double DistanceRatio { get; set; } = 0.3;
+
     }
 }

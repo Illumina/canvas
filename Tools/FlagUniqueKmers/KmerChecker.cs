@@ -289,16 +289,6 @@ namespace FlagUniqueKmers
                     Console.WriteLine("{0} >>>Pass {1}: flagged {2} unique kmers", DateTime.Now, PassIndex, UniqueCount);
                     Console.WriteLine();
 
-                    //// %%% TEMP DEBUG METHOD: Find positions on the first chromosome that weren't already flagged as done.
-                    //for (int i = 0; i < ChromosomeFinishedFlags[0].Length; i++)
-                    //{
-                    //    if (!ChromosomeFinishedFlags[0][i])
-                    //    {
-                    //        Console.WriteLine("{0}\t{1}", i, ChromosomeNonUniqueFlags[0][i]);
-                    //    }
-                    //}
-                    //Console.WriteLine(">>>Done");
-
                 }
             } // Pass loop
 
