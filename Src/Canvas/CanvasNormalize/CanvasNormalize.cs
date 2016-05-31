@@ -31,7 +31,8 @@ namespace CanvasNormalize
                     throw new Exception(string.Format("Invalid CanvasNormalize mode '{0}'", parameters.normalizationMode));
             }
             
-            GetBinRatio(parameters.tumorBedPath, parameters.weightedAverageNormalBedPath, parameters.outBedPath, parameters.ploidyBedPath);
+            GetBinRatio(parameters.tumorBedPath, parameters.weightedAverageNormalBedPath, parameters.outBedPath, 
+                parameters.ploidyBedPath, manifest: manifest);
 
             return 0;
         }
@@ -193,9 +194,13 @@ namespace CanvasNormalize
             return Tuple.Create(meanSquaredLogRatios, ignoredBinCount);
         }
 
-        private static void GetBinRatio(string tumorBinnedPath, string normalBinnedPath, string ratioBinnedPath, string ploidyBedPath)
+        private static void GetBinRatio(string tumorBinnedPath, string normalBinnedPath, string ratioBinnedPath,
+            string ploidyBedPath, NexteraManifest manifest = null)
         {
             PloidyInfo referencePloidy = String.IsNullOrEmpty(ploidyBedPath) ? null : PloidyInfo.LoadPloidyFromBedFile(ploidyBedPath);
+            double tumorMedian = (new BinCounts(tumorBinnedPath, manifest: manifest)).OnTargetMedianBinCount;
+            double normalMedian = (new BinCounts(normalBinnedPath, manifest: manifest)).OnTargetMedianBinCount;
+            double librarySizeFactor = (tumorMedian > 0 && normalMedian > 0) ? normalMedian / tumorMedian : 1;
 
             using (GzipReader tumorReader = new GzipReader(tumorBinnedPath))
             using (GzipReader normalReader = new GzipReader(normalBinnedPath))
@@ -224,7 +229,7 @@ namespace CanvasNormalize
                     int end = int.Parse(normalToks[2]);
                     // get the normal ploidy from intervalsWithPloidyByChrom
                     double factor = CanvasDiploidBinRatioFactor * GetPloidy(referencePloidy, chrom, start, end) / 2.0;
-                    ratio = tumorCount / normalCount * factor;
+                    ratio = tumorCount / normalCount * factor * librarySizeFactor;
                     normalToks[3] = String.Format("{0}", ratio);
                     writer.WriteLine(String.Join("\t", normalToks));
                 }
