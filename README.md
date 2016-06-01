@@ -126,15 +126,15 @@ With all files copied and installed, we are now ready to run Canvas. This demo w
 CNV.vcf.gz files will be saved to HCC2218_v2 output directory. Depending on the number of available CPUs, the demo will take from few minutes to under an hour to complete.
 
 #### Inspecting results 
-Now we can test Canvas performance by using a set of previously curated HCC2218 copy number calls from whole-genome data (HCC2218Truth.vcf) and a set of repetitive or ambiguous regions (HCC2218.cnaqc.excluded_regions.bed), which are available under Tools/EvaluateCNV/Docs/ of the canvas GitHub repository.  The evaluation is accomplished by using EvaluateCNV; the latest binary distribution for the tool can be found in [releases]:https://github.com/Illumina/canvas/releases.  
+Now we can test Canvas performance by using a set of previously curated HCC2218 copy number calls from whole-genome data (HCC2218Truth.vcf) and a set of repetitive or ambiguous regions (HCC2218.cnaqc.excluded_regions.bed), which are available under https://illumina.app.box.com/v/CanvasPublic/1/8196858257.  The evaluation is accomplished by using EvaluateCNV; the latest binary distribution for the tool can be found in [releases]:https://github.com/Illumina/canvas/releases.  
 EvaluateCNV usage info:
 ```
 EvaluateCNV $TruthSetPath $CNV.vcf $ExcludedRegionsBed $OutputPath  [$RegionOfInterestBed]
 ```
 In our case, given that truth files location in WORKDIR/tools/EvaluateCNV, the command is:
 ```
-mono $WORKDIR/tools/EvaluateCNV/EvaluateCNV.exe WORKDIR/tools/EvaluateCNV/HCC2218Truth.vcf $WORKDIR/testing/HCC2218/CNV.vcf.gz 
-$WORKDIR/tools/EvaluateCNV/HCC2218.cnaqc.excluded_regions.bed $WORKDIR/testing/HCC2218/EvaluateCNV.txt
+mono $WORKDIR/tools/EvaluateCNV/EvaluateCNV.exe WORKDIR/TruthSets/HCC2218Truth.vcf $WORKDIR/testing/HCC2218/CNV.vcf.gz 
+$WORKDIR/TruthSets/HCC2218.cnaqc.excluded_regions.bed $WORKDIR/testing/HCC2218/EvaluateCNV.txt
 ```
 This will save evaluation data into $WORKDIR/testing/HCC2218/EvaluateCNV.txt.
 Inspecting it suggests that Canvas performed quite well in calling somatic CNV variants in HCC2218, below is an extract from the file (results obtained using Canvas 1.3.4 with the command line shown above, other versions and main/custom parameters might alter performance metrics)
