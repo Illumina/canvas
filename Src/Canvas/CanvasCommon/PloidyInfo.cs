@@ -136,6 +136,7 @@ namespace CanvasCommon
     {
         public CanvasSegment Segment;
         public Dictionary<ModelPoint, double> PosteriorProbs;
+
     }
 
     public class CoverageModel
@@ -156,7 +157,5 @@ namespace CanvasCommon
         public int? ClusterID;
         public bool IsHeterogeneous = false;
         public double ClusterMedianDistance;
-        public double ClusterDistanceIQR;
-        public List<Tuple<float, float>> ClusterDistances = new List<Tuple<float, float>>();
     }
 }

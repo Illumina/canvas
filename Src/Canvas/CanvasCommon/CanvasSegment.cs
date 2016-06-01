@@ -14,13 +14,16 @@ namespace CanvasCommon
         #region Members
         public List<float> Counts;
         private int copyNumber;
+        private int secondBestCopyNumber;
         public List<float> VariantFrequencies = new List<float>();
         public List<int> VariantTotalCoverage = new List<int>();
         public int? MajorChromosomeCount;
         public double QScore;
         public double ModelDistance;
         public double RunnerUpModelDistance;
+        public string cnSwaped = "N";
         private static readonly int NumberVariantFrequencyBins = 100;
+        public string Filter = "PASS";
         #endregion
 
         /// <summary>
@@ -70,6 +73,8 @@ namespace CanvasCommon
             this.End = end;
             this.Counts = new List<float>(counts);
             this.copyNumber = -1;
+            this.secondBestCopyNumber = -1;
+
         }
 
         public string Chr { get; private set; }
@@ -103,6 +108,18 @@ namespace CanvasCommon
             set
             {
                 copyNumber = value;
+            }
+        }
+
+        public int SecondBestCopyNumber
+        {
+            get
+            {
+                return secondBestCopyNumber;
+            }
+            set
+            {
+                secondBestCopyNumber = value;
             }
         }
 
@@ -271,8 +288,7 @@ namespace CanvasCommon
                         int position = (alternateAllele.StartsWith("<") && alternateAllele.EndsWith(">")) ? segment.Begin : segment.Begin + 1;
                         writer.Write($"{segment.Chr}\t{position}\tCanvas:{cnvType.ToVcfId()}:{segment.Chr}:{segment.Begin + 1}-{segment.End}\t");
 
-                        var filter = segment.GetFilter(qualityThreshold, qualityFilter);
-                        writer.Write($"N\t{alternateAllele}\t{segment.QScore}\t{filter}\t", alternateAllele, segment.QScore, filter);
+                        writer.Write($"N\t{alternateAllele}\t{segment.QScore}\t{segment.Filter}\t", alternateAllele, segment.QScore, segment.Filter);
 
                         if (cnvType != CnvType.Reference)
                             writer.Write($"SVTYPE={cnvType.ToSvType()};");
@@ -295,23 +311,6 @@ namespace CanvasCommon
                     }
                 }
             }
-        }
-
-        private string GetFilter(int qualityThreshold, string qualityFilter)
-        {
-            string filter = null;
-            if (QScore < qualityThreshold)
-                filter = qualityFilter;
-            if (End - Begin < 10000)
-            {
-                if (filter != null)
-                    filter = filter + ";L10kb";
-                else
-                    filter = "L10kb";
-            }
-            if (filter == null)
-                filter = "PASS";
-            return filter;
         }
 
         static public Dictionary<string, List<CanvasSegment>> GetSegmentsByChromosome(List<CanvasSegment> segments)

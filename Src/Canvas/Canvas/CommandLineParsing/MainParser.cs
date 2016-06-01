@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using Canvas.CommandLineParsing.CoreOptionTypes;
@@ -10,11 +11,15 @@ namespace Canvas.CommandLineParsing
 {
     public class MainParser
     {
+        private readonly string _version;
+        private readonly string _copyright;
         private static readonly BaseOptionsParser BaseOptionsParser = new BaseOptionsParser();
         private readonly Dictionary<string, ModeParser> _modeParsers;
 
-        public MainParser(params ModeParser[] modeParsers)
+        public MainParser(string version, string copyright, params ModeParser[] modeParsers)
         {
+            _version = version;
+            _copyright = copyright;
             _modeParsers = modeParsers.ToDictionary(modeParser => modeParser.Name, modeParser => modeParser, StringComparer.OrdinalIgnoreCase);
         }
 
@@ -80,7 +85,7 @@ namespace Canvas.CommandLineParsing
 
         private void ShowHelp(TextWriter writer, ModeParser specifiedMode = null)
         {
-            writer.WriteLine($"Canvas {GetVersion()} {Illumina.Shared.Version.VersionInfo.AssemblyCopyright}");
+            writer.WriteLine($"Canvas {GetVersion()} {GetCopyright()}");
             writer.WriteLine();
             string modeName = specifiedMode?.Name ?? "[MODE]";
             if (specifiedMode != null)
@@ -114,7 +119,12 @@ namespace Canvas.CommandLineParsing
 
         private string GetVersion()
         {
-            return typeof(MainParser).Assembly.GetName().Version.ToString();
+            return _version;
+        }
+
+        private string GetCopyright()
+        {
+            return _copyright;
         }
     }
 }

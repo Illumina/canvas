@@ -200,6 +200,31 @@ namespace CanvasPartition
         }
 
         /// <summary>
+        /// Refines breakpoint by maximising local medians
+        /// </summary>
+        private static void RefineSegments( List<int> breakpoints, List<double> coverage)
+        {
+            int halfWindow = 5;
+            double totalMedian = CanvasCommon.Utilities.Median(coverage);
+            for (int i = 1; i < (int)breakpoints.Count - 1; i++)
+            {
+                int leftInterval = Math.Min(halfWindow, (breakpoints[i] - breakpoints[i-1])/2);
+                int rightInterval = Math.Min(halfWindow, (breakpoints[i+1] - breakpoints[i])/2);
+                double bestMedianDifference = Math.Abs(CanvasCommon.Utilities.Median(coverage, breakpoints[i - 1], breakpoints[i]) - totalMedian);
+                int bestBreakpoint = breakpoints[i];
+                for (int j = breakpoints[i] - leftInterval; j < breakpoints[i] + rightInterval; j++)
+                {
+                    double tmpMedianDifference = Math.Abs(CanvasCommon.Utilities.Median(coverage, breakpoints[i-1], j) - totalMedian);
+                    if (tmpMedianDifference > bestMedianDifference)
+                    {
+                        bestMedianDifference = tmpMedianDifference;
+                        bestBreakpoint = j;
+                    }
+                }
+                breakpoints[i] = bestBreakpoint;
+            }
+        }
+        /// <summary>
         /// Find best Unbalanced Haar wavelets decomposition
         /// </summary>
         private static void FindBestUnbalancedHaarDecomposition(double[] x, List<List<double>> tree, double smooth)
@@ -354,7 +379,8 @@ namespace CanvasPartition
             Console.WriteLine("Wavelet threshold:");
             Console.WriteLine(mad);
             GetSegments(tree, smooth, breakpoints);
-
+            if (isGermline)
+                RefineSegments(breakpoints, ratio_list);
 
         }
     }
