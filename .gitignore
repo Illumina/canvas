@@ -149,7 +149,7 @@ publish/
 **/packages/*
 # These packages aren't available on public nuget
 !**/packages/IlluminaCommon*
-!**/packages/Isas*
+!**/packages/Isas.*/build/*
 # except build/, which is used as an MSBuild target.
 #!**/packages/build/
 #!**/packages/*/build/
