@@ -1,7 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Text;
 using NDesk.Options;
+using System.Runtime.Serialization;
+using System.Runtime.Serialization.Json;
 
 namespace CanvasSomaticCaller
 {
@@ -33,15 +36,15 @@ namespace CanvasSomaticCaller
             bool isEnrichment = false;
             bool isDbsnpVcf = false;
             double? localSDmetric = null;
-            // Parameters, for parameter-sweep:
-            float deviationFactor = SomaticCaller.DefaultDeviationFactor;
-            double coverageWeighting = SomaticCaller.DefaultCoverageWeighting;
-            int minimumCallSize = SomaticCaller.DefaultMinimumCallSize;
-            double precisionWeightingFactor = SomaticCaller.DefaultPrecisionWeightingFactor;
+            double minimumCallSize;
+            int qualityFilterThreshold = 0;
+            // Parameters, for parameter-sweep, somatic model training:
+            bool isTrainMode = false;
             float? userPurity = null;
             float? userPloidy = null;
+            CanvasCommon.CanvasSomaticClusteringMode somaticClusteringMode = CanvasCommon.CanvasSomaticClusteringMode.Density;
+            string parameterconfigPath = Path.Combine(Isas.Shared.Utilities.GetAssemblyFolder(typeof(Program)), "SomaticCallerParameters.json");
 
-            SomaticCaller caller = new SomaticCaller();
             OptionSet p = new OptionSet()
             {
                 { "i|infile=", "file containing bins, their counts, and assigned segments (obtained from CanvasPartition.exe)",  v => inFile = v },
@@ -57,13 +60,12 @@ namespace CanvasSomaticCaller
                 { "p|ploidyBedFile=", "bed file specifying reference ploidy (e.g. for sex chromosomes) (optional)", v => ploidyBedPath = v},
                 { "f|localSDFile=", "text file with localSD metric (calculate within CanvasClean) (optional)", v => ffpeOutliersPath = v},
                 { "d|dbsnpvcf", "flag indicating a dbSNP VCF file is used to generate the variant frequency file", v => isDbsnpVcf = v != null },
-                { "D|deviation=", "INTERNAL: best deviation parameter", v => deviationFactor = float.Parse(v) },
-                { "C|coverageweight=", "INTERNAL: coverage weighting", v => coverageWeighting = float.Parse(v) },
                 { "M|minimumcall=", "INTERNAL: minimum call size", v => minimumCallSize = int.Parse(v) },
-                { "P|precisionweight=", "INTERNAL: precision weighting factor", v => precisionWeightingFactor = double.Parse(v) },
+                { "q|qualitythreshold=", $"quality filter threshold (default {qualityFilterThreshold})", v => qualityFilterThreshold = int.Parse(v) },
+                { "c|parameterconfig=", $"parameter configuration path (default {parameterconfigPath})", v => parameterconfigPath = v },
                 { "u|definedpurity=", "INTERNAL: user pre-defined purity", v => userPurity = float.Parse(v) },
                 { "l|definedploidy=", "INTERNAL: user pre-defined ploidy", v => userPloidy = float.Parse(v) },
-                { "q|qualitythreshold=", $"quality filter threshold (default {caller.QualityFilterThreshold})", v => caller.QualityFilterThreshold = int.Parse(v) },
+                { "a|trainmodel=", "INTERNAL: user pre-defined ploidy", v => isTrainMode = v != null }
             };
 
             List<string> extraArgs = p.Parse(args);
@@ -104,26 +106,33 @@ namespace CanvasSomaticCaller
                 return 1;
             }
 
-            if (userPurity == null && userPloidy != null || userPurity != null && userPloidy == null)
+            if (qualityFilterThreshold < 0)
+                throw new ArgumentException($"Quality filter threshold must be greater than or equal to zero. Value was {qualityFilterThreshold}");
+
+            if (!File.Exists(parameterconfigPath))
             {
-                Console.WriteLine("Canvas error: both definedpurity and definedploidy should be specified");
+                Console.WriteLine("Canvas error: File {0} does not exist! Exiting.", parameterconfigPath);
                 return 1;
             }
 
-            if (caller.QualityFilterThreshold < 0)
-                throw new ArgumentException($"Quality filter threshold must be greater than or equal to zero. Value was {caller.QualityFilterThreshold}");
+            DataContractJsonSerializer js = new DataContractJsonSerializer(typeof(SomaticCallerParameters));
+            string parameterconfigFile = File.ReadAllText(parameterconfigPath);
+            MemoryStream ms = new MemoryStream(Encoding.ASCII.GetBytes(parameterconfigFile));
+            SomaticCallerParameters somaticCallerParametersJSON = (SomaticCallerParameters)js.ReadObject(ms);
 
-            // Set parameters:
+            SomaticCaller caller = new SomaticCaller();
+            caller.somaticCallerParameters = somaticCallerParametersJSON;
             caller.TruthDataPath = truthDataPath;
             caller.SomaticVCFPath = somaticVCFPath;
             caller.IsEnrichment = isEnrichment;
             caller.IsDbsnpVcf = isDbsnpVcf;
-            caller.DeviationFactor = deviationFactor;
-            caller.MinimumCallSize = minimumCallSize;
-            caller.CoverageWeighting = coverageWeighting;
             caller.userPurity = userPurity;
             caller.userPloidy = userPloidy;
-            caller.PrecisionWeightingFactor = precisionWeightingFactor;
+            caller.IsTrainingMode = isTrainMode;
+            caller.QualityFilterThreshold = qualityFilterThreshold;
+
+            // Set parameters:
+
             if (!string.IsNullOrEmpty(ploidyBedPath))
             {
                 caller.LoadReferencePloidy(ploidyBedPath);
@@ -132,8 +141,9 @@ namespace CanvasSomaticCaller
             {
                 localSDmetric = CanvasCommon.CanvasIO.ReadLocalSDFromTextFile(ffpeOutliersPath);
             }
+            
             caller.LoadBedFile(bedPath);
-            return caller.CallVariants(inFile, variantFrequencyFile, outFile, referenceFolder, name, localSDmetric);
+            return caller.CallVariants(inFile, variantFrequencyFile, outFile, referenceFolder, name, localSDmetric, somaticClusteringMode);
         }
     }
 }

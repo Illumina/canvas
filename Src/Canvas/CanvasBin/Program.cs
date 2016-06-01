@@ -16,11 +16,20 @@ namespace CanvasBin
             CanvasCommon.Utilities.LogCommandLine(args);
             CanvasBinParameters parameters = CanvasBinParameters.ParseCommandLine(args);
             if (parameters == null) return 1;
-            return CanvasBin.Run(parameters);
+
+            Console.WriteLine("{0} Parsed command-line", DateTime.Now);
+            if (parameters.coverageMode == CanvasCommon.CanvasCoverageMode.Fragment)
+            {
+                return (new FragmentBinner(parameters)).Bin();
+            }
+            else
+            {
+                return CanvasBin.Run(parameters);
+            }
         }
     }
 
-    internal class CanvasBinParameters
+    public class CanvasBinParameters
     {
         #region Members
         // Fasta file of the reference genome.
@@ -104,12 +113,13 @@ namespace CanvasBin
                 Console.Error.WriteLine("Please specify an output file name.");
                 needHelp = true;
             }
-            else if (parameters.countsPerBin == -1)
+            else if (parameters.coverageMode != CanvasCommon.CanvasCoverageMode.Fragment && parameters.countsPerBin == -1)
             {
                 Console.Error.WriteLine("Please specify counts per bin.");
                 needHelp = true;
             }
-            else if (string.IsNullOrEmpty(parameters.chromosome) && parameters.intermediatePaths.Count == 0)
+            else if (parameters.coverageMode != CanvasCommon.CanvasCoverageMode.Fragment
+                && string.IsNullOrEmpty(parameters.chromosome) && parameters.intermediatePaths.Count == 0)
             {
                 Console.Error.WriteLine("Please specify chromsome to measure coverage for.");
                 needHelp = true;
@@ -143,7 +153,7 @@ namespace CanvasBin
             }
 
             // Did the user supply a non-negative number?
-            if (parameters.countsPerBin < 1)
+            if (parameters.coverageMode != CanvasCommon.CanvasCoverageMode.Fragment && parameters.countsPerBin < 1)
             {
                 Console.WriteLine("CanvasBin.exe: Median counts must be strictly positive. Exiting.");
                 return null;

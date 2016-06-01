@@ -144,12 +144,15 @@ publish/
 *.publishproj
 
 # NuGet Packages
-#*.nupkg
+*.nupkg
 # The packages folder can be ignored because of Package Restore
-#**/packages/*
+**/packages/*
+# These packages aren't available on public nuget
+!**/packages/IlluminaCommon*
+!**/packages/Isas*
 # except build/, which is used as an MSBuild target.
-!**/packages/build/
-!**/packages/*/build/
+#!**/packages/build/
+#!**/packages/*/build/
 # Uncomment if necessary however generally it will be regenerated when needed
 #!**/packages/repositories.config
 

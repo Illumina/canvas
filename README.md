@@ -5,19 +5,16 @@ Canvas is a tool for calling copy number variants (CNVs) from human DNA sequenci
 
 Canvas is used as the copy number caller in the Isaac Whole Genome Sequencing workflow in BaseSpace (https://basespace.illumina.com), and in HiSeq Analysis Software (HAS) (http://support.illumina.com/sequencing/sequencing_software/hiseq-analysis-software.html).  
 
-Canvas is written in C# and runs either under a recent version of Mono (3.10.0+ has been tested) or on .NET 4.5.1.
+Canvas is written in C# and runs either under a recent version of Mono (e.g. 3.10.0) or on .NET 4.5.1.
 
-For more information on Canvas, see the [software design description] [SDD] for a description of Canvas and the algorithms it uses.
+For more information about Canvas and the algorithms it uses see the [software design document] [SDD].
 
-[SDD]:Docs/CanvasSoftwareDesignDescription.pdf
-
-The publication "Canvas: versatile and scalable detection of copy number variants" describes the operation of Canvas and provides accuracy on several germline and somatic data-sets: http://bioinformatics.oxfordjournals.org/content/early/2016/03/24/bioinformatics.btw163.abstract
-
+[SDD]:SoftwareDesignDocument.pdf
 
 License
 -------
 
-Copyright (c) 2013-2016 Illumina, Inc. All rights reserved.
+Copyright (c) 2013-2015 Illumina, Inc. All rights reserved.
 
 This software is provided under the terms and conditions of the GNU GENERAL PUBLIC LICENSE Version 3
 
@@ -46,7 +43,7 @@ Canvas is known to run under the following Linux distributions:
 - CentOS 5, 6 (Mono 3.10.0, Mono 4.0.2)
 - Ubuntu 14.04 (Mono 4.0.2)
 
-Other Linux distributions and other recent Mono versions are likely to work as well but have not been explicitly tested. To install mono see http://www.mono-project.com/download/#download-lin
+Other Linux distributions and other recent Mono versions are likely to work as well but have not been explicitly tested.
 
 #### Windows
 Canvas is known to run on Windows 7 or Windows 8 systems using .NET 4.5.1
@@ -74,7 +71,7 @@ The required input files for Human reference genome builds GRCh37, hg19, and GRC
 ## DEMO (Tumor-normal-enrichment data)
 This demo will run Canvas on exome data for HCC2218 breast carcinoma cell lines and compare results with previously curated ground truth set.
 #### Installation
-The easiest way to install Canvas is to use the latest pre-compiled binaries from  [releases]:https://github.com/Illumina/canvas/releases (just download and uncompress). The demo presumes that binary files were installed to WORKDIR/canvas/canvas-1.3.4_x64/. Exact installation of mono environment depends on OS, below is an installation example for Ubuntu:
+The easiest way to install Canvas is to use the latest pre-copiled binaries from [releases]:https://github.com/Illumina/canvas/releases (just download and uncopress). The demo presumes that binary files were installed to WORKDIR/canvas/canvas-1.3.4_x64/. Exact installation of mono environment depends on OS, below is an installation example for Ubuntu:
 ```
 Compiling mono from source
 mkdir mono-4.0.2_source
@@ -126,7 +123,7 @@ With all files copied and installed, we are now ready to run Canvas. This demo w
 CNV.vcf.gz files will be saved to HCC2218_v2 output directory. Depending on the number of available CPUs, the demo will take from few minutes to under an hour to complete.
 
 #### Inspecting results 
-Now we can test Canvas performance by using a set of previously curated HCC2218 copy number calls from whole-genome data (HCC2218Truth.vcf) and a set of repetitive or ambiguous regions (HCC2218.cnaqc.excluded_regions.bed), which are available under https://illumina.app.box.com/v/CanvasPublic/1/8196858257.  The evaluation is accomplished by using EvaluateCNV; the latest binary distribution for the tool can be found in [releases]:https://github.com/Illumina/canvas/releases.  
+Now we can test Canvas performance by using a set of previously curated HCC2218 copy number calls from whole-genome data (HCC2218Truth.vcf) and a set of repetitive or ambiguous regions (HCC2218.cnaqc.excluded_regions.bed), which are available in the TruthSets directory under https://illumina.box.com/CanvasPublic.  The evaluation is accomplished by using EvaluateCNV; the latest binary distribution for the tool can be found in [releases]:https://github.com/Illumina/canvas/releases.  
 EvaluateCNV usage info:
 ```
 EvaluateCNV $TruthSetPath $CNV.vcf $ExcludedRegionsBed $OutputPath  [$RegionOfInterestBed]

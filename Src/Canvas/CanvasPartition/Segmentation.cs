@@ -29,15 +29,18 @@ namespace CanvasPartition
         public double Alpha = DefaultAlpha;
         public SegmentSplitUndo UndoMethod = SegmentSplitUndo.None;
         private string ForbiddenIntervalBedPath = null;
+        private int MaxInterBinDistInSegment = 1000000;
         #endregion
 
         // dataType: "logratio" (aCGH, ROMA, etc.) or "binary" (LOH)
-        public Segmentation(string inputBinPath, string forbiddenBedPath, string dataType = "logratio")
+        public Segmentation(string inputBinPath, string forbiddenBedPath, string dataType = "logratio",
+            int maxInterBinDistInSegment = 1000000)
         {
             this.InputBinPath = inputBinPath;
             this.DataType = dataType;
             this.SegmentationResults = null;
             this.ForbiddenIntervalBedPath = forbiddenBedPath;
+            this.MaxInterBinDistInSegment = maxInterBinDistInSegment;
             // Read the input file:
             this.ReadBEDInput();
         }
@@ -71,7 +74,7 @@ namespace CanvasPartition
         /// Wavelets: unbalanced HAAR wavelets segmentation 
         /// </summary>
         /// <param name="threshold">wavelets coefficient threshold</param>
-        private void Wavelets(bool isGermline, double thresholdLower = 5, double thresholdUpper = 80, int minSize = 10, int verbose = 1 )
+        private void Wavelets(bool isGermline, double thresholdLower = 5, double thresholdUpper = 80, int minSize = 10, int verbose = 1)
         {
             Dictionary<string, int[]> inaByChr = new Dictionary<string, int[]>();
             Dictionary<string, double[]> finiteScoresByChr = new Dictionary<string, double[]>();
@@ -80,30 +83,30 @@ namespace CanvasPartition
             foreach (KeyValuePair<string, double[]> scoreByChrKVP in ScoreByChr)
             {
                 tasks.Add(new ThreadStart(() =>
+                {
+                    string chr = scoreByChrKVP.Key;
+                    int[] ina;
+                    Helper.GetFiniteIndices(scoreByChrKVP.Value, out ina); // not NaN, -Inf, Inf
+
+                    double[] scores;
+                    if (ina.Length == scoreByChrKVP.Value.Length)
                     {
-                        string chr = scoreByChrKVP.Key;
-                        int[] ina;
-                        Helper.GetFiniteIndices(scoreByChrKVP.Value, out ina); // not NaN, -Inf, Inf
+                        scores = scoreByChrKVP.Value;
+                    }
+                    else
+                    {
+                        Helper.ExtractValues<double>(scoreByChrKVP.Value, ina, out scores);
+                    }
 
-                        double[] scores;
-                        if (ina.Length == scoreByChrKVP.Value.Length)
-                        {
-                            scores = scoreByChrKVP.Value;
-                        }
-                        else
-                        {
-                            Helper.ExtractValues<double>(scoreByChrKVP.Value, ina, out scores);
-                        }
+                    lock (finiteScoresByChr)
+                    {
+                        finiteScoresByChr[chr] = scores;
+                        inaByChr[chr] = ina;
+                    }
 
-                        lock (finiteScoresByChr)
-                        {
-                            finiteScoresByChr[chr] = scores;
-                            inaByChr[chr] = ina;
-                        }
-
-                    }));
+                }));
             }
-            Illumina.SecondaryAnalysis.Utilities.DoWorkParallelThreads(tasks);
+            Isas.Shared.Utilities.DoWorkParallelThreads(tasks);
             // Quick sanity-check: If we don't have any segments, then return a dummy result.
             int n = 0;
             foreach (var list in finiteScoresByChr.Values)
@@ -130,75 +133,75 @@ namespace CanvasPartition
             foreach (string chr in ScoreByChr.Keys)
             {
                 tasks.Add(new ThreadStart(() =>
+                {
+                    int[] ina = inaByChr[chr];
+                    List<int> breakpoints = new List<int>();
+                    int sizeScoreByChr = this.ScoreByChr[chr].Length;
+                    if (sizeScoreByChr > minSize)
                     {
-                        int[] ina = inaByChr[chr];
-                        List<int> breakpoints = new List<int>();
-                        int sizeScoreByChr = this.ScoreByChr[chr].Length;
-                        if (sizeScoreByChr > minSize)
+                        WaveletSegmentation.HaarWavelets(this.ScoreByChr[chr].ToArray(), thresholdLower, thresholdUpper, breakpoints, isGermline);
+                    }
+
+                    List<int> startBreakpointsPos = new List<int>();
+                    List<int> endBreakpointPos = new List<int>();
+                    List<int> lengthSeg = new List<int>();
+
+                    if (breakpoints.Count() >= 2 && sizeScoreByChr > 10)
+                    {
+                        startBreakpointsPos.Add(breakpoints[0]);
+                        endBreakpointPos.Add(breakpoints[1] - 1);
+                        lengthSeg.Add(breakpoints[1] - 1);
+
+                        for (int i = 1; i < breakpoints.Count - 1; i++)
                         {
-                            WaveletSegmentation.HaarWavelets(this.ScoreByChr[chr].ToArray(), thresholdLower, thresholdUpper, breakpoints, isGermline);
+                            startBreakpointsPos.Add(breakpoints[i]);
+                            endBreakpointPos.Add(breakpoints[i + 1] - 1);
+                            lengthSeg.Add(breakpoints[i + 1] - 1 - breakpoints[i]);
                         }
+                        startBreakpointsPos.Add(breakpoints[breakpoints.Count - 1]);
+                        endBreakpointPos.Add(sizeScoreByChr - 1);
+                        lengthSeg.Add(sizeScoreByChr - breakpoints[breakpoints.Count - 1] - 1);
+                    }
+                    else
+                    {
+                        startBreakpointsPos.Add(0);
+                        endBreakpointPos.Add(sizeScoreByChr - 1);
+                        lengthSeg.Add(sizeScoreByChr - 1);
 
-                        List<int> startBreakpointsPos = new List<int>();
-                        List<int> endBreakpointPos = new List<int>();
-                        List<int> lengthSeg = new List<int>();
+                    }
+                    // estimate segment means 
 
-                        if (breakpoints.Count() >= 2 && sizeScoreByChr > 10)
-                        {
-                            startBreakpointsPos.Add(breakpoints[0]);
-                            endBreakpointPos.Add(breakpoints[1] - 1);
-                            lengthSeg.Add(breakpoints[1] - 1);
+                    double[] segmentMeans = new double[lengthSeg.Count()];
+                    int ss = 0, ee = 0;
+                    for (int i = 0; i < lengthSeg.Count(); i++)
+                    {
+                        ee += lengthSeg[i];
+                        // Works even if weights == null
+                        segmentMeans[i] = Helper.WeightedAverage(this.ScoreByChr[chr], null, iStart: ss, iEnd: ee);
+                        ss = ee;
+                    }
 
-                            for (int i = 1; i < breakpoints.Count - 1; i++)
-                            {
-                                startBreakpointsPos.Add(breakpoints[i]);
-                                endBreakpointPos.Add(breakpoints[i + 1] - 1);
-                                lengthSeg.Add(breakpoints[i + 1] - 1 - breakpoints[i]);
-                            }
-                            startBreakpointsPos.Add(breakpoints[breakpoints.Count - 1]);
-                            endBreakpointPos.Add(sizeScoreByChr - 1);
-                            lengthSeg.Add(sizeScoreByChr - breakpoints[breakpoints.Count - 1] - 1);
-                        }
-                        else
-                        {
-                            startBreakpointsPos.Add(0);
-                            endBreakpointPos.Add(sizeScoreByChr - 1);
-                            lengthSeg.Add(sizeScoreByChr - 1);
+                    Segment[] segments = new Segment[startBreakpointsPos.Count];
+                    for (int i = 0; i < startBreakpointsPos.Count; i++)
+                    {
+                        int start = startBreakpointsPos[i];
+                        int end = endBreakpointPos[i];
+                        segments[i] = new Segment();
+                        segments[i].start = this.StartByChr[chr][start]; // Genomic start
+                        segments[i].end = this.EndByChr[chr][end]; // Genomic end
+                        segments[i].nMarkers = lengthSeg[i];
+                        segments[i].mean = segmentMeans[i];
+                    }
 
-                        }
-                        // estimate segment means 
-
-                        double[] segmentMeans = new double[lengthSeg.Count()];
-                        int ss = 0, ee = 0;
-                        for (int i = 0; i < lengthSeg.Count(); i++)
-                        {
-                            ee += lengthSeg[i];
-                            // Works even if weights == null
-                            segmentMeans[i] = Helper.WeightedAverage(this.ScoreByChr[chr], null, iStart: ss, iEnd: ee);
-                            ss = ee;
-                        }
-
-                        Segment[] segments = new Segment[startBreakpointsPos.Count];
-                        for (int i = 0; i < startBreakpointsPos.Count; i++)
-                        {
-                            int start = startBreakpointsPos[i];
-                            int end = endBreakpointPos[i];
-                            segments[i] = new Segment();
-                            segments[i].start = this.StartByChr[chr][start]; // Genomic start
-                            segments[i].end = this.EndByChr[chr][end]; // Genomic end
-                            segments[i].nMarkers = lengthSeg[i];
-                            segments[i].mean = segmentMeans[i];
-                        }
-
-                        lock (segmentByChr)
-                        {
-                            segmentByChr[chr] = segments;
-                        }
-                    }));
+                    lock (segmentByChr)
+                    {
+                        segmentByChr[chr] = segments;
+                    }
+                }));
 
             }
             Console.WriteLine("{0} Launching wavelet tasks", DateTime.Now);
-            Illumina.SecondaryAnalysis.Utilities.DoWorkParallelThreads(tasks);
+            Isas.Shared.Utilities.DoWorkParallelThreads(tasks);
             Console.WriteLine("{0} Completed wavelet tasks", DateTime.Now);
             this.SegmentationResults = new GenomeSegmentationResults(segmentByChr);
             Console.WriteLine("{0} Segmentation results complete", DateTime.Now);
@@ -247,31 +250,31 @@ namespace CanvasPartition
             foreach (KeyValuePair<string, double[]> scoreByChrKVP in ScoreByChr)
             {
                 tasks.Add(new ThreadStart(() =>
+                {
+                    string chr = scoreByChrKVP.Key;
+                    int[] ina;
+                    Helper.GetFiniteIndices(scoreByChrKVP.Value, out ina); // not NaN, -Inf, Inf
+
+                    double[] scores;
+                    if (ina.Length == scoreByChrKVP.Value.Length)
                     {
-                        string chr = scoreByChrKVP.Key;
-                        int[] ina;
-                        Helper.GetFiniteIndices(scoreByChrKVP.Value, out ina); // not NaN, -Inf, Inf
+                        scores = scoreByChrKVP.Value;
+                    }
+                    else
+                    {
+                        Helper.ExtractValues<double>(scoreByChrKVP.Value, ina, out scores);
+                    }
 
-                        double[] scores;
-                        if (ina.Length == scoreByChrKVP.Value.Length)
-                        {
-                            scores = scoreByChrKVP.Value;
-                        }
-                        else
-                        {
-                            Helper.ExtractValues<double>(scoreByChrKVP.Value, ina, out scores);
-                        }
+                    lock (finiteScoresByChr)
+                    {
+                        finiteScoresByChr[chr] = scores;
+                        inaByChr[chr] = ina;
+                    }
 
-                        lock (finiteScoresByChr)
-                        {
-                            finiteScoresByChr[chr] = scores;
-                            inaByChr[chr] = ina;
-                        }
-
-                    }));
+                }));
             }
             //Parallel.ForEach(tasks, t => { t.Invoke(); });
-            Illumina.SecondaryAnalysis.Utilities.DoWorkParallelThreads(tasks);
+            Isas.Shared.Utilities.DoWorkParallelThreads(tasks);
             // Quick sanity-check: If we don't have any segments, then return a dummy result.
             int n = 0;
             foreach (var list in finiteScoresByChr.Values)
@@ -299,39 +302,39 @@ namespace CanvasPartition
             foreach (string chr in ScoreByChr.Keys)
             {
                 tasks.Add(new ThreadStart(() =>
+                {
+                    int[] ina = inaByChr[chr];
+                    int[] lengthSeg;
+                    double[] segmentMeans;
+                    ChangePoint.ChangePoints(this.ScoreByChr[chr], sbdry, out lengthSeg, out segmentMeans, perChromosomeRandom[chr],
+                        dataType: this.DataType, alpha: this.Alpha, nPerm: nPerm,
+                        pMethod: pMethod, minWidth: minWidth, kMax: kMax, nMin: nMin, trimmedSD: trimmedSD,
+                        undoSplits: this.UndoMethod, undoPrune: undoPrune, undoSD: undoSD, verbose: verbose);
+
+                    Segment[] segments = new Segment[lengthSeg.Length];
+                    int cs1 = 0, cs2 = -1; // cumulative sum
+                    for (int i = 0; i < lengthSeg.Length; i++)
                     {
-                        int[] ina = inaByChr[chr];
-                        int[] lengthSeg;
-                        double[] segmentMeans;
-                        ChangePoint.ChangePoints(this.ScoreByChr[chr], sbdry, out lengthSeg, out segmentMeans, perChromosomeRandom[chr],
-                            dataType: this.DataType, alpha: this.Alpha, nPerm: nPerm,
-                            pMethod: pMethod, minWidth: minWidth, kMax: kMax, nMin: nMin, trimmedSD: trimmedSD,
-                            undoSplits: this.UndoMethod, undoPrune: undoPrune, undoSD: undoSD, verbose: verbose);
+                        cs2 += lengthSeg[i];
+                        int start = ina[cs1];
+                        int end = ina[cs2];
+                        segments[i] = new Segment();
+                        segments[i].start = this.StartByChr[chr][start]; // Genomic start
+                        segments[i].end = this.EndByChr[chr][end]; // Genomic end
+                        segments[i].nMarkers = lengthSeg[i];
+                        segments[i].mean = segmentMeans[i];
+                        cs1 += lengthSeg[i];
+                    }
 
-                        Segment[] segments = new Segment[lengthSeg.Length];
-                        int cs1 = 0, cs2 = -1; // cumulative sum
-                        for (int i = 0; i < lengthSeg.Length; i++)
-                        {
-                            cs2 += lengthSeg[i];
-                            int start = ina[cs1];
-                            int end = ina[cs2];
-                            segments[i] = new Segment();
-                            segments[i].start = this.StartByChr[chr][start]; // Genomic start
-                            segments[i].end = this.EndByChr[chr][end]; // Genomic end
-                            segments[i].nMarkers = lengthSeg[i];
-                            segments[i].mean = segmentMeans[i];
-                            cs1 += lengthSeg[i];
-                        }
-
-                        lock (segmentByChr)
-                        {
-                            segmentByChr[chr] = segments;
-                        }
-                    }));
+                    lock (segmentByChr)
+                    {
+                        segmentByChr[chr] = segments;
+                    }
+                }));
             }
 
             //Parallel.ForEach(tasks, t => { t.Invoke(); });
-            Illumina.SecondaryAnalysis.Utilities.DoWorkParallelThreads(tasks);
+            Isas.Shared.Utilities.DoWorkParallelThreads(tasks);
             this.SegmentationResults = new GenomeSegmentationResults(segmentByChr);
         }
 
@@ -445,16 +448,17 @@ namespace CanvasPartition
                         if (excludeIntervals != null)
                         {
                             while (excludeIndex < excludeIntervals.Count && excludeIntervals[excludeIndex].Stop < previousBinEnd) excludeIndex++;
-                            if (excludeIndex < excludeIntervals.Count) 
-                            { 
+                            if (excludeIndex < excludeIntervals.Count)
+                            {
                                 // Note: forbiddenZoneMid should never fall inside a bin, becuase these intervals were already excluded 
                                 // from consideration during the call to CanvasBin.
                                 int forbiddenZoneMid = (excludeIntervals[excludeIndex].Start + excludeIntervals[excludeIndex].Stop) / 2;
                                 if (previousBinEnd < forbiddenZoneMid && end >= forbiddenZoneMid) newSegment = true;
                             }
                         }
-                        if (previousBinEnd > 0 && previousBinEnd + 1000000 < start && !newSegment)
-                        { 
+                        if (previousBinEnd > 0 && MaxInterBinDistInSegment >= 0 && previousBinEnd + MaxInterBinDistInSegment < start
+                            && !newSegment)
+                        {
                             newSegment = true;
                         }
 

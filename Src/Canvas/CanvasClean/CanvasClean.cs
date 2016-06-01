@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using CanvasCommon;
 using NDesk.Options;
 using System.IO;
@@ -73,31 +71,31 @@ namespace CanvasClean
             EnrichmentUtilities.GetCountsByGC(bins, manifest, out countsByGC, out counts);
 
             // Estimate quartiles of all bins genomewide
-            var globalQuartiles = CanvasCommon.Utilities.Quartiles(counts);
+            var globalQuartiles = Utilities.Quartiles(counts);
             // Will hold interquartile range (IQR) separately for each GC bin
-            List<float> localIQR = new List<float> (countsByGC.Length);
+            List<float> localIQR = new List<float>(countsByGC.Length);
             // Will hold quartiles separately for each GC bin
             List<Tuple<float, float, float>> localQuartiles = new List<Tuple<float, float, float>>(countsByGC.Length);
 
             // calculate interquartile range (IQR) for GC bins and populate localQuartiles list
             for (int i = 0; i < countsByGC.Length; i++)
             {
-                if (countsByGC[i].Count == 0) 
+                if (countsByGC[i].Count == 0)
                 {
-                    localIQR.Add(-1f);     
+                    localIQR.Add(-1f);
                     localQuartiles.Add(new Tuple<float, float, float>(-1f, -1f, -1f));
                 }
                 else if (countsByGC[i].Count >= defaultMinNumberOfBinsPerGC)
                 {
-                    localQuartiles.Add(CanvasCommon.Utilities.Quartiles(countsByGC[i]));
+                    localQuartiles.Add(Utilities.Quartiles(countsByGC[i]));
                     localIQR.Add(localQuartiles[i].Item3 - localQuartiles[i].Item1);
                 }
                 else
                 {
                     List<Tuple<float, float>> weightedCounts = GetWeightedCounts(countsByGC, i);
-                    double[] quartiles = CanvasCommon.Utilities.WeightedQuantiles(weightedCounts, new List<float>() { 0.25f, 0.5f, 0.75f });
+                    double[] quartiles = Utilities.WeightedQuantiles(weightedCounts, new List<float>() { 0.25f, 0.5f, 0.75f });
                     localQuartiles.Add(new Tuple<float, float, float>((float)quartiles[0], (float)quartiles[1], (float)quartiles[2]));
-                    localIQR.Add((float)(quartiles[2] - quartiles[0]));   
+                    localIQR.Add((float)(quartiles[2] - quartiles[0]));
                 }
             }
 
@@ -108,30 +106,26 @@ namespace CanvasClean
             for (int i = 10; i < 90; i++)
             {
                 if (globalIQR < localIQR[i] * 2f)
-                    significantIQRcounter ++;
+                    significantIQRcounter++;
             }
 
-            if (significantIQRcounter > 0) 
-            {
-                // Divide each count by the median count of bins with the same GC content
-                for (int i = 0; i < bins.Count; i++)
-                {
-                    if (globalIQR < localIQR[bins[i].GC] * 0.8f)
-                    {
-                        // ratio of GC bins and global IQRs
-                        float ratioIQR = localIQR[bins[i].GC] / globalIQR;
-                        if (bins[i].Count > localQuartiles[bins[i].GC].Item2)
-                            bins[i].Count = localQuartiles[bins[i].GC].Item2 + (bins[i].Count - localQuartiles[bins[i].GC].Item2) / (ratioIQR * 0.8f);
-                        else
-                            bins[i].Count = localQuartiles[bins[i].GC].Item2 - (bins[i].Count - localQuartiles[bins[i].GC].Item2) / (ratioIQR * 0.8f);
-                    }
-                }            
-            }
-            // DebugPrintCountsByGC(bins, "CountsByGCVariance-After.txt");
-            if (significantIQRcounter > 0)
-                return true;
-            else 
+            if (significantIQRcounter <= 0)
                 return false;
+
+            // Divide each count by the median count of bins with the same GC content
+            foreach (GenomicBin bin in bins)
+            {
+                var scaledLocalIqr = localIQR[bin.GC] * 0.8f;
+                if (globalIQR >= scaledLocalIqr) continue;
+
+                // ratio of GC bins and global IQRs
+                float iqrRatio = scaledLocalIqr / globalIQR;
+                var medianGCCount = localQuartiles[bin.GC].Item2;
+                bin.Count = medianGCCount + (bin.Count - medianGCCount) / iqrRatio;
+            }
+
+            // DebugPrintCountsByGC(bins, "CountsByGCVariance-After.txt");
+            return true;
         }
 
         /// <summary>
@@ -147,18 +141,18 @@ namespace CanvasClean
             List<Tuple<float, float>> weightedCounts = new List<Tuple<float, float>>();
             int radius = 0;
             float weight = 1;
-            while (weightedCounts.Count < defaultMinNumberOfBinsPerGC) 
+            while (weightedCounts.Count < defaultMinNumberOfBinsPerGC)
             {
                 int gcWindowEnd = gcBin + radius;
                 int gcWindowStart = gcBin - radius;
                 if (gcWindowEnd >= countsByGC.Length && gcWindowStart < 0) { break; }
 
-                if (gcWindowEnd < countsByGC.Length) 
+                if (gcWindowEnd < countsByGC.Length)
                 {
                     weightedCounts.AddRange(countsByGC[gcWindowEnd].Select(c => Tuple.Create(c, weight)));
                 }
 
-                if (gcWindowStart != gcWindowEnd && gcWindowStart >= 0) 
+                if (gcWindowStart != gcWindowEnd && gcWindowStart >= 0)
                 {
                     weightedCounts.AddRange(countsByGC[gcWindowStart].Select(c => Tuple.Create(c, weight)));
                 }
@@ -208,7 +202,7 @@ namespace CanvasClean
             List<float> counts;
             EnrichmentUtilities.GetCountsByGC(bins, manifest, out countsByGC, out counts);
 
-            double globalMedian = CanvasCommon.Utilities.Median(counts);
+            double globalMedian = Utilities.Median(counts);
             double?[] medians = new double?[countsByGC.Length];
 
             // Compute the median count for each GC bin
@@ -216,12 +210,12 @@ namespace CanvasClean
             {
                 if (countsByGC[gcBinIndex].Count >= defaultMinNumberOfBinsPerGC)
                 {
-                    medians[gcBinIndex] = CanvasCommon.Utilities.Median(countsByGC[gcBinIndex]);
+                    medians[gcBinIndex] = Utilities.Median(countsByGC[gcBinIndex]);
                 }
                 else
                 {
-                    List<Tuple<float, float>> weightedCounts = GetWeightedCounts(countsByGC, gcBinIndex);              
-                    medians[gcBinIndex] = CanvasCommon.Utilities.WeightedMedian(weightedCounts);
+                    List<Tuple<float, float>> weightedCounts = GetWeightedCounts(countsByGC, gcBinIndex);
+                    medians[gcBinIndex] = Utilities.WeightedMedian(weightedCounts);
                 }
             }
 
@@ -289,11 +283,11 @@ namespace CanvasClean
                 if (chromosome[i] != chromosome[iStart])
                 {
                     int iEnd = i; // 0-based, exclusive
-                    medianAbsoluteDeviations.Add(CanvasCommon.Utilities.Mad(list, iStart, iEnd));
+                    medianAbsoluteDeviations.Add(Utilities.Mad(list, iStart, iEnd));
                     iStart = i;
                 }
             }
-            medianAbsoluteDeviations.Add(CanvasCommon.Utilities.Mad(list, iStart, list.Count));
+            medianAbsoluteDeviations.Add(Utilities.Mad(list, iStart, list.Count));
             return medianAbsoluteDeviations.Average();
         }
 
@@ -312,7 +306,7 @@ namespace CanvasClean
 
             for (int binIndex = 0; binIndex < bins.Count - 1; binIndex++)
             {
-                countsDiffs[binIndex] = System.Convert.ToDouble(bins[binIndex + 1].Count - bins[binIndex].Count);
+                countsDiffs[binIndex] = Convert.ToDouble(bins[binIndex + 1].Count - bins[binIndex].Count);
             }
 
             // holder of local SD values (SDs of 20 bins)
@@ -323,7 +317,7 @@ namespace CanvasClean
             int windowSize = 20;
             for (int windowEnd = windowSize, windowStart = 0; windowEnd < countsDiffs.Length; windowStart += windowSize, windowEnd += windowSize)
             {
-                double localSD = CanvasCommon.Utilities.StandardDeviation(countsDiffs, windowStart, windowEnd);
+                double localSD = Utilities.StandardDeviation(countsDiffs, windowStart, windowEnd);
                 localSDs.Add(localSD);
                 chromosomeBin.Add(bins[windowStart].Chromosome);
                 for (int binIndex = windowStart; binIndex < windowEnd; binIndex += 1)
@@ -358,7 +352,7 @@ namespace CanvasClean
                     continue;
                 strippedBins.Add(bin);
             }
-            return strippedBins;    
+            return strippedBins;
         }
 
         /// <summary>
@@ -434,7 +428,7 @@ namespace CanvasClean
                 bool hasPreviousBin = binIndex > 0;
                 bool hasNextBin = binIndex < bins.Count - 1;
                 string currentBinChromosome = bins[binIndex].Chromosome;
-                string previousBinChromosome =  hasPreviousBin ? bins[binIndex - 1].Chromosome : null;
+                string previousBinChromosome = hasPreviousBin ? bins[binIndex - 1].Chromosome : null;
                 string nextBinChromosome = hasNextBin ? bins[binIndex + 1].Chromosome : null;
                 // Different chromosome on both sides
                 if ((hasPreviousBin && !currentBinChromosome.Equals(previousBinChromosome))
@@ -454,7 +448,7 @@ namespace CanvasClean
 
         static int Main(string[] args)
         {
-            CanvasCommon.Utilities.LogCommandLine(args);
+            Utilities.LogCommandLine(args);
             string inFile = null;
             string outFile = null;
             bool doGCnorm = false;
@@ -462,7 +456,7 @@ namespace CanvasClean
             bool doOutlierRemoval = false;
             string ffpeOutliersFile = null;
             string manifestFile = null;
-            CanvasCommon.CanvasGCNormalizationMode gcNormalizationMode = CanvasGCNormalizationMode.MedianByGC;
+            CanvasGCNormalizationMode gcNormalizationMode = CanvasGCNormalizationMode.MedianByGC;
             string modeDescription = String.Format("gc normalization mode. Available modes: {0}. Default: {1}",
                 String.Join(", ", Enum.GetValues(typeof(CanvasGCNormalizationMode)).Cast<CanvasGCNormalizationMode>()),
                 gcNormalizationMode);
@@ -478,7 +472,7 @@ namespace CanvasClean
                 { "f|ffpeoutliers=",   "filter regions of FFPE biases",                   v => ffpeOutliersFile = v },
                 { "t|manifest=",      "Nextera manifest file",                            v => manifestFile = v },
                 { "w|weightedmedian=", "Minimum number of bins per GC required to calculate weighted median", v => minNumberOfBinsPerGCForWeightedMedian = int.Parse(v) },
-                { "m|mode=",          modeDescription,                                    v => gcNormalizationMode = CanvasCommon.Utilities.ParseCanvasGCNormalizationMode(v) },
+                { "m|mode=",          modeDescription,                                    v => gcNormalizationMode = Utilities.ParseCanvasGCNormalizationMode(v) },
                 { "h|help",           "show this message and exit",                       v => needHelp = v != null },
             };
 
@@ -519,10 +513,10 @@ namespace CanvasClean
 
             // estimate localSD metric to use in doFFPEOutlierRemoval later and write to a text file 
             double LocalSD = -1.0;
-            if (ffpeOutliersFile != null) 
+            if (ffpeOutliersFile != null)
             {
                 LocalSD = getLocalStandardDeviation(bins);
-                CanvasIO.WriteLocalSDToTextFile(ffpeOutliersFile, LocalSD);            
+                CanvasIO.WriteLocalSDToTextFile(ffpeOutliersFile, LocalSD);
             }
 
             if (doGCnorm)

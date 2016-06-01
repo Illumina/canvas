@@ -16,32 +16,45 @@ namespace CanvasSNV
     class SNVReviewer
     {
         #region Members
-        public string Chromosome;
+        protected readonly string Chromosome;
+        protected readonly string VcfPath;
+        protected readonly string BamPath;
+        protected readonly string OutputPath;
         List<VcfVariant> Variants;
         int[] ReferenceCounts;
         int[] VariantCounts;
         int MinimumBaseQScore = 20; // You must be >= this base call quality to be counted.
+        protected readonly int MinimumMapQ;
         #endregion
 
-        public int Main(string vcfPath, string bamPath, string outputPath)
+        public SNVReviewer(string chromosome, string vcfPath, string bamPath, string outputPath, int minMapQ)
+        {
+            Chromosome = chromosome;
+            VcfPath = vcfPath;
+            BamPath = bamPath;
+            OutputPath = outputPath;
+            MinimumMapQ = minMapQ;
+        }
+
+        public int Run()
         {
             
-            if (!File.Exists(vcfPath))
+            if (!File.Exists(VcfPath))
             {
-                Console.Error.WriteLine("Error: Input vcf file not found at {0}", vcfPath);
+                Console.Error.WriteLine("Error: Input vcf file not found at {0}", VcfPath);
                 return 1;
             }
-            if (!File.Exists(bamPath))
+            if (!File.Exists(BamPath))
             {
-                Console.Error.WriteLine("Error: Input bam file not found at {0}", bamPath);
+                Console.Error.WriteLine("Error: Input bam file not found at {0}", BamPath);
                 return 1;
             }
 
-            this.LoadVariants(vcfPath);
+            this.LoadVariants(VcfPath);
             ReferenceCounts = new int[Variants.Count];
             VariantCounts = new int[Variants.Count];
-            this.ProcessBamFile(bamPath);
-            this.WriteResults(outputPath);
+            this.ProcessBamFile(BamPath);
+            this.WriteResults(OutputPath);
             return 0;
         }
 
@@ -59,7 +72,7 @@ namespace CanvasSNV
                 VcfVariant variant = new VcfVariant();
                 while (true)
                 {
-                    bool result = reader.GetNextVariant(variant);
+                    bool result = reader.GetNextVariant(out variant);
                     if (!result) break;
                     overallCount++; 
                     if (variant.ReferenceName != this.Chromosome)
@@ -132,7 +145,7 @@ namespace CanvasSNV
                     if (!read.IsPrimaryAlignment()) continue;
                     if (!read.IsMapped()) continue;
                     if (read.IsDuplicate()) continue;
-                    if (read.MapQuality == 0) continue;
+                    if (read.MapQuality <= MinimumMapQ) continue;
 
                     // Scan forward through the variants list, to keep up with our reads:
                     while (nextVariantIndex < this.Variants.Count && this.Variants[nextVariantIndex].ReferencePosition < read.Position)
