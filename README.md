@@ -9,7 +9,7 @@ Canvas is written in C# and runs either under a recent version of Mono (e.g. 3.1
 
 For more information on Canvas, see the [software design description] [SDD] for a description of Canvas and the algorithms it uses.
 
-[SDD]:Docs/CanvasSoftwareDesignDescription.pdf
+[SDD]:SoftwareDesignDescription.pdf
 
 License
 -------
