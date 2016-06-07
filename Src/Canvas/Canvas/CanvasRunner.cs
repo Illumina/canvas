@@ -626,7 +626,7 @@ namespace Illumina.SecondaryAnalysis
             {
                 ExecutablePath = executablePath,
                 LoggingFolder = _workManager.LoggingFolder.FullName,
-                LoggingStub = Path.GetFileName(cleanedPath.FullName),
+                LoggingStub = cleanedPath.Name,
                 CommandLine = commandLine.ToString()
             };
             if (_customParameters.ContainsKey("CanvasClean"))
