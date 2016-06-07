@@ -599,18 +599,19 @@ namespace Illumina.SecondaryAnalysis
                 executablePath = Utilities.GetMonoPath();
             }
             commandLine.AppendFormat("-i \"{0}\" ", binnedPath);
-            string cleanedPath = Path.Combine(callset.TempFolder, string.Format("{0}.cleaned", callset.Id));
+            var tempFolder = new DirectoryLocation(callset.TempFolder);
+            var cleanedPath = tempFolder.GetFileLocation($"{callset.Id}.cleaned");
             commandLine.AppendFormat("-o \"{0}\" ", cleanedPath);
             commandLine.AppendFormat("-g");
 
-            string ffpePath = null;
+            IFileLocation ffpePath = null;
 
             // TruSight Cancer has 1,737 targeted regions. The cut-off 2000 is somewhat arbitrary.
             // TruSight One has 62,309 targeted regions.
             // Nextera Rapid Capture v1.1 has 411,513 targeted regions.
             if (!callset.IsEnrichment || callset.Manifest.Regions.Count > 2000)
             {
-                ffpePath = Path.Combine(callset.TempFolder, "FilterRegions.txt");
+                ffpePath = tempFolder.GetFileLocation("FilterRegions.txt");
                 commandLine.AppendFormat(" -s -r -f \"{0}\"", ffpePath);
             }
             if (callset.IsEnrichment) // manifest
@@ -625,7 +626,7 @@ namespace Illumina.SecondaryAnalysis
             {
                 ExecutablePath = executablePath,
                 LoggingFolder = _workManager.LoggingFolder.FullName,
-                LoggingStub = Path.GetFileName(cleanedPath),
+                LoggingStub = Path.GetFileName(cleanedPath.FullName),
                 CommandLine = commandLine.ToString()
             };
             if (_customParameters.ContainsKey("CanvasClean"))
@@ -634,7 +635,7 @@ namespace Illumina.SecondaryAnalysis
             }
             _workManager.DoWorkSingleThread(cleanJob);
 
-            var canvasCleanOutput = new CanvasCleanOutput(new FileLocation(cleanedPath), new FileLocation(ffpePath));
+            var canvasCleanOutput = new CanvasCleanOutput(cleanedPath, ffpePath);
             return canvasCleanOutput;
         }
 
