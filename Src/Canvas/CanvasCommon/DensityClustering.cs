@@ -60,6 +60,24 @@ namespace CanvasCommon
             return segmentCounts;
         }
 
+        public List<double> GetCentroidsVariance(List<double> centroidsMAFs, List<double> centroidsCoverage, int nClusters)
+        {
+            List<double> clusterVariance = new List<double>();
+
+            for (int clusterID = 0; clusterID<nClusters; clusterID++)
+            {
+                List<double> tmpDistance = new List<double>();
+                foreach (SegmentInfo segment in this.Segments)
+                {
+                    if (segment.Cluster.HasValue && clusterID == segment.Cluster.Value)
+                    {
+                        tmpDistance.Add(GetEuclideanDistance(segment.Coverage, centroidsCoverage[clusterID], segment.MAF, centroidsMAFs[clusterID]));
+                    }
+                }
+                clusterVariance.Add(tmpDistance.Average());
+            }
+            return clusterVariance;
+        }
 
         public List<double> GetCentroidsMAF()
         {
@@ -71,6 +89,8 @@ namespace CanvasCommon
             return this.CentroidsCoverage;
         }
 
+
+        
         /// <summary>
         /// Return the squared euclidean distance between (coverage, maf) and (coverage2, maf2) in scaled coverage/MAF space.
         /// https://en.wikipedia.org/wiki/Euclidean_distance
