@@ -492,6 +492,8 @@ namespace CanvasSomaticCaller
                 }
                 if (filter == null)
                     filter = "PASS";
+
+                segment.Filter = filter;
             }
         }
 
