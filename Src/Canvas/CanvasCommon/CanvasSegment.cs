@@ -39,6 +39,7 @@ namespace CanvasCommon
                 return sum / this.BinCount;
             }
         }
+    
 
         public CnvType GetCnvType(int referenceCopyNumber)
         {

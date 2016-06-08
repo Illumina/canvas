@@ -69,7 +69,7 @@ namespace CanvasCommon
                 List<double> tmpDistance = new List<double>();
                 foreach (SegmentInfo segment in this.Segments)
                 {
-                    if (segment.Cluster.HasValue && clusterID == segment.Cluster.Value)
+                    if (segment.Cluster.HasValue && clusterID + 1 == segment.Cluster.Value)
                     {
                         tmpDistance.Add(GetEuclideanDistance(segment.Coverage, centroidsCoverage[clusterID], segment.MAF, centroidsMAFs[clusterID]));
                     }
