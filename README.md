@@ -11,6 +11,12 @@ For more information about Canvas and the algorithms it uses see the [software d
 
 [SDD]:SoftwareDesignDocument.pdf
 
+Canvas also  described in the publication Canvas: versatile and scalable detection of copy number variants in the journal Bioinformatics.
+
+Publication link: http://bioinformatics.oxfordjournals.org/content/early/2016/04/19/bioinformatics.btw163
+
+BioRxiv link: http://biorxiv.org/content/early/2016/01/13/036194
+
 License
 -------
 
