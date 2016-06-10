@@ -392,24 +392,17 @@ namespace CanvasCommon
         /// </summary>
         /// <param name="x">List of doubles.</param>
         /// <returns>Median of x.</returns>
-        public static double Median(List<double> x, int start = 0, int end = 0)
+        public static double Median(IEnumerable<double> x, int start = 0, int end = 0)
         {
             if (start == 0 && end == 0)
             {
-                end = x.Count;
+                end = x.Count();
             }
 
-            List<double> sorted = new List<double>(end);
+            double[] sorted = x.Skip(start).Take(end - start).ToArray();
+            Array.Sort(sorted);
 
-            for (int i = start; i < end; i++)
-            {
-                sorted.Add(x[i]);
-            }
-
-            sorted.Sort();
-
-            int n = sorted.Count;
-
+            int n = sorted.Length;
             double median = 0;
 
             if (n % 2 == 0)
@@ -431,22 +424,18 @@ namespace CanvasCommon
         /// </summary>
         /// <param name="x">List of doubles.</param>
         /// <returns>Median absolute deviation of x.</returns>
-        public static double Mad(List<double> x, int start = 0, int end = 0)
+        public static double Mad(IEnumerable<double> x, int start = 0, int end = 0)
         {
             if (start == 0 && end == 0)
             {
-                end = x.Count;
+                end = x.Count();
             }
 
             double median = Median(x, start, end);
-            List<double> diffs = new List<double>(end);
+            double[] diffs = x.Skip(start).Take(end - start)
+                .Select(xi => Math.Abs(xi - median)).ToArray();
 
-            for (int i = start; i < end; i++)
-            {
-                diffs.Add(Math.Abs(x[i] - median));
-            }
-            double medianDiffs = Median(diffs);
-            return medianDiffs;
+            return Median(diffs);
         }
 
         /// <summary>

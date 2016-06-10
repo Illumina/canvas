@@ -17,7 +17,8 @@ namespace CanvasPartition
     class Segmentation
     {
         #region Members
-        public static readonly double DefaultAlpha = 0.01;
+        public static readonly double DefaultAlpha = 0.01; // default alpha for CBS
+        public static readonly double DefaultMadFactor = 2.0; // default MAD factor for Wavelets
         private string InputBinPath;
         private string DataType;
         private const int idxChr = 0, idxStart = 1, idxEnd = 2;
@@ -27,6 +28,7 @@ namespace CanvasPartition
         private Dictionary<string, double[]> ScoreByChr = new Dictionary<string, double[]>();
         private GenomeSegmentationResults SegmentationResults;
         public double Alpha = DefaultAlpha;
+        public double MadFactor = DefaultMadFactor;
         public SegmentSplitUndo UndoMethod = SegmentSplitUndo.None;
         private string ForbiddenIntervalBedPath = null;
         private int MaxInterBinDistInSegment = 1000000;
@@ -52,7 +54,7 @@ namespace CanvasPartition
                 case SegmentationMethod.Wavelets:
                 default:// use Wavelets if CBS is not selected       
                     Console.WriteLine("{0} Running Wavelet Partitioning", DateTime.Now);
-                    this.Wavelets(isGermline, verbose: 2);
+                    this.Wavelets(isGermline, madFactor: MadFactor, verbose: 2);
                     break;
                 case SegmentationMethod.CBS:
                     Console.WriteLine("{0} Running CBS Partitioning", DateTime.Now);
@@ -74,7 +76,7 @@ namespace CanvasPartition
         /// Wavelets: unbalanced HAAR wavelets segmentation 
         /// </summary>
         /// <param name="threshold">wavelets coefficient threshold</param>
-        private void Wavelets(bool isGermline, double thresholdLower = 5, double thresholdUpper = 80, int minSize = 10, int verbose = 1)
+        private void Wavelets(bool isGermline, double thresholdLower = 5, double thresholdUpper = 80, double madFactor = 2, int minSize = 10, int verbose = 1)
         {
             Dictionary<string, int[]> inaByChr = new Dictionary<string, int[]>();
             Dictionary<string, double[]> finiteScoresByChr = new Dictionary<string, double[]>();
@@ -139,7 +141,8 @@ namespace CanvasPartition
                     int sizeScoreByChr = this.ScoreByChr[chr].Length;
                     if (sizeScoreByChr > minSize)
                     {
-                        WaveletSegmentation.HaarWavelets(this.ScoreByChr[chr].ToArray(), thresholdLower, thresholdUpper, breakpoints, isGermline);
+                        WaveletSegmentation.HaarWavelets(this.ScoreByChr[chr].ToArray(), thresholdLower, thresholdUpper,
+                            breakpoints, isGermline, madFactor: madFactor);
                     }
 
                     List<int> startBreakpointsPos = new List<int>();
