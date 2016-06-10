@@ -461,7 +461,10 @@ namespace CanvasSomaticCaller
                 }
             }
             if (totalWeight > 0)
-                ExtraHeaders.Add(string.Format("##OverallPloidy={0:F2}", totalPloidy / totalWeight));
+            {
+                ExtraHeaders.Add($"##OverallPloidy={totalPloidy / totalWeight:F2}");
+                ExtraHeaders.Add($"##DiploidCoverage={Model.DiploidCoverage:F2}");
+            }
 
 
             // Write out results:
