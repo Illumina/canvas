@@ -394,14 +394,18 @@ namespace CanvasCommon
         /// <param name="start">First element to calculate the median.</param>
         /// <param name="end">(Exclusive) Last element to calculate the median.</param>
         /// <returns>Median of x.</returns>
-        public static double Median(IList<double> x, int start = 0, int end = 0)
+        public static double Median(IEnumerable<double> x, int start = 0, int end = 0)
         {
-            if (start == 0 && end == 0)
-            {
-                end = x.Count;
-            }
+            if (start < 0)
+                throw new ArgumentException("start cannot be negative");
+            if (end < 0)
+                throw new ArgumentException("end cannot be negative");
 
-            double[] sorted = x.Skip(start).Take(end - start).ToArray();
+            double[] sorted;
+            if (end == 0)
+                sorted = x.Skip(start).ToArray();
+            else
+                sorted = x.Skip(start).Take(end - start).ToArray();
             Array.Sort(sorted);
 
             int n = sorted.Length;
@@ -428,16 +432,16 @@ namespace CanvasCommon
         /// <param name="start">First element to calculate the MAD.</param>
         /// <param name="end">(Exclusive) Last element to calculate the MAD.</param>
         /// <returns>Median absolute deviation of x.</returns>
-        public static double Mad(IList<double> x, int start = 0, int end = 0)
+        public static double Mad(IEnumerable<double> x, int start = 0, int end = 0)
         {
-            if (start == 0 && end == 0)
-            {
-                end = x.Count;
-            }
+            if (start < 0)
+                throw new ArgumentException("start cannot be negative");
+            if (end < 0)
+                throw new ArgumentException("end cannot be negative");
 
             double median = Median(x, start, end);
-            double[] diffs = x.Skip(start).Take(end - start)
-                .Select(xi => Math.Abs(xi - median)).ToArray();
+            var xSlice = end == 0 ? x.Skip(start) : x.Skip(start).Take(end - start);
+            double[] diffs = xSlice.Select(xi => Math.Abs(xi - median)).ToArray();
 
             return Median(diffs);
         }
