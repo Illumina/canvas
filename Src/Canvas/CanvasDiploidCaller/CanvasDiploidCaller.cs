@@ -389,7 +389,7 @@ namespace CanvasDiploidCaller
             if (this.Segments.Count == 0)
             {
                 Console.WriteLine("CanvasDiploidCaller: No segments loaded; no CNV calls will be made.");
-                CanvasSegment.WriteSegments(outFile, this.Segments, referenceFolder, sampleName, null, null);
+                CanvasSegment.WriteSegments(outFile, this.Segments, Model.DiploidCoverage, referenceFolder, sampleName, null, null);
                 return 0;
             }
             PloidyInfo ploidy = null;
