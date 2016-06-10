@@ -202,7 +202,7 @@ namespace CanvasPartition
         /// <summary>
         /// Refines breakpoint by maximising local medians
         /// </summary>
-        private static void RefineSegments(List<int> breakpoints, IEnumerable<double> coverage)
+        private static void RefineSegments(List<int> breakpoints, IList<double> coverage)
         {
             int halfWindow = 5;
             double totalMedian = CanvasCommon.Utilities.Median(coverage);

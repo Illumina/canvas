@@ -394,11 +394,11 @@ namespace CanvasCommon
         /// <param name="start">First element to calculate the median.</param>
         /// <param name="end">(Exclusive) Last element to calculate the median.</param>
         /// <returns>Median of x.</returns>
-        public static double Median(IEnumerable<double> x, int start = 0, int end = 0)
+        public static double Median(IList<double> x, int start = 0, int end = 0)
         {
             if (start == 0 && end == 0)
             {
-                end = x.Count();
+                end = x.Count;
             }
 
             double[] sorted = x.Skip(start).Take(end - start).ToArray();
@@ -428,11 +428,11 @@ namespace CanvasCommon
         /// <param name="start">First element to calculate the MAD.</param>
         /// <param name="end">(Exclusive) Last element to calculate the MAD.</param>
         /// <returns>Median absolute deviation of x.</returns>
-        public static double Mad(IEnumerable<double> x, int start = 0, int end = 0)
+        public static double Mad(IList<double> x, int start = 0, int end = 0)
         {
             if (start == 0 && end == 0)
             {
-                end = x.Count();
+                end = x.Count;
             }
 
             double median = Median(x, start, end);
