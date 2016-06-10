@@ -401,7 +401,7 @@ namespace CanvasSomaticCaller
                 {
                     Console.WriteLine("Not calling any CNVs. Reason: {0}", e.Message);
                     Segments.Clear();
-                    CanvasSegment.WriteSegments(outputVCFPath, this.Segments, referenceFolder, name, ExtraHeaders,
+                    CanvasSegment.WriteSegments(outputVCFPath, this.Segments, Model.DiploidCoverage, referenceFolder, name, ExtraHeaders,
                         this.ReferencePloidy, QualityFilterThreshold);
                     Environment.Exit(0);
                 }
