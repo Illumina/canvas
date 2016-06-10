@@ -391,6 +391,8 @@ namespace CanvasCommon
         /// Calculates the median of an arbitrary interval in a  list.  Does not re-order the original list.
         /// </summary>
         /// <param name="x">List of doubles.</param>
+        /// <param name="start">First element to calculate the median.</param>
+        /// <param name="end">(Exclusive) Last element to calculate the median.</param>
         /// <returns>Median of x.</returns>
         public static double Median(IEnumerable<double> x, int start = 0, int end = 0)
         {
@@ -420,9 +422,11 @@ namespace CanvasCommon
         }
 
         /// <summary>
-        /// Calculates the median absolute deviation of a list.  Does not re-order the original list.
+        /// Calculates the median absolute deviation (MAD) of a list.  Does not re-order the original list.
         /// </summary>
         /// <param name="x">List of doubles.</param>
+        /// <param name="start">First element to calculate the MAD.</param>
+        /// <param name="end">(Exclusive) Last element to calculate the MAD.</param>
         /// <returns>Median absolute deviation of x.</returns>
         public static double Mad(IEnumerable<double> x, int start = 0, int end = 0)
         {
