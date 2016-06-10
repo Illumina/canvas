@@ -276,8 +276,8 @@ namespace CanvasPartition
 
                 }));
             }
-            //Parallel.ForEach(tasks, t => { t.Invoke(); });
             Isas.Shared.Utilities.DoWorkParallelThreads(tasks);
+
             // Quick sanity-check: If we don't have any segments, then return a dummy result.
             int n = 0;
             foreach (var list in finiteScoresByChr.Values)
