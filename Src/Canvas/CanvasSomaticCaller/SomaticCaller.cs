@@ -449,26 +449,10 @@ namespace CanvasSomaticCaller
                 this.GenerateExtendedReportVersusKnownCN();
             }
 
-            ExtraHeaders.Add(string.Format("##EstimatedChromosomeCount={0:F2}", this.EstimateChromosomeCount()));
-            double totalPloidy = 0;
-            double totalWeight = 0;
-            foreach (CanvasSegment segment in this.Segments)
-            {
-                if (segment.Filter == "PASS")
-                {
-                    totalWeight += segment.End - segment.Begin;
-                    totalPloidy += segment.CopyNumber * (segment.End - segment.Begin);
-                }
-            }
-            if (totalWeight > 0)
-            {
-                ExtraHeaders.Add($"##OverallPloidy={totalPloidy / totalWeight:F2}");
-                ExtraHeaders.Add($"##DiploidCoverage={Model.DiploidCoverage:F2}");
-            }
-
+            ExtraHeaders.Add($"##EstimatedChromosomeCount={this.EstimateChromosomeCount():F2}");
 
             // Write out results:
-            CanvasSegment.WriteSegments(outputVCFPath, this.Segments, referenceFolder, name, ExtraHeaders, this.ReferencePloidy, QualityFilterThreshold);
+            CanvasSegment.WriteSegments(outputVCFPath, this.Segments, Model.DiploidCoverage, referenceFolder, name, ExtraHeaders, this.ReferencePloidy, QualityFilterThreshold);
 
             return 0;
         }

@@ -234,10 +234,29 @@ namespace CanvasCommon
             }
         }
 
+        private static void AddPloidyAndCoverageHeaders(BgzipOrStreamWriter writer, List<CanvasSegment> segments, double diploidCoverage)
+        {
+            double totalPloidy = 0;
+            double totalWeight = 0;
+            foreach (CanvasSegment segment in segments)
+            {
+                if (segment.Filter == "PASS")
+                {
+                    totalWeight += segment.End - segment.Begin;
+                    totalPloidy += segment.CopyNumber * (segment.End - segment.Begin);
+                }
+            }
+            if (totalWeight > 0)
+            {
+                writer.WriteLine($"##OverallPloidy={totalPloidy / totalWeight:F2}");
+                writer.WriteLine($"##DiploidCoverage={diploidCoverage:F2}");
+            }
+        }
+
         /// <summary>
         /// Outputs the copy number calls to a text file.
         /// </summary>
-        public static void WriteSegments(string outVcfPath, List<CanvasSegment> segments, string wholeGenomeFastaDirectory, string sampleName,
+        public static void WriteSegments(string outVcfPath, List<CanvasSegment> segments, double diploidCoverage, string wholeGenomeFastaDirectory, string sampleName,
             List<string> extraHeaders, PloidyInfo ploidy, int qualityThreshold = 10)
         {
             using (BgzipOrStreamWriter writer = new BgzipOrStreamWriter(outVcfPath))
@@ -246,11 +265,12 @@ namespace CanvasCommon
                 writer.WriteLine("##fileformat=VCFv4.1");
                 writer.WriteLine($"##source={CanvasVersionInfo.NameString} {CanvasVersionInfo.VersionString}");
                 writer.WriteLine($"##reference={Path.Combine(wholeGenomeFastaDirectory, "genome.fa")}");
-
+                AddPloidyAndCoverageHeaders(writer, segments, diploidCoverage);
                 foreach (string header in extraHeaders ?? new List<string>())
                 {
                     writer.WriteLine(header);
                 }
+
                 GenomeMetadata genome = new GenomeMetadata();
                 genome.Deserialize(Path.Combine(wholeGenomeFastaDirectory, "GenomeSize.xml"));
                 foreach (GenomeMetadata.SequenceMetadata chromosome in genome.Sequences)
