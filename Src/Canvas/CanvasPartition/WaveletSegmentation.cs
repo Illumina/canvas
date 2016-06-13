@@ -202,11 +202,11 @@ namespace CanvasPartition
         /// <summary>
         /// Refines breakpoint by maximising local medians
         /// </summary>
-        private static void RefineSegments( List<int> breakpoints, List<double> coverage)
+        private static void RefineSegments(List<int> breakpoints, IEnumerable<double> coverage)
         {
             int halfWindow = 5;
             double totalMedian = CanvasCommon.Utilities.Median(coverage);
-            for (int i = 1; i < (int)breakpoints.Count - 1; i++)
+            for (int i = 1; i < breakpoints.Count - 1; i++)
             {
                 int leftInterval = Math.Min(halfWindow, (breakpoints[i] - breakpoints[i-1])/2);
                 int rightInterval = Math.Min(halfWindow, (breakpoints[i+1] - breakpoints[i])/2);
@@ -349,7 +349,8 @@ namespace CanvasPartition
         /// Enrty function for performing Unbalanced Haar (UH) wavelets decomposition
         /// for change point (breakpoint) detection
         /// </summary>
-        public static void HaarWavelets(double[] ratio, double thresholdlower, double thresholdupper, List<int> breakpoints, bool isGermline)
+        public static void HaarWavelets(double[] ratio, double thresholdlower, double thresholdupper, List<int> breakpoints,
+            bool isGermline, double madFactor = 2.0)
         {
             // tree = A list of J matrices (list of lists in C#), where J represents the number of UH “scales”. 
             // Each matrix is of size 5 x (the number of UH coefficients at a given scale). 
@@ -361,27 +362,25 @@ namespace CanvasPartition
             
             List<List<double>> tree = new List<List<double>>();
             double smooth = 0;
-            List<double> ratio_list = new List<double>(ratio);
             FindBestUnbalancedHaarDecomposition(ratio, tree, smooth);
             // set threshold proportional to SD as and sample size as suggested in
             // Piotr Fryzlewicz, Journal of the American Statistical Association
             // Vol. 102, No. 480 (Dec., 2007), pp. 1318-1327
-            double mad = CanvasCommon.Utilities.Mad(ratio_list) * 2.0;
-            if (mad < thresholdlower)
+            double threshold = CanvasCommon.Utilities.Mad(ratio) * madFactor;
+            if (threshold < thresholdlower)
             {
-                mad = thresholdlower;
+                threshold = thresholdlower;
             }
-            if (mad > thresholdupper)
+            if (threshold > thresholdupper)
             {
-                mad = thresholdupper;
+                threshold = thresholdupper;
             }
-            HardThresh(tree, mad, isGermline);
+            HardThresh(tree, threshold, isGermline);
             Console.WriteLine("Wavelet threshold:");
-            Console.WriteLine(mad);
+            Console.WriteLine(threshold);
             GetSegments(tree, smooth, breakpoints);
             if (isGermline)
-                RefineSegments(breakpoints, ratio_list);
-
+                RefineSegments(breakpoints, ratio);
         }
     }
 }
