@@ -62,6 +62,21 @@ namespace CanvasSomaticCaller
         public int HeterogeneousClustersCutoff { get; set; } = 1;
         [DataMember(Name = "DistanceRatio", EmitDefaultValue = true, IsRequired = true)]
         public double DistanceRatio { get; set; } = 0.3;
-
+        [DataMember(Name = "ClonalityIntercept", EmitDefaultValue = true, IsRequired = true)]
+        public double ClonalityIntercept { get; set; } = 2.774;
+        [DataMember(Name = "ClonalityBestModelDistance", EmitDefaultValue = true, IsRequired = true)]
+        public double ClonalityBestModelDistance { get; set; } = -13.575;
+        [DataMember(Name = "ClonalityClusterEntropy", EmitDefaultValue = true, IsRequired = true)]
+        public double ClonalityClusterEntropy { get; set; } = -3.522;
+        [DataMember(Name = "ClonalityClusterMedianDistance", EmitDefaultValue = true, IsRequired = true)]
+        public double ClonalityClusterMedianDistance { get; set; } = 2.808;
+        [DataMember(Name = "ClonalityClusterMeanDistance", EmitDefaultValue = true, IsRequired = true)]
+        public double ClonalityClusterMeanDistance { get; set; } = 6.8904;
+        [DataMember(Name = "ClonalityClusterVariance", EmitDefaultValue = true, IsRequired = true)]
+        public double ClonalityClusterVariance { get; set; } = 14.9372;
+        [DataMember(Name = "NumClusters", EmitDefaultValue = true, IsRequired = true)]
+        public double NumClusters { get; set; } = -0.0988;
+        [DataMember(Name = "ModelDeviation", EmitDefaultValue = true, IsRequired = true)]
+        public double ModelDeviation { get; set; } = -7.3681;
     }
 }

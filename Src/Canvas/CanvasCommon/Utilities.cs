@@ -275,6 +275,20 @@ namespace CanvasCommon
             return Math.Sqrt(sum / (x.Length - 1));
         }
 
+        // estimate Standard Deviation of double list
+        static public double StandardDeviation(List<double> x)
+        {
+
+            double mu = x.Average();
+            double sum = 0;
+
+            for (int i = 0; i < x.Count; i++)
+            {
+                double diff = x[i] - mu;
+                sum += diff * diff;
+            }
+            return Math.Sqrt(sum / (x.Count - 1));
+        }
 
         /// <summary>
         /// Calculates the median of a list.  Does not re-order the original list.

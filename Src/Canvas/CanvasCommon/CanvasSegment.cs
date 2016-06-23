@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.IO;
+using System.Runtime.CompilerServices;
 using SequencingFiles;
 
 namespace CanvasCommon
@@ -21,7 +22,8 @@ namespace CanvasCommon
         public double QScore;
         public double ModelDistance;
         public double RunnerUpModelDistance;
-        public string cnSwaped = "N";
+        public string CnSwaped = "N";
+        public string IsHeterogeneous = "N";
         private static readonly int NumberVariantFrequencyBins = 100;
         public string Filter = "PASS";
         #endregion
@@ -262,6 +264,7 @@ namespace CanvasCommon
                 writer.WriteLine("##ALT=<ID=CNV,Description=\"Copy number variable region\">");
                 writer.WriteLine($"##FILTER=<ID={qualityFilter},Description=\"Quality below {qualityThreshold}\">");
                 writer.WriteLine("##FILTER=<ID=L10kb,Description=\"Length shorter than 10kb\">");
+                writer.WriteLine("##INFO=<ID=SUBCLONAL,Number=0,Type=Flag,Description=\"Subclonal variant\">");
                 writer.WriteLine("##INFO=<ID=SVTYPE,Number=1,Type=String,Description=\"Type of structural variant\">");
                 writer.WriteLine("##INFO=<ID=END,Number=1,Type=Integer,Description=\"End position of the variant described in this record\">");
                 writer.WriteLine("##INFO=<ID=CNVLEN,Number=1,Type=Integer,Description=\"Number of reference positions spanned by this CNV\">");
@@ -293,6 +296,8 @@ namespace CanvasCommon
 
                         if (cnvType != CnvType.Reference)
                             writer.Write($"SVTYPE={cnvType.ToSvType()};");
+                        if (segment.IsHeterogeneous == "T")
+                            writer.Write("SUBCLONAL;");
                         writer.Write($"END={segment.End}");
                         if (cnvType != CnvType.Reference)
                             writer.Write($";CNVLEN={segment.End - segment.Begin}");
@@ -609,9 +614,10 @@ namespace CanvasCommon
             segmentIndex = 1;
             while (segmentIndex < segments.Count)
             {
-                // Assimilate an adjacent segment with the same copy number call:
+                // Assimilate an adjacent segment with the same copy number call and heterogeneity flag:
                 if (lastSegment.copyNumber == segments[segmentIndex].copyNumber && lastSegment.Chr == segments[segmentIndex].Chr &&
-                    !IsForbiddenInterval(lastSegment.Chr, lastSegment.End, segments[segmentIndex].Begin, excludedIntervals))
+                    !IsForbiddenInterval(lastSegment.Chr, lastSegment.End, segments[segmentIndex].Begin, excludedIntervals) &&
+                    lastSegment.IsHeterogeneous == segments[segmentIndex].IsHeterogeneous)
                 {
                     lastSegment.MergeIn(segments[segmentIndex]);
                     segmentIndex++;
@@ -704,9 +710,9 @@ namespace CanvasCommon
             segmentIndex = 1;
             while (segmentIndex < segments.Count)
             {
-                // Assimilate an adjacent segment with the same copy number call:
+                // Assimilate an adjacent segment with the same copy number call and heterogeneity flag:
                 if (lastSegment.copyNumber == segments[segmentIndex].copyNumber && lastSegment.Chr == segments[segmentIndex].Chr &&
-                    segments[segmentIndex].Begin - lastSegment.End < maximumMergeSpan)
+                    segments[segmentIndex].Begin - lastSegment.End < maximumMergeSpan && lastSegment.IsHeterogeneous == segments[segmentIndex].IsHeterogeneous)
                 {
                     lastSegment.MergeIn(segments[segmentIndex]);
                     segmentIndex++;
@@ -838,6 +844,6 @@ namespace CanvasCommon
             }
             return 0;
         }
-
+        
     }
 }

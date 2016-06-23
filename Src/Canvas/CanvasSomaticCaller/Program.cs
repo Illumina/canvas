@@ -44,6 +44,8 @@ namespace CanvasSomaticCaller
             float? userPloidy = null;
             CanvasCommon.CanvasSomaticClusteringMode somaticClusteringMode = CanvasCommon.CanvasSomaticClusteringMode.Density;
             string parameterconfigPath = Path.Combine(Isas.Shared.Utilities.GetAssemblyFolder(typeof(Program)), "SomaticCallerParameters.json");
+            string clonalityParameterconfigPath = Path.Combine(Isas.Shared.Utilities.GetAssemblyFolder(typeof(Program)), "SomaticCallerClonalityParameters.json");
+
 
             OptionSet p = new OptionSet()
             {
@@ -119,6 +121,9 @@ namespace CanvasSomaticCaller
             string parameterconfigFile = File.ReadAllText(parameterconfigPath);
             MemoryStream ms = new MemoryStream(Encoding.ASCII.GetBytes(parameterconfigFile));
             SomaticCallerParameters somaticCallerParametersJSON = (SomaticCallerParameters)js.ReadObject(ms);
+
+
+            
 
             SomaticCaller caller = new SomaticCaller();
             caller.somaticCallerParameters = somaticCallerParametersJSON;

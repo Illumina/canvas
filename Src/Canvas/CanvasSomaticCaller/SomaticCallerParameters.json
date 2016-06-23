@@ -22,6 +22,14 @@
     "MaxAllowedPloidy": "5", 
     "CoverageLevelWeightingFactorLevels": 86, 
     "PrecisionWeightingFactor": "0.3333333333", 
-    "HeterogeneousClusterMedianCutoff": 1.323, 
-    "CoverageWeighting": "0.4"
+    "HeterogeneousClusterMedianCutoff": 1.323,
+    "CoverageWeighting": "0.4",
+    "ClonalityIntercept": "2.5621879132",
+    "ClonalityBestModelDistance": "-45.471444424",
+    "ClonalityClusterEntropy": "-4.2843880136",
+    "ClonalityClusterMedianDistance": "1.3284471738",
+    "ClonalityClusterMeanDistance": "7.7372213136",
+    "ClonalityClusterVariance": "20.8041902168",
+    "NumClusters": "-0.0940266124",
+    "ModelDeviation": "-2.2441224164"
 }

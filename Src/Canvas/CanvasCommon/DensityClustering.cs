@@ -19,10 +19,10 @@ namespace CanvasCommon
     public class DensityClusteringModel
     {
         #region Members
-        private List<SegmentInfo> Segments;
-        private List<double?> Distance;
-        private List<double> Centroids;
-        private List<double> Rho;
+        public List<SegmentInfo> Segments;
+        public List<double?> Distance;
+        public List<double> Centroids;
+        public List<double> Rho;
         private List<double> CentroidsMAFs;
         private List<double> CentroidsCoverage;
         private double _coverageWeightingFactor;
@@ -77,6 +77,23 @@ namespace CanvasCommon
                 clusterVariance.Add(tmpDistance.Average());
             }
             return clusterVariance;
+        }
+
+        public List<int> GetClustersSize(int nClusters)
+        {
+            List<int> clustersSize = new List<int>();
+
+            for (int clusterID = 0; clusterID < nClusters; clusterID++)
+            {
+                int tmpSize = 0;
+                foreach (SegmentInfo segment in this.Segments)
+                {
+                    if (segment.Cluster.HasValue && clusterID + 1 == segment.Cluster.Value)
+                        tmpSize++;
+                }
+                clustersSize.Add(tmpSize);
+            }
+            return clustersSize;
         }
 
         public List<double> GetCentroidsMAF()
