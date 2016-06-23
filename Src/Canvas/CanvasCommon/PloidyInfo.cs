@@ -58,7 +58,9 @@ namespace CanvasCommon
                 {
                     string fileLine = reader.ReadLine();
                     if (fileLine == null) break;
-                    if (fileLine.StartsWith("##ReferenceSexChromosomeKaryotype"))
+                    // save anything that looks like a vcf header line (we will add it to the output vcf)
+                    // TODO: support adding multiple header lines to the output vcf
+                    if (fileLine.StartsWith("##"))
                     {
                         ploidy.HeaderLine = fileLine.Trim();
                         continue;
