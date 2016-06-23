@@ -11,7 +11,7 @@ namespace CanvasCommon
     {
         #region Members
         public string HeaderLine;
-        public Dictionary<string, List<PloidyInterval>> PloidyByChromosome = new Dictionary<string,List<PloidyInterval>>();
+        public Dictionary<string, List<PloidyInterval>> PloidyByChromosome = new Dictionary<string, List<PloidyInterval>>();
         #endregion
 
         /// <summary>
@@ -58,7 +58,7 @@ namespace CanvasCommon
                 {
                     string fileLine = reader.ReadLine();
                     if (fileLine == null) break;
-                    if (fileLine.StartsWith("##ExpectedSexChromosomeKaryotype"))
+                    if (fileLine.StartsWith("##ReferenceSexChromosomeKaryotype"))
                     {
                         ploidy.HeaderLine = fileLine.Trim();
                         continue;
