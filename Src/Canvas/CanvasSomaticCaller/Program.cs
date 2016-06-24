@@ -44,7 +44,7 @@ namespace CanvasSomaticCaller
             float? userPloidy = null;
             CanvasCommon.CanvasSomaticClusteringMode somaticClusteringMode = CanvasCommon.CanvasSomaticClusteringMode.Density;
             string parameterconfigPath = Path.Combine(Isas.Shared.Utilities.GetAssemblyFolder(typeof(Program)), "SomaticCallerParameters.json");
-            string clonalityParameterconfigPath = Path.Combine(Isas.Shared.Utilities.GetAssemblyFolder(typeof(Program)), "SomaticCallerClonalityParameters.json");
+            string qualityScoreConfigPath = Path.Combine(Isas.Shared.Utilities.GetAssemblyFolder(typeof(Program)), "QualityScoreParameters.json");
 
 
             OptionSet p = new OptionSet()
@@ -65,6 +65,7 @@ namespace CanvasSomaticCaller
                 { "M|minimumcall=", "INTERNAL: minimum call size", v => minimumCallSize = int.Parse(v) },
                 { "q|qualitythreshold=", $"quality filter threshold (default {qualityFilterThreshold})", v => qualityFilterThreshold = int.Parse(v) },
                 { "c|parameterconfig=", $"parameter configuration path (default {parameterconfigPath})", v => parameterconfigPath = v },
+                { "s|qscoreconfig=", $"parameter configuration path (default {qualityScoreConfigPath})", v => qualityScoreConfigPath = v },
                 { "u|definedpurity=", "INTERNAL: user pre-defined purity", v => userPurity = float.Parse(v) },
                 { "l|definedploidy=", "INTERNAL: user pre-defined ploidy", v => userPloidy = float.Parse(v) },
                 { "a|trainmodel=", "INTERNAL: user pre-defined ploidy", v => isTrainMode = v != null }
@@ -119,14 +120,18 @@ namespace CanvasSomaticCaller
 
             DataContractJsonSerializer js = new DataContractJsonSerializer(typeof(SomaticCallerParameters));
             string parameterconfigFile = File.ReadAllText(parameterconfigPath);
-            MemoryStream ms = new MemoryStream(Encoding.ASCII.GetBytes(parameterconfigFile));
-            SomaticCallerParameters somaticCallerParametersJSON = (SomaticCallerParameters)js.ReadObject(ms);
+            MemoryStream msp = new MemoryStream(Encoding.ASCII.GetBytes(parameterconfigFile));
+            SomaticCallerParameters somaticCallerParametersJSON = (SomaticCallerParameters)js.ReadObject(msp);
 
+            DataContractJsonSerializer jq = new DataContractJsonSerializer(typeof(CanvasCommon.QualityScoreParameters));
+            string qscoreConfigFile = File.ReadAllText(qualityScoreConfigPath);
+            MemoryStream msq = new MemoryStream(Encoding.ASCII.GetBytes(qscoreConfigFile));
+            CanvasCommon.QualityScoreParameters qscoreParametersJSON = (CanvasCommon.QualityScoreParameters)jq.ReadObject(msq);
 
-            
 
             SomaticCaller caller = new SomaticCaller();
             caller.somaticCallerParameters = somaticCallerParametersJSON;
+            caller.somaticCallerQscoreParameters = qscoreParametersJSON;
             caller.TruthDataPath = truthDataPath;
             caller.SomaticVCFPath = somaticVCFPath;
             caller.IsEnrichment = isEnrichment;

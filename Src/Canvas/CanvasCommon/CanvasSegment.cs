@@ -229,11 +229,11 @@ namespace CanvasCommon
         /// <summary>
         /// Apply quality scores.
         /// </summary>
-        public static void AssignQualityScores(List<CanvasSegment> segments, QScoreMethod qscoreMethod)
+        public static void AssignQualityScores(List<CanvasSegment> segments, QScoreMethod qscoreMethod, QualityScoreParameters qscoreParameters)
         {
             foreach (CanvasSegment segment in segments)
             {
-                segment.QScore = segment.ComputeQScore(qscoreMethod);
+                segment.QScore = segment.ComputeQScore(qscoreMethod, qscoreParameters);
             }
         }
 
@@ -729,7 +729,7 @@ namespace CanvasCommon
         /// Computes QScore using one of the available methods
         /// </summary>
         public enum QScoreMethod { BinCountLinearFit, GeneralizedLinearFit, Logistic, LogisticGermline };
-        public int ComputeQScore(QScoreMethod qscoreMethod)
+        public int ComputeQScore(QScoreMethod qscoreMethod, QualityScoreParameters qscoreParameters)
         {
             double score;
             int qscore;
@@ -737,10 +737,10 @@ namespace CanvasCommon
             {
                 case QScoreMethod.LogisticGermline:
                     // Logistic model using a new selection of features.  Gives ROC curve area 0.921
-                    score = -5.0123;
-                    score += GetQScorePredictor(QScorePredictor.LogBinCount) * 4.9801;
-                    score += GetQScorePredictor(QScorePredictor.ModelDistance) * -5.5472;
-                    score += GetQScorePredictor(QScorePredictor.DistanceRatio) * -1.7914;
+                    score = qscoreParameters.LogisticGermlineIntercept;
+                    score += GetQScorePredictor(QScorePredictor.LogBinCount) * qscoreParameters.LogisticGermlineLogBinCount;
+                    score += GetQScorePredictor(QScorePredictor.ModelDistance) * qscoreParameters.LogisticGermlineModelDistance;
+                    score += GetQScorePredictor(QScorePredictor.DistanceRatio) * qscoreParameters.LogisticGermlineDistanceRatio;
                     score = Math.Exp(score);
                     score = score / (score + 1);
                     // Transform probability into a q-score:
@@ -750,10 +750,10 @@ namespace CanvasCommon
                     return qscore;
                 case QScoreMethod.Logistic:
                     // Logistic model using a new selection of features.  Gives ROC curve area 0.8289
-                    score = -0.5143;
-                    score += GetQScorePredictor(QScorePredictor.LogBinCount) * 0.8596;
-                    score += GetQScorePredictor(QScorePredictor.ModelDistance) * -50.4366;
-                    score += GetQScorePredictor(QScorePredictor.DistanceRatio) * -0.6511;
+                    score = qscoreParameters.LogisticIntercept;
+                    score += GetQScorePredictor(QScorePredictor.LogBinCount) * qscoreParameters.LogisticLogBinCount;
+                    score += GetQScorePredictor(QScorePredictor.ModelDistance) * qscoreParameters.LogisticModelDistance;
+                    score += GetQScorePredictor(QScorePredictor.DistanceRatio) * qscoreParameters.LogisticDistanceRatio;
                     score = Math.Exp(score);
                     score = score / (score + 1);
                     // Transform probability into a q-score:
@@ -767,12 +767,16 @@ namespace CanvasCommon
                     else
                         return (int)Math.Round(-10 * Math.Log10(1 - 1 / (1 + Math.Exp(0.5532 - this.BinCount * 0.147))), 0, MidpointRounding.AwayFromZero);
                 case QScoreMethod.GeneralizedLinearFit: // Generalized linear fit with linear transformation to QScore
-                    double linearFit = -3.65
-                                       - 1.12 * GetQScorePredictor(QScorePredictor.LogBinCount)
-                                       + 3.89 * GetQScorePredictor(QScorePredictor.ModelDistance)
-                                       + 0.47 * GetQScorePredictor(QScorePredictor.MajorChromosomeCount)
-                                       - 0.68 * GetQScorePredictor(QScorePredictor.MafMean)
-                                       - 0.25 * GetQScorePredictor(QScorePredictor.LogMafCv);
+                    double linearFit = qscoreParameters.GeneralizedLinearFitIntercept;
+                    linearFit += qscoreParameters.GeneralizedLinearFitLogBinCount*
+                                 GetQScorePredictor(QScorePredictor.LogBinCount);
+                    linearFit += qscoreParameters.GeneralizedLinearFitModelDistance*
+                                 GetQScorePredictor(QScorePredictor.ModelDistance);
+                    linearFit += qscoreParameters.GeneralizedLinearFitMajorChromosomeCount*
+                                 GetQScorePredictor(QScorePredictor.MajorChromosomeCount);
+                    linearFit += qscoreParameters.GeneralizedLinearFitMafMean*
+                                 GetQScorePredictor(QScorePredictor.MafMean);
+                    linearFit += qscoreParameters.GeneralizedLinearFitLogMafCv * GetQScorePredictor(QScorePredictor.LogMafCv);
                     score = -11.9 - 11.4 * linearFit; // Scaling to achieve 2 <= qscore <= 61
                     score = Math.Max(2, score);
                     score = Math.Min(61, score);
