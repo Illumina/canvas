@@ -13,17 +13,32 @@ namespace CanvasCommon
     {
         #region Members
         public List<float> Counts;
-        private int copyNumber;
-        private int secondBestCopyNumber;
+        public int CopyNumber { get; set; }
+        public int SecondBestCopyNumber { get; set; }
         public List<float> VariantFrequencies = new List<float>();
         public List<int> VariantTotalCoverage = new List<int>();
         public int? MajorChromosomeCount;
         public double QScore;
         public double ModelDistance;
         public double RunnerUpModelDistance;
-        public string cnSwaped = "N";
+        public bool CopyNumberSwapped;
         private static readonly int NumberVariantFrequencyBins = 100;
         public string Filter = "PASS";
+        public Tuple<int, int> StartConfidenceInterval; // if not null, this is a confidence interval around Start, reported in the CIPOS tag
+        public Tuple<int, int> EndConfidenceInterval; // if not null, this is a confidence interval around End, reported in the CIEND tag
+        public string Chr { get; private set; }
+
+        /// <summary>
+        /// bed format start position
+        /// zero-based inclusive start position
+        /// </summary>
+        public int Begin { get; private set; }
+
+        /// <summary>
+        /// bed format end position
+        /// zero-based exclusive end position (i.e. the same as one-based inclusive end position)
+        /// </summary>
+        public int End { get; private set; }
         #endregion
 
         /// <summary>
@@ -72,54 +87,15 @@ namespace CanvasCommon
             this.Begin = begin;
             this.End = end;
             this.Counts = new List<float>(counts);
-            this.copyNumber = -1;
-            this.secondBestCopyNumber = -1;
-
+            this.CopyNumber = -1;
+            this.SecondBestCopyNumber = -1;
         }
-
-        public string Chr { get; private set; }
-
-        /// <summary>
-        /// bed format start position
-        /// zero-based inclusive start position
-        /// </summary>
-        public int Begin { get; private set; }
-
-        /// <summary>
-        /// bed format end position
-        /// zero-based exclusive end position (i.e. the same as one-based inclusive end position)
-        /// </summary>
-        public int End { get; private set; }
 
         public int BinCount
         {
             get
             {
                 return Counts.Count;
-            }
-        }
-
-        public int CopyNumber
-        {
-            get
-            {
-                return copyNumber;
-            }
-            set
-            {
-                copyNumber = value;
-            }
-        }
-
-        public int SecondBestCopyNumber
-        {
-            get
-            {
-                return secondBestCopyNumber;
-            }
-            set
-            {
-                secondBestCopyNumber = value;
             }
         }
 
@@ -281,9 +257,11 @@ namespace CanvasCommon
                 writer.WriteLine("##ALT=<ID=CNV,Description=\"Copy number variable region\">");
                 writer.WriteLine($"##FILTER=<ID={qualityFilter},Description=\"Quality below {qualityThreshold}\">");
                 writer.WriteLine("##FILTER=<ID=L10kb,Description=\"Length shorter than 10kb\">");
-                writer.WriteLine("##INFO=<ID=SVTYPE,Number=1,Type=String,Description=\"Type of structural variant\">");
-                writer.WriteLine("##INFO=<ID=END,Number=1,Type=Integer,Description=\"End position of the variant described in this record\">");
+                writer.WriteLine("##INFO=<ID=CIEND,Number=2,Type=Integer,Description=\"Confidence interval around END for imprecise variants\">");
+                writer.WriteLine("##INFO=<ID=CIPOS,Number=2,Type=Integer,Description=\"Confidence interval around POS for imprecise variants\">");
                 writer.WriteLine("##INFO=<ID=CNVLEN,Number=1,Type=Integer,Description=\"Number of reference positions spanned by this CNV\">");
+                writer.WriteLine("##INFO=<ID=END,Number=1,Type=Integer,Description=\"End position of the variant described in this record\">");
+                writer.WriteLine("##INFO=<ID=SVTYPE,Number=1,Type=String,Description=\"Type of structural variant\">");
                 writer.WriteLine("##FORMAT=<ID=RC,Number=1,Type=Float,Description=\"Mean counts per bin in the region\">");
                 writer.WriteLine("##FORMAT=<ID=BC,Number=1,Type=Float,Description=\"Number of bins in the region\">");
                 writer.WriteLine("##FORMAT=<ID=CN,Number=1,Type=Integer,Description=\"Copy number genotype for imprecise events\">");
@@ -315,7 +293,14 @@ namespace CanvasCommon
                         writer.Write($"END={segment.End}");
                         if (cnvType != CnvType.Reference)
                             writer.Write($";CNVLEN={segment.End - segment.Begin}");
-
+                        if (segment.StartConfidenceInterval != null)
+                        {
+                            writer.Write($";CIPOS={segment.StartConfidenceInterval.Item1},{segment.StartConfidenceInterval.Item2}");
+                        }
+                        if (segment.EndConfidenceInterval != null)
+                        {
+                            writer.Write($";CIPOS={segment.EndConfidenceInterval.Item1},{segment.EndConfidenceInterval.Item2}");
+                        }
                         //  FORMAT field
                         writer.Write("\tRC:BC:CN", segment.End);
                         if (segment.MajorChromosomeCount.HasValue)
@@ -392,11 +377,11 @@ namespace CanvasCommon
                             if (segment.End < pointStartPos) continue;
 
                             int weight = Math.Min(segment.End, pointEndPos) - Math.Max(segment.Begin, pointStartPos);
-                            string key = string.Format("{0} {1}", segment.copyNumber, segment.MajorChromosomeCount);
+                            string key = string.Format("{0} {1}", segment.CopyNumber, segment.MajorChromosomeCount);
                             if (!CopyNumberAndChromCount.ContainsKey(key)) CopyNumberAndChromCount[key] = 0;
                             CopyNumberAndChromCount[key] += weight;
-                            if (!basesByCopyNumber.ContainsKey(segment.copyNumber)) basesByCopyNumber[segment.copyNumber] = 0;
-                            basesByCopyNumber[segment.copyNumber] += weight;
+                            if (!basesByCopyNumber.ContainsKey(segment.CopyNumber)) basesByCopyNumber[segment.CopyNumber] = 0;
+                            basesByCopyNumber[segment.CopyNumber] += weight;
                             overlapSegments.Add(segment);
                         }
 
@@ -430,9 +415,9 @@ namespace CanvasCommon
                         // the most common copy number:
                         foreach (CanvasSegment segment in overlapSegments)
                         {
-                            if ((majorCopyNumber == 2 && segment.copyNumber != 2) ||
-                                (majorCopyNumber < 2 && segment.copyNumber >= 2) ||
-                                (majorCopyNumber > 2 && segment.copyNumber <= 2))
+                            if ((majorCopyNumber == 2 && segment.CopyNumber != 2) ||
+                                (majorCopyNumber < 2 && segment.CopyNumber >= 2) ||
+                                (majorCopyNumber > 2 && segment.CopyNumber <= 2))
                                 continue;
                             float segLength = segment.End - segment.Begin;
 
@@ -629,7 +614,7 @@ namespace CanvasCommon
             while (segmentIndex < segments.Count)
             {
                 // Assimilate an adjacent segment with the same copy number call:
-                if (lastSegment.copyNumber == segments[segmentIndex].copyNumber && lastSegment.Chr == segments[segmentIndex].Chr &&
+                if (lastSegment.CopyNumber == segments[segmentIndex].CopyNumber && lastSegment.Chr == segments[segmentIndex].Chr &&
                     !IsForbiddenInterval(lastSegment.Chr, lastSegment.End, segments[segmentIndex].Begin, excludedIntervals))
                 {
                     lastSegment.MergeIn(segments[segmentIndex]);
@@ -724,7 +709,7 @@ namespace CanvasCommon
             while (segmentIndex < segments.Count)
             {
                 // Assimilate an adjacent segment with the same copy number call:
-                if (lastSegment.copyNumber == segments[segmentIndex].copyNumber && lastSegment.Chr == segments[segmentIndex].Chr &&
+                if (lastSegment.CopyNumber == segments[segmentIndex].CopyNumber && lastSegment.Chr == segments[segmentIndex].Chr &&
                     segments[segmentIndex].Begin - lastSegment.End < maximumMergeSpan)
                 {
                     lastSegment.MergeIn(segments[segmentIndex]);
