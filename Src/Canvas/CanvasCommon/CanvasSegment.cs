@@ -207,25 +207,6 @@ namespace CanvasCommon
             return segments;
         }
 
-        ///// <summary>
-        ///// Our start confidence interval is the same as the previous segment's end confidence interval...assuming we 
-        ///// have a previous segment, and it's *next to* us on the current chromosome.  If not, use a dummy confidence interval.
-        ///// </summary>
-        //private static void SetLastSegmentStartConfidenceInterval(List<CanvasSegment> segments)
-        //{
-        //    CanvasSegment segment = segments[segments.Count - 1];
-        //    if (segments.Count > 1)
-        //    {
-        //        CanvasSegment prevSegment = segments[segments.Count - 2];
-        //        if (prevSegment.Chr == segment.Chr && prevSegment.End > segment.Begin - 10)
-        //        {
-        //            segment.StartConfidenceInterval = segments[segments.Count - 2].EndConfidenceInterval;
-        //        }
-        //    }
-        //    if (segment.StartConfidenceInterval == null)
-        //        segment.StartConfidenceInterval = new Tuple<int, int>(-DummyConfidenceInterval, DummyConfidenceInterval);
-        //}
-
         /// <summary>
         /// Integrity check, to ensure that our reference FASTA file is in sync with our inputs.  
         /// </summary>
