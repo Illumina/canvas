@@ -72,8 +72,16 @@ namespace CanvasCommon
         /// <param name="s">Segment to merge in.</param>
         public void MergeIn(CanvasSegment s)
         {
-            this.End = Math.Max(this.End, s.End);
-            this.Begin = Math.Min(this.Begin, s.Begin);
+            if (s.Begin < this.Begin)
+            {
+                this.StartConfidenceInterval = s.StartConfidenceInterval;
+                this.Begin = s.Begin;
+            }
+            if (s.End > this.End)
+            {
+                this.EndConfidenceInterval = s.EndConfidenceInterval;
+                this.End = s.End;
+            }
             this.Counts.AddRange(s.Counts);
             this.VariantFrequencies.AddRange(s.VariantFrequencies);
             this.VariantTotalCoverage.AddRange(s.VariantTotalCoverage);
@@ -132,7 +140,7 @@ namespace CanvasCommon
 
             string chr = null;
             int begin = -1;
-            
+
             int previousSegmentIndex = -1;
             int previousBinStart = 0;
             int previousBinEnd = 0;
@@ -165,9 +173,10 @@ namespace CanvasCommon
                             {
                                 CIEnd2 = (newBinEnd - newBinStart) / 2;
                             }
+                            segment.EndConfidenceInterval = new Tuple<int, int>(CIEnd1, CIEnd2);
+                            segment.StartConfidenceInterval = segmentStartCI;
                             segments.Add(segment);
                             counts.Clear();
-                            segment.StartConfidenceInterval = segmentStartCI;
 
                             // Prepare the confidence interval for the start of the segment that just started, based on the size of its first
                             // bin (and, if the segments abut, based on the size of the previous segment's last bin):
