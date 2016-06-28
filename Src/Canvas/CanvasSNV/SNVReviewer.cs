@@ -216,20 +216,27 @@ namespace CanvasSNV
         }
 
         /// <summary>
-        /// Step 3: Summarize results to a simple tab-delimited file.
+        /// Step 3: Summarize results to a simple tab-delimited file and a CSV file.
         /// </summary>
         protected void WriteResults(string outputPath)
+        {
+            WriteAlleleCounts(outputPath);
+            WriteBAlleleFrequencies(outputPath + ".baf");
+        }
+
+        protected void WriteAlleleCounts(string outputPath)
         {
             using (GzipWriter writer = new GzipWriter(outputPath))
             {
                 writer.WriteLine("#Chromosome\tPosition\tRef\tAlt\tCountRef\tCountAlt");
                 for (int index = 0; index < this.Variants.Count; index++)
-                { 
+                {
                     VcfVariant variant = this.Variants[index];
                     // skip HOM REF positions 
-                    if (this.VariantCounts[index] > 5) {
+                    if (this.VariantCounts[index] > 5)
+                    {
                         writer.WriteLine(string.Format("{0}\t{1}\t{2}\t{3}\t{4}\t{5}", variant.ReferenceName, variant.ReferencePosition,
-                        variant.ReferenceAllele, variant.VariantAlleles[0], this.ReferenceCounts[index], 
+                        variant.ReferenceAllele, variant.VariantAlleles[0], this.ReferenceCounts[index],
                         this.VariantCounts[index]));
                     }
                 }
@@ -237,5 +244,63 @@ namespace CanvasSNV
             Console.WriteLine("{0} Results written to {1}", DateTime.Now, outputPath);
         }
 
+        protected void WriteBAlleleFrequencies(string outputPath)
+        {
+            using (GzipWriter writer = new GzipWriter(outputPath))
+            {
+                writer.WriteLine(CSVWriter.GetLine("Chromosome", "Position", "BAF"));
+                for (int index = 0; index < this.Variants.Count; index++)
+                {
+                    VcfVariant variant = this.Variants[index];
+                    double? baf = GetBAlleleFrequency(variant, this.ReferenceCounts[index], this.VariantCounts[index]);
+                    if (!baf.HasValue)
+                        continue;
+                    writer.WriteLine(CSVWriter.GetLine(variant.ReferenceName, variant.ReferencePosition.ToString(),
+                        baf.Value.ToString()));
+                }
+            }
+            Console.WriteLine("{0} Results written to {1}", DateTime.Now, outputPath);
+        }
+
+        private static double? GetBAlleleFrequency(VcfVariant variant, int referenceCount, int variantCount)
+        {
+            double? baf = null;
+            double totalAlleleCount = referenceCount + variantCount;
+            if (totalAlleleCount == 0)
+                return baf;
+
+            if (BAllelePreference(variant.ReferenceAllele) < BAllelePreference(variant.VariantAlleles[0]))
+            {
+                baf = referenceCount / totalAlleleCount;
+            }
+            else
+            {
+                baf = variantCount / totalAlleleCount;
+            }
+
+            return baf;
+        }
+
+        /// <summary>
+        /// Returns B allele preference for single nucleotide alleles. The highest is 0 and the lowest is 3.
+        /// </summary>
+        /// <param name="allele"></param>
+        /// <returns></returns>
+        private static int BAllelePreference(string allele)
+        {
+            switch (allele.ToLower())
+            {
+                case "a":
+                    return 0;
+                case "t":
+                    return 1;
+                case "g":
+                    return 2;
+                case "c":
+                    return 3;
+                default:
+                    throw new ArgumentException("Invalid single nucleotide allele: " + allele);
+            }
+        }
     }
 }
