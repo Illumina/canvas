@@ -27,7 +27,6 @@ namespace CanvasCommon
         public Tuple<int, int> StartConfidenceInterval; // if not null, this is a confidence interval around Start, reported in the CIPOS tag
         public Tuple<int, int> EndConfidenceInterval; // if not null, this is a confidence interval around End, reported in the CIEND tag
         public string Chr { get; private set; }
-
         /// <summary>
         /// bed format start position
         /// zero-based inclusive start position
@@ -133,10 +132,12 @@ namespace CanvasCommon
 
             string chr = null;
             int begin = -1;
-            int end = -1;
-            int bin = -1;
+            
+            int previousSegmentIndex = -1;
+            int previousBinStart = 0;
+            int previousBinEnd = 0;
             List<float> counts = new List<float>();
-
+            Tuple<int, int> segmentStartCI = null;
             using (GzipReader reader = new GzipReader(infile))
             {
                 string row = null;
@@ -145,40 +146,85 @@ namespace CanvasCommon
                 {
                     string[] fields = row.Split('\t');
 
-                    int currentBin = Convert.ToInt32(fields[4]);
+                    int currentSegmentIndex = Convert.ToInt32(fields[4]);
+                    int newBinStart = Convert.ToInt32(fields[1]);
+                    int newBinEnd = Convert.ToInt32(fields[2]);
 
                     // We've moved to a new segment
-                    if (currentBin != bin)
+                    if (currentSegmentIndex != previousSegmentIndex)
                     {
                         // Make a segment
-                        if (bin != -1)
+                        if (previousSegmentIndex != -1)
                         {
-                            CanvasSegment segment = new CanvasSegment(chr, begin, end, counts);
+                            CanvasSegment segment = new CanvasSegment(chr, begin, previousBinEnd, counts);
+                            // Prepare the confidence interval for the end of the segment that just ended, based on the size of its last bin
+                            // (and, if the segments abut, based on the size of the next segment's first bin):
+                            int CIEnd1 = -(previousBinEnd - previousBinStart) / 2;
+                            int CIEnd2 = -CIEnd1;
+                            if (previousBinEnd == newBinStart)
+                            {
+                                CIEnd2 = (newBinEnd - newBinStart) / 2;
+                            }
                             segments.Add(segment);
                             counts.Clear();
-                        }
+                            segment.StartConfidenceInterval = segmentStartCI;
 
+                            // Prepare the confidence interval for the start of the segment that just started, based on the size of its first
+                            // bin (and, if the segments abut, based on the size of the previous segment's last bin):
+                            int CIStart2 = (newBinEnd - newBinStart) / 2;
+                            int CIStart1 = -CIStart2;
+                            if (previousBinEnd == newBinStart)
+                            {
+                                CIStart1 = -(previousBinEnd - previousBinStart) / 2;
+                            }
+                            segmentStartCI = new Tuple<int, int>(CIStart1, CIStart2);
+                        }
+                        else
+                        {
+                            int interval = (newBinEnd - newBinStart) / 2;
+                            segmentStartCI = new Tuple<int, int>(-interval, interval);
+                        }
                         chr = fields[0];
                         begin = Convert.ToInt32(fields[1]);
-                        bin = currentBin;
-
+                        previousSegmentIndex = currentSegmentIndex;
                     }
+                    previousBinStart = newBinStart;
+                    previousBinEnd = newBinEnd;
 
-                    end = Convert.ToInt32(fields[2]);
                     counts.Add(float.Parse(fields[3]));
-
                 }
 
-                if (bin != -1)
+                if (previousSegmentIndex != -1)
                 {
                     // Add the last segment
-                    CanvasSegment segment = new CanvasSegment(chr, begin, end, counts);
+                    CanvasSegment segment = new CanvasSegment(chr, begin, previousBinEnd, counts);
                     segments.Add(segment);
+                    segment.StartConfidenceInterval = segmentStartCI;
+                    //SetLastSegmentStartConfidenceInterval(segments);
                 }
             }
             Console.WriteLine("{0} Loaded {1} segments", DateTime.Now, segments.Count);
             return segments;
         }
+
+        ///// <summary>
+        ///// Our start confidence interval is the same as the previous segment's end confidence interval...assuming we 
+        ///// have a previous segment, and it's *next to* us on the current chromosome.  If not, use a dummy confidence interval.
+        ///// </summary>
+        //private static void SetLastSegmentStartConfidenceInterval(List<CanvasSegment> segments)
+        //{
+        //    CanvasSegment segment = segments[segments.Count - 1];
+        //    if (segments.Count > 1)
+        //    {
+        //        CanvasSegment prevSegment = segments[segments.Count - 2];
+        //        if (prevSegment.Chr == segment.Chr && prevSegment.End > segment.Begin - 10)
+        //        {
+        //            segment.StartConfidenceInterval = segments[segments.Count - 2].EndConfidenceInterval;
+        //        }
+        //    }
+        //    if (segment.StartConfidenceInterval == null)
+        //        segment.StartConfidenceInterval = new Tuple<int, int>(-DummyConfidenceInterval, DummyConfidenceInterval);
+        //}
 
         /// <summary>
         /// Integrity check, to ensure that our reference FASTA file is in sync with our inputs.  
@@ -299,7 +345,7 @@ namespace CanvasCommon
                         }
                         if (segment.EndConfidenceInterval != null)
                         {
-                            writer.Write($";CIPOS={segment.EndConfidenceInterval.Item1},{segment.EndConfidenceInterval.Item2}");
+                            writer.Write($";CIEND={segment.EndConfidenceInterval.Item1},{segment.EndConfidenceInterval.Item2}");
                         }
                         //  FORMAT field
                         writer.Write("\tRC:BC:CN", segment.End);
