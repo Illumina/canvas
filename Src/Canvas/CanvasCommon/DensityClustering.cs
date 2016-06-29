@@ -60,6 +60,9 @@ namespace CanvasCommon
             return segmentCounts;
         }
 
+        /// <summary>
+        /// Estimate cluster variance using cluster centroids identified by densityClustering function
+        /// </summary>
         public List<double> GetCentroidsVariance(List<double> centroidsMAFs, List<double> centroidsCoverage, int nClusters)
         {
             List<double> clusterVariance = new List<double>();
@@ -79,6 +82,9 @@ namespace CanvasCommon
             return clusterVariance;
         }
 
+        /// <summary>
+        /// Return cluster sizes
+        /// </summary>
         public List<int> GetClustersSize(int nClusters)
         {
             List<int> clustersSize = new List<int>();

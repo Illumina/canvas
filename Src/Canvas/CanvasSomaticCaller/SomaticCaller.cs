@@ -1057,26 +1057,7 @@ namespace CanvasSomaticCaller
                 return Double.MaxValue;
             }
 
-            List<double> clusterEntropy = Enumerable.Repeat(0.0, numClusters).ToList();
-
-            for (int clusterID = 0; clusterID < numClusters; clusterID++)
-            {
-                var uniqueMccCounts = clusterMajorChromosomeCount[clusterID].Distinct().ToList();
-                List<int> uniqueMccCountsInd = Enumerable.Repeat(0, uniqueMccCounts.Count).ToList();
-                foreach (double mcc in clusterMajorChromosomeCount[clusterID])
-                    uniqueMccCountsInd[uniqueMccCounts.FindIndex(x => x == mcc)] += 1;
-                double entropy = 0;
-                foreach (double mccCount in uniqueMccCounts)
-                {
-                    if (mccCount > 0)
-                    {
-                        double mccTmpProbability = mccCount / clusterMajorChromosomeCount[clusterID].Count;
-                        entropy += -mccTmpProbability * Math.Log(mccTmpProbability);
-                    }
-                }
-                clusterEntropy[clusterID] = entropy;
-                tmpClusterEntropy.Add(entropy);
-            }
+            var clusterEntropy = ClusterEntropy(numClusters, clusterMajorChromosomeCount, tmpClusterEntropy);
 
 
             double clusterDeviation = 0;
@@ -1155,6 +1136,39 @@ namespace CanvasSomaticCaller
                 ComputeClonalityScore(segments, clusterDeviations, modelPoints, numClusters, model);
 
             return clusterDeviation;
+        }
+
+        /// <summary>
+        /// Cluster entropy is estimated Based on the following logic: 
+        /// for each segment in the cluster, identify the closest model point (copy number and MCC). 
+        /// Clusters in which all segments belong to only one model point will have very low entropy. 
+        /// Conversely clusters containing segment that are closest to different model points will have high entropy.
+        /// Clusters with high entropy tend to be located between different model points and are likely to represent 
+        /// sunclonal CMV variants
+        /// </summary>
+        public static List<double> ClusterEntropy(int numClusters, List<List<double>> clusterMajorChromosomeCount, List<double> tmpClusterEntropy)
+        {
+            List<double> clusterEntropy = Enumerable.Repeat(0.0, numClusters).ToList();
+
+            for (int clusterID = 0; clusterID < numClusters; clusterID++)
+            {
+                var uniqueMccCounts = clusterMajorChromosomeCount[clusterID].Distinct().ToList();
+                List<int> uniqueMccCountsInd = Enumerable.Repeat(0, uniqueMccCounts.Count).ToList();
+                foreach (double mcc in clusterMajorChromosomeCount[clusterID])
+                    uniqueMccCountsInd[uniqueMccCounts.FindIndex(x => x == mcc)] += 1;
+                double entropy = 0;
+                foreach (double mccCount in uniqueMccCounts)
+                {
+                    if (mccCount > 0)
+                    {
+                        double mccTmpProbability = mccCount/clusterMajorChromosomeCount[clusterID].Count;
+                        entropy += -mccTmpProbability*Math.Log(mccTmpProbability);
+                    }
+                }
+                clusterEntropy[clusterID] = entropy;
+                tmpClusterEntropy.Add(entropy);
+            }
+            return clusterEntropy;
         }
 
         /// <summary>
@@ -2308,6 +2322,11 @@ namespace CanvasSomaticCaller
         }
 
 
+        /// <summary>
+        /// Discriminant function uses weights from previously fitted multivariate logistic regression model. 
+        /// Logistic regression workflow is accessible from git.illumina.com/Bioinformatics/CanvasTest/TrainingScripts.
+        /// The variant is predicted as heterogeneous if score is below 0.5
+        /// </summary>
         private void ComputeClonalityScore(List<SegmentInfo> segments, List<ClusterModel> clusterDeviations, List<ModelPoint> modelPoints, int numClusters, CoveragePurityModel model)
         {
             foreach (SegmentInfo info in segments)
@@ -2340,6 +2359,9 @@ namespace CanvasSomaticCaller
             }
         }
 
+        /// <summary>
+        /// Flag CanvasSegment as heterogeneous based on logistic regression predictions from ComputeClonalityScore function
+        /// </summary>
         private double AssignHeterogeneity()
         {
             long allSegments = 1;
@@ -2361,7 +2383,10 @@ namespace CanvasSomaticCaller
             return heterogeneousSegments/(double)allSegments;
         }
 
-
+        /// <summary>
+        /// Debug function for clonality model training in git.illumina.com/Bioinformatics/CanvasTest/TrainingScripts
+        /// Writes down a vector of features for each segment.clusterEntropy 
+        /// </summary>
         private void GenerateClonalityReportVersusKnownCN(List<SegmentInfo> segments, List <ClusterModel> clusterDeviations, List<ModelPoint> modelPoints, int numClusters, CoveragePurityModel model)
         {
             string debugPath = Path.Combine(this.OutputFolder, "ClonalityVersusKnownCN.txt");
