@@ -124,6 +124,7 @@
     <Compile Include="Canvas\CommandLineParsing\ModeParserTests.cs" />
     <Compile Include="InlineAutoNSubstituteDataAttribute.cs" />
     <Compile Include="TestCanvasBin.cs" />
+    <Compile Include="TestCanvasSNV.cs" />
     <Compile Include="TestLoessInterpolator.cs" />
     <Compile Include="TemporaryDirectoryFixture.cs" />
     <Compile Include="TestCanvasSomatic.cs" />

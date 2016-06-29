@@ -13,7 +13,7 @@ namespace CanvasSNV
     /// For all variants in the .vcf file that pass our filters, we review the variant allele frequency in the .bam file
     /// from the tumor sample.  We output that data in tabular format.
     /// </summary>
-    class SNVReviewer
+    public class SNVReviewer
     {
         #region Members
         protected readonly string Chromosome;
@@ -262,7 +262,7 @@ namespace CanvasSNV
             Console.WriteLine("{0} Results written to {1}", DateTime.Now, outputPath);
         }
 
-        private static double? GetBAlleleFrequency(VcfVariant variant, int referenceCount, int variantCount)
+        public static double? GetBAlleleFrequency(VcfVariant variant, int referenceCount, int variantCount)
         {
             double? baf = null;
             double totalAlleleCount = referenceCount + variantCount;
@@ -283,6 +283,12 @@ namespace CanvasSNV
 
         /// <summary>
         /// Returns B allele preference for single nucleotide alleles. The highest is 0 and the lowest is 3.
+        /// This definition of B-Allele Frequency is based on the definition that is used for bead arrays.
+        /// Here, the choice of the B allele is based on the color of dye attached to each nucleotide. A and T
+        /// get one color, G and C get the other color. Bead array has much more complex rule for tie-breaking
+        /// between A and T or G and C that involves top and bottom strands. This is unnecessary so we go with
+        /// the simpler hierarchical approach. In this case, this is not strictly a definition of B allele
+        /// frequency that is applied in any other product.
         /// </summary>
         /// <param name="allele"></param>
         /// <returns></returns>
