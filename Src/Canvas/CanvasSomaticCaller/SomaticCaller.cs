@@ -401,7 +401,7 @@ namespace CanvasSomaticCaller
                 {
                     Console.WriteLine("Not calling any CNVs. Reason: {0}", e.Message);
                     Segments.Clear();
-                    CanvasSegment.WriteSegments(outputVCFPath, this.Segments, referenceFolder, name, ExtraHeaders,
+                    CanvasSegment.WriteSegments(outputVCFPath, this.Segments, Model.DiploidCoverage, referenceFolder, name, ExtraHeaders,
                         this.ReferencePloidy, QualityFilterThreshold);
                     Environment.Exit(0);
                 }
@@ -449,26 +449,10 @@ namespace CanvasSomaticCaller
                 this.GenerateExtendedReportVersusKnownCN();
             }
 
-            ExtraHeaders.Add(string.Format("##EstimatedChromosomeCount={0:F2}", this.EstimateChromosomeCount()));
-            double totalPloidy = 0;
-            double totalWeight = 0;
-            foreach (CanvasSegment segment in this.Segments)
-            {
-                if (segment.Filter == "PASS")
-                {
-                    totalWeight += segment.End - segment.Begin;
-                    totalPloidy += segment.CopyNumber * (segment.End - segment.Begin);
-                }
-            }
-            if (totalWeight > 0)
-            {
-                ExtraHeaders.Add($"##OverallPloidy={totalPloidy / totalWeight:F2}");
-                ExtraHeaders.Add($"##DiploidCoverage={Model.DiploidCoverage:F2}");
-            }
-
+            ExtraHeaders.Add($"##EstimatedChromosomeCount={this.EstimateChromosomeCount():F2}");
 
             // Write out results:
-            CanvasSegment.WriteSegments(outputVCFPath, this.Segments, referenceFolder, name, ExtraHeaders, this.ReferencePloidy, QualityFilterThreshold);
+            CanvasSegment.WriteSegments(outputVCFPath, this.Segments, Model.DiploidCoverage, referenceFolder, name, ExtraHeaders, this.ReferencePloidy, QualityFilterThreshold);
 
             return 0;
         }
@@ -1937,7 +1921,7 @@ namespace CanvasSomaticCaller
                         int tmpCopyNumber = segment.SecondBestCopyNumber;
                         segment.SecondBestCopyNumber = segment.CopyNumber; // indicator that CNs have swapped
                         segment.CopyNumber = tmpCopyNumber;
-                        segment.cnSwaped = "Y";
+                        segment.CopyNumberSwapped = true;
 
                     }
                 }
@@ -2211,7 +2195,7 @@ namespace CanvasSomaticCaller
                         (CN == 2 && segment.CopyNumber == 2) ||
                         (CN > 2 && segment.CopyNumber > 2))
                         directionAccurateFlag = "Y";
-                    writer.Write("{0}\t{1}\t{2}\t{3}\t{4}\t{5}\t{6}\t{7}\t", segment.Chr, segment.Begin, segment.End, CN, Heterogeneity, segment.CopyNumber, segment.SecondBestCopyNumber, segment.cnSwaped);
+                    writer.Write("{0}\t{1}\t{2}\t{3}\t{4}\t{5}\t{6}\t{7}\t", segment.Chr, segment.Begin, segment.End, CN, Heterogeneity, segment.CopyNumber, segment.SecondBestCopyNumber, segment.CopyNumberSwapped ? "Y" : "N");
                     writer.Write("{0}\t{1}\t", accurateFlag, directionAccurateFlag);
                     writer.Write("{0}\t", Math.Log(segment.End - segment.Begin));
                     writer.Write("{0}\t", segment.GetQScorePredictor(CanvasSegment.QScorePredictor.LogBinCount));

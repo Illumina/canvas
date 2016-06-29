@@ -389,7 +389,7 @@ namespace CanvasDiploidCaller
             if (this.Segments.Count == 0)
             {
                 Console.WriteLine("CanvasDiploidCaller: No segments loaded; no CNV calls will be made.");
-                CanvasSegment.WriteSegments(outFile, this.Segments, referenceFolder, sampleName, null, null);
+                CanvasSegment.WriteSegments(outFile, this.Segments, Model.DiploidCoverage, referenceFolder, sampleName, null, null);
                 return 0;
             }
             PloidyInfo ploidy = null;
@@ -459,7 +459,6 @@ namespace CanvasDiploidCaller
             // Merge neighboring segments that got the same copy number call.
             CanvasSegment.MergeSegments(ref this.Segments);
             CanvasSegment.AssignQualityScores(this.Segments, CanvasSegment.QScoreMethod.LogisticGermline);
-            List<string> extraHeaders = new List<string>();
             string coverageOutputPath = CanvasCommon.Utilities.GetCoverageAndVariantFrequencyOutputPath(outFile);
             CanvasSegment.WriteCoveragePlotData(this.Segments, Model.DiploidCoverage, ploidy, coverageOutputPath, referenceFolder);
 
@@ -468,8 +467,10 @@ namespace CanvasDiploidCaller
                 this.GenerateReportVersusKnownCN();
             }
 
+            List<string> extraHeaders = new List<string>();
             if (ploidy != null && !string.IsNullOrEmpty(ploidy.HeaderLine)) extraHeaders.Add(ploidy.HeaderLine);
-            CanvasSegment.WriteSegments(outFile, this.Segments, referenceFolder, sampleName, extraHeaders, ploidy);
+
+            CanvasSegment.WriteSegments(outFile, this.Segments, Model.DiploidCoverage, referenceFolder, sampleName, extraHeaders, ploidy);
             return 0;
         }
     }
