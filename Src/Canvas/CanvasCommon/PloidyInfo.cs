@@ -11,7 +11,7 @@ namespace CanvasCommon
     {
         #region Members
         public string HeaderLine;
-        public Dictionary<string, List<PloidyInterval>> PloidyByChromosome = new Dictionary<string,List<PloidyInterval>>();
+        public Dictionary<string, List<PloidyInterval>> PloidyByChromosome = new Dictionary<string, List<PloidyInterval>>();
         #endregion
 
         /// <summary>
@@ -58,7 +58,9 @@ namespace CanvasCommon
                 {
                     string fileLine = reader.ReadLine();
                     if (fileLine == null) break;
-                    if (fileLine.StartsWith("##ExpectedSexChromosomeKaryotype"))
+                    // save anything that looks like a vcf header line (we will add it to the output vcf)
+                    // TODO: support adding multiple header lines to the output vcf
+                    if (fileLine.StartsWith("##"))
                     {
                         ploidy.HeaderLine = fileLine.Trim();
                         continue;

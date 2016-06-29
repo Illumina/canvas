@@ -408,7 +408,7 @@ namespace CanvasSomaticCaller
                 {
                     Console.WriteLine("Not calling any CNVs. Reason: {0}", e.Message);
                     Segments.Clear();
-                    CanvasSegment.WriteSegments(outputVCFPath, this.Segments, referenceFolder, name, ExtraHeaders,
+                    CanvasSegment.WriteSegments(outputVCFPath, this.Segments, Model.DiploidCoverage, referenceFolder, name, ExtraHeaders,
                         this.ReferencePloidy, QualityFilterThreshold);
                     Environment.Exit(0);
                 }
@@ -458,23 +458,10 @@ namespace CanvasSomaticCaller
                 this.GenerateExtendedReportVersusKnownCN();
             }
 
-            ExtraHeaders.Add(string.Format("##EstimatedChromosomeCount={0:F2}", this.EstimateChromosomeCount()));
-            double totalPloidy = 0;
-            double totalWeight = 0;
-            foreach (CanvasSegment segment in this.Segments) 
-            {
-                if (segment.Filter == "PASS")
-                {
-                    totalWeight += segment.End - segment.Begin;
-                    totalPloidy += segment.CopyNumber * (segment.End - segment.Begin);
-                }
-            }
-            if (totalWeight > 0)
-                ExtraHeaders.Add(string.Format("##OverallPloidy={0:F2}", totalPloidy / totalWeight));
-
+            ExtraHeaders.Add($"##EstimatedChromosomeCount={this.EstimateChromosomeCount():F2}");
 
             // Write out results:
-            CanvasSegment.WriteSegments(outputVCFPath, this.Segments, referenceFolder, name, ExtraHeaders, this.ReferencePloidy, QualityFilterThreshold);
+            CanvasSegment.WriteSegments(outputVCFPath, this.Segments, Model.DiploidCoverage, referenceFolder, name, ExtraHeaders, this.ReferencePloidy, QualityFilterThreshold);
 
             return 0;
         }
@@ -501,6 +488,8 @@ namespace CanvasSomaticCaller
                 }
                 if (filter == null)
                     filter = "PASS";
+
+                segment.Filter = filter;
             }
         }
 
@@ -1034,13 +1023,13 @@ namespace CanvasSomaticCaller
 
             foreach (SegmentInfo info in segments)
             {
-                double bestDeviation = Double.MaxValue;
-                int bestCluster = 0;
+                    double bestDeviation = Double.MaxValue;
+                    int bestCluster = 0;
                 double bestMajorChromosomeCount = 0;
                 foreach (ModelPoint modelPoint in modelPoints)
-                {
-                    if (modelPoint.Coverage < MeanCoverage * 2.0)
                     {
+                    if (modelPoint.Coverage < MeanCoverage * 2.0)
+                        {
                         // iterate over clusters, segments and then modelpoints
                         double currentDeviation = GetModelDistance(info.Coverage, modelPoint.Coverage, info.MAF, modelPoint.MAF);
                         if (currentDeviation < bestDeviation && info.FinalCluster.HasValue && info.FinalCluster.Value > 0)
@@ -1120,7 +1109,7 @@ namespace CanvasSomaticCaller
                 if (clusterInfo.ClusterMedianDistance > medianClusterDistance && clusterInfo.ClusterEntropy > medianEntropy)
                     heterogeneousClusterID.Add(clusterInfo.ClusterID.Value);
 
-            
+
             // store signatures of potential heterogeneous variants 
             if (heterogeneousClusterID.Count > 0 && bestModel)
             {
@@ -1182,7 +1171,7 @@ namespace CanvasSomaticCaller
             List<ModelPoint> modelPoints = InitializeModelPoints(model);
             double precisionDeviation = 0;
             this.RefineDiploidMAF(segments, modelPoints);
-            
+
             /////////////////////////////////////////////
             // Cluster our segments:
             Array.Clear(model.PercentCN, 0, model.PercentCN.Length);
@@ -1349,7 +1338,7 @@ namespace CanvasSomaticCaller
 
             public CoveragePurityModel(int maximumCopyNumber)
             {
-                 PercentCN = new double[maximumCopyNumber + 1];
+                PercentCN = new double[maximumCopyNumber + 1];
             }
 
 
@@ -1364,7 +1353,7 @@ namespace CanvasSomaticCaller
                 if (IsEnrichment)
                 {
                     tempCountsList.Add(Convert.ToSingle(CanvasCommon.Utilities.Median(segment.Counts)));
-                }                   
+                }
                 else
                 {
                     foreach (float value in segment.Counts)
@@ -1688,7 +1677,7 @@ namespace CanvasSomaticCaller
                                         {
                                             segment.FinalCluster = -2;
                                             remainingSegments.Add(segment);
-                                        }
+                        }
                                         else
                                         {
                                             segment.FinalCluster = smallClusters.FindIndex(x => x == segment.Cluster) + 1;
@@ -1862,7 +1851,7 @@ namespace CanvasSomaticCaller
                         {
                             heterogeneityIndex = model.HeterogeneityIndex.Value;
                         }
-                            
+
                         score += lowPurityWeightingFactor * somaticCallerParameters.CN2WeightingFactor * model.PercentCN[2] / Math.Max(0.01, bestCN2);
                         score += somaticCallerParameters.DeviationScoreWeightingFactor * (worstAllowedDeviation - model.Deviation) / (worstAllowedDeviation - bestDeviation);
                         score += somaticCallerParameters.DiploidDistanceScoreWeightingFactor * model.DiploidDistance / Math.Max(0.01, bestDiploidDistance);
@@ -2167,7 +2156,7 @@ namespace CanvasSomaticCaller
                 {
                     percentageHeterogeneity = AssignHeterogeneity();
                     AdjustPloidyCalls();
-                }
+            }
             }
             else
             {
@@ -2417,7 +2406,7 @@ namespace CanvasSomaticCaller
         /// exactly matches truth set) or directionally accurate (copy number and truth set are both <2, both =2, or both >2)
         /// This table will become our collection of feature vectors for training q-scores!
         /// </summary>
-            private void GenerateReportVersusKnownCN()
+        private void GenerateReportVersusKnownCN()
 
         {
             string debugPath = Path.Combine(this.TempFolder, "CallsVersusKnownCN.txt");
