@@ -65,7 +65,7 @@ namespace CanvasSomaticCaller
                 { "M|minimumcall=", "INTERNAL: minimum call size", v => minimumCallSize = int.Parse(v) },
                 { "q|qualitythreshold=", $"quality filter threshold (default {qualityFilterThreshold})", v => qualityFilterThreshold = int.Parse(v) },
                 { "c|parameterconfig=", $"parameter configuration path (default {parameterconfigPath})", v => parameterconfigPath = v },
-                { "s|qscoreconfig=", $"parameter configuration path (default {qualityScoreConfigPath})", v => qualityScoreConfigPath = v },
+                { "g|qscoreconfig=", $"parameter configuration path (default {qualityScoreConfigPath})", v => qualityScoreConfigPath = v },
                 { "u|definedpurity=", "INTERNAL: user pre-defined purity", v => userPurity = float.Parse(v) },
                 { "l|definedploidy=", "INTERNAL: user pre-defined ploidy", v => userPloidy = float.Parse(v) },
                 { "a|trainmodel=", "INTERNAL: user pre-defined ploidy", v => isTrainMode = v != null }
@@ -138,6 +138,8 @@ namespace CanvasSomaticCaller
             caller.IsDbsnpVcf = isDbsnpVcf;
             caller.userPurity = userPurity;
             caller.userPloidy = userPloidy;
+            if (truthDataPath != null)
+                isTrainMode = true;
             caller.IsTrainingMode = isTrainMode;
             caller.QualityFilterThreshold = qualityFilterThreshold;
 
