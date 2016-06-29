@@ -1514,6 +1514,17 @@ namespace CanvasSomaticCaller
             return bestCoverageWeightingFactor;
         }
 
+        public static DensityClusteringModel runDensityClustering(List<SegmentInfo> usableSegments, double coverageWeightingFactor, double knearestNeighbourCutoff, double centoridCutoff, out int clusterCount, double rhoCutoff = DensityClusteringModel.RhoCutoff)
+        {
+            DensityClusteringModel densityClustering = new DensityClusteringModel(usableSegments, coverageWeightingFactor, knearestNeighbourCutoff, centoridCutoff);
+            densityClustering.EstimateDistance();
+            double distanceThreshold = densityClustering.EstimateDc();
+            densityClustering.GaussianLocalDensity(distanceThreshold);
+            densityClustering.FindCentroids();
+            clusterCount = densityClustering.FindClusters(rhoCutoff);
+            return densityClustering;
+        }
+
         /// <summary>
         /// Identify the tuple (DiploidCoverage, OverallPurity) which best models our overall
         /// distribution of (MAF, Coverage) data across all segments.  Consider various tuples (first with a coarse-grained
@@ -1587,9 +1598,9 @@ namespace CanvasSomaticCaller
                         knearestNeighbourCutoff = KnearestNeighbourCutoff(usableSegments);
 
                         // Density clustering 
-                        // Step2: Find best parameters for density clustering, parameter sweep
-                        double centroidCutoff = 0;
-                        int clusterCount = 0;
+                        // Step2: Find best parameters for density clustering by performing parameter sweep
+                        double centroidCutoff;
+                        int clusterCount;
                         List<int> numNumClusters = new List<int>();
                         List<double> centroidCutoffs = new List<double>();
                         double centoridStep = (somaticCallerParameters.UpperCentroidCutoff - somaticCallerParameters.LowerCentroidCutoff) / somaticCallerParameters.CentroidCutoffStep;
@@ -1602,15 +1613,15 @@ namespace CanvasSomaticCaller
                         List<SegmentInfo> remainingSegments = new List<SegmentInfo>();
                         foreach (double centoridCutoff in centroidCutoffs)
                         {
-                            DensityClusteringModel densityClustering = new DensityClusteringModel(usableSegments, CoverageWeightingFactor, knearestNeighbourCutoff, centoridCutoff);
-                            densityClustering.EstimateDistance();
-                            double distanceThreshold = densityClustering.EstimateDc();
-                            densityClustering.GaussianLocalDensity(distanceThreshold);
-                            densityClustering.FindCentroids();
-                            clusterCount = densityClustering.FindClusters();
+                            DensityClusteringModel densityClustering = runDensityClustering(usableSegments, CoverageWeightingFactor, knearestNeighbourCutoff, centoridCutoff, out clusterCount);
                             numNumClusters.Add(clusterCount);
                             Console.WriteLine(">>> Running density clustering for cutoff {0:F5} , number of clusters {1}", centoridCutoff, clusterCount);
                         }
+
+                        // Each clustering run returns total number of identified clusters. 
+                        // Given the vector of cluster numbers find the mode =>
+                        // Clustering is more robust if different parameters produce the same 
+                        // number of clusters
                         var modeClustersValues = numNumClusters
                             .GroupBy(x => x)
                             .Select(g => new { Value = g.Key, Count = g.Count() })
@@ -1619,35 +1630,27 @@ namespace CanvasSomaticCaller
                         IEnumerable<int> modes = modeClustersValues
                             .Where(g => g.Count == maxCount)
                             .Select(g => g.Value);
-                        List<int> modesList = modes.ToList();
-                        if (modesList.Count == 1)
+                        List<int> clusterModes = modes.ToList();
+                        if (clusterModes.Count == 1)
                         {
-                            clusterCount = modesList[0];
+                            clusterCount = clusterModes[0];
                             centroidCutoff = centroidCutoffs[numNumClusters.FindIndex(x => x == clusterCount)];
 
                         }
-                        else if (modesList.Count == 2 || modesList.Count == 3)
+                        else if (clusterModes.Count < 4)
                         {
-                            if (modesList[1] < 7)
-                                clusterCount = modesList[1];
-                            else
-                                clusterCount = modesList[0];
+                            clusterCount = clusterModes[1] < 7 ? clusterModes[1] : clusterModes[0];
                             centroidCutoff = centroidCutoffs[numNumClusters.FindIndex(x => x == clusterCount)];
                         }
                         else
                         {
+                            // each clustering produces different results, default to a conservative  cut-off
                             centroidCutoff = somaticCallerParameters.DefaultCentroidCutoff;
-                            clusterCount = numNumClusters[centroidCutoffs.FindIndex(x => x == centroidCutoff)];
 
                         }
                         // Step3: Use best parameters for density clustering, parameter sweep
                         Console.WriteLine(">>> Running density selected cutoff {0:F5}", centroidCutoff);
-                        DensityClusteringModel optimizedDensityClustering = new DensityClusteringModel(usableSegments, CoverageWeightingFactor, knearestNeighbourCutoff, centroidCutoff);
-                        optimizedDensityClustering.EstimateDistance();
-                        double finalDistanceThreshold = optimizedDensityClustering.EstimateDc();
-                        optimizedDensityClustering.GaussianLocalDensity(finalDistanceThreshold);
-                        optimizedDensityClustering.FindCentroids();
-                        bestNumClusters = optimizedDensityClustering.FindClusters();
+                        DensityClusteringModel optimizedDensityClustering = runDensityClustering(usableSegments, CoverageWeightingFactor, knearestNeighbourCutoff, centroidCutoff, out bestNumClusters);
                         centroidsMAF = optimizedDensityClustering.GetCentroidsMAF();
                         centroidsCoverage = optimizedDensityClustering.GetCentroidsCoverage();
                         List<double> clusterVariance = optimizedDensityClustering.GetCentroidsVariance(centroidsMAF, centroidsCoverage, bestNumClusters);
@@ -1656,7 +1659,6 @@ namespace CanvasSomaticCaller
                         // Step4: Identify which clusters are under-partitioned (largeClusters), extract segments from these clusters (remainingSegments)                     
                         List<int> largeClusters = new List<int>();
                         List<int> smallClusters = new List<int>();
-
                         for (int clusterID = 0; clusterID < bestNumClusters; clusterID++)
                         {
                             if (clusterVariance[clusterID] >= clusterVariance.Average() && Utilities.StandardDeviation(clusterVariance) > 0.015 && clustersSize[clusterID]/clustersSize.Sum() < 0.9 && bestNumClusters < 4)
@@ -1667,41 +1669,14 @@ namespace CanvasSomaticCaller
 
                         if (largeClusters.Count > 0)
                         {
-                            for (int clusterID = 0; clusterID < bestNumClusters; clusterID++)
-                            {
-                                foreach (SegmentInfo segment in usableSegments)
-                                {
-                                    if (segment.Cluster.HasValue && segment.Cluster.Value == clusterID + 1)
-                                    {
-                                        if (clusterVariance[clusterID] >= clusterVariance.Average() && Utilities.StandardDeviation(clusterVariance) > 0.015 && clustersSize[clusterID] / clustersSize.Sum() < 0.9 && bestNumClusters < 4)
-                                        {
-                                            segment.FinalCluster = -2;
-                                            remainingSegments.Add(segment);
-                        }
-                                        else
-                                        {
-                                            segment.FinalCluster = smallClusters.FindIndex(x => x == segment.Cluster) + 1;
-                                        }
-                                    }
-                                    else if (segment.Cluster.HasValue && segment.Cluster.Value == -1)
-                                        segment.FinalCluster = segment.Cluster.Value;
-                                }
-                            }
+                            extractSegments(bestNumClusters, usableSegments, clusterVariance, clustersSize, remainingSegments, smallClusters);
 
-                            // Step5: Cluster remaining underpartitioned segments and merge new clusters with the earlier cluster set
-                            DensityClusteringModel remainingDensityClustering = new DensityClusteringModel(remainingSegments,
-                                CoverageWeightingFactor, knearestNeighbourCutoff,
-                                centroidCutoff);
-                            remainingDensityClustering.EstimateDistance();
-                            double remainingDistanceThreshold = remainingDensityClustering.EstimateDc();
-                            remainingDensityClustering.GaussianLocalDensity(remainingDistanceThreshold);
-                            remainingDensityClustering.FindCentroids();
+                            // Step5: Cluster remaining underpartitioned segments (remainingSegments) and merge new clusters with the earlier cluster set
                             int remainingBestNumClusters = 0;
-                            List<double> remainingCentroidsMAF = new List<double>();
-                            List<double> remainingCentroidsCoverage = new List<double>();
-                            remainingBestNumClusters = remainingDensityClustering.FindClusters(1.0);
-                            remainingCentroidsMAF = remainingDensityClustering.GetCentroidsMAF();
-                            remainingCentroidsCoverage = remainingDensityClustering.GetCentroidsCoverage();
+                            DensityClusteringModel remainingDensityClustering = runDensityClustering(usableSegments, CoverageWeightingFactor, knearestNeighbourCutoff, centroidCutoff, out remainingBestNumClusters, 1.0);
+                            remainingDensityClustering.FindCentroids();
+                            List<double> remainingCentroidsMAF = remainingDensityClustering.GetCentroidsMAF();
+                            List<double> remainingCentroidsCoverage = remainingDensityClustering.GetCentroidsCoverage();
                             mergeClusters(remainingSegments, usableSegments, centroidsMAF, remainingCentroidsMAF,
                                 centroidsCoverage, remainingCentroidsCoverage, bestNumClusters - largeClusters.Count);
                             bestNumClusters = bestNumClusters + remainingBestNumClusters - largeClusters.Count;
@@ -1952,6 +1927,33 @@ namespace CanvasSomaticCaller
                     bestModel.InterModelDistance = interModelDistance;
                 }
                 return bestModel;
+            }
+        }
+
+        public static void extractSegments(int bestNumClusters, List<SegmentInfo> usableSegments, List<double> clusterVariance, List<int> clustersSize,
+            List<SegmentInfo> remainingSegments, List<int> smallClusters)
+        {
+            for (int clusterID = 0; clusterID < bestNumClusters; clusterID++)
+            {
+                foreach (SegmentInfo segment in usableSegments)
+                {
+                    if (segment.Cluster.HasValue && segment.Cluster.Value == clusterID + 1)
+                    {
+                        if (clusterVariance[clusterID] >= clusterVariance.Average() &&
+                            Utilities.StandardDeviation(clusterVariance) > 0.015 &&
+                            clustersSize[clusterID]/clustersSize.Sum() < 0.9 && bestNumClusters < 4)
+                        {
+                            segment.FinalCluster = -2;
+                            remainingSegments.Add(segment);
+                        }
+                        else
+                        {
+                            segment.FinalCluster = smallClusters.FindIndex(x => x == segment.Cluster) + 1;
+                        }
+                    }
+                    else if (segment.Cluster.HasValue && segment.Cluster.Value == -1)
+                        segment.FinalCluster = segment.Cluster.Value;
+                }
             }
         }
 

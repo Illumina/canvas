@@ -32,7 +32,7 @@ namespace CanvasCommon
         // parameters
         // RhoCutoff and CentroidsCutoff estimated from running density clustering on 70 HapMix tumour samples https://git.illumina.com/Bioinformatics/HapMix/
         // and visually inspecting validity of clusters
-        private const double RhoCutoff = 2.0; 
+        public const double RhoCutoff = 2.0; 
         private const double NeighborRateLow = 0.02;
         private const double NeighborRateHigh = 0.03;
         #endregion

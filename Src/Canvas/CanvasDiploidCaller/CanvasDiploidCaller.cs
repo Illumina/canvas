@@ -470,7 +470,6 @@ namespace CanvasDiploidCaller
                 this.GenerateReportVersusKnownCN();
             }
 
-            List<string> extraHeaders = new List<string>();
             if (ploidy != null && !string.IsNullOrEmpty(ploidy.HeaderLine)) extraHeaders.Add(ploidy.HeaderLine);
 
             CanvasSegment.WriteSegments(outFile, this.Segments, Model.DiploidCoverage, referenceFolder, sampleName, extraHeaders, ploidy);
