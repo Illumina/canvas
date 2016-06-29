@@ -2075,7 +2075,7 @@ namespace CanvasSomaticCaller
 
             foreach (CanvasSegment segment in this.Segments)
             {
-                if (segment.IsHeterogeneous == "T" && Model.Purity > 0.2f && Math.Max(segment.ModelDistance, Double.MinValue) / segment.RunnerUpModelDistance > somaticCallerParameters.DistanceRatio)
+                if (segment.IsHeterogeneous && Model.Purity > 0.2f && Math.Max(segment.ModelDistance, Double.MinValue) / segment.RunnerUpModelDistance > somaticCallerParameters.DistanceRatio)
                 {
                     if (segment.CopyNumber == 2 && (segment.SecondBestCopyNumber == 1 || segment.SecondBestCopyNumber == 3))
                     {
@@ -2083,7 +2083,7 @@ namespace CanvasSomaticCaller
                         int tmpCopyNumber = segment.SecondBestCopyNumber;
                         segment.SecondBestCopyNumber = segment.CopyNumber; // indicator that CNs have swapped
                         segment.CopyNumber = tmpCopyNumber;
-                        segment.CnSwaped = "Y";
+                        segment.CopyNumberSwapped = true; 
 
                     }
                 }
@@ -2375,7 +2375,7 @@ namespace CanvasSomaticCaller
                     if (this.HeterogeneousSegmentsSignature[segment.Begin + segment.End +
                                                             segment.Counts.Count + segment.CopyNumber] < 0.5)
                     {
-                        segment.IsHeterogeneous = "T";
+                        segment.IsHeterogeneous = true;
                         heterogeneousSegments += segment.End - segment.Begin;
                     }
                 }
@@ -2470,7 +2470,7 @@ namespace CanvasSomaticCaller
                         (CN == 2 && segment.CopyNumber == 2) ||
                         (CN > 2 && segment.CopyNumber > 2))
                         directionAccurateFlag = "Y";
-                    writer.Write("{0}\t{1}\t{2}\t{3}\t{4}\t{5}\t{6}\t{7}\t", segment.Chr, segment.Begin, segment.End, CN, Heterogeneity, segment.CopyNumber, segment.SecondBestCopyNumber, segment.CnSwaped);
+                    writer.Write("{0}\t{1}\t{2}\t{3}\t{4}\t{5}\t{6}\t{7}\t", segment.Chr, segment.Begin, segment.End, CN, Heterogeneity, segment.CopyNumber, segment.SecondBestCopyNumber, segment.CopyNumberSwapped ? "Y" : "N");
                     writer.Write("{0}\t{1}\t", accurateFlag, directionAccurateFlag);
                     writer.Write("{0}\t", Math.Log(segment.End - segment.Begin));
                     writer.Write("{0}\t", segment.GetQScorePredictor(CanvasSegment.QScorePredictor.LogBinCount));

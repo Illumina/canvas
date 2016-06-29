@@ -22,8 +22,8 @@ namespace CanvasCommon
         public double QScore;
         public double ModelDistance;
         public double RunnerUpModelDistance;
-        public string CnSwaped = "N";
-        public string IsHeterogeneous = "N";
+        public bool CopyNumberSwapped;
+        public bool IsHeterogeneous;
         private static readonly int NumberVariantFrequencyBins = 100;
         public string Filter = "PASS";
         #endregion
@@ -316,7 +316,7 @@ namespace CanvasCommon
 
                         if (cnvType != CnvType.Reference)
                             writer.Write($"SVTYPE={cnvType.ToSvType()};");
-                        if (segment.IsHeterogeneous == "T")
+                        if (segment.IsHeterogeneous)
                             writer.Write("SUBCLONAL;");
                         writer.Write($"END={segment.End}");
                         if (cnvType != CnvType.Reference)
