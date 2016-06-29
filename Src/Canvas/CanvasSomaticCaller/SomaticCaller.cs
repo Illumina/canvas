@@ -1079,7 +1079,7 @@ namespace CanvasSomaticCaller
                     clusterDeviations[clusterID].ClusterMeanDistance = clusterDistance[clusterID].Average();
                     clusterDeviations[clusterID].ClusterVariance = CanvasCommon.Utilities.StandardDeviation(clusterDistance[clusterID]);
                     clusterDeviations[clusterID].ClusterEntropy = clusterEntropy[clusterID];
-                }
+            }
             }
 
 
@@ -1103,7 +1103,7 @@ namespace CanvasSomaticCaller
                             info.ClusterMedianDistance = clusterInfo.ClusterMedianDistance;
                             info.ClusterMeanDistance = clusterInfo.ClusterMeanDistance;
                             info.ClusterVariance = clusterInfo.ClusterVariance;                         
-                        }
+            }
                 }           
             }
 
@@ -1124,10 +1124,10 @@ namespace CanvasSomaticCaller
                             debugWriter.Write("{0}\t{1}\t{2}\t", clusterID, clusterDistance[clusterID].Average(), CanvasCommon.Utilities.Median(clusterDistance[clusterID]));
                             debugWriter.Write("{0}\t{1}\t", CanvasCommon.Utilities.StandardDeviation(clusterDistance[clusterID]),clusterEntropy[clusterID]);
                             debugWriter.Write("{0}", clusterDistance[clusterID].Count);
-                            debugWriter.WriteLine();
-                        }
+                        debugWriter.WriteLine();
                     }
                 }
+            }
             }
             // debug method to generate optimization information for heterogeneity prediction
             if (CNOracle != null)
@@ -2083,7 +2083,7 @@ namespace CanvasSomaticCaller
                         int tmpCopyNumber = segment.SecondBestCopyNumber;
                         segment.SecondBestCopyNumber = segment.CopyNumber; // indicator that CNs have swapped
                         segment.CopyNumber = tmpCopyNumber;
-                        segment.CopyNumberSwapped = true; 
+                        segment.CopyNumberSwapped = true;
 
                     }
                 }

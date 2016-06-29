@@ -14,8 +14,8 @@ namespace CanvasCommon
     {
         #region Members
         public List<float> Counts;
-        private int copyNumber;
-        private int secondBestCopyNumber;
+        public int CopyNumber { get; set; }
+        public int SecondBestCopyNumber { get; set; }
         public List<float> VariantFrequencies = new List<float>();
         public List<int> VariantTotalCoverage = new List<int>();
         public int? MajorChromosomeCount;
@@ -26,6 +26,20 @@ namespace CanvasCommon
         public bool IsHeterogeneous;
         private static readonly int NumberVariantFrequencyBins = 100;
         public string Filter = "PASS";
+        public Tuple<int, int> StartConfidenceInterval; // if not null, this is a confidence interval around Start, reported in the CIPOS tag
+        public Tuple<int, int> EndConfidenceInterval; // if not null, this is a confidence interval around End, reported in the CIEND tag
+        public string Chr { get; private set; }
+        /// <summary>
+        /// bed format start position
+        /// zero-based inclusive start position
+        /// </summary>
+        public int Begin { get; private set; }
+
+        /// <summary>
+        /// bed format end position
+        /// zero-based exclusive end position (i.e. the same as one-based inclusive end position)
+        /// </summary>
+        public int End { get; private set; }
         #endregion
 
         /// <summary>
@@ -41,7 +55,7 @@ namespace CanvasCommon
                 return sum / this.BinCount;
             }
         }
-    
+
 
         public CnvType GetCnvType(int referenceCopyNumber)
         {
@@ -61,8 +75,16 @@ namespace CanvasCommon
         /// <param name="s">Segment to merge in.</param>
         public void MergeIn(CanvasSegment s)
         {
-            this.End = Math.Max(this.End, s.End);
-            this.Begin = Math.Min(this.Begin, s.Begin);
+            if (s.Begin < this.Begin)
+            {
+                this.StartConfidenceInterval = s.StartConfidenceInterval;
+                this.Begin = s.Begin;
+            }
+            if (s.End > this.End)
+            {
+                this.EndConfidenceInterval = s.EndConfidenceInterval;
+                this.End = s.End;
+            }
             this.Counts.AddRange(s.Counts);
             this.VariantFrequencies.AddRange(s.VariantFrequencies);
             this.VariantTotalCoverage.AddRange(s.VariantTotalCoverage);
@@ -75,54 +97,15 @@ namespace CanvasCommon
             this.Begin = begin;
             this.End = end;
             this.Counts = new List<float>(counts);
-            this.copyNumber = -1;
-            this.secondBestCopyNumber = -1;
-
+            this.CopyNumber = -1;
+            this.SecondBestCopyNumber = -1;
         }
-
-        public string Chr { get; private set; }
-
-        /// <summary>
-        /// bed format start position
-        /// zero-based inclusive start position
-        /// </summary>
-        public int Begin { get; private set; }
-
-        /// <summary>
-        /// bed format end position
-        /// zero-based exclusive end position (i.e. the same as one-based inclusive end position)
-        /// </summary>
-        public int End { get; private set; }
 
         public int BinCount
         {
             get
             {
                 return Counts.Count;
-            }
-        }
-
-        public int CopyNumber
-        {
-            get
-            {
-                return copyNumber;
-            }
-            set
-            {
-                copyNumber = value;
-            }
-        }
-
-        public int SecondBestCopyNumber
-        {
-            get
-            {
-                return secondBestCopyNumber;
-            }
-            set
-            {
-                secondBestCopyNumber = value;
             }
         }
 
@@ -160,10 +143,12 @@ namespace CanvasCommon
 
             string chr = null;
             int begin = -1;
-            int end = -1;
-            int bin = -1;
-            List<float> counts = new List<float>();
 
+            int previousSegmentIndex = -1;
+            int previousBinStart = 0;
+            int previousBinEnd = 0;
+            List<float> counts = new List<float>();
+            Tuple<int, int> segmentStartCI = null;
             using (GzipReader reader = new GzipReader(infile))
             {
                 string row = null;
@@ -172,35 +157,62 @@ namespace CanvasCommon
                 {
                     string[] fields = row.Split('\t');
 
-                    int currentBin = Convert.ToInt32(fields[4]);
+                    int currentSegmentIndex = Convert.ToInt32(fields[4]);
+                    int newBinStart = Convert.ToInt32(fields[1]);
+                    int newBinEnd = Convert.ToInt32(fields[2]);
 
                     // We've moved to a new segment
-                    if (currentBin != bin)
+                    if (currentSegmentIndex != previousSegmentIndex)
                     {
                         // Make a segment
-                        if (bin != -1)
+                        if (previousSegmentIndex != -1)
                         {
-                            CanvasSegment segment = new CanvasSegment(chr, begin, end, counts);
+                            CanvasSegment segment = new CanvasSegment(chr, begin, previousBinEnd, counts);
+                            // Prepare the confidence interval for the end of the segment that just ended, based on the size of its last bin
+                            // (and, if the segments abut, based on the size of the next segment's first bin):
+                            int CIEnd1 = -(previousBinEnd - previousBinStart) / 2;
+                            int CIEnd2 = -CIEnd1;
+                            if (previousBinEnd == newBinStart)
+                        {
+                                CIEnd2 = (newBinEnd - newBinStart) / 2;
+                            }
+                            segment.EndConfidenceInterval = new Tuple<int, int>(CIEnd1, CIEnd2);
+                            segment.StartConfidenceInterval = segmentStartCI;
                             segments.Add(segment);
                             counts.Clear();
-                        }
 
+                            // Prepare the confidence interval for the start of the segment that just started, based on the size of its first
+                            // bin (and, if the segments abut, based on the size of the previous segment's last bin):
+                            int CIStart2 = (newBinEnd - newBinStart) / 2;
+                            int CIStart1 = -CIStart2;
+                            if (previousBinEnd == newBinStart)
+                            {
+                                CIStart1 = -(previousBinEnd - previousBinStart) / 2;
+                            }
+                            segmentStartCI = new Tuple<int, int>(CIStart1, CIStart2);
+                        }
+                        else
+                        {
+                            int interval = (newBinEnd - newBinStart) / 2;
+                            segmentStartCI = new Tuple<int, int>(-interval, interval);
+                        }
                         chr = fields[0];
                         begin = Convert.ToInt32(fields[1]);
-                        bin = currentBin;
-
+                        previousSegmentIndex = currentSegmentIndex;
                     }
+                    previousBinStart = newBinStart;
+                    previousBinEnd = newBinEnd;
 
-                    end = Convert.ToInt32(fields[2]);
                     counts.Add(float.Parse(fields[3]));
-
                 }
 
-                if (bin != -1)
+                if (previousSegmentIndex != -1)
                 {
                     // Add the last segment
-                    CanvasSegment segment = new CanvasSegment(chr, begin, end, counts);
+                    CanvasSegment segment = new CanvasSegment(chr, begin, previousBinEnd, counts);
                     segments.Add(segment);
+                    segment.StartConfidenceInterval = segmentStartCI;
+                    //SetLastSegmentStartConfidenceInterval(segments);
                 }
             }
             Console.WriteLine("{0} Loaded {1} segments", DateTime.Now, segments.Count);
@@ -284,10 +296,12 @@ namespace CanvasCommon
                 writer.WriteLine("##ALT=<ID=CNV,Description=\"Copy number variable region\">");
                 writer.WriteLine($"##FILTER=<ID={qualityFilter},Description=\"Quality below {qualityThreshold}\">");
                 writer.WriteLine("##FILTER=<ID=L10kb,Description=\"Length shorter than 10kb\">");
-                writer.WriteLine("##INFO=<ID=SUBCLONAL,Number=0,Type=Flag,Description=\"Subclonal variant\">");
-                writer.WriteLine("##INFO=<ID=SVTYPE,Number=1,Type=String,Description=\"Type of structural variant\">");
-                writer.WriteLine("##INFO=<ID=END,Number=1,Type=Integer,Description=\"End position of the variant described in this record\">");
+                writer.WriteLine("##INFO=<ID=CIEND,Number=2,Type=Integer,Description=\"Confidence interval around END for imprecise variants\">");
+                writer.WriteLine("##INFO=<ID=CIPOS,Number=2,Type=Integer,Description=\"Confidence interval around POS for imprecise variants\">");
                 writer.WriteLine("##INFO=<ID=CNVLEN,Number=1,Type=Integer,Description=\"Number of reference positions spanned by this CNV\">");
+                writer.WriteLine("##INFO=<ID=END,Number=1,Type=Integer,Description=\"End position of the variant described in this record\">");
+                writer.WriteLine("##INFO=<ID=SVTYPE,Number=1,Type=String,Description=\"Type of structural variant\">");
+                writer.WriteLine("##INFO=<ID=SUBCLONAL,Number=0,Type=Flag,Description=\"Subclonal variant\">");
                 writer.WriteLine("##FORMAT=<ID=RC,Number=1,Type=Float,Description=\"Mean counts per bin in the region\">");
                 writer.WriteLine("##FORMAT=<ID=BC,Number=1,Type=Float,Description=\"Number of bins in the region\">");
                 writer.WriteLine("##FORMAT=<ID=CN,Number=1,Type=Integer,Description=\"Copy number genotype for imprecise events\">");
@@ -321,7 +335,14 @@ namespace CanvasCommon
                         writer.Write($"END={segment.End}");
                         if (cnvType != CnvType.Reference)
                             writer.Write($";CNVLEN={segment.End - segment.Begin}");
-
+                        if (segment.StartConfidenceInterval != null)
+                        {
+                            writer.Write($";CIPOS={segment.StartConfidenceInterval.Item1},{segment.StartConfidenceInterval.Item2}");
+                        }
+                        if (segment.EndConfidenceInterval != null)
+                        {
+                            writer.Write($";CIEND={segment.EndConfidenceInterval.Item1},{segment.EndConfidenceInterval.Item2}");
+                        }
                         //  FORMAT field
                         writer.Write("\tRC:BC:CN", segment.End);
                         if (segment.MajorChromosomeCount.HasValue)
@@ -398,11 +419,11 @@ namespace CanvasCommon
                             if (segment.End < pointStartPos) continue;
 
                             int weight = Math.Min(segment.End, pointEndPos) - Math.Max(segment.Begin, pointStartPos);
-                            string key = string.Format("{0} {1}", segment.copyNumber, segment.MajorChromosomeCount);
+                            string key = string.Format("{0} {1}", segment.CopyNumber, segment.MajorChromosomeCount);
                             if (!CopyNumberAndChromCount.ContainsKey(key)) CopyNumberAndChromCount[key] = 0;
                             CopyNumberAndChromCount[key] += weight;
-                            if (!basesByCopyNumber.ContainsKey(segment.copyNumber)) basesByCopyNumber[segment.copyNumber] = 0;
-                            basesByCopyNumber[segment.copyNumber] += weight;
+                            if (!basesByCopyNumber.ContainsKey(segment.CopyNumber)) basesByCopyNumber[segment.CopyNumber] = 0;
+                            basesByCopyNumber[segment.CopyNumber] += weight;
                             overlapSegments.Add(segment);
                         }
 
@@ -436,9 +457,9 @@ namespace CanvasCommon
                         // the most common copy number:
                         foreach (CanvasSegment segment in overlapSegments)
                         {
-                            if ((majorCopyNumber == 2 && segment.copyNumber != 2) ||
-                                (majorCopyNumber < 2 && segment.copyNumber >= 2) ||
-                                (majorCopyNumber > 2 && segment.copyNumber <= 2))
+                            if ((majorCopyNumber == 2 && segment.CopyNumber != 2) ||
+                                (majorCopyNumber < 2 && segment.CopyNumber >= 2) ||
+                                (majorCopyNumber > 2 && segment.CopyNumber <= 2))
                                 continue;
                             float segLength = segment.End - segment.Begin;
 
@@ -635,7 +656,7 @@ namespace CanvasCommon
             while (segmentIndex < segments.Count)
             {
                 // Assimilate an adjacent segment with the same copy number call and heterogeneity flag:
-                if (lastSegment.copyNumber == segments[segmentIndex].copyNumber && lastSegment.Chr == segments[segmentIndex].Chr &&
+                if (lastSegment.CopyNumber == segments[segmentIndex].CopyNumber && lastSegment.Chr == segments[segmentIndex].Chr &&
                     !IsForbiddenInterval(lastSegment.Chr, lastSegment.End, segments[segmentIndex].Begin, excludedIntervals) &&
                     lastSegment.IsHeterogeneous == segments[segmentIndex].IsHeterogeneous)
                 {
@@ -731,7 +752,7 @@ namespace CanvasCommon
             while (segmentIndex < segments.Count)
             {
                 // Assimilate an adjacent segment with the same copy number call and heterogeneity flag:
-                if (lastSegment.copyNumber == segments[segmentIndex].copyNumber && lastSegment.Chr == segments[segmentIndex].Chr &&
+                if (lastSegment.CopyNumber == segments[segmentIndex].CopyNumber && lastSegment.Chr == segments[segmentIndex].Chr &&
                     segments[segmentIndex].Begin - lastSegment.End < maximumMergeSpan && lastSegment.IsHeterogeneous == segments[segmentIndex].IsHeterogeneous)
                 {
                     lastSegment.MergeIn(segments[segmentIndex]);
@@ -868,6 +889,6 @@ namespace CanvasCommon
             }
             return 0;
         }
-        
+
     }
 }
