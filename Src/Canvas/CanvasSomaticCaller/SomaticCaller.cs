@@ -1921,7 +1921,7 @@ namespace CanvasSomaticCaller
                         int tmpCopyNumber = segment.SecondBestCopyNumber;
                         segment.SecondBestCopyNumber = segment.CopyNumber; // indicator that CNs have swapped
                         segment.CopyNumber = tmpCopyNumber;
-                        segment.cnSwaped = "Y";
+                        segment.CopyNumberSwapped = true;
 
                     }
                 }
@@ -2195,7 +2195,7 @@ namespace CanvasSomaticCaller
                         (CN == 2 && segment.CopyNumber == 2) ||
                         (CN > 2 && segment.CopyNumber > 2))
                         directionAccurateFlag = "Y";
-                    writer.Write("{0}\t{1}\t{2}\t{3}\t{4}\t{5}\t{6}\t{7}\t", segment.Chr, segment.Begin, segment.End, CN, Heterogeneity, segment.CopyNumber, segment.SecondBestCopyNumber, segment.cnSwaped);
+                    writer.Write("{0}\t{1}\t{2}\t{3}\t{4}\t{5}\t{6}\t{7}\t", segment.Chr, segment.Begin, segment.End, CN, Heterogeneity, segment.CopyNumber, segment.SecondBestCopyNumber, segment.CopyNumberSwapped ? "Y" : "N");
                     writer.Write("{0}\t{1}\t", accurateFlag, directionAccurateFlag);
                     writer.Write("{0}\t", Math.Log(segment.End - segment.Begin));
                     writer.Write("{0}\t", segment.GetQScorePredictor(CanvasSegment.QScorePredictor.LogBinCount));
