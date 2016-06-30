@@ -10,6 +10,9 @@ namespace CanvasCommon
     public class PloidyInfo
     {
         #region Members
+
+        public const int OutlierClusterFlag = -1;
+        public const int UndersegmentedClusterFlag = -2;
         public string HeaderLine;
         public Dictionary<string, List<PloidyInterval>> PloidyByChromosome = new Dictionary<string, List<PloidyInterval>>();
         #endregion

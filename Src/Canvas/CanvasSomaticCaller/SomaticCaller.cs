@@ -46,15 +46,15 @@ namespace CanvasSomaticCaller
         public float? userPurity;
         protected float MeanCoverage = 30;
         private double CoverageWeightingFactor; // Computed from CoverageWeighting
-        public bool IsEnrichment = false;
-        public bool IsDbsnpVcf = false;
-        public bool IsTrainingMode = false;
+        public bool IsEnrichment;
+        public bool IsDbsnpVcf;
+        public bool IsTrainingMode;
         protected PloidyInfo ReferencePloidy;
         public SomaticCallerParameters somaticCallerParameters;
         public CanvasCommon.QualityScoreParameters somaticCallerQscoreParameters;
 
 
-        public bool FFPEMode = false; // Assume MAF and Coverage are independent/uncorrelated in FFPEMode (always false for now)
+        public bool FFPEMode; // Assume MAF and Coverage are independent/uncorrelated in FFPEMode (always false for now)
         private const double EMPosteriorProbThres = 0.01; // Controls whether a segment contributes to Mu and Sigma estimates
         private const double EMOmegaThres = 0.01; // Controls when to update means
         private const double EMLikelihoodThres = 1; // Controls when to update means
@@ -406,10 +406,10 @@ namespace CanvasSomaticCaller
 
                 if (this.IsTrainingMode)
                 {
-                    Console.WriteLine("Not calling any CNVs. Reason: {0}", e.Message);
+                    Console.WriteLine("IsTrainingMode activated. Not calling any CNVs. Reason: {0}", e.Message);
                     Segments.Clear();
                     CanvasSegment.WriteSegments(outputVCFPath, this.Segments, Model.DiploidCoverage, referenceFolder, name, ExtraHeaders,
-                        this.ReferencePloidy, QualityFilterThreshold);
+                    this.ReferencePloidy, QualityFilterThreshold);
                     Environment.Exit(0);
                 }
                 else
@@ -615,7 +615,7 @@ namespace CanvasSomaticCaller
 
             foreach (SegmentInfo segment in segments)
             {
-                if (segment.Cluster != -1 && segment.MAF >= 0)
+                if (segment.Cluster != CanvasCommon.PloidyInfo.OutlierClusterFlag && segment.MAF >= 0)
                     usableSegments.Add(segment);
             }
 
@@ -891,7 +891,7 @@ namespace CanvasSomaticCaller
                 {
                     for (int j = 0; j < usableSegments.Count; j++)
                     {
-                        if (i != j && usableSegments[i].Cluster != -1 && usableSegments[j].Cluster != -1 && usableSegments[i].Cluster == k + 1 && usableSegments[i].MAF >= 0 && usableSegments[j].MAF >= 0)
+                        if (i != j && usableSegments[i].Cluster != CanvasCommon.PloidyInfo.OutlierClusterFlag && usableSegments[j].Cluster != CanvasCommon.PloidyInfo.OutlierClusterFlag && usableSegments[i].Cluster == k + 1 && usableSegments[i].MAF >= 0 && usableSegments[j].MAF >= 0)
                         {
                             if (usableSegments[i].Cluster == usableSegments[j].Cluster)
                             {
@@ -979,7 +979,7 @@ namespace CanvasSomaticCaller
         /// Helper function for ModelDeviation. Outputs
         /// estimates of average cluster deviation.
         /// </summary>
-        void mergeClusters(List<SegmentInfo> remainingSegments, List<SegmentInfo> usableSegments,
+        void MergeClusters(List<SegmentInfo> remainingSegments, List<SegmentInfo> usableSegments,
             List<double> centroidsMAF, List<double> remainingCentroidsMAF, List<double> centroidsCoverage, List<double> remainingCentroidsCoverage,
             int bestNumClusters)
         {
@@ -988,7 +988,7 @@ namespace CanvasSomaticCaller
             centroidsCoverage.AddRange(remainingCentroidsCoverage);
             foreach (SegmentInfo segment in usableSegments)
             {
-                if (segment.FinalCluster.HasValue && segment.FinalCluster.Value == -2)
+                if (segment.FinalCluster.HasValue && segment.FinalCluster.Value == CanvasCommon.PloidyInfo.UndersegmentedClusterFlag)
                 {
                     segment.FinalCluster = remainingSegments[remainingSegmentsCounter].Cluster.Value + bestNumClusters;
                     remainingSegmentsCounter++;
@@ -1436,7 +1436,7 @@ namespace CanvasSomaticCaller
             {
                 for (int j = 0; j < usableSegments.Count; j++)
                 {
-                    if (i != j && usableSegments[i].Cluster != -1 && usableSegments[j].Cluster != -1 && usableSegments[i].MAF >= 0 && usableSegments[j].MAF >= 0)
+                    if (i != j && usableSegments[i].Cluster != CanvasCommon.PloidyInfo.OutlierClusterFlag && usableSegments[j].Cluster != CanvasCommon.PloidyInfo.OutlierClusterFlag && usableSegments[i].MAF >= 0 && usableSegments[j].MAF >= 0)
                     {
                         tempModelDistanceList.Add(GetModelDistance(usableSegments[i].Coverage, usableSegments[j].Coverage, usableSegments[i].MAF, usableSegments[j].MAF));
                     }
@@ -1683,7 +1683,7 @@ namespace CanvasSomaticCaller
 
                         if (largeClusters.Count > 0)
                         {
-                            extractSegments(bestNumClusters, usableSegments, clusterVariance, clustersSize, remainingSegments, smallClusters);
+                            ExtractSegments(bestNumClusters, usableSegments, clusterVariance, clustersSize, remainingSegments, smallClusters);
 
                             // Step5: Cluster remaining underpartitioned segments (remainingSegments) and merge new clusters with the earlier cluster set
                             int remainingBestNumClusters = 0;
@@ -1691,7 +1691,7 @@ namespace CanvasSomaticCaller
                             remainingDensityClustering.FindCentroids();
                             List<double> remainingCentroidsMAF = remainingDensityClustering.GetCentroidsMAF();
                             List<double> remainingCentroidsCoverage = remainingDensityClustering.GetCentroidsCoverage();
-                            mergeClusters(remainingSegments, usableSegments, centroidsMAF, remainingCentroidsMAF,
+                            MergeClusters(remainingSegments, usableSegments, centroidsMAF, remainingCentroidsMAF,
                                 centroidsCoverage, remainingCentroidsCoverage, bestNumClusters - largeClusters.Count);
                             bestNumClusters = bestNumClusters + remainingBestNumClusters - largeClusters.Count;
                         }
@@ -1944,7 +1944,10 @@ namespace CanvasSomaticCaller
             }
         }
 
-        public static void extractSegments(int bestNumClusters, List<SegmentInfo> usableSegments, List<double> clusterVariance, List<int> clustersSize,
+        /// <summary>
+        /// Extract segments from clusters that appear underclustered, i.e. subclonal CNV variants cluster with the closest clonal copy number 
+        /// </summary>
+        public static void ExtractSegments(int bestNumClusters, List<SegmentInfo> usableSegments, List<double> clusterVariance, List<int> clustersSize,
             List<SegmentInfo> remainingSegments, List<int> smallClusters)
         {
             for (int clusterID = 0; clusterID < bestNumClusters; clusterID++)
@@ -1957,7 +1960,7 @@ namespace CanvasSomaticCaller
                             Utilities.StandardDeviation(clusterVariance) > 0.015 &&
                             clustersSize[clusterID]/clustersSize.Sum() < 0.9 && bestNumClusters < 4)
                         {
-                            segment.FinalCluster = -2;
+                            segment.FinalCluster = -CanvasCommon.PloidyInfo.UndersegmentedClusterFlag;
                             remainingSegments.Add(segment);
                         }
                         else
@@ -1965,7 +1968,7 @@ namespace CanvasSomaticCaller
                             segment.FinalCluster = smallClusters.FindIndex(x => x == segment.Cluster) + 1;
                         }
                     }
-                    else if (segment.Cluster.HasValue && segment.Cluster.Value == -1)
+                    else if (segment.Cluster.HasValue && segment.Cluster.Value == CanvasCommon.PloidyInfo.OutlierClusterFlag)
                         segment.FinalCluster = segment.Cluster.Value;
                 }
             }

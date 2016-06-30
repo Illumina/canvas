@@ -150,7 +150,7 @@ namespace CanvasCommon
         {
             foreach (var segment in segments)
             {
-                if (segment.KnearestNeighbour > this.KnearestNeighbourCutoff) segment.Cluster = -1;
+                if (segment.KnearestNeighbour > this.KnearestNeighbourCutoff) segment.Cluster = CanvasCommon.PloidyInfo.OutlierClusterFlag;
                 else EMComputePosteriorProbs(modelPoints, segment);
             }
         }
@@ -185,7 +185,7 @@ namespace CanvasCommon
                 modelPoint.Ploidy.Omega = 0;
                 foreach (var segment in segments)
                 {
-                    if (segment.Cluster != -1)
+                    if (segment.Cluster != CanvasCommon.PloidyInfo.OutlierClusterFlag)
                     // weight segments by segment.Weight
                     {
                         sumWeights += segment.Weight;
@@ -317,7 +317,7 @@ namespace CanvasCommon
                 {
                     // weight segments by segment.Weight
                     // each segment represents segment.Weight points
-                    if (segment.Cluster == -1) { continue; }
+                    if (segment.Cluster == CanvasCommon.PloidyInfo.OutlierClusterFlag) { continue; }
                     if (segment.PosteriorProbs[modelPoint] < postProbThres) { continue; }
                     double weight = segment.PosteriorProbs[modelPoint] * segment.Weight;
                     sumWeights += weight;
@@ -379,7 +379,7 @@ namespace CanvasCommon
                 {
                     // weight segments by segment.Weight
                     // each segment represents segment.Weight points
-                    if (segment.Cluster == -1) { continue; }
+                    if (segment.Cluster == CanvasCommon.PloidyInfo.OutlierClusterFlag) { continue; }
                     if (segment.PosteriorProbs[modelPoint] < postProbThres) { continue; }
                     double weight = segment.PosteriorProbs[modelPoint] * segment.Weight;
                     sumWeights += weight;
@@ -401,7 +401,7 @@ namespace CanvasCommon
 
             foreach (var segment in segments)
             {
-                if (segment.Cluster == -1) { continue; }
+                if (segment.Cluster == CanvasCommon.PloidyInfo.OutlierClusterFlag) { continue; }
                 double temp = 0;
                 foreach (var modelPoint in modelPoints)
                 {
@@ -431,7 +431,7 @@ namespace CanvasCommon
 
             foreach (var segment in segments)
             {
-                if (segment.Cluster == -1) { continue; }
+                if (segment.Cluster == CanvasCommon.PloidyInfo.OutlierClusterFlag) { continue; }
                 double temp = 0;
                 foreach (var modelPoint in modelPoints)
                 {

@@ -395,7 +395,7 @@ namespace CanvasCommon
                     if (this.Segments[runOrderIndex].MAF >= 0)
                         this.Segments[runOrderIndex].Cluster = this.Segments[minRhoElementIndex].Cluster;
                     if (!this.Segments[runOrderIndex].Cluster.HasValue || this.Segments[runOrderIndex].MAF < 0 || this.Segments[runOrderIndex].KnearestNeighbour > this._knearestNeighbourCutoff)
-                        this.Segments[runOrderIndex].Cluster = -1;
+                        this.Segments[runOrderIndex].Cluster = CanvasCommon.PloidyInfo.OutlierClusterFlag;
                 }
             }
             return CentroidsIndex.Count;
