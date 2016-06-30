@@ -17,7 +17,8 @@ namespace CanvasCommon
     public enum CanvasNormalizeMode
     {
         WeightedAverage, // Weighted average of all control samples
-        BestLR2 // Use sum of log ratio^2 to find the best control sample
+        BestLR2, // Use sum of log ratio^2 to find the best control sample
+        PCA // Project a sample to the PCA axes to obtain the control sample
     }
 
     public enum CanvasGCNormalizationMode
@@ -88,6 +89,8 @@ namespace CanvasCommon
                     return CanvasNormalizeMode.WeightedAverage;
                 case "bestlr2":
                     return CanvasNormalizeMode.BestLR2;
+                case "pca":
+                    return CanvasNormalizeMode.PCA;
                 default:
                     throw new Exception(string.Format("Invalid CanvasNormalize mode '{0}'", mode));
             }
