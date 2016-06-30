@@ -87,17 +87,14 @@ namespace CanvasCommon
         /// </summary>
         public List<int> GetClustersSize(int nClusters)
         {
-            List<int> clustersSize = new List<int>();
+            List<int> clustersSize = Enumerable.Repeat(0, nClusters).ToList();
 
-            for (int clusterID = 0; clusterID < nClusters; clusterID++)
+            foreach (SegmentInfo segment in this.Segments)
             {
-                int tmpSize = 0;
-                foreach (SegmentInfo segment in this.Segments)
+                if (segment.Cluster.HasValue && segment.Cluster.Value > 0)
                 {
-                    if (segment.Cluster.HasValue && clusterID + 1 == segment.Cluster.Value)
-                        tmpSize++;
+                    clustersSize[segment.Cluster.Value - 1] += 1;
                 }
-                clustersSize.Add(tmpSize);
             }
             return clustersSize;
         }
