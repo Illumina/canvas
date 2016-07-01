@@ -10,6 +10,6 @@ namespace CanvasNormalize
 {
     interface IRatioCalculator
     {
-        void Run(IFileLocation sampleBedFile, IFileLocation referenceBedFile, IFileLocation referencePloidyBedFile, IFileLocation outputBedFile);
+        IEnumerable<Tuple<string, int, int, double>> Run(IFileLocation sampleBedFile, IFileLocation referenceBedFile);
     }
 }
