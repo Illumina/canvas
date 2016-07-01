@@ -85,6 +85,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="CanvasSegment.cs" />
+    <Compile Include="ClusterInfo.cs" />
     <Compile Include="QualityScoreParameters.cs" />
     <Compile Include="CanvasVersionInfo.cs" />
     <Compile Include="CnvType.cs" />

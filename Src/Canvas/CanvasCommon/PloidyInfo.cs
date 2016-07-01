@@ -126,12 +126,8 @@ namespace CanvasCommon
         public double Weight;
         public double MAFWeight;
         public int CN;
-        public int? Cluster; 
-        public int? FinalCluster;
-        public double? ClusterEntropy;
-        public double? ClusterMedianDistance;
-        public double? ClusterMeanDistance;
-        public double? ClusterVariance;
+        public int? ClusterId; 
+        public int? FinalClusterId;
         public double? KnearestNeighbour;
         public SegmentPloidy Ploidy;
         public double EmpiricalMAF;
@@ -145,6 +141,7 @@ namespace CanvasCommon
     public class SegmentInfo : ModelPoint
     {
         public CanvasSegment Segment;
+        public ClusterInfo Cluster;
         public Dictionary<ModelPoint, double> PosteriorProbs;        
     }
 
@@ -158,18 +155,4 @@ namespace CanvasCommon
         public List<int> CNs = new List<int>();
     }
 
-    /// <summary>
-    /// Stores information about clustering of CanvasSegment objects
-    /// </summary>
-    public class ClusterModel
-    {
-        public int? ClusterID;
-        public bool IsHeterogeneous = false;
-        public double? ClusterMedianDistance;
-        public double? ClusterEntropy;
-        public double? ClusterMeanDistance;
-        public double? ClusterVariance;
-
-
-    }
 }

@@ -173,7 +173,7 @@ namespace CanvasCommon
                             int CIEnd1 = -(previousBinEnd - previousBinStart) / 2;
                             int CIEnd2 = -CIEnd1;
                             if (previousBinEnd == newBinStart)
-                        {
+                            {
                                 CIEnd2 = (newBinEnd - newBinStart) / 2;
                             }
                             segment.EndConfidenceInterval = new Tuple<int, int>(CIEnd1, CIEnd2);
@@ -809,13 +809,13 @@ namespace CanvasCommon
                         return (int)Math.Round(-10 * Math.Log10(1 - 1 / (1 + Math.Exp(0.5532 - this.BinCount * 0.147))), 0, MidpointRounding.AwayFromZero);
                 case QScoreMethod.GeneralizedLinearFit: // Generalized linear fit with linear transformation to QScore
                     double linearFit = qscoreParameters.GeneralizedLinearFitIntercept;
-                    linearFit += qscoreParameters.GeneralizedLinearFitLogBinCount*
+                    linearFit += qscoreParameters.GeneralizedLinearFitLogBinCount *
                                  GetQScorePredictor(QScorePredictor.LogBinCount);
-                    linearFit += qscoreParameters.GeneralizedLinearFitModelDistance*
+                    linearFit += qscoreParameters.GeneralizedLinearFitModelDistance *
                                  GetQScorePredictor(QScorePredictor.ModelDistance);
-                    linearFit += qscoreParameters.GeneralizedLinearFitMajorChromosomeCount*
+                    linearFit += qscoreParameters.GeneralizedLinearFitMajorChromosomeCount *
                                  GetQScorePredictor(QScorePredictor.MajorChromosomeCount);
-                    linearFit += qscoreParameters.GeneralizedLinearFitMafMean*
+                    linearFit += qscoreParameters.GeneralizedLinearFitMafMean *
                                  GetQScorePredictor(QScorePredictor.MafMean);
                     linearFit += qscoreParameters.GeneralizedLinearFitLogMafCv * GetQScorePredictor(QScorePredictor.LogMafCv);
                     score = -11.9 - 11.4 * linearFit; // Scaling to achieve 2 <= qscore <= 61

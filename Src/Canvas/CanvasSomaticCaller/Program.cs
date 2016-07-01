@@ -3,8 +3,8 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using NDesk.Options;
-using System.Runtime.Serialization;
-using System.Runtime.Serialization.Json;
+using Newtonsoft.Json;
+using Isas.Shared;
 
 namespace CanvasSomaticCaller
 {
@@ -42,33 +42,61 @@ namespace CanvasSomaticCaller
             bool isTrainMode = false;
             float? userPurity = null;
             float? userPloidy = null;
-            CanvasCommon.CanvasSomaticClusteringMode somaticClusteringMode = CanvasCommon.CanvasSomaticClusteringMode.Density;
-            string parameterconfigPath = Path.Combine(Isas.Shared.Utilities.GetAssemblyFolder(typeof(Program)), "SomaticCallerParameters.json");
-            string qualityScoreConfigPath = Path.Combine(Isas.Shared.Utilities.GetAssemblyFolder(typeof(Program)), "QualityScoreParameters.json");
+            CanvasCommon.CanvasSomaticClusteringMode somaticClusteringMode =
+                CanvasCommon.CanvasSomaticClusteringMode.Density;
+            string parameterconfigPath = Path.Combine(Isas.Shared.Utilities.GetAssemblyFolder(typeof (Program)),
+                "SomaticCallerParameters.json");
+            string qualityScoreConfigPath = Path.Combine(Isas.Shared.Utilities.GetAssemblyFolder(typeof (Program)),
+                "QualityScoreParameters.json");
 
 
             OptionSet p = new OptionSet()
             {
-                { "i|infile=", "file containing bins, their counts, and assigned segments (obtained from CanvasPartition.exe)",  v => inFile = v },
-                { "v|varfile=", "file containing variant frequencies (obtained from CanvasSNV.exe)", v => variantFrequencyFile = v },
-                { "o|outfile=", "file name prefix to ouput copy number calls to outfile.vcf", v => outFile = v },
-                { "r|reference=", "folder that contains both genome.fa and GenomeSize.xml", v => referenceFolder = v },
-                { "n|name=", "sample name for output VCF header (optional)", v => name = v },
-                { "t|truth=", "path to vcf/bed with CNV truth data (optional)", v => truthDataPath = v },
-                { "h|help", "show this message and exit", v => needHelp = v != null },
-                { "e|enrichment", "flag indicating this is enrichment data", v => isEnrichment = v != null },
-                { "s|somaticvcf=", "somatic vcf file - optionally used for purity estimation", v => somaticVCFPath = v },
-                { "b|bedfile=", "bed file containing regions to exclude from calling", v => bedPath = v},
-                { "p|ploidyBedFile=", "bed file specifying reference ploidy (e.g. for sex chromosomes) (optional)", v => ploidyBedPath = v},
-                { "f|localSDFile=", "text file with localSD metric (calculate within CanvasClean) (optional)", v => ffpeOutliersPath = v},
-                { "d|dbsnpvcf", "flag indicating a dbSNP VCF file is used to generate the variant frequency file", v => isDbsnpVcf = v != null },
-                { "M|minimumcall=", "INTERNAL: minimum call size", v => minimumCallSize = int.Parse(v) },
-                { "q|qualitythreshold=", $"quality filter threshold (default {qualityFilterThreshold})", v => qualityFilterThreshold = int.Parse(v) },
-                { "c|parameterconfig=", $"parameter configuration path (default {parameterconfigPath})", v => parameterconfigPath = v },
-                { "g|qscoreconfig=", $"parameter configuration path (default {qualityScoreConfigPath})", v => qualityScoreConfigPath = v },
-                { "u|definedpurity=", "INTERNAL: user pre-defined purity", v => userPurity = float.Parse(v) },
-                { "l|definedploidy=", "INTERNAL: user pre-defined ploidy", v => userPloidy = float.Parse(v) },
-                { "a|trainmodel=", "INTERNAL: user pre-defined ploidy", v => isTrainMode = v != null }
+                {
+                    "i|infile=",
+                    "file containing bins, their counts, and assigned segments (obtained from CanvasPartition.exe)",
+                    v => inFile = v
+                },
+                {
+                    "v|varfile=", "file containing variant frequencies (obtained from CanvasSNV.exe)",
+                    v => variantFrequencyFile = v
+                },
+                {"o|outfile=", "file name prefix to ouput copy number calls to outfile.vcf", v => outFile = v},
+                {"r|reference=", "folder that contains both genome.fa and GenomeSize.xml", v => referenceFolder = v},
+                {"n|name=", "sample name for output VCF header (optional)", v => name = v},
+                {"t|truth=", "path to vcf/bed with CNV truth data (optional)", v => truthDataPath = v},
+                {"h|help", "show this message and exit", v => needHelp = v != null},
+                {"e|enrichment", "flag indicating this is enrichment data", v => isEnrichment = v != null},
+                {"s|somaticvcf=", "somatic vcf file - optionally used for purity estimation", v => somaticVCFPath = v},
+                {"b|bedfile=", "bed file containing regions to exclude from calling", v => bedPath = v},
+                {
+                    "p|ploidyBedFile=", "bed file specifying reference ploidy (e.g. for sex chromosomes) (optional)",
+                    v => ploidyBedPath = v
+                },
+                {
+                    "f|localSDFile=", "text file with localSD metric (calculate within CanvasClean) (optional)",
+                    v => ffpeOutliersPath = v
+                },
+                {
+                    "d|dbsnpvcf", "flag indicating a dbSNP VCF file is used to generate the variant frequency file",
+                    v => isDbsnpVcf = v != null
+                },
+                {"M|minimumcall=", "INTERNAL: minimum call size", v => minimumCallSize = int.Parse(v)},
+                {
+                    "q|qualitythreshold=", $"quality filter threshold (default {qualityFilterThreshold})",
+                    v => qualityFilterThreshold = int.Parse(v)
+                },
+                {
+                    "c|parameterconfig=", $"parameter configuration path (default {parameterconfigPath})",
+                    v => parameterconfigPath = v
+                },
+                {
+                    "g|qscoreconfig=", $"parameter configuration path (default {qualityScoreConfigPath})",
+                    v => qualityScoreConfigPath = v
+                },
+                {"u|definedpurity=", "INTERNAL: user pre-defined purity", v => userPurity = float.Parse(v)},
+                {"l|definedploidy=", "INTERNAL: user pre-defined ploidy", v => userPloidy = float.Parse(v)},
+                {"a|trainmodel=", "INTERNAL: user pre-defined ploidy", v => isTrainMode = v != null}
             };
 
             List<string> extraArgs = p.Parse(args);
@@ -105,12 +133,14 @@ namespace CanvasSomaticCaller
 
             if (!File.Exists(Path.Combine(referenceFolder, "GenomeSize.xml")))
             {
-                Console.WriteLine("Canvas error: File {0} does not exist! Exiting.", Path.Combine(referenceFolder, "GenomeSize.xml"));
+                Console.WriteLine("Canvas error: File {0} does not exist! Exiting.",
+                    Path.Combine(referenceFolder, "GenomeSize.xml"));
                 return 1;
             }
 
             if (qualityFilterThreshold < 0)
-                throw new ArgumentException($"Quality filter threshold must be greater than or equal to zero. Value was {qualityFilterThreshold}");
+                throw new ArgumentException(
+                    $"Quality filter threshold must be greater than or equal to zero. Value was {qualityFilterThreshold}");
 
             if (!File.Exists(parameterconfigPath))
             {
@@ -118,16 +148,11 @@ namespace CanvasSomaticCaller
                 return 1;
             }
 
-            DataContractJsonSerializer js = new DataContractJsonSerializer(typeof(SomaticCallerParameters));
-            string parameterconfigFile = File.ReadAllText(parameterconfigPath);
-            MemoryStream msp = new MemoryStream(Encoding.ASCII.GetBytes(parameterconfigFile));
-            SomaticCallerParameters somaticCallerParametersJSON = (SomaticCallerParameters)js.ReadObject(msp);
+            FileLocation parameterconfigFile = new FileLocation(parameterconfigPath);
+            SomaticCallerParameters somaticCallerParametersJSON = Deserialize<SomaticCallerParameters>(parameterconfigFile);
 
-            DataContractJsonSerializer jq = new DataContractJsonSerializer(typeof(CanvasCommon.QualityScoreParameters));
-            string qscoreConfigFile = File.ReadAllText(qualityScoreConfigPath);
-            MemoryStream msq = new MemoryStream(Encoding.ASCII.GetBytes(qscoreConfigFile));
-            CanvasCommon.QualityScoreParameters qscoreParametersJSON = (CanvasCommon.QualityScoreParameters)jq.ReadObject(msq);
-
+            FileLocation qscoreConfigFile = new FileLocation(qualityScoreConfigPath);
+            CanvasCommon.QualityScoreParameters qscoreParametersJSON =  Deserialize<CanvasCommon.QualityScoreParameters>(qscoreConfigFile);
 
             SomaticCaller caller = new SomaticCaller();
             caller.somaticCallerParameters = somaticCallerParametersJSON;
@@ -138,8 +163,7 @@ namespace CanvasSomaticCaller
             caller.IsDbsnpVcf = isDbsnpVcf;
             caller.userPurity = userPurity;
             caller.userPloidy = userPloidy;
-            if (truthDataPath != null)
-                isTrainMode = true;
+            caller.IsTrainingMode = truthDataPath != null || isTrainMode;
             caller.IsTrainingMode = isTrainMode;
             caller.QualityFilterThreshold = qualityFilterThreshold;
 
@@ -156,6 +180,11 @@ namespace CanvasSomaticCaller
             
             caller.LoadBedFile(bedPath);
             return caller.CallVariants(inFile, variantFrequencyFile, outFile, referenceFolder, name, localSDmetric, somaticClusteringMode);
+        }
+        private static T Deserialize<T>(IFileLocation path)
+        {
+            using (StreamReader reader = path.OpenText())
+                return JsonConvert.DeserializeObject<T>(reader.ReadToEnd());
         }
     }
 }

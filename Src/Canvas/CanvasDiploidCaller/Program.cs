@@ -6,8 +6,8 @@ using System.Threading.Tasks;
 using System.IO;
 using NDesk.Options;
 using SequencingFiles;
-using System.Runtime.Serialization;
-using System.Runtime.Serialization.Json;
+using Newtonsoft.Json;
+using Isas.Shared;
 
 namespace CanvasDiploidCaller
 {
@@ -92,17 +92,19 @@ namespace CanvasDiploidCaller
                 return 1;
             }
 
+            FileLocation qscoreConfigFile = new FileLocation(qualityScoreConfigPath);
+            CanvasCommon.QualityScoreParameters qscoreParametersJSON = Deserialize<CanvasCommon.QualityScoreParameters>(qscoreConfigFile);
 
-            DataContractJsonSerializer jq = new DataContractJsonSerializer(typeof(CanvasCommon.QualityScoreParameters));
-            string qscoreConfigFile = File.ReadAllText(qualityScoreConfigPath);
-            MemoryStream msq = new MemoryStream(Encoding.ASCII.GetBytes(qscoreConfigFile));
-            CanvasCommon.QualityScoreParameters qscoreParametersJSON = (CanvasCommon.QualityScoreParameters)jq.ReadObject(msq);
-
-            CanvasDiploidCaller caller = new CanvasDiploidCaller();
             // Set parameters:
+            CanvasDiploidCaller caller = new CanvasDiploidCaller();
             caller.IsDbsnpVcf = isDbsnpVcf;
             caller.germlineScoreParameters = qscoreParametersJSON;
             return caller.CallVariants(variantFrequencyFile, inFile, outFile, ploidyBedPath, referenceFolder, sampleName, truthDataPath);
+        }
+        private static T Deserialize<T>(IFileLocation path)
+        {
+            using (StreamReader reader = path.OpenText())
+                return JsonConvert.DeserializeObject<T>(reader.ReadToEnd());
         }
     }
 }

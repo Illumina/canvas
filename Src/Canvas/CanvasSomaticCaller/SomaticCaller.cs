@@ -8,6 +8,7 @@ using SequencingFiles;
 using CanvasCommon;
 using SequencingFiles.Vcf;
 
+
 namespace CanvasSomaticCaller
 {
     public class SomaticCaller
@@ -395,8 +396,8 @@ namespace CanvasSomaticCaller
             {
                 ExtraHeaders = CallCNVUsingSNVFrequency(localSDmertic, referenceFolder, clusteringMode);
             }
- 
-            
+
+
             catch (Exception e)
             {
                 // In a training mode (INTERNAL) somatic model is initialized with a large number of parameter trials. 
@@ -615,7 +616,7 @@ namespace CanvasSomaticCaller
 
             foreach (SegmentInfo segment in segments)
             {
-                if (segment.Cluster != CanvasCommon.PloidyInfo.OutlierClusterFlag && segment.MAF >= 0)
+                if (segment.ClusterId != CanvasCommon.PloidyInfo.OutlierClusterFlag && segment.MAF >= 0)
                     usableSegments.Add(segment);
             }
 
@@ -647,7 +648,7 @@ namespace CanvasSomaticCaller
                 ploidy.CopyNumber = 2;
                 ploidy.MajorChromosomeCount = 1;
                 point.Ploidy = ploidy;
-                point.Cluster = i + 1;
+                point.ClusterId = i + 1;
                 modelPoints.Add(point);
             }
             return modelPoints;
@@ -716,7 +717,7 @@ namespace CanvasSomaticCaller
 
             for (int i = 0; i < numClusters; i++)
             {
-                modelPoints[scoresIndex[i]].Cluster = i + 1;
+                modelPoints[scoresIndex[i]].ClusterId = i + 1;
                 selectedModelPoints.Add(modelPoints[scoresIndex[i]]);
             }
 
@@ -891,9 +892,9 @@ namespace CanvasSomaticCaller
                 {
                     for (int j = 0; j < usableSegments.Count; j++)
                     {
-                        if (i != j && usableSegments[i].Cluster != CanvasCommon.PloidyInfo.OutlierClusterFlag && usableSegments[j].Cluster != CanvasCommon.PloidyInfo.OutlierClusterFlag && usableSegments[i].Cluster == k + 1 && usableSegments[i].MAF >= 0 && usableSegments[j].MAF >= 0)
+                        if (i != j && usableSegments[i].ClusterId != CanvasCommon.PloidyInfo.OutlierClusterFlag && usableSegments[j].ClusterId != CanvasCommon.PloidyInfo.OutlierClusterFlag && usableSegments[i].ClusterId == k + 1 && usableSegments[i].MAF >= 0 && usableSegments[j].MAF >= 0)
                         {
-                            if (usableSegments[i].Cluster == usableSegments[j].Cluster)
+                            if (usableSegments[i].ClusterId == usableSegments[j].ClusterId)
                             {
                                 withinClusterDistance[k].Add(GetModelDistance(usableSegments[i].Coverage, usableSegments[j].Coverage, usableSegments[i].MAF, usableSegments[j].MAF));
                             }
@@ -988,9 +989,9 @@ namespace CanvasSomaticCaller
             centroidsCoverage.AddRange(remainingCentroidsCoverage);
             foreach (SegmentInfo segment in usableSegments)
             {
-                if (segment.FinalCluster.HasValue && segment.FinalCluster.Value == CanvasCommon.PloidyInfo.UndersegmentedClusterFlag)
+                if (segment.FinalClusterId.HasValue && segment.FinalClusterId.Value == CanvasCommon.ClusterInfo.UndersegmentedClusterFlag)
                 {
-                    segment.FinalCluster = remainingSegments[remainingSegmentsCounter].Cluster.Value + bestNumClusters;
+                    segment.FinalClusterId = remainingSegments[remainingSegmentsCounter].ClusterId.Value + bestNumClusters;
                     remainingSegmentsCounter++;
                 }
             }
@@ -1000,56 +1001,23 @@ namespace CanvasSomaticCaller
         /// <summary>
         /// Helper function for ModelDeviation. Outputs estimates of average cluster deviation.
         /// </summary>
-        protected double ClusterDeviation(SomaticCaller.CoveragePurityModel model, List<ModelPoint> modelPoints, List<double> centroidMAFs, List<double> centroidCoverage, List<SegmentInfo> segments, int numClusters, double tempDeviation, out int heterogeneousClusters, out double heterogeneityIndex, bool bestModel, out List<ClusterModel> clusterDeviations, string debugPathClusterInfo = null)
+        protected double ClusterDeviation(SomaticCaller.CoveragePurityModel model, List<ModelPoint> modelPoints,
+            List<double> centroidMAFs, List<double> centroidCoverage, List<SegmentInfo> segments, int numClusters,
+            double tempDeviation, out int heterogeneousClusters, out double heterogeneityIndex, bool bestModel,
+            out List<ClusterInfo> clusterInfos, string debugPathClusterInfo = null)
         {
-            clusterDeviations = new List<ClusterModel>();
+            clusterInfos = new List<ClusterInfo>();
             // compute average deviation for each cluster (clusterDeviation)
-        
+
             for (int clusterID = 0; clusterID < numClusters; clusterID++)
             {
-                ClusterModel clusterInfo = new ClusterModel();
-                clusterInfo.ClusterID = clusterID + 1;
-                clusterDeviations.Add(clusterInfo);
+                ClusterInfo clusterInfo = new ClusterInfo();
+                clusterInfo.ClusterId = clusterID + 1;
+                clusterInfos.Add(clusterInfo);
             }
 
-            // populate clusters
-            List<List<double>> clusterDistance = new List<List<double>>();
-            for (int i = 0; i < numClusters; i++) clusterDistance.Add(new List<double>());
-            List<List<double>> clusterMajorChromosomeCount = new List<List<double>>();
-            for (int i = 0; i < numClusters; i++) clusterMajorChromosomeCount.Add(new List<double>());
-            List<double> tmpClusterDistance = new List<double>();
-            List<double> tmpClusterEntropy = new List<double>();
-
-
-            foreach (SegmentInfo info in segments)
-            {
-                    double bestDeviation = Double.MaxValue;
-                    int bestCluster = 0;
-                double bestMajorChromosomeCount = 0;
-                foreach (ModelPoint modelPoint in modelPoints)
-                    {
-                    if (modelPoint.Coverage < MeanCoverage * 2.0)
-                        {
-                        // iterate over clusters, segments and then modelpoints
-                        double currentDeviation = GetModelDistance(info.Coverage, modelPoint.Coverage, info.MAF, modelPoint.MAF);
-                        if (currentDeviation < bestDeviation && info.FinalCluster.HasValue && info.FinalCluster.Value > 0)
-                        {
-                            bestDeviation = currentDeviation;
-                            bestCluster = info.FinalCluster.Value;
-                            if (modelPoint.Ploidy.MajorChromosomeCount == 0 && modelPoint.Ploidy.CopyNumber == 0)
-                                bestMajorChromosomeCount = 0;
-                            else
-                                bestMajorChromosomeCount = modelPoint.Ploidy.MajorChromosomeCount/(double) modelPoint.Ploidy.CopyNumber;
-                        }
-                    }
-                }
-                if (bestCluster > 0 && bestCluster <= numClusters)
-                {
-                    clusterDistance[bestCluster - 1].Add(bestDeviation);
-                    clusterMajorChromosomeCount[bestCluster - 1].Add(bestMajorChromosomeCount);
-                    tmpClusterDistance.Add(bestDeviation);
-                }
-            }
+            // populate clusterInfo obsjects with cluster metrics information
+            var tmpClusterDistance = CalculateClusterMetrics(modelPoints, segments, clusterInfos);
             if (tmpClusterDistance.Count == 0)
             {
                 heterogeneousClusters = int.MaxValue;
@@ -1057,38 +1025,26 @@ namespace CanvasSomaticCaller
                 return Double.MaxValue;
             }
 
-            var clusterEntropy = ClusterEntropy(numClusters, clusterMajorChromosomeCount, tmpClusterEntropy);
-
-
+            // average metrics across all clusters
+            List<double> tmpClusterEntropy = new List<double>();
             double clusterDeviation = 0;
-            for (int i = 0; i < numClusters; i++)
+            foreach (ClusterInfo clusterInfo in clusterInfos)
             {
-                clusterDeviation += clusterDistance[i].Average();
+                clusterDeviation += clusterInfo.ClusterMeanDistance;
+                tmpClusterEntropy.Add(clusterInfo.ClusterEntropy);
             }
             clusterDeviation /= numClusters;
 
             double medianClusterDistance = CanvasCommon.Utilities.Median(tmpClusterDistance);
             double medianEntropy = CanvasCommon.Utilities.Median(tmpClusterEntropy);
 
-            // compute cluster mean and standard deviation
-            for (int clusterID = 0; clusterID < numClusters; clusterID++)
-            {
-                if (clusterDistance[clusterID].Count > 2)
-                {
-                    clusterDeviations[clusterID].ClusterMedianDistance = CanvasCommon.Utilities.Median(clusterDistance[clusterID]);
-                    clusterDeviations[clusterID].ClusterMeanDistance = clusterDistance[clusterID].Average();
-                    clusterDeviations[clusterID].ClusterVariance = CanvasCommon.Utilities.StandardDeviation(clusterDistance[clusterID]);
-                    clusterDeviations[clusterID].ClusterEntropy = clusterEntropy[clusterID];
-            }
-            }
-
-
             // exlcude clusters with deviation larger than 1.25 of average deviation
             // these clusters locate far from expected model centroids and most likely represent segments coming from heterogeneous variants 
             List<int> heterogeneousClusterID = new List<int>();
-            foreach (ClusterModel clusterInfo in clusterDeviations)
-                if (clusterInfo.ClusterMedianDistance > medianClusterDistance && clusterInfo.ClusterEntropy > medianEntropy)
-                    heterogeneousClusterID.Add(clusterInfo.ClusterID.Value);
+            foreach (ClusterInfo clusterInfo in clusterInfos)
+                if (clusterInfo.ClusterMedianDistance > medianClusterDistance &&
+                    clusterInfo.ClusterEntropy > medianEntropy)
+                    heterogeneousClusterID.Add(clusterInfo.ClusterId);
 
 
             // store signatures of potential heterogeneous variants 
@@ -1096,19 +1052,14 @@ namespace CanvasSomaticCaller
             {
                 foreach (SegmentInfo info in segments)
                 {
-                    foreach (ClusterModel clusterInfo in clusterDeviations)
-                        if (info.Cluster.HasValue && clusterInfo.ClusterID == info.Cluster.Value)
-                        {
-                            info.ClusterEntropy = clusterInfo.ClusterEntropy;
-                            info.ClusterMedianDistance = clusterInfo.ClusterMedianDistance;
-                            info.ClusterMeanDistance = clusterInfo.ClusterMeanDistance;
-                            info.ClusterVariance = clusterInfo.ClusterVariance;                         
-            }
-                }           
+                    foreach (ClusterInfo clusterInfo in clusterInfos)
+                        if (info.ClusterId.HasValue && clusterInfo.ClusterId == info.ClusterId.Value)
+                            info.Cluster = clusterInfo;
+                }
             }
 
             heterogeneousClusters = heterogeneousClusterID.Count;
-            heterogeneityIndex = heterogeneousClusterID.Count/(double)numClusters;
+            heterogeneityIndex = heterogeneousClusterID.Count / (double)numClusters;
 
             //  write cluster deviations
             if (debugPathClusterInfo != null)
@@ -1117,25 +1068,73 @@ namespace CanvasSomaticCaller
                 {
                     // Write clustering results
                     debugWriter.WriteLine("#clusterID\tAverage\tMedian\tSD\tEntropy");
-                    for (int clusterID = 0; clusterID < numClusters; clusterID++)
+                    foreach (ClusterInfo clusterInfo in clusterInfos)
                     {
-                        if (clusterDistance[clusterID].Count > 3)
+                        if (clusterInfo.ClusterDistance.Count > 3)
                         {
-                            debugWriter.Write("{0}\t{1}\t{2}\t", clusterID, clusterDistance[clusterID].Average(), CanvasCommon.Utilities.Median(clusterDistance[clusterID]));
-                            debugWriter.Write("{0}\t{1}\t", CanvasCommon.Utilities.StandardDeviation(clusterDistance[clusterID]),clusterEntropy[clusterID]);
-                            debugWriter.Write("{0}", clusterDistance[clusterID].Count);
-                        debugWriter.WriteLine();
+                            debugWriter.Write("{0}\t{1}\t{2}\t", clusterInfo.ClusterId, clusterInfo.ClusterMeanDistance,
+                                clusterInfo.ClusterMedianDistance);
+                            debugWriter.Write("{0}\t{1}\t", clusterInfo.ClusterVariance, clusterInfo.ClusterEntropy);
+                            debugWriter.Write("{0}", clusterInfo.ClusterDistance.Count);
+                            debugWriter.WriteLine();
+                        }
                     }
                 }
             }
-            }
             // debug method to generate optimization information for heterogeneity prediction
             if (CNOracle != null)
-                GenerateClonalityReportVersusKnownCN(segments, clusterDeviations, modelPoints, numClusters, model);
+                GenerateClonalityReportVersusKnownCN(segments, clusterInfos, modelPoints, numClusters, model);
             if (bestModel)
-                ComputeClonalityScore(segments, clusterDeviations, modelPoints, numClusters, model);
-
+                ComputeClonalityScore(segments, clusterInfos, modelPoints, numClusters, model);
             return clusterDeviation;
+        }
+
+
+        private List<double> CalculateClusterMetrics(List<ModelPoint> modelPoints, List<SegmentInfo> segments, List<ClusterInfo> clustersInfo)
+        {
+            List<double> tmpClusterDistance = new List<double>();
+            foreach (SegmentInfo info in segments)
+            {
+                double bestDeviation = Double.MaxValue;
+                int bestCluster = 0;
+                double bestMajorChromosomeCount = 0;
+                foreach (ModelPoint modelPoint in modelPoints)
+                {
+                    if (modelPoint.Coverage < MeanCoverage * 2.0)
+                    {
+                        // iterate over clusters, segments and then modelpoints
+                        double currentDeviation = GetModelDistance(info.Coverage, modelPoint.Coverage, info.MAF, modelPoint.MAF);
+                        if (currentDeviation < bestDeviation && info.FinalClusterId.HasValue && info.FinalClusterId.Value > 0)
+                        {
+                            bestDeviation = currentDeviation;
+                            bestCluster = info.FinalClusterId.Value;
+                            if (modelPoint.Ploidy.MajorChromosomeCount == 0 && modelPoint.Ploidy.CopyNumber == 0)
+                                bestMajorChromosomeCount = 0;
+                            else
+                                bestMajorChromosomeCount = modelPoint.Ploidy.MajorChromosomeCount /
+                                                           (double)modelPoint.Ploidy.CopyNumber;
+                        }
+                    }
+                }
+                if (bestCluster > 0 && bestCluster <= clustersInfo.Count)
+                {
+                    clustersInfo[bestCluster - 1].ClusterDistance.Add(bestDeviation);
+                    clustersInfo[bestCluster - 1].ClusterMajorChromosomeCount.Add(bestMajorChromosomeCount);
+                    tmpClusterDistance.Add(bestDeviation);
+                }
+            }
+            // compute cluster mean and standard deviation
+            foreach (ClusterInfo clusterInfo in clustersInfo)
+            {
+                if (clusterInfo.ClusterDistance.Count > 2)
+                {
+                    clusterInfo.ClusterMedianDistance = CanvasCommon.Utilities.Median(clusterInfo.ClusterDistance);
+                    clusterInfo.ClusterMeanDistance = clusterInfo.ClusterDistance.Average();
+                    clusterInfo.ClusterVariance = CanvasCommon.Utilities.StandardDeviation(clusterInfo.ClusterDistance);
+                    clusterInfo.ComputeClusterEntropy();
+                }
+            }
+            return tmpClusterDistance;
         }
 
         /// <summary>
@@ -1146,23 +1145,23 @@ namespace CanvasSomaticCaller
         /// Clusters with high entropy tend to be located between different model points and are likely to represent 
         /// sunclonal CMV variants
         /// </summary>
-        public static List<double> ClusterEntropy(int numClusters, List<List<double>> clusterMajorChromosomeCount, List<double> tmpClusterEntropy)
+        public static List<double> ComputeClusterEntropy(int numClusters, List<List<double>> clusterMajorChromosomeCount, List<double> tmpClusterEntropy)
         {
             List<double> clusterEntropy = Enumerable.Repeat(0.0, numClusters).ToList();
 
             for (int clusterID = 0; clusterID < numClusters; clusterID++)
             {
                 var uniqueMccCounts = clusterMajorChromosomeCount[clusterID].Distinct().ToList();
-                List<int> uniqueMccCountsInd = Enumerable.Repeat(0, uniqueMccCounts.Count).ToList();
+                List<int> uniqueMccCountsIndices = Enumerable.Repeat(0, uniqueMccCounts.Count).ToList();
                 foreach (double mcc in clusterMajorChromosomeCount[clusterID])
-                    uniqueMccCountsInd[uniqueMccCounts.FindIndex(x => x == mcc)] += 1;
+                    uniqueMccCountsIndices[uniqueMccCounts.FindIndex(x => x == mcc)] += 1;
                 double entropy = 0;
                 foreach (double mccCount in uniqueMccCounts)
                 {
                     if (mccCount > 0)
                     {
-                        double mccTmpProbability = mccCount/clusterMajorChromosomeCount[clusterID].Count;
-                        entropy += -mccTmpProbability*Math.Log(mccTmpProbability);
+                        double mccTmpProbability = mccCount / clusterMajorChromosomeCount[clusterID].Count;
+                        entropy += -mccTmpProbability * Math.Log(mccTmpProbability);
                     }
                 }
                 clusterEntropy[clusterID] = entropy;
@@ -1273,11 +1272,11 @@ namespace CanvasSomaticCaller
             double clusterDeviation = 0;
             int validMAFCount = segments.Count(x => x.MAF >= 0);
 
-            List<ClusterModel> clusterDeviations;
+            List<ClusterInfo> clusterInfos;
             if (validMAFCount > 100 && segments.Count > 100 && centroidMAFs.Count < 10 && !this.IsEnrichment)
             {
                 // compute cluster deviation
-                clusterDeviation = ClusterDeviation(model, modelPoints, centroidMAFs, centroidCoverage, segments, numClusters, tempDeviation, out heterogeneousClusters, out heterogeneityIndex, bestModel, out clusterDeviations, debugPathClusterInfo);
+                clusterDeviation = ClusterDeviation(model, modelPoints, centroidMAFs, centroidCoverage, segments, numClusters, tempDeviation, out heterogeneousClusters, out heterogeneityIndex, bestModel, out clusterInfos, debugPathClusterInfo);
             }
 
             // compute total deviation
@@ -1436,7 +1435,7 @@ namespace CanvasSomaticCaller
             {
                 for (int j = 0; j < usableSegments.Count; j++)
                 {
-                    if (i != j && usableSegments[i].Cluster != CanvasCommon.PloidyInfo.OutlierClusterFlag && usableSegments[j].Cluster != CanvasCommon.PloidyInfo.OutlierClusterFlag && usableSegments[i].MAF >= 0 && usableSegments[j].MAF >= 0)
+                    if (i != j && usableSegments[i].ClusterId != CanvasCommon.PloidyInfo.OutlierClusterFlag && usableSegments[j].ClusterId != CanvasCommon.PloidyInfo.OutlierClusterFlag && usableSegments[i].MAF >= 0 && usableSegments[j].MAF >= 0)
                     {
                         tempModelDistanceList.Add(GetModelDistance(usableSegments[i].Coverage, usableSegments[j].Coverage, usableSegments[i].MAF, usableSegments[j].MAF));
                     }
@@ -1528,7 +1527,7 @@ namespace CanvasSomaticCaller
             return bestCoverageWeightingFactor;
         }
 
-        public static DensityClusteringModel runDensityClustering(List<SegmentInfo> usableSegments, double coverageWeightingFactor, double knearestNeighbourCutoff, double centoridCutoff, out int clusterCount, double rhoCutoff = DensityClusteringModel.RhoCutoff)
+        public static DensityClusteringModel RunDensityClustering(List<SegmentInfo> usableSegments, double coverageWeightingFactor, double knearestNeighbourCutoff, double centoridCutoff, out int clusterCount, double rhoCutoff = DensityClusteringModel.RhoCutoff)
         {
             DensityClusteringModel densityClustering = new DensityClusteringModel(usableSegments, coverageWeightingFactor, knearestNeighbourCutoff, centoridCutoff);
             densityClustering.EstimateDistance();
@@ -1615,7 +1614,7 @@ namespace CanvasSomaticCaller
                         // Step2: Find best parameters for density clustering by performing parameter sweep
                         double centroidCutoff;
                         int clusterCount;
-                        List<int> numNumClusters = new List<int>();
+                        List<int> numOfClusters = new List<int>();
                         List<double> centroidCutoffs = new List<double>();
                         double centoridStep = (somaticCallerParameters.UpperCentroidCutoff - somaticCallerParameters.LowerCentroidCutoff) / somaticCallerParameters.CentroidCutoffStep;
                         for (double centoridCutoff = somaticCallerParameters.LowerCentroidCutoff;
@@ -1627,8 +1626,8 @@ namespace CanvasSomaticCaller
                         List<SegmentInfo> remainingSegments = new List<SegmentInfo>();
                         foreach (double centoridCutoff in centroidCutoffs)
                         {
-                            DensityClusteringModel densityClustering = runDensityClustering(usableSegments, CoverageWeightingFactor, knearestNeighbourCutoff, centoridCutoff, out clusterCount);
-                            numNumClusters.Add(clusterCount);
+                            DensityClusteringModel densityClustering = RunDensityClustering(usableSegments, CoverageWeightingFactor, knearestNeighbourCutoff, centoridCutoff, out clusterCount);
+                            numOfClusters.Add(clusterCount);
                             Console.WriteLine(">>> Running density clustering for cutoff {0:F5} , number of clusters {1}", centoridCutoff, clusterCount);
                         }
 
@@ -1636,7 +1635,7 @@ namespace CanvasSomaticCaller
                         // Given the vector of cluster numbers find the mode =>
                         // Clustering is more robust if different parameters produce the same 
                         // number of clusters
-                        var modeClustersValues = numNumClusters
+                        var modeClustersValues = numOfClusters
                             .GroupBy(x => x)
                             .Select(g => new { Value = g.Key, Count = g.Count() })
                             .ToList(); // materialize the query to avoid evaluating it twice below
@@ -1648,13 +1647,13 @@ namespace CanvasSomaticCaller
                         if (clusterModes.Count == 1)
                         {
                             clusterCount = clusterModes[0];
-                            centroidCutoff = centroidCutoffs[numNumClusters.FindIndex(x => x == clusterCount)];
+                            centroidCutoff = centroidCutoffs[numOfClusters.FindIndex(x => x == clusterCount)];
 
                         }
                         else if (clusterModes.Count < 4)
                         {
-                            clusterCount = clusterModes[1] < 7 ? clusterModes[1] : clusterModes[0];
-                            centroidCutoff = centroidCutoffs[numNumClusters.FindIndex(x => x == clusterCount)];
+                            clusterCount = clusterModes[1] < DensityClusteringModel.MaxClusterNumber ? clusterModes[1] : clusterModes[0];
+                            centroidCutoff = centroidCutoffs[numOfClusters.FindIndex(x => x == clusterCount)];
                         }
                         else
                         {
@@ -1663,8 +1662,8 @@ namespace CanvasSomaticCaller
 
                         }
                         // Step3: Use best parameters for density clustering, parameter sweep
-                        Console.WriteLine(">>> Running density selected cutoff {0:F5}", centroidCutoff);
-                        DensityClusteringModel optimizedDensityClustering = runDensityClustering(usableSegments, CoverageWeightingFactor, knearestNeighbourCutoff, centroidCutoff, out bestNumClusters);
+                        Console.WriteLine(">>> Running density clustering selected cutoff {0:F5}", centroidCutoff);
+                        DensityClusteringModel optimizedDensityClustering = RunDensityClustering(usableSegments, CoverageWeightingFactor, knearestNeighbourCutoff, centroidCutoff, out bestNumClusters);
                         centroidsMAF = optimizedDensityClustering.GetCentroidsMAF();
                         centroidsCoverage = optimizedDensityClustering.GetCentroidsCoverage();
                         List<double> clusterVariance = optimizedDensityClustering.GetCentroidsVariance(centroidsMAF, centroidsCoverage, bestNumClusters);
@@ -1675,7 +1674,7 @@ namespace CanvasSomaticCaller
                         List<int> smallClusters = new List<int>();
                         for (int clusterID = 0; clusterID < bestNumClusters; clusterID++)
                         {
-                            if (clusterVariance[clusterID] >= clusterVariance.Average() && Utilities.StandardDeviation(clusterVariance) > 0.015 && clustersSize[clusterID]/clustersSize.Sum() < 0.9 && bestNumClusters < 4)
+                            if (clusterVariance[clusterID] >= clusterVariance.Average() && Utilities.StandardDeviation(clusterVariance) > 0.015 && clustersSize[clusterID] / clustersSize.Sum() < 0.9 && bestNumClusters < 4)
                                 largeClusters.Add(clusterID + 1);
                             else
                                 smallClusters.Add(clusterID + 1);
@@ -1687,7 +1686,7 @@ namespace CanvasSomaticCaller
 
                             // Step5: Cluster remaining underpartitioned segments (remainingSegments) and merge new clusters with the earlier cluster set
                             int remainingBestNumClusters = 0;
-                            DensityClusteringModel remainingDensityClustering = runDensityClustering(usableSegments, CoverageWeightingFactor, knearestNeighbourCutoff, centroidCutoff, out remainingBestNumClusters, 1.0);
+                            DensityClusteringModel remainingDensityClustering = RunDensityClustering(usableSegments, CoverageWeightingFactor, knearestNeighbourCutoff, centroidCutoff, out remainingBestNumClusters, 1.0);
                             remainingDensityClustering.FindCentroids();
                             List<double> remainingCentroidsMAF = remainingDensityClustering.GetCentroidsMAF();
                             List<double> remainingCentroidsCoverage = remainingDensityClustering.GetCentroidsCoverage();
@@ -1698,8 +1697,8 @@ namespace CanvasSomaticCaller
                         else
                         {
                             foreach (SegmentInfo segment in usableSegments)
-                                if (segment.Cluster.HasValue)
-                                    segment.FinalCluster = segment.Cluster.Value;
+                                if (segment.ClusterId.HasValue)
+                                    segment.FinalClusterId = segment.ClusterId.Value;
                         }
                         break;
                     default:
@@ -1954,22 +1953,22 @@ namespace CanvasSomaticCaller
             {
                 foreach (SegmentInfo segment in usableSegments)
                 {
-                    if (segment.Cluster.HasValue && segment.Cluster.Value == clusterID + 1)
+                    if (segment.ClusterId.HasValue && segment.ClusterId.Value == clusterID + 1)
                     {
                         if (clusterVariance[clusterID] >= clusterVariance.Average() &&
                             Utilities.StandardDeviation(clusterVariance) > 0.015 &&
-                            clustersSize[clusterID]/clustersSize.Sum() < 0.9 && bestNumClusters < 4)
+                            clustersSize[clusterID] / clustersSize.Sum() < 0.9 && bestNumClusters < 4)
                         {
-                            segment.FinalCluster = -CanvasCommon.PloidyInfo.UndersegmentedClusterFlag;
+                            segment.FinalClusterId = -CanvasCommon.PloidyInfo.UndersegmentedClusterFlag;
                             remainingSegments.Add(segment);
                         }
                         else
                         {
-                            segment.FinalCluster = smallClusters.FindIndex(x => x == segment.Cluster) + 1;
+                            segment.FinalClusterId = smallClusters.FindIndex(x => x == segment.ClusterId) + 1;
                         }
                     }
-                    else if (segment.Cluster.HasValue && segment.Cluster.Value == CanvasCommon.PloidyInfo.OutlierClusterFlag)
-                        segment.FinalCluster = segment.Cluster.Value;
+                    else if (segment.ClusterId.HasValue && segment.ClusterId.Value == CanvasCommon.PloidyInfo.OutlierClusterFlag)
+                        segment.FinalClusterId = segment.ClusterId.Value;
                 }
             }
         }
@@ -2070,8 +2069,6 @@ namespace CanvasSomaticCaller
         /// </summary>
         protected void AdjustPloidyCalls()
         {
-
-
             Console.WriteLine();
             Console.WriteLine(">>> HeterogeneousSegmentsSignature: {0}", HeterogeneousSegmentsSignature.Count);
             Console.WriteLine();
@@ -2175,7 +2172,7 @@ namespace CanvasSomaticCaller
                 {
                     percentageHeterogeneity = AssignHeterogeneity();
                     AdjustPloidyCalls();
-            }
+                }
             }
             else
             {
@@ -2198,7 +2195,7 @@ namespace CanvasSomaticCaller
                 }
             }
 
-            
+
 
             // Add some extra information to the vcf file header:
             Headers.Add(string.Format("##EstimatedTumorPurity={0:F2}", this.Model.Purity));
@@ -2330,7 +2327,7 @@ namespace CanvasSomaticCaller
         /// Logistic regression workflow is accessible from git.illumina.com/Bioinformatics/CanvasTest/TrainingScripts.
         /// The variant is predicted as heterogeneous if score is below 0.5
         /// </summary>
-        private void ComputeClonalityScore(List<SegmentInfo> segments, List<ClusterModel> clusterDeviations, List<ModelPoint> modelPoints, int numClusters, CoveragePurityModel model)
+        private void ComputeClonalityScore(List<SegmentInfo> segments, List<ClusterInfo> ClusterInfos, List<ModelPoint> modelPoints, int numClusters, CoveragePurityModel model)
         {
             foreach (SegmentInfo info in segments)
             {
@@ -2344,14 +2341,14 @@ namespace CanvasSomaticCaller
                 bestModelDistance = Math.Sqrt(bestModelDistance);
 
 
-                if (info.ClusterEntropy.HasValue && info.ClusterMedianDistance.HasValue && info.ClusterMeanDistance.HasValue && info.ClusterVariance.HasValue)
+                if (info.Cluster != null)
                 {
                     double score = somaticCallerParameters.ClonalityIntercept;
                     score += bestModelDistance * somaticCallerParameters.ClonalityBestModelDistance;
-                    score += info.ClusterEntropy.Value * somaticCallerParameters.ClonalityClusterEntropy;
-                    score += info.ClusterMedianDistance.Value * somaticCallerParameters.ClonalityClusterMedianDistance;
-                    score += info.ClusterMeanDistance.Value * somaticCallerParameters.ClonalityClusterMeanDistance;
-                    score += info.ClusterVariance.Value * somaticCallerParameters.ClonalityClusterVariance;
+                    score += info.Cluster.ClusterEntropy * somaticCallerParameters.ClonalityClusterEntropy;
+                    score += info.Cluster.ClusterMedianDistance * somaticCallerParameters.ClonalityClusterMedianDistance;
+                    score += info.Cluster.ClusterMeanDistance * somaticCallerParameters.ClonalityClusterMeanDistance;
+                    score += info.Cluster.ClusterVariance * somaticCallerParameters.ClonalityClusterVariance;
                     score += numClusters * somaticCallerParameters.NumClusters;
                     score += model.Deviation * somaticCallerParameters.ModelDeviation;
                     score = Math.Exp(score);
@@ -2383,14 +2380,14 @@ namespace CanvasSomaticCaller
                     }
                 }
             }
-            return heterogeneousSegments/(double)allSegments;
+            return heterogeneousSegments / (double)allSegments;
         }
 
         /// <summary>
         /// Debug function for clonality model training in git.illumina.com/Bioinformatics/CanvasTest/TrainingScripts
         /// Writes down a vector of features for each segment.clusterEntropy 
         /// </summary>
-        private void GenerateClonalityReportVersusKnownCN(List<SegmentInfo> segments, List <ClusterModel> clusterDeviations, List<ModelPoint> modelPoints, int numClusters, CoveragePurityModel model)
+        private void GenerateClonalityReportVersusKnownCN(List<SegmentInfo> segments, List<ClusterInfo> clusterInfos, List<ModelPoint> modelPoints, int numClusters, CoveragePurityModel model)
         {
             string debugPath = Path.Combine(this.OutputFolder, "ClonalityVersusKnownCN.txt");
             using (StreamWriter writer = new StreamWriter(debugPath))
@@ -2409,20 +2406,19 @@ namespace CanvasSomaticCaller
                         if (distance < bestModelDistance) bestModelDistance = distance;
                     }
                     bestModelDistance = Math.Sqrt(bestModelDistance);
-                    
+
                     int CN = this.GetKnownCNForSegment(info.Segment);
                     double clonality = this.GetKnownClonalityForSegment(info.Segment);
-                    if (info.ClusterEntropy.HasValue && info.ClusterMedianDistance.HasValue &&
-                        info.ClusterMeanDistance.HasValue && info.ClusterVariance.HasValue)
+                    if (info.Cluster != null)
                     {
                         writer.Write("{0}\t", clonality);
                         writer.Write("{0}\t", CN);
                         writer.Write("{0}\t{1}\t{2}\t", info.Segment.Chr, info.Segment.Begin, info.Segment.End);
                         writer.Write("{0}\t{1}\t{2}\t", bestModelDistance, info.MAF, info.Coverage);
-                        writer.Write("{0}\t", info.ClusterEntropy);
-                        writer.Write("{0}\t", info.ClusterMedianDistance);
-                        writer.Write("{0}\t", info.ClusterMeanDistance);
-                        writer.Write("{0}\t", info.ClusterVariance);
+                        writer.Write("{0}\t", info.Cluster.ClusterEntropy);
+                        writer.Write("{0}\t", info.Cluster.ClusterMedianDistance);
+                        writer.Write("{0}\t", info.Cluster.ClusterMeanDistance);
+                        writer.Write("{0}\t", info.Cluster.ClusterVariance);
                         writer.Write("{0}\t", numClusters);
                         writer.Write("{0}", model.Deviation);
                         writer.WriteLine();
