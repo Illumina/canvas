@@ -44,9 +44,9 @@ namespace CanvasSomaticCaller
             float? userPloidy = null;
             CanvasCommon.CanvasSomaticClusteringMode somaticClusteringMode =
                 CanvasCommon.CanvasSomaticClusteringMode.Density;
-            string parameterconfigPath = Path.Combine(Isas.Shared.Utilities.GetAssemblyFolder(typeof (Program)),
+            string parameterconfigPath = Path.Combine(Isas.Shared.Utilities.GetAssemblyFolder(typeof(Program)),
                 "SomaticCallerParameters.json");
-            string qualityScoreConfigPath = Path.Combine(Isas.Shared.Utilities.GetAssemblyFolder(typeof (Program)),
+            string qualityScoreConfigPath = Path.Combine(Isas.Shared.Utilities.GetAssemblyFolder(typeof(Program)),
                 "QualityScoreParameters.json");
 
 
@@ -152,7 +152,7 @@ namespace CanvasSomaticCaller
             SomaticCallerParameters somaticCallerParametersJSON = Deserialize<SomaticCallerParameters>(parameterconfigFile);
 
             FileLocation qscoreConfigFile = new FileLocation(qualityScoreConfigPath);
-            CanvasCommon.QualityScoreParameters qscoreParametersJSON =  Deserialize<CanvasCommon.QualityScoreParameters>(qscoreConfigFile);
+            CanvasCommon.QualityScoreParameters qscoreParametersJSON = Deserialize<CanvasCommon.QualityScoreParameters>(qscoreConfigFile);
 
             SomaticCaller caller = new SomaticCaller();
             caller.somaticCallerParameters = somaticCallerParametersJSON;
@@ -177,7 +177,7 @@ namespace CanvasSomaticCaller
             {
                 localSDmetric = CanvasCommon.CanvasIO.ReadLocalSDFromTextFile(ffpeOutliersPath);
             }
-            
+
             caller.LoadBedFile(bedPath);
             return caller.CallVariants(inFile, variantFrequencyFile, outFile, referenceFolder, name, localSDmetric, somaticClusteringMode);
         }

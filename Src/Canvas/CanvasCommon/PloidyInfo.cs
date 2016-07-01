@@ -126,7 +126,7 @@ namespace CanvasCommon
         public double Weight;
         public double MAFWeight;
         public int CN;
-        public int? ClusterId; 
+        public int? ClusterId;
         public int? FinalClusterId;
         public double? KnearestNeighbour;
         public SegmentPloidy Ploidy;
@@ -142,7 +142,7 @@ namespace CanvasCommon
     {
         public CanvasSegment Segment;
         public ClusterInfo Cluster;
-        public Dictionary<ModelPoint, double> PosteriorProbs;        
+        public Dictionary<ModelPoint, double> PosteriorProbs;
     }
 
     public class CoverageModel

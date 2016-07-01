@@ -34,21 +34,21 @@ namespace CanvasCommon
         /// Clusters with high entropy tend to be located between different model points and are likely to represent 
         /// sunclonal CMV variants
         /// </summary>
-                
+
         public void ComputeClusterEntropy()
         {
-                var uniqueMccCounts = ClusterMajorChromosomeCount.Distinct().ToList();
-                List<int> uniqueMccCountsIndices = Enumerable.Repeat(0, uniqueMccCounts.Count).ToList();
-                foreach (double mcc in ClusterMajorChromosomeCount)
-                    uniqueMccCountsIndices[uniqueMccCounts.FindIndex(x => x == mcc)] += 1;
-                foreach (double mccCount in uniqueMccCounts)
+            var uniqueMccCounts = ClusterMajorChromosomeCount.Distinct().ToList();
+            List<int> uniqueMccCountsIndices = Enumerable.Repeat(0, uniqueMccCounts.Count).ToList();
+            foreach (double mcc in ClusterMajorChromosomeCount)
+                uniqueMccCountsIndices[uniqueMccCounts.FindIndex(x => x == mcc)] += 1;
+            foreach (double mccCount in uniqueMccCounts)
+            {
+                if (mccCount > 0)
                 {
-                    if (mccCount > 0)
-                    {
-                        double mccTmpProbability = mccCount / ClusterMajorChromosomeCount.Count;
+                    double mccTmpProbability = mccCount / ClusterMajorChromosomeCount.Count;
                     this.ClusterEntropy += -mccTmpProbability * Math.Log(mccTmpProbability);
-                    }
                 }
+            }
         }
     }
 }

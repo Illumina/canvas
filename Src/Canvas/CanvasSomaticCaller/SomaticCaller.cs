@@ -417,7 +417,7 @@ namespace CanvasSomaticCaller
                 {
                     if (e is SomaticCaller.UncallableDataException)
                     {
-                        Console.WriteLine("Not calling any CNVs. Reason: {0}", e.Message);
+                        Console.Error.WriteLine("Not calling any CNVs. Reason: {0}", e.Message);
                         Segments.Clear();
                     }
                     else
