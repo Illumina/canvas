@@ -212,7 +212,6 @@ namespace CanvasCommon
                     CanvasSegment segment = new CanvasSegment(chr, begin, previousBinEnd, counts);
                     segments.Add(segment);
                     segment.StartConfidenceInterval = segmentStartCI;
-                    //SetLastSegmentStartConfidenceInterval(segments);
                 }
             }
             Console.WriteLine("{0} Loaded {1} segments", DateTime.Now, segments.Count);

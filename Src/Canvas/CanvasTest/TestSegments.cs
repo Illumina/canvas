@@ -8,10 +8,23 @@ namespace CanvasTest
     [TestClass]
     public class TestSegments
     {
+
+
         [TestMethod]
-        public void DummyTestMethod()
+        public void TestCIPOS()
         {
-            Console.WriteLine("Hello world!");
+            // Merge two segments, and confirm we keep the correct confidence intervals post-merge:
+            List<float> counts = new List<float>() { 100, 90, 110, 100, 95, 105 };
+            CanvasSegment segment = new CanvasSegment("chr1", 1245, 678910, counts);
+            segment.StartConfidenceInterval = new Tuple<int, int>(-100, 100);
+            segment.EndConfidenceInterval = new Tuple<int, int>(-80, 80);
+            CanvasSegment segment2 = new CanvasSegment("chr1", 678910, 8787888, counts);
+            segment2.StartConfidenceInterval = new Tuple<int, int>(-50, 50);
+            segment2.EndConfidenceInterval = new Tuple<int, int>(-30, 30);
+            segment.MergeIn(segment2);
+            Assert.AreEqual(segment.End, 8787888);
+            Assert.AreEqual(segment.EndConfidenceInterval.Item1, -30);
+            Assert.AreEqual(segment.StartConfidenceInterval.Item2, 100);
         }
 
         [TestMethod]
