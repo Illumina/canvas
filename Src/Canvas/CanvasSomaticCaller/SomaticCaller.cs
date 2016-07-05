@@ -2353,7 +2353,7 @@ namespace CanvasSomaticCaller
                     score += model.Deviation * somaticCallerParameters.ModelDeviation;
                     score = Math.Exp(score);
                     score = score / (score + 1.0);
-                    this.HeterogeneousSegmentsSignature.Add(info.Segment.Begin + info.Segment.End +
+                    this.HeterogeneousSegmentsSignature.Add(info.Segment.Chr.GetHashCode() + info.Segment.Begin + info.Segment.End +
                                                                 info.Segment.Counts.Count + info.Segment.CopyNumber, score);
                 }
             }
@@ -2369,10 +2369,10 @@ namespace CanvasSomaticCaller
             foreach (CanvasSegment segment in this.Segments)
             {
                 allSegments += segment.End - segment.Begin;
-                if (this.HeterogeneousSegmentsSignature.ContainsKey(segment.Begin + segment.End +
+                if (this.HeterogeneousSegmentsSignature.ContainsKey(segment.Chr.GetHashCode() + segment.Begin + segment.End +
                                                                     segment.Counts.Count + segment.CopyNumber))
                 {
-                    if (this.HeterogeneousSegmentsSignature[segment.Begin + segment.End +
+                    if (this.HeterogeneousSegmentsSignature[segment.Chr.GetHashCode() + segment.Begin + segment.End +
                                                             segment.Counts.Count + segment.CopyNumber] < 0.5)
                     {
                         segment.IsHeterogeneous = true;
@@ -2485,8 +2485,8 @@ namespace CanvasSomaticCaller
                     writer.Write("{0}\t", segment.GetQScorePredictor(CanvasSegment.QScorePredictor.MajorChromosomeCount));
                     writer.Write("{0}\t", segment.GetQScorePredictor(CanvasSegment.QScorePredictor.DistanceRatio));
                     writer.Write("{0}\t", Math.Log(segment.GetQScorePredictor(CanvasSegment.QScorePredictor.MafCount)));
-                    if (this.HeterogeneousSegmentsSignature.ContainsKey(segment.Begin + segment.End + segment.Counts.Count + segment.CopyNumber))
-                        writer.Write("{0}\t", this.HeterogeneousSegmentsSignature[segment.Begin + segment.End + segment.Counts.Count + segment.CopyNumber]);
+                    if (this.HeterogeneousSegmentsSignature.ContainsKey(segment.Chr.GetHashCode() + segment.Begin + segment.End + segment.Counts.Count + segment.CopyNumber))
+                        writer.Write("{0}\t", this.HeterogeneousSegmentsSignature[segment.Chr.GetHashCode() + segment.Begin + segment.End + segment.Counts.Count + segment.CopyNumber]);
                     else
                         writer.Write("{0}\t", -1);
                     writer.Write("{0}\t", Model.Purity);
