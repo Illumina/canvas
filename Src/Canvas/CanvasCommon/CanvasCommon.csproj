@@ -76,6 +76,7 @@
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
+    <Reference Include="System.Runtime.Serialization" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
     <Reference Include="Microsoft.CSharp" />
@@ -84,6 +85,8 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="CanvasSegment.cs" />
+    <Compile Include="ClusterInfo.cs" />
+    <Compile Include="QualityScoreParameters.cs" />
     <Compile Include="CanvasVersionInfo.cs" />
     <Compile Include="CnvType.cs" />
     <Compile Include="DensityClustering.cs" />
@@ -96,6 +99,9 @@
     <Compile Include="Utilities.cs" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="QualityScoreParameters.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
     <None Include="packages.config" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
