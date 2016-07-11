@@ -23,7 +23,7 @@ namespace CanvasNormalize
             return referencePloidy.GetReferenceCopyNumber(segment);
         }
 
-        public static void RatiosToCounts(IEnumerable<Tuple<string, int, int, double>> ratios, IFileLocation referencePloidyBedFile,
+        public static void RatiosToCounts(IEnumerable<GenomicBin> ratios, IFileLocation referencePloidyBedFile,
             IFileLocation outputPath)
         {
             PloidyInfo referencePloidy = null;
@@ -32,16 +32,12 @@ namespace CanvasNormalize
 
             using (GzipWriter writer = new GzipWriter(outputPath.FullName))
             {
-                //writer.WriteLine(String.Join("\t", referenceToks));
-                foreach (var ratio in ratios)
+                foreach (GenomicBin ratio in ratios)
                 {
-                    string chrom = ratio.Item1;
-                    int start = ratio.Item2;
-                    int end = ratio.Item3;
                     // get the normal ploidy
-                    double factor = CanvasDiploidBinRatioFactor * GetPloidy(referencePloidy, chrom, start, end) / 2.0;
-                    double count = ratio.Item4 * factor;
-                    writer.WriteLine(String.Join("\t", chrom, start, end, count));
+                    double factor = CanvasDiploidBinRatioFactor * GetPloidy(referencePloidy, ratio.Chromosome, ratio.Start, ratio.Stop) / 2.0;
+                    double count = ratio.Count * factor;
+                    writer.WriteLine(String.Join("\t", ratio.Chromosome, ratio.Start, ratio.Stop, count));
                 }
             }
         }

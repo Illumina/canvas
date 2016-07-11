@@ -22,7 +22,7 @@ namespace CanvasNormalize
             _manifest = manifest;
         }
 
-        public IEnumerable<Tuple<string, int, int, double>> Run(IFileLocation sampleBedFile, IFileLocation referenceBedFile)
+        public IEnumerable<GenomicBin> Run(IFileLocation sampleBedFile, IFileLocation referenceBedFile)
         {
             if (!sampleBedFile.Exists)
                 throw new FileNotFoundException(sampleBedFile.FullName + " does not exist.");
@@ -58,7 +58,7 @@ namespace CanvasNormalize
                     int start = int.Parse(referenceToks[1]);
                     int end = int.Parse(referenceToks[2]);
                     ratio = sampleCount / referenceCount * librarySizeFactor;
-                    yield return Tuple.Create(chrom, start, end, ratio);
+                    yield return new GenomicBin(chrom, start, end, -1, (float)ratio);
                 }
             }
         }

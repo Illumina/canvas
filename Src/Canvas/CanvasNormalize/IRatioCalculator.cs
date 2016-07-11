@@ -5,11 +5,12 @@ using System.Text;
 using System.Threading.Tasks;
 
 using Isas.Shared;
+using CanvasCommon;
 
 namespace CanvasNormalize
 {
     interface IRatioCalculator
     {
-        IEnumerable<Tuple<string, int, int, double>> Run(IFileLocation sampleBedFile, IFileLocation referenceBedFile);
+        IEnumerable<GenomicBin> Run(IFileLocation sampleBedFile, IFileLocation referenceBedFile);
     }
 }
