@@ -70,6 +70,12 @@ namespace CanvasNormalize
             LoadBinCounts();
         }
 
+        public BinCounts(IEnumerable<GenomicBin> bins, NexteraManifest manifest = null)
+        {
+            Manifest = manifest;
+            Counts = bins.Select(bin => (double)bin.Count).ToList();
+        }
+
         private void LoadBinCounts()
         {
             if (Manifest == null)

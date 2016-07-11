@@ -10,7 +10,7 @@ namespace CanvasCommon
 {
     public class CanvasIO
     {
-        public static void WriteToTextFile(string outfile, List<GenomicBin> bins)
+        public static void WriteToTextFile(string outfile, IEnumerable<GenomicBin> bins)
         {
             using (GzipWriter writer = new GzipWriter(outfile))
             {
@@ -37,7 +37,6 @@ namespace CanvasCommon
                     string chr = fields[0];
                     int start = Convert.ToInt32(fields[1]);
                     int stop = Convert.ToInt32(fields[2]);
-                    //int count = Convert.ToInt32(fields[3]);
                     float count = float.Parse(fields[3]);
                     int gc = Convert.ToInt32(fields[4]);
 

@@ -12,9 +12,9 @@ namespace CanvasNormalize
 {
     public class BestLR2ReferenceGenerator : IReferenceGenerator
     {
-        private IFileLocation _sampleBinnedFile;
-        private IEnumerable<IFileLocation> _controlBinnedFiles;
-        private NexteraManifest _manifest;
+        private readonly IFileLocation _sampleBinnedFile;
+        private readonly IEnumerable<IFileLocation> _controlBinnedFiles;
+        private readonly NexteraManifest _manifest;
 
         public BestLR2ReferenceGenerator(IFileLocation sampleBinnedFile, IEnumerable<IFileLocation> controlBinnedFiles,
             NexteraManifest manifest)

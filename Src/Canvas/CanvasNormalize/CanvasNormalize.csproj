@@ -94,8 +94,10 @@
     <Compile Include="IRatioCalculator.cs" />
     <Compile Include="IReferenceGenerator.cs" />
     <Compile Include="LSNormRatioCalculator.cs" />
+    <Compile Include="PCAReferenceGenerator.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="RawRatioCalculator.cs" />
     <Compile Include="WeightedAverageReferenceGenerator.cs" />
   </ItemGroup>
   <ItemGroup>

@@ -614,6 +614,125 @@ namespace CanvasCommon
 
         }
 
+        /// <summary>
+        /// Returns the 2-norm of vector
+        /// </summary>
+        /// <param name="v"></param>
+        /// <returns></returns>
+        public static double TwoNorm(IEnumerable<double> v)
+        {
+            double norm2 = 0;
+            foreach (double x in v)
+            {
+                norm2 += x * x;
+            }
+
+            return Math.Sqrt(norm2);
+        }
+
+        /// <summary>
+        /// Returns the normalized vector by 2-norm
+        /// </summary>
+        /// <param name="v"></param>
+        /// <returns></returns>
+        public static double[] NormalizeBy2Norm(double[] v)
+        {
+            double[] normalized = new double[v.Length];
+            double size = TwoNorm(v);
+            if (size == 0)
+            {
+                Array.Copy(v, normalized, v.Length);
+            }
+            else
+            {
+                for (int i = 0; i < v.Length; i++)
+                {
+                    normalized[i] = v[i] / size;
+                }
+            }
+
+            return normalized;
+        }
+
+        public static double DotProduct(double[] v1, double[] v2)
+        {
+            if (v1.Length != v2.Length)
+            {
+                throw new ApplicationException("Vectors must be of the same dimension to calculate dot product.");
+            }
+
+            double dotProduct = 0;
+            for (int i = 0; i < v1.Length; i++)
+            {
+                dotProduct += v1[i] * v2[i];
+            }
+
+            return dotProduct;
+        }
+
+        public static bool AreOrthogonal(double[] v1, double[] v2, double tolerance = 1e-4)
+        {
+            double dotProduct = DotProduct(v1, v2);
+            if (Math.Abs(dotProduct) > tolerance)
+                return false;
+
+            return true;
+        }
+
+        /// <summary>
+        /// Projects v onto axis. Assumes that axis is a unit vector.
+        /// </summary>
+        /// <param name="v"></param>
+        /// <param name="axis"></param>
+        /// <returns></returns>
+        public static double[] Project(double[] v, double[] axis)
+        {
+            if (v.Length != axis.Length)
+            {
+                throw new ApplicationException("Vector and the axis must be of the same dimension.");
+            }
+
+            double size = DotProduct(v, axis); // size of the projected vector
+            double[] projected = new double[v.Length];
+            for (int i = 0; i < v.Length; i++)
+            {
+                projected[i] = size * axis[i];
+            }
+
+            return projected;
+        }
+
+        /// <summary>
+        /// Projects v onto the space spanned by axes. Assumes that the axes are orthonormal to each other.
+        /// </summary>
+        /// <param name="v"></param>
+        /// <param name="axes"></param>
+        /// <returns></returns>
+        public static double[] Project(double[] v, IEnumerable<double[]> axes)
+        {
+            if (!axes.Any())
+            {
+                throw new ApplicationException("No axes to project onto.");
+            }
+
+            if (axes.Any(axis => axis.Length != v.Length))
+            {
+                throw new ApplicationException("Vector and the axes must be of the same dimension.");
+            }
+
+            double[] projected = Project(v, axes.First());
+            foreach (double[] axis in axes.Skip(1))
+            {
+                double[] tmp = Project(v, axis);
+                for (int i = 0; i < projected.Length; i++)
+                {
+                    projected[i] += tmp[i];
+                }
+            }
+
+            return projected;
+        }
+
         public static Dictionary<string, List<GenomicBin>> LoadBedFile(string bedPath, int? gcIndex = null)
         {
             Dictionary<string, List<GenomicBin>> excludedIntervals = new Dictionary<string, List<GenomicBin>>();

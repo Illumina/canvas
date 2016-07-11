@@ -49,6 +49,9 @@ namespace CanvasNormalize
         public IFileLocation ploidyBedFile = null;
 
         public CanvasCommon.CanvasNormalizeMode normalizationMode = CanvasCommon.CanvasNormalizeMode.WeightedAverage;
+
+        // These are currently only used in the PCA mode. Skip bins if the reference count is outside the range.
+        public List<double> referenceBinCountRange = new List<double>();
         #endregion
 
         public static CanvasNormalizeParameters ParseCommandLine(string[] args)
@@ -61,11 +64,12 @@ namespace CanvasNormalize
             OptionSet p = new OptionSet()
                 {
                     { "t|tumor=",         "bed file containing bin counts for the tumor sample", v => parameters.tumorBedFile = new FileLocation(v) },
-                    { "n|normal=",        "bed file containing bin counts for a normal sample. Pass this option multiple times, once for each normal sample.", v => parameters.normalBedFiles.Add(new FileLocation(v)) },
+                    { "n|normal=",        "bed file containing bin counts for a normal sample. Pass this option multiple times, once for each normal sample.\nIn PCA mode, model file containing the mean vector and the axes for projection. Pass this option only once.", v => parameters.normalBedFiles.Add(new FileLocation(v)) },
                     { "o|out=",           "bed file to output containing normalized bin counts",     v => parameters.outBedFile = new FileLocation(v) },
                     { "w|weightedAverageNormal=",           "bed file to output containing reference bin counts",     v => parameters.weightedAverageNormalBedFile = new FileLocation(v) },
                     { "f|manifest=",      "Nextera manifest file",                       v => parameters.manifestFile = new FileLocation(v) },
                     { "p|ploidyBedFile=", "bed file specifying reference ploidy (e.g. for sex chromosomes) (optional)", v => parameters.ploidyBedFile = new FileLocation(v)},
+                    { "r|referenceBinCountRange=", "reference bin count range for the PCA mode. Default: (1, infinity). Pass this option twice to specify the min and the max (optional)", v => parameters.referenceBinCountRange.Add(double.Parse(v))},
                     { "h|help",           "show this message and exit",                       v => needHelp = v != null },
                     { "m|mode=",          "normalization mode (WeightedAverage/BestLR2/PCA). Default: " + parameters.normalizationMode, v => parameters.normalizationMode = CanvasCommon.Utilities.ParseCanvasNormalizeMode(v) },
                 };
@@ -82,12 +86,29 @@ namespace CanvasNormalize
             }
             else if (!parameters.normalBedFiles.Any()) 
             {
-                Console.Error.WriteLine("Please specify at least one normal bed file.");
+                if (parameters.normalizationMode == CanvasNormalizeMode.PCA)
+                {
+                    Console.Error.WriteLine("Please specify a model file.");
+                }
+                else
+                {
+                    Console.Error.WriteLine("Please specify at least one normal bed file.");
+                }
                 needHelp = true;
             }
             else if (parameters.outBedFile == null)
             {
                 Console.Error.WriteLine("Please specify an output file name.");
+                needHelp = true;
+            }
+
+            if (!parameters.referenceBinCountRange.Any()) // default to 1 and infinity
+            {
+                parameters.referenceBinCountRange = new List<double>() { 1, double.PositiveInfinity };
+            }
+            else if (parameters.referenceBinCountRange.Count != 2)
+            {
+                Console.Error.WriteLine("Please specify -r exactly twice.");
                 needHelp = true;
             }
 
@@ -125,6 +146,13 @@ namespace CanvasNormalize
             if (parameters.ploidyBedFile != null && !parameters.ploidyBedFile.Exists) 
             {
                 Console.WriteLine("CanvasNormalize.exe: File {0} does not exist! Exiting.", parameters.ploidyBedFile.FullName);
+                return null;
+            }
+
+            // Do we have only one model file in the PCA mode?
+            if (parameters.normalizationMode == CanvasNormalizeMode.PCA && parameters.normalBedFiles.Count > 1)
+            {
+                Console.WriteLine("CanvasNormalize.exe: Please specify only one model file.");
                 return null;
             }
 
