@@ -374,7 +374,13 @@ namespace CanvasBin
             Int16 meanFragmentSize = 0;
             Int16 meanFragmentCutoff = 3;
             if (coverageMode == CanvasCoverageMode.GCContentWeighted)
+            {
                 meanFragmentSize = MeanFragmentSize(fragmentLengths);
+                if (meanFragmentSize <= 0)
+                {
+                    throw new Exception("CNV input data error - Unable to determine fragment size, likely because of very low genome coverage.");
+                }
+            }
 
             using (FastaReader reader = new FastaReader(referenceFile))
             {
@@ -535,9 +541,6 @@ namespace CanvasBin
                 if (!fastaEntry.Bases[pos].Equals("n"))
                     currentBin.NucleotideCount++;
 
-
-                //if (Utilities.IsGC(fastaEntry.Bases[pos]))
-                //    currentBin.GCCount++;
                 switch (fastaEntry.Bases[pos])
                 {
                     case 'C':
@@ -546,7 +549,6 @@ namespace CanvasBin
                     case 'g':
                         currentBin.GCCount++;
                         break;
-
                 }
 
                 if (possibleAlignments[pos])
@@ -582,7 +584,7 @@ namespace CanvasBin
 
                     }
 
-                    int gc = (int)(100 * currentBin.GCCount / currentBin.NucleotideCount);
+                    int gc = (int)(100f * currentBin.GCCount / currentBin.NucleotideCount); // Note: Use 100f to avoid int overflow for a very large bin
 
                     if (usePredefinedBins)
                     {
@@ -767,7 +769,6 @@ namespace CanvasBin
             //load our intermediate data files
             List<string> inputFiles = new List<string>(parameters.intermediatePaths);
             Object semaphore = new object(); // control access to possibleAlignments, observedAlignments, fragmentLengths
-            // retrieve the number of processors
             //int processorCoreCount = Environment.ProcessorCount;
             int processorCoreCount = 1; // Limit # of deserialization threads to avoid (rare) protobuf issue.
             List<Thread> threads = new List<Thread>();
