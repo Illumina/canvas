@@ -248,7 +248,7 @@ namespace CanvasCommon
             }
         }
 
-        private static void AddPloidyAndCoverageHeaders(BgzipOrStreamWriter writer, List<CanvasSegment> segments, double diploidCoverage)
+        private static void AddPloidyAndCoverageHeaders(BgzipOrStreamWriter writer, List<CanvasSegment> segments, double? diploidCoverage)
         {
             double totalPloidy = 0;
             double totalWeight = 0;
@@ -263,14 +263,14 @@ namespace CanvasCommon
             if (totalWeight > 0)
             {
                 writer.WriteLine($"##OverallPloidy={totalPloidy / totalWeight:F2}");
-                writer.WriteLine($"##DiploidCoverage={diploidCoverage:F2}");
+                if (diploidCoverage != null)  writer.WriteLine($"##DiploidCoverage={diploidCoverage:F2}");
             }
         }
 
         /// <summary>
         /// Outputs the copy number calls to a text file.
         /// </summary>
-        public static void WriteSegments(string outVcfPath, List<CanvasSegment> segments, double diploidCoverage, string wholeGenomeFastaDirectory, string sampleName,
+        public static void WriteSegments(string outVcfPath, List<CanvasSegment> segments, double? diploidCoverage, string wholeGenomeFastaDirectory, string sampleName,
             List<string> extraHeaders, PloidyInfo ploidy, int qualityThreshold = 10)
         {
             using (BgzipOrStreamWriter writer = new BgzipOrStreamWriter(outVcfPath))

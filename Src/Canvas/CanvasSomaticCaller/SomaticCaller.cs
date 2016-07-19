@@ -420,10 +420,9 @@ namespace CanvasSomaticCaller
                         Console.Error.WriteLine("Not calling any CNVs. Reason: {0}", e.Message);
                         Segments.Clear();
                     }
-                    else
-                    {
-                        throw;
-                    }
+                    // Throw the exception - if we can't do CNV calling in production we should treat that as a fatal error for
+                    // the workflow: 
+                    throw;
                 }
             }
 
@@ -461,8 +460,8 @@ namespace CanvasSomaticCaller
 
             ExtraHeaders.Add($"##EstimatedChromosomeCount={this.EstimateChromosomeCount():F2}");
 
-            // Write out results:
-            CanvasSegment.WriteSegments(outputVCFPath, this.Segments, Model.DiploidCoverage, referenceFolder, name, ExtraHeaders, this.ReferencePloidy, QualityFilterThreshold);
+            // Write out results.  Note that model may be null here, in training mode, if we hit an UncallableDataException:
+            CanvasSegment.WriteSegments(outputVCFPath, this.Segments, Model?.DiploidCoverage, referenceFolder, name, ExtraHeaders, this.ReferencePloidy, QualityFilterThreshold);
 
             return 0;
         }
@@ -1764,7 +1763,7 @@ namespace CanvasSomaticCaller
                 }
                 if (allModels.Count == 0)
                 {
-                    throw new UncallableDataException(string.Format("Error with CNV detection - unable to find any viable purity/ploidy model."));
+                    throw new UncallableDataException(string.Format("Error with CNV detection - unable to find any viable purity/ploidy model.  Check that the sample has reasonable coverage (>=10x)"));
                 }
 
                 // New logic for model selection:

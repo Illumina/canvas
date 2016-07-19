@@ -126,7 +126,7 @@ namespace CanvasBin
                 InitializeBins();
 
                 // Populate GC for each bin if not available
-                if (!isBinGCAvailable()) { populateBinGC(); }
+                if (!IsBinGCAvailable()) { PopulateBinGC(); }
 
                 // Bin fragments
                 binFragments();
@@ -145,7 +145,7 @@ namespace CanvasBin
             /// Is %GC available for all bins?
             /// </summary>
             /// <returns></returns>
-            private bool isBinGCAvailable()
+            private bool IsBinGCAvailable()
             {
                 foreach (GenomicBin bin in Bins)
                 {
@@ -161,7 +161,7 @@ namespace CanvasBin
             /// <summary>
             /// Calculates %GC for bins on the chromosome.
             /// </summary>
-            private void populateBinGC()
+            private void PopulateBinGC()
             {
                 Console.WriteLine("Calculating %GC for each bin on {0}...", Chromosome);
                 string referenceBases = FastaLoader.LoadFastaSequence(FastaFile, Chromosome);
