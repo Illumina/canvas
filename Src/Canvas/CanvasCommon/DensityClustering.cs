@@ -19,10 +19,10 @@ namespace CanvasCommon
     public class DensityClusteringModel
     {
         #region Members
-        private List<SegmentInfo> Segments;
-        private List<double?> Distance;
-        private List<double> Centroids;
-        private List<double> Rho;
+        public List<SegmentInfo> Segments;
+        public List<double?> Distance;
+        public List<double> Centroids;
+        public List<double> Rho;
         private List<double> CentroidsMAFs;
         private List<double> CentroidsCoverage;
         private double _coverageWeightingFactor;
@@ -32,7 +32,8 @@ namespace CanvasCommon
         // parameters
         // RhoCutoff and CentroidsCutoff estimated from running density clustering on 70 HapMix tumour samples https://git.illumina.com/Bioinformatics/HapMix/
         // and visually inspecting validity of clusters
-        private const double RhoCutoff = 2.0; 
+        public const double RhoCutoff = 2.0;
+        public const int MaxClusterNumber = 7; // too many clusters suggest incorrect cluster partitioning 
         private const double NeighborRateLow = 0.02;
         private const double NeighborRateHigh = 0.03;
         #endregion
@@ -60,6 +61,44 @@ namespace CanvasCommon
             return segmentCounts;
         }
 
+        /// <summary>
+        /// Estimate cluster variance using cluster centroids identified by densityClustering function
+        /// </summary>
+        public List<double> GetCentroidsVariance(List<double> centroidsMAFs, List<double> centroidsCoverage, int nClusters)
+        {
+            List<double> clusterVariance = new List<double>();
+
+            for (int clusterID = 0; clusterID < nClusters; clusterID++)
+            {
+                List<double> tmpDistance = new List<double>();
+                foreach (SegmentInfo segment in this.Segments)
+                {
+                    if (segment.ClusterId.HasValue && clusterID + 1 == segment.ClusterId.Value)
+                    {
+                        tmpDistance.Add(GetEuclideanDistance(segment.Coverage, centroidsCoverage[clusterID], segment.MAF, centroidsMAFs[clusterID]));
+                    }
+                }
+                clusterVariance.Add(tmpDistance.Average());
+            }
+            return clusterVariance;
+        }
+
+        /// <summary>
+        /// Return cluster sizes
+        /// </summary>
+        public List<int> GetClustersSize(int nClusters)
+        {
+            List<int> clustersSize = Enumerable.Repeat(0, nClusters).ToList();
+
+            foreach (SegmentInfo segment in this.Segments)
+            {
+                if (segment.ClusterId.HasValue && segment.ClusterId.Value > 0)
+                {
+                    clustersSize[segment.ClusterId.Value - 1] += 1;
+                }
+            }
+            return clustersSize;
+        }
 
         public List<double> GetCentroidsMAF()
         {
@@ -70,6 +109,8 @@ namespace CanvasCommon
         {
             return this.CentroidsCoverage;
         }
+
+
 
         /// <summary>
         /// Return the squared euclidean distance between (coverage, maf) and (coverage2, maf2) in scaled coverage/MAF space.
@@ -95,9 +136,9 @@ namespace CanvasCommon
             foreach (double? element in this.Distance)
             {
                 if (element.HasValue && element < tmpLow && element > 0)
-                    tmpLow = (double) element;
+                    tmpLow = (double)element;
                 else if (element.HasValue && element > tmpHigh)
-                    tmpHigh = (double) element;
+                    tmpHigh = (double)element;
             }
 
             double neighborRate = 0;
@@ -204,7 +245,7 @@ namespace CanvasCommon
             {
                 for (int row = col + 1; row < segmentsLength; row++)
                 {
-                    double? tmp = null;                  
+                    double? tmp = null;
                     if (this.Segments[col].MAF >= 0 && this.Segments[row].MAF >= 0)
                         tmp = GetEuclideanDistance(this.Segments[col].Coverage, this.Segments[row].Coverage, this.Segments[col].MAF, this.Segments[row].MAF);
                     this.Distance.Add(tmp);
@@ -236,7 +277,7 @@ namespace CanvasCommon
                         i++;
                         continue;
                     }
-                    double newValue = (double) this.Distance[i];
+                    double newValue = (double)this.Distance[i];
                     double rhoRow = this.Rho[row];
                     double rhoCol = this.Rho[col];
 
@@ -297,11 +338,10 @@ namespace CanvasCommon
                 return null;
             }
         }
-        
+
 
         public int FindClusters(double rhoCutoff = RhoCutoff)
         {
-
             CentroidsMAFs = new List<double>();
             CentroidsCoverage = new List<double>();
             int segmentsLength = this.Segments.Count;
@@ -317,8 +357,8 @@ namespace CanvasCommon
             }
 
 
-        // sort list and return indices
-        List<int> runOrder = new List<int>();
+            // sort list and return indices
+            List<int> runOrder = new List<int>();
             var sortedScores = Rho.Select((x, i) => new KeyValuePair<double, int>(x, i)).OrderByDescending(x => x.Key).ToList();
             runOrder = sortedScores.Select(x => x.Value).ToList();
 
@@ -327,7 +367,7 @@ namespace CanvasCommon
                 // set segment cluster value to the cluster centroid 
                 if (CentroidsIndex.Contains(runOrderIndex))
                 {
-                    this.Segments[runOrderIndex].Cluster =  CentroidsIndex.FindIndex(x => x == runOrderIndex) + 1;
+                    this.Segments[runOrderIndex].ClusterId = CentroidsIndex.FindIndex(x => x == runOrderIndex) + 1;
                 }
                 // set segment cluster value to the closest cluster segment 
                 else
@@ -339,7 +379,7 @@ namespace CanvasCommon
                     {
                         if (Rho[tmpIndex] > Rho[runOrderIndex] && this.Segments[tmpIndex].MAF >= 0)
                         {
-                            tmpDistance = GetDistance(segmentsLength,  tmpIndex,  runOrderIndex);
+                            tmpDistance = GetDistance(segmentsLength, tmpIndex, runOrderIndex);
 
                             if (tmpDistance.HasValue)
                             {
@@ -353,9 +393,9 @@ namespace CanvasCommon
                     }
                     // populate clusters
                     if (this.Segments[runOrderIndex].MAF >= 0)
-                        this.Segments[runOrderIndex].Cluster = this.Segments[minRhoElementIndex].Cluster;
-                    if (!this.Segments[runOrderIndex].Cluster.HasValue || this.Segments[runOrderIndex].MAF < 0 || this.Segments[runOrderIndex].KnearestNeighbour > this._knearestNeighbourCutoff)
-                        this.Segments[runOrderIndex].Cluster = -1;
+                        this.Segments[runOrderIndex].ClusterId = this.Segments[minRhoElementIndex].ClusterId;
+                    if (!this.Segments[runOrderIndex].ClusterId.HasValue || this.Segments[runOrderIndex].MAF < 0 || this.Segments[runOrderIndex].KnearestNeighbour > this._knearestNeighbourCutoff)
+                        this.Segments[runOrderIndex].ClusterId = CanvasCommon.PloidyInfo.OutlierClusterFlag;
                 }
             }
             return CentroidsIndex.Count;

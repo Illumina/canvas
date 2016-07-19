@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.IO;
+using System.Runtime.CompilerServices;
 using SequencingFiles;
 
 namespace CanvasCommon
@@ -22,6 +23,7 @@ namespace CanvasCommon
         public double ModelDistance;
         public double RunnerUpModelDistance;
         public bool CopyNumberSwapped;
+        public bool IsHeterogeneous;
         private static readonly int NumberVariantFrequencyBins = 100;
         public string Filter = "PASS";
         public Tuple<int, int> StartConfidenceInterval; // if not null, this is a confidence interval around Start, reported in the CIPOS tag
@@ -53,6 +55,7 @@ namespace CanvasCommon
                 return sum / this.BinCount;
             }
         }
+
 
         public CnvType GetCnvType(int referenceCopyNumber)
         {
@@ -209,7 +212,6 @@ namespace CanvasCommon
                     CanvasSegment segment = new CanvasSegment(chr, begin, previousBinEnd, counts);
                     segments.Add(segment);
                     segment.StartConfidenceInterval = segmentStartCI;
-                    //SetLastSegmentStartConfidenceInterval(segments);
                 }
             }
             Console.WriteLine("{0} Loaded {1} segments", DateTime.Now, segments.Count);
@@ -238,15 +240,15 @@ namespace CanvasCommon
         /// <summary>
         /// Apply quality scores.
         /// </summary>
-        public static void AssignQualityScores(List<CanvasSegment> segments, QScoreMethod qscoreMethod)
+        public static void AssignQualityScores(List<CanvasSegment> segments, QScoreMethod qscoreMethod, QualityScoreParameters qscoreParameters)
         {
             foreach (CanvasSegment segment in segments)
             {
-                segment.QScore = segment.ComputeQScore(qscoreMethod);
+                segment.QScore = segment.ComputeQScore(qscoreMethod, qscoreParameters);
             }
         }
 
-        private static void AddPloidyAndCoverageHeaders(BgzipOrStreamWriter writer, List<CanvasSegment> segments, double diploidCoverage)
+        private static void AddPloidyAndCoverageHeaders(BgzipOrStreamWriter writer, List<CanvasSegment> segments, double? diploidCoverage)
         {
             double totalPloidy = 0;
             double totalWeight = 0;
@@ -261,14 +263,14 @@ namespace CanvasCommon
             if (totalWeight > 0)
             {
                 writer.WriteLine($"##OverallPloidy={totalPloidy / totalWeight:F2}");
-                writer.WriteLine($"##DiploidCoverage={diploidCoverage:F2}");
+                if (diploidCoverage != null)  writer.WriteLine($"##DiploidCoverage={diploidCoverage:F2}");
             }
         }
 
         /// <summary>
         /// Outputs the copy number calls to a text file.
         /// </summary>
-        public static void WriteSegments(string outVcfPath, List<CanvasSegment> segments, double diploidCoverage, string wholeGenomeFastaDirectory, string sampleName,
+        public static void WriteSegments(string outVcfPath, List<CanvasSegment> segments, double? diploidCoverage, string wholeGenomeFastaDirectory, string sampleName,
             List<string> extraHeaders, PloidyInfo ploidy, int qualityThreshold = 10)
         {
             using (BgzipOrStreamWriter writer = new BgzipOrStreamWriter(outVcfPath))
@@ -298,6 +300,7 @@ namespace CanvasCommon
                 writer.WriteLine("##INFO=<ID=CNVLEN,Number=1,Type=Integer,Description=\"Number of reference positions spanned by this CNV\">");
                 writer.WriteLine("##INFO=<ID=END,Number=1,Type=Integer,Description=\"End position of the variant described in this record\">");
                 writer.WriteLine("##INFO=<ID=SVTYPE,Number=1,Type=String,Description=\"Type of structural variant\">");
+                writer.WriteLine("##INFO=<ID=SUBCLONAL,Number=0,Type=Flag,Description=\"Subclonal variant\">");
                 writer.WriteLine("##FORMAT=<ID=RC,Number=1,Type=Float,Description=\"Mean counts per bin in the region\">");
                 writer.WriteLine("##FORMAT=<ID=BC,Number=1,Type=Float,Description=\"Number of bins in the region\">");
                 writer.WriteLine("##FORMAT=<ID=CN,Number=1,Type=Integer,Description=\"Copy number genotype for imprecise events\">");
@@ -326,6 +329,8 @@ namespace CanvasCommon
 
                         if (cnvType != CnvType.Reference)
                             writer.Write($"SVTYPE={cnvType.ToSvType()};");
+                        if (segment.IsHeterogeneous)
+                            writer.Write("SUBCLONAL;");
                         writer.Write($"END={segment.End}");
                         if (cnvType != CnvType.Reference)
                             writer.Write($";CNVLEN={segment.End - segment.Begin}");
@@ -649,9 +654,10 @@ namespace CanvasCommon
             segmentIndex = 1;
             while (segmentIndex < segments.Count)
             {
-                // Assimilate an adjacent segment with the same copy number call:
+                // Assimilate an adjacent segment with the same copy number call and heterogeneity flag:
                 if (lastSegment.CopyNumber == segments[segmentIndex].CopyNumber && lastSegment.Chr == segments[segmentIndex].Chr &&
-                    !IsForbiddenInterval(lastSegment.Chr, lastSegment.End, segments[segmentIndex].Begin, excludedIntervals))
+                    !IsForbiddenInterval(lastSegment.Chr, lastSegment.End, segments[segmentIndex].Begin, excludedIntervals) &&
+                    lastSegment.IsHeterogeneous == segments[segmentIndex].IsHeterogeneous)
                 {
                     lastSegment.MergeIn(segments[segmentIndex]);
                     segmentIndex++;
@@ -744,9 +750,9 @@ namespace CanvasCommon
             segmentIndex = 1;
             while (segmentIndex < segments.Count)
             {
-                // Assimilate an adjacent segment with the same copy number call:
+                // Assimilate an adjacent segment with the same copy number call and heterogeneity flag:
                 if (lastSegment.CopyNumber == segments[segmentIndex].CopyNumber && lastSegment.Chr == segments[segmentIndex].Chr &&
-                    segments[segmentIndex].Begin - lastSegment.End < maximumMergeSpan)
+                    segments[segmentIndex].Begin - lastSegment.End < maximumMergeSpan && lastSegment.IsHeterogeneous == segments[segmentIndex].IsHeterogeneous)
                 {
                     lastSegment.MergeIn(segments[segmentIndex]);
                     segmentIndex++;
@@ -763,7 +769,7 @@ namespace CanvasCommon
         /// Computes QScore using one of the available methods
         /// </summary>
         public enum QScoreMethod { BinCountLinearFit, GeneralizedLinearFit, Logistic, LogisticGermline };
-        public int ComputeQScore(QScoreMethod qscoreMethod)
+        public int ComputeQScore(QScoreMethod qscoreMethod, QualityScoreParameters qscoreParameters)
         {
             double score;
             int qscore;
@@ -771,10 +777,10 @@ namespace CanvasCommon
             {
                 case QScoreMethod.LogisticGermline:
                     // Logistic model using a new selection of features.  Gives ROC curve area 0.921
-                    score = -5.0123;
-                    score += GetQScorePredictor(QScorePredictor.LogBinCount) * 4.9801;
-                    score += GetQScorePredictor(QScorePredictor.ModelDistance) * -5.5472;
-                    score += GetQScorePredictor(QScorePredictor.DistanceRatio) * -1.7914;
+                    score = qscoreParameters.LogisticGermlineIntercept;
+                    score += GetQScorePredictor(QScorePredictor.LogBinCount) * qscoreParameters.LogisticGermlineLogBinCount;
+                    score += GetQScorePredictor(QScorePredictor.ModelDistance) * qscoreParameters.LogisticGermlineModelDistance;
+                    score += GetQScorePredictor(QScorePredictor.DistanceRatio) * qscoreParameters.LogisticGermlineDistanceRatio;
                     score = Math.Exp(score);
                     score = score / (score + 1);
                     // Transform probability into a q-score:
@@ -784,10 +790,10 @@ namespace CanvasCommon
                     return qscore;
                 case QScoreMethod.Logistic:
                     // Logistic model using a new selection of features.  Gives ROC curve area 0.8289
-                    score = -0.5143;
-                    score += GetQScorePredictor(QScorePredictor.LogBinCount) * 0.8596;
-                    score += GetQScorePredictor(QScorePredictor.ModelDistance) * -50.4366;
-                    score += GetQScorePredictor(QScorePredictor.DistanceRatio) * -0.6511;
+                    score = qscoreParameters.LogisticIntercept;
+                    score += GetQScorePredictor(QScorePredictor.LogBinCount) * qscoreParameters.LogisticLogBinCount;
+                    score += GetQScorePredictor(QScorePredictor.ModelDistance) * qscoreParameters.LogisticModelDistance;
+                    score += GetQScorePredictor(QScorePredictor.DistanceRatio) * qscoreParameters.LogisticDistanceRatio;
                     score = Math.Exp(score);
                     score = score / (score + 1);
                     // Transform probability into a q-score:
@@ -801,12 +807,16 @@ namespace CanvasCommon
                     else
                         return (int)Math.Round(-10 * Math.Log10(1 - 1 / (1 + Math.Exp(0.5532 - this.BinCount * 0.147))), 0, MidpointRounding.AwayFromZero);
                 case QScoreMethod.GeneralizedLinearFit: // Generalized linear fit with linear transformation to QScore
-                    double linearFit = -3.65
-                                       - 1.12 * GetQScorePredictor(QScorePredictor.LogBinCount)
-                                       + 3.89 * GetQScorePredictor(QScorePredictor.ModelDistance)
-                                       + 0.47 * GetQScorePredictor(QScorePredictor.MajorChromosomeCount)
-                                       - 0.68 * GetQScorePredictor(QScorePredictor.MafMean)
-                                       - 0.25 * GetQScorePredictor(QScorePredictor.LogMafCv);
+                    double linearFit = qscoreParameters.GeneralizedLinearFitIntercept;
+                    linearFit += qscoreParameters.GeneralizedLinearFitLogBinCount *
+                                 GetQScorePredictor(QScorePredictor.LogBinCount);
+                    linearFit += qscoreParameters.GeneralizedLinearFitModelDistance *
+                                 GetQScorePredictor(QScorePredictor.ModelDistance);
+                    linearFit += qscoreParameters.GeneralizedLinearFitMajorChromosomeCount *
+                                 GetQScorePredictor(QScorePredictor.MajorChromosomeCount);
+                    linearFit += qscoreParameters.GeneralizedLinearFitMafMean *
+                                 GetQScorePredictor(QScorePredictor.MafMean);
+                    linearFit += qscoreParameters.GeneralizedLinearFitLogMafCv * GetQScorePredictor(QScorePredictor.LogMafCv);
                     score = -11.9 - 11.4 * linearFit; // Scaling to achieve 2 <= qscore <= 61
                     score = Math.Max(2, score);
                     score = Math.Min(61, score);

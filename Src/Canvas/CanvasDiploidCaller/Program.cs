@@ -6,6 +6,8 @@ using System.Threading.Tasks;
 using System.IO;
 using NDesk.Options;
 using SequencingFiles;
+using Newtonsoft.Json;
+using Isas.Shared;
 
 namespace CanvasDiploidCaller
 {
@@ -37,6 +39,8 @@ namespace CanvasDiploidCaller
             bool needHelp = false;
             string truthDataPath = null;
 
+            string qualityScoreConfigPath = Path.Combine(Isas.Shared.Utilities.GetAssemblyFolder(typeof(Program)), "QualityScoreParameters.json");
+
             var p = new OptionSet()
             {
                 { "i|infile=",        "file containing bins, their counts, and assigned segments (obtained from CanvasPartition.exe)",  v => inFile = v },
@@ -47,6 +51,7 @@ namespace CanvasDiploidCaller
                 { "p|ploidyBed=",     "bed file specifying reference ploidy (e.g. for sex chromosomes) (optional)",                     v => ploidyBedPath = v },
                 { "d|dbsnpvcf", "flag indicating a dbSNP VCF file is used to generate the variant frequency file",                      v => isDbsnpVcf = v != null },
                 { "h|help",           "show this message and exit",                                                                     v => needHelp = v != null },
+                { "s|qscoreconfig=", $"parameter configuration path (default {qualityScoreConfigPath})", v => qualityScoreConfigPath = v },
                 { "t|truth=", "path to vcf/bed with CNV truth data (optional)", v => truthDataPath = v },
             };
 
@@ -86,10 +91,20 @@ namespace CanvasDiploidCaller
                 Console.WriteLine("CanvasDiploidCaller.exe: File {0} does not exist! Exiting.", Path.Combine(referenceFolder, "GenomeSize.xml"));
                 return 1;
             }
-            CanvasDiploidCaller caller = new CanvasDiploidCaller();
+
+            FileLocation qscoreConfigFile = new FileLocation(qualityScoreConfigPath);
+            CanvasCommon.QualityScoreParameters qscoreParametersJSON = Deserialize<CanvasCommon.QualityScoreParameters>(qscoreConfigFile);
+
             // Set parameters:
+            CanvasDiploidCaller caller = new CanvasDiploidCaller();
             caller.IsDbsnpVcf = isDbsnpVcf;
+            caller.germlineScoreParameters = qscoreParametersJSON;
             return caller.CallVariants(variantFrequencyFile, inFile, outFile, ploidyBedPath, referenceFolder, sampleName, truthDataPath);
+        }
+        private static T Deserialize<T>(IFileLocation path)
+        {
+            using (StreamReader reader = path.OpenText())
+                return JsonConvert.DeserializeObject<T>(reader.ReadToEnd());
         }
     }
 }

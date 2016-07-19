@@ -25,6 +25,8 @@ namespace CanvasDiploidCaller
         static protected int MinimumVariantFrequenciesForInformativeSegment = 50;
         protected int MedianHetSnpsDistance = 463; // based on NA12878 VFResults.txt.gz file
         CopyNumberOracle CNOracle = null;
+        public CanvasCommon.QualityScoreParameters germlineScoreParameters;
+
 
         // File paths:
         public string TempFolder;
@@ -360,13 +362,13 @@ namespace CanvasDiploidCaller
                     writer.Write("{0}\t", Math.Log(segment.GetQScorePredictor(CanvasSegment.QScorePredictor.MafCount)));
                     writer.Write("{0}\t", 100);
                     writer.Write("{0}\t", Model.Deviation);
-                    double score = segment.ComputeQScore(CanvasSegment.QScoreMethod.BinCountLinearFit);
+                    double score = segment.ComputeQScore(CanvasSegment.QScoreMethod.BinCountLinearFit, germlineScoreParameters);
                     writer.Write("{0}\t", score);
-                    score = segment.ComputeQScore(CanvasSegment.QScoreMethod.GeneralizedLinearFit);
+                    score = segment.ComputeQScore(CanvasSegment.QScoreMethod.GeneralizedLinearFit, germlineScoreParameters);
                     writer.Write("{0}\t", score);
-                    score = segment.ComputeQScore(CanvasSegment.QScoreMethod.Logistic);
+                    score = segment.ComputeQScore(CanvasSegment.QScoreMethod.Logistic, germlineScoreParameters);
                     writer.Write("{0}\t", score);
-                    score = segment.ComputeQScore(CanvasSegment.QScoreMethod.LogisticGermline);
+                    score = segment.ComputeQScore(CanvasSegment.QScoreMethod.LogisticGermline, germlineScoreParameters);
                     writer.Write("{0}\t", score);
 
                     writer.WriteLine();
@@ -458,7 +460,8 @@ namespace CanvasDiploidCaller
 
             // Merge neighboring segments that got the same copy number call.
             CanvasSegment.MergeSegments(ref this.Segments);
-            CanvasSegment.AssignQualityScores(this.Segments, CanvasSegment.QScoreMethod.LogisticGermline);
+            CanvasSegment.AssignQualityScores(this.Segments, CanvasSegment.QScoreMethod.LogisticGermline, germlineScoreParameters);
+            List<string> extraHeaders = new List<string>();
             string coverageOutputPath = CanvasCommon.Utilities.GetCoverageAndVariantFrequencyOutputPath(outFile);
             CanvasSegment.WriteCoveragePlotData(this.Segments, Model.DiploidCoverage, ploidy, coverageOutputPath, referenceFolder);
 
@@ -467,7 +470,6 @@ namespace CanvasDiploidCaller
                 this.GenerateReportVersusKnownCN();
             }
 
-            List<string> extraHeaders = new List<string>();
             if (ploidy != null && !string.IsNullOrEmpty(ploidy.HeaderLine)) extraHeaders.Add(ploidy.HeaderLine);
 
             CanvasSegment.WriteSegments(outFile, this.Segments, Model.DiploidCoverage, referenceFolder, sampleName, extraHeaders, ploidy);

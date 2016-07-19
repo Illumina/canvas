@@ -10,6 +10,9 @@ namespace CanvasCommon
     public class PloidyInfo
     {
         #region Members
+
+        public const int OutlierClusterFlag = -1;
+        public const int UndersegmentedClusterFlag = -2;
         public string HeaderLine;
         public Dictionary<string, List<PloidyInterval>> PloidyByChromosome = new Dictionary<string, List<PloidyInterval>>();
         #endregion
@@ -123,7 +126,8 @@ namespace CanvasCommon
         public double Weight;
         public double MAFWeight;
         public int CN;
-        public int? Cluster;
+        public int? ClusterId;
+        public int? FinalClusterId;
         public double? KnearestNeighbour;
         public SegmentPloidy Ploidy;
         public double EmpiricalMAF;
@@ -137,8 +141,8 @@ namespace CanvasCommon
     public class SegmentInfo : ModelPoint
     {
         public CanvasSegment Segment;
+        public ClusterInfo Cluster;
         public Dictionary<ModelPoint, double> PosteriorProbs;
-
     }
 
     public class CoverageModel
@@ -151,13 +155,4 @@ namespace CanvasCommon
         public List<int> CNs = new List<int>();
     }
 
-    /// <summary>
-    /// Stores information about clustering of CanvasSegment objects
-    /// </summary>
-    public class ClusterModel
-    {
-        public int? ClusterID;
-        public bool IsHeterogeneous = false;
-        public double ClusterMedianDistance;
-    }
 }

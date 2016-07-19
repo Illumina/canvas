@@ -40,8 +40,8 @@ Open the solution file (Canvas.sln) using Visual Studio 2013, and build the main
 
 #### Linux
 Canvas is known to run under the following Linux distributions:
-- CentOS 5, 6 (Mono 3.10.0, Mono 4.0.2)
-- Ubuntu 14.04 (Mono 4.0.2)
+- CentOS 5, 6 (Mono 3.10.0, Mono 4.0.2, Mono 4.2.3)
+- Ubuntu 14.04 (Mono 4.0.2, Mono 4.2.3)
 
 Other Linux distributions and other recent Mono versions are likely to work as well but have not been explicitly tested.
 
