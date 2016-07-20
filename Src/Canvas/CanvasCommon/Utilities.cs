@@ -710,7 +710,7 @@ namespace CanvasCommon
         /// <returns></returns>
         public static double[] Project(double[] v, IEnumerable<double[]> axes)
         {
-            if (!axes.Any())
+            if (axes == null  || !axes.Any())
             {
                 throw new ApplicationException("No axes to project onto.");
             }
@@ -728,6 +728,24 @@ namespace CanvasCommon
                 {
                     projected[i] += tmp[i];
                 }
+            }
+
+            return projected;
+        }
+
+        /// <summary>
+        /// Projects v to the orthogonal complement of the space spanned by axes. Assumes that the axes are orthonormal to each other.
+        /// </summary>
+        /// <param name="v"></param>
+        /// <param name="axes"></param>
+        /// <returns></returns>
+        public static double[] ProjectToComplement(double[] v, IEnumerable<double[]> axes)
+        {
+            double[] projected = Project(v, axes);
+
+            for (int i = 0; i < v.Length; i++)
+            {
+                projected[i] = v[i] - projected[i];
             }
 
             return projected;
