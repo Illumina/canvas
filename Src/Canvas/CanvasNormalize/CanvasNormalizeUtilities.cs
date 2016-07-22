@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -38,6 +39,34 @@ namespace CanvasNormalize
                     double factor = CanvasDiploidBinRatioFactor * GetPloidy(referencePloidy, ratio.Chromosome, ratio.Start, ratio.Stop) / 2.0;
                     double count = ratio.Count * factor;
                     writer.WriteLine(String.Join("\t", ratio.Chromosome, ratio.Start, ratio.Stop, count));
+                }
+            }
+        }
+
+        public static void WriteCndFile(IFileLocation fragmentCountFile, IFileLocation referenceCountFile,
+            IEnumerable<GenomicBin> ratios, IFileLocation outputFile)
+        {
+            IEnumerable<GenomicBin> fragmentCounts = CanvasIO.IterateThroughTextFile(fragmentCountFile.FullName);
+            IEnumerable<GenomicBin> referenceCounts = CanvasIO.IterateThroughTextFile(referenceCountFile.FullName);
+
+            using (var eFragment = fragmentCounts.GetEnumerator())
+            using (var eReference = referenceCounts.GetEnumerator())
+            using (var eRatio = ratios.GetEnumerator())
+            using (StreamWriter writer = new StreamWriter(outputFile.FullName))
+            {
+                writer.WriteLine(CSVWriter.GetLine("Fragment Count", "Reference Count", "Chromosome",
+                    "Start", "End", "Unsmoothed Log Ratio"));
+                while (eFragment.MoveNext() && eReference.MoveNext() && eRatio.MoveNext())
+                {
+                    if (!eFragment.Current.IsSameBin(eReference.Current)
+                        || !eFragment.Current.IsSameBin(eRatio.Current))
+                    {
+                        throw new ApplicationException("Bins are not in the same order.");
+                    }
+                    writer.WriteLine(CSVWriter.GetLine(eFragment.Current.Count.ToString(),
+                        eReference.Current.Count.ToString(), eFragment.Current.Chromosome,
+                        eFragment.Current.Start.ToString(), eFragment.Current.Stop.ToString(),
+                        eRatio.Current.Count.ToString()));
                 }
             }
         }

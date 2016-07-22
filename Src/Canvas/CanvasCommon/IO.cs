@@ -21,10 +21,8 @@ namespace CanvasCommon
             }
         }
 
-        public static List<GenomicBin> ReadFromTextFile(string infile)
+        public static IEnumerable<GenomicBin> IterateThroughTextFile(string infile)
         {
-            List<GenomicBin> bins = new List<GenomicBin>();
-
             using (GzipReader reader = new GzipReader(infile))
             {
                 string row;
@@ -41,10 +39,14 @@ namespace CanvasCommon
                     int gc = Convert.ToInt32(fields[4]);
 
                     GenomicBin bin = new GenomicBin(chr, start, stop, gc, count);
-                    bins.Add(bin);
+                    yield return bin;
                 }
             }
-            return bins;
+        }
+
+        public static List<GenomicBin> ReadFromTextFile(string infile)
+        {
+            return IterateThroughTextFile(infile).ToList();
         }
 
         // write localSD metric

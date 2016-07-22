@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
+using Isas.Shared;
 using CanvasCommon;
 using SequencingFiles;
 
@@ -12,6 +13,7 @@ namespace CanvasNormalize
 {
     class CanvasNormalize
     {
+        private readonly string CndFileSuffix = ".cnd";
         private IReferenceGenerator _referenceGenerator;
         private IRatioCalculator _ratioCalculator;
         public CanvasNormalize(IReferenceGenerator referenceGenerator, IRatioCalculator ratioCalculator)
@@ -25,6 +27,9 @@ namespace CanvasNormalize
             _referenceGenerator.Run(parameters.weightedAverageNormalBedFile);
             var ratios = _ratioCalculator.Run(parameters.tumorBedFile, parameters.weightedAverageNormalBedFile);
             CanvasNormalizeUtilities.RatiosToCounts(ratios, parameters.ploidyBedFile, parameters.outBedFile);
+            CanvasNormalizeUtilities.WriteCndFile(parameters.tumorBedFile, parameters.weightedAverageNormalBedFile,
+                ratios, new FileLocation(parameters.outBedFile.FullName + CndFileSuffix));
+            
             return 0;
         }
     }
