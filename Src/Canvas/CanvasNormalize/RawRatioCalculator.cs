@@ -32,32 +32,22 @@ namespace CanvasNormalize
             if (!referenceBedFile.Exists)
                 throw new FileNotFoundException(referenceBedFile.FullName + " does not exist.");
 
-            using (GzipReader sampleReader = new GzipReader(sampleBedFile.FullName))
-            using (GzipReader referenceReader = new GzipReader(referenceBedFile.FullName))
+            var sampleBins = CanvasIO.IterateThroughTextFile(sampleBedFile.FullName);
+            var referenceBins = CanvasIO.IterateThroughTextFile(referenceBedFile.FullName);
+            using (var eSampleBins = sampleBins.GetEnumerator())
+            using (var eReferenceBins = referenceBins.GetEnumerator())
             {
-                string referenceLine;
-                string sampleLine;
-                string[] referenceToks;
-                string[] sampleToks;
-                double referenceCount;
-                double sampleCount;
-                double ratio;
-                while ((referenceLine = referenceReader.ReadLine()) != null)
+                while (eSampleBins.MoveNext() && eReferenceBins.MoveNext())
                 {
-                    sampleLine = sampleReader.ReadLine();
-                    referenceToks = referenceLine.Split('\t');
-                    sampleToks = sampleLine.Split('\t');
-                    referenceCount = double.Parse(referenceToks[3]);
-                    sampleCount = double.Parse(sampleToks[3]);
+                    var sampleBin = eSampleBins.Current;
+                    var referenceBin = eReferenceBins.Current;
                     // Bins with extreme reference counts introduce large variance into the ratios.
                     // It would be better to just drop these bins so we don't introduce too much noise into segmentation and CNV calling.
-                    if (referenceCount < _minReferenceCount) { continue; } // skip the bin
-                    if (referenceCount > _maxReferenceCount) { continue; } // skip the bin
-                    string chrom = referenceToks[0];
-                    int start = int.Parse(referenceToks[1]);
-                    int end = int.Parse(referenceToks[2]);
-                    ratio = sampleCount / referenceCount;
-                    yield return new GenomicBin(chrom, start, end, -1, (float)ratio);
+                    if (referenceBin.Count < _minReferenceCount) { continue; } // skip the bin
+                    if (referenceBin.Count > _maxReferenceCount) { continue; } // skip the bin
+                    double sampleCount = eSampleBins.Current.Count;
+                    double ratio = sampleBin.Count / referenceBin.Count;
+                    yield return new GenomicBin(sampleBin.Chromosome, sampleBin.Start, sampleBin.Stop, sampleBin.GC, (float)ratio);
                 }
             }
         }

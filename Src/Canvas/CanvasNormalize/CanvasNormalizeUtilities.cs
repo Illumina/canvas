@@ -24,6 +24,17 @@ namespace CanvasNormalize
             return referencePloidy.GetReferenceCopyNumber(segment);
         }
 
+        private static IEnumerable<GenomicBin> RatiosToCounts(IEnumerable<GenomicBin> ratios, PloidyInfo referencePloidy)
+        {
+            foreach (GenomicBin ratio in ratios)
+            {
+                // get the normal ploidy
+                double factor = CanvasDiploidBinRatioFactor * GetPloidy(referencePloidy, ratio.Chromosome, ratio.Start, ratio.Stop) / 2.0;
+                double count = ratio.Count * factor;
+                yield return new GenomicBin(ratio.Chromosome, ratio.Start, ratio.Stop, ratio.GC, (float)count);
+            }
+        }
+
         public static void RatiosToCounts(IEnumerable<GenomicBin> ratios, IFileLocation referencePloidyBedFile,
             IFileLocation outputPath)
         {
@@ -31,16 +42,7 @@ namespace CanvasNormalize
             if (referencePloidyBedFile != null && referencePloidyBedFile.Exists)
                 referencePloidy = PloidyInfo.LoadPloidyFromBedFile(referencePloidyBedFile.FullName);
 
-            using (GzipWriter writer = new GzipWriter(outputPath.FullName))
-            {
-                foreach (GenomicBin ratio in ratios)
-                {
-                    // get the normal ploidy
-                    double factor = CanvasDiploidBinRatioFactor * GetPloidy(referencePloidy, ratio.Chromosome, ratio.Start, ratio.Stop) / 2.0;
-                    double count = ratio.Count * factor;
-                    writer.WriteLine(String.Join("\t", ratio.Chromosome, ratio.Start, ratio.Stop, count));
-                }
-            }
+            CanvasIO.WriteToTextFile(outputPath.FullName, RatiosToCounts(ratios, referencePloidy));
         }
 
         public static void WriteCndFile(IFileLocation fragmentCountFile, IFileLocation referenceCountFile,

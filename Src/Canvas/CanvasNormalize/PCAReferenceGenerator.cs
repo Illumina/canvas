@@ -51,8 +51,15 @@ namespace CanvasNormalize
 
             // write temporary reference count file
             var tempReferenceFile = new FileLocation(Path.GetTempFileName());
+            var tempReferenceBins = Enumerable.Zip(sampleBins, referenceVector,
+                (bin, count) => new GenomicBin(bin.Chromosome, bin.Start, bin.Stop, bin.GC, (float)count));
+            CanvasIO.WriteToTextFile(tempReferenceFile.FullName, tempReferenceBins);
+
+            // calcualte median ratio
             var ratios = new BinCounts(_ratioCalculator.Run(_sampleBinnedFile, tempReferenceFile), _manifest);
             double medianRatio = ratios.OnTargetMedianBinCount;
+
+            // delete temporary reference count file
             Isas.Shared.Utilities.SafeDelete(tempReferenceFile.FullName);
 
             // multiply reference counts by the median ratio
@@ -68,8 +75,8 @@ namespace CanvasNormalize
         /// </summary>
         protected void VerifyBinOrder(IEnumerable<GenomicBin> bins)
         {
-            bool mismatch = Enumerable.Zip(bins, _model.Mu, (bin1, bin2) =>
-            bin1.Chromosome != bin2.Chromosome || bin1.Start != bin2.Start || bin1.Stop != bin2.Stop).Any();
+            bool mismatch = Enumerable.Zip(bins, _model.Mu, (bin1, bin2) => bin1.IsSameBin(bin2))
+                .SkipWhile(sameBin => sameBin).TakeWhile(sameBin => !sameBin).Any();
 
             if (mismatch)
                 throw new ApplicationException("Bins must be in the same order as those in the model file.");

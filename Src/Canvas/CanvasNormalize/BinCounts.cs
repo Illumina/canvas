@@ -67,24 +67,36 @@ namespace CanvasNormalize
         {
             BinnedPath = binnedPath;
             Manifest = manifest;
-            LoadBinCounts();
+            LoadBinCounts(binnedPath, manifest);
         }
 
         public BinCounts(IEnumerable<GenomicBin> bins, NexteraManifest manifest = null)
         {
             Manifest = manifest;
-            Counts = bins.Select(bin => (double)bin.Count).ToList();
+            LoadBinCounts(bins, manifest);
         }
 
-        private void LoadBinCounts()
+        private void LoadBinCounts(string binnedPath, NexteraManifest manifest)
         {
-            if (Manifest == null)
+            if (manifest == null)
             {
-                LoadBinCounts(BinnedPath, out Counts);
+                LoadBinCounts(binnedPath, out Counts);
             }
             else
             {
-                LoadBinCounts(BinnedPath, Manifest, out Counts, out OnTargetIndices);
+                LoadBinCounts(binnedPath, manifest, out Counts, out OnTargetIndices);
+            }
+        }
+
+        private void LoadBinCounts(IEnumerable<GenomicBin> bins, NexteraManifest manifest)
+        {
+            if (manifest == null)
+            {
+                Counts = bins.Select(bin => (double)bin.Count).ToList();
+            }
+            else
+            {
+                LoadBinCounts(bins, manifest, out Counts, out OnTargetIndices);
             }
         }
 
@@ -104,8 +116,8 @@ namespace CanvasNormalize
             }
         }
 
-        private static void LoadBinCounts(string binnedPath, NexteraManifest manifest, out List<double> binCounts,
-            out List<int> onTargetIndices)
+        private static void LoadBinCounts(IEnumerable<GenomicBin> bins, NexteraManifest manifest,
+            out List<double> binCounts, out List<int> onTargetIndices)
         {
             binCounts = new List<double>();
             onTargetIndices = new List<int>();
@@ -115,50 +127,47 @@ namespace CanvasNormalize
             List<NexteraManifest.ManifestRegion> regions = null; // 1-based regions
             int regionIndex = -1;
             bool onTarget = false;
-            using (GzipReader reader = new GzipReader(binnedPath))
+            int binIdx = 0;
+            foreach (var bin in bins)
             {
-                string line;
-                string[] toks;
-                int binIdx = 0;
-                while ((line = reader.ReadLine()) != null)
+                if (currChrom != bin.Chromosome)
                 {
-                    toks = line.Split('\t');
-                    string chrom = toks[0];
-                    int start = int.Parse(toks[1]); // 0-based, inclusive
-                    int stop = int.Parse(toks[2]); // 0-based, exclusive
-                    if (currChrom != chrom)
+                    currChrom = bin.Chromosome;
+                    onTarget = false;
+                    if (!regionsByChrom.ContainsKey(currChrom))
                     {
-                        currChrom = chrom;
-                        onTarget = false;
-                        if (!regionsByChrom.ContainsKey(currChrom))
-                        {
-                            regions = null;
-                        }
-                        else
-                        {
-                            regions = regionsByChrom[currChrom];
-                            regionIndex = 0;
-                        }
-                    }
-                    while (regions != null && regionIndex < regions.Count && regions[regionIndex].End < start + 1)
-                    {
-                        regionIndex++;
-                    }
-                    if (regions != null && regionIndex < regions.Count && regions[regionIndex].Start <= stop) // overlap
-                    {
-                        onTarget = true;
+                        regions = null;
                     }
                     else
                     {
-                        onTarget = false;
+                        regions = regionsByChrom[currChrom];
+                        regionIndex = 0;
                     }
-
-                    if (onTarget) { onTargetIndices.Add(binIdx); }
-
-                    binCounts.Add(double.Parse(toks[3]));
-                    binIdx++;
                 }
+                while (regions != null && regionIndex < regions.Count && regions[regionIndex].End < bin.Start + 1)
+                {
+                    regionIndex++;
+                }
+                if (regions != null && regionIndex < regions.Count && regions[regionIndex].Start <= bin.Stop) // overlap
+                {
+                    onTarget = true;
+                }
+                else
+                {
+                    onTarget = false;
+                }
+
+                if (onTarget) { onTargetIndices.Add(binIdx); }
+
+                binCounts.Add(bin.Count);
+                binIdx++;
             }
+        }
+
+        private static void LoadBinCounts(string binnedPath, NexteraManifest manifest, out List<double> binCounts,
+            out List<int> onTargetIndices)
+        {
+            LoadBinCounts(CanvasIO.IterateThroughTextFile(binnedPath), manifest, out binCounts, out onTargetIndices);
         }
     }
 }
