@@ -45,6 +45,13 @@ namespace CanvasNormalize
             CanvasIO.WriteToTextFile(outputPath.FullName, RatiosToCounts(ratios, referencePloidy));
         }
 
+        /// <summary>
+        /// Writes copy-number data (cnd) file.
+        /// </summary>
+        /// <param name="fragmentCountFile"></param>
+        /// <param name="referenceCountFile"></param>
+        /// <param name="ratios"></param>
+        /// <param name="outputFile"></param>
         public static void WriteCndFile(IFileLocation fragmentCountFile, IFileLocation referenceCountFile,
             IEnumerable<GenomicBin> ratios, IFileLocation outputFile)
         {

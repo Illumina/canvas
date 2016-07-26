@@ -13,7 +13,7 @@ namespace CanvasNormalize
 {
     class CanvasNormalize
     {
-        private readonly string CndFileSuffix = ".cnd";
+        private readonly string CndFileSuffix = ".cnd"; // cnd: copy-number data
         private IReferenceGenerator _referenceGenerator;
         private IRatioCalculator _ratioCalculator;
         public CanvasNormalize(IReferenceGenerator referenceGenerator, IRatioCalculator ratioCalculator)
