@@ -435,13 +435,10 @@ namespace CanvasSomaticCaller
             }
 
             CanvasSegment.AssignQualityScores(this.Segments, CanvasSegment.QScoreMethod.Logistic, this.somaticCallerQscoreParameters);
-            this.FilterCNVCalls();
-
+            
             // Merge *neighboring* segments that got the same copy number call.
             // Enrichment is not allowed to merge non-adjacent segments, since many of those merges would
             // jump across non-manifest intervals.
-
-
             if (this.IsEnrichment)
             {
                 CanvasSegment.MergeSegments(ref this.Segments, somaticCallerParameters.MinimumCallSize, 1);
@@ -450,6 +447,8 @@ namespace CanvasSomaticCaller
             {
                 CanvasSegment.MergeSegmentsUsingExcludedIntervals(ref this.Segments, somaticCallerParameters.MinimumCallSize, ExcludedIntervals);
             }
+
+            CanvasSegment.FilterSegments(QualityFilterThreshold, Segments);
 
             if (this.CNOracle != null)
             {
@@ -464,33 +463,6 @@ namespace CanvasSomaticCaller
             CanvasSegment.WriteSegments(outputVCFPath, this.Segments, Model?.DiploidCoverage, referenceFolder, name, ExtraHeaders, this.ReferencePloidy, QualityFilterThreshold);
 
             return 0;
-        }
-
-        /// <summary>
-        /// Set segment.Filter for each of our segments.
-        /// </summary>
-        protected void FilterCNVCalls()
-        {
-            string qualityFilter = $"q{QualityFilterThreshold}";
-            foreach (var segment in this.Segments)
-            {
-                string filter = null;
-                if (segment.QScore < QualityFilterThreshold)
-                {
-                    filter = qualityFilter;
-                }
-                if (segment.End - segment.Begin < 10000)
-                {
-                    if (filter != null)
-                        filter = filter + ";L10kb";
-                    else
-                        filter = "L10kb";
-                }
-                if (filter == null)
-                    filter = "PASS";
-
-                segment.Filter = filter;
-            }
         }
 
         /// <summary>

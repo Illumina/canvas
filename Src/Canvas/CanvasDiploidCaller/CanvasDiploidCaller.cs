@@ -25,8 +25,8 @@ namespace CanvasDiploidCaller
         static protected int MinimumVariantFrequenciesForInformativeSegment = 50;
         protected int MedianHetSnpsDistance = 463; // based on NA12878 VFResults.txt.gz file
         CopyNumberOracle CNOracle = null;
-        public CanvasCommon.QualityScoreParameters germlineScoreParameters;
-
+        public QualityScoreParameters germlineScoreParameters;
+        public int QualityFilterThreshold { get; set; } = 10;
 
         // File paths:
         public string TempFolder;
@@ -391,7 +391,7 @@ namespace CanvasDiploidCaller
             if (this.Segments.Count == 0)
             {
                 Console.WriteLine("CanvasDiploidCaller: No segments loaded; no CNV calls will be made.");
-                CanvasSegment.WriteSegments(outFile, this.Segments, Model.DiploidCoverage, referenceFolder, sampleName, null, null);
+                CanvasSegment.WriteSegments(outFile, this.Segments, Model.DiploidCoverage, referenceFolder, sampleName, null, null, QualityFilterThreshold);
                 return 0;
             }
             PloidyInfo ploidy = null;
@@ -461,6 +461,8 @@ namespace CanvasDiploidCaller
             // Merge neighboring segments that got the same copy number call.
             CanvasSegment.MergeSegments(ref this.Segments);
             CanvasSegment.AssignQualityScores(this.Segments, CanvasSegment.QScoreMethod.LogisticGermline, germlineScoreParameters);
+            CanvasSegment.FilterSegments(QualityFilterThreshold, Segments);
+
             List<string> extraHeaders = new List<string>();
             string coverageOutputPath = CanvasCommon.Utilities.GetCoverageAndVariantFrequencyOutputPath(outFile);
             CanvasSegment.WriteCoveragePlotData(this.Segments, Model.DiploidCoverage, ploidy, coverageOutputPath, referenceFolder);
@@ -472,7 +474,7 @@ namespace CanvasDiploidCaller
 
             if (ploidy != null && !string.IsNullOrEmpty(ploidy.HeaderLine)) extraHeaders.Add(ploidy.HeaderLine);
 
-            CanvasSegment.WriteSegments(outFile, this.Segments, Model.DiploidCoverage, referenceFolder, sampleName, extraHeaders, ploidy);
+            CanvasSegment.WriteSegments(outFile, this.Segments, Model.DiploidCoverage, referenceFolder, sampleName, extraHeaders, ploidy, QualityFilterThreshold);
             return 0;
         }
     }
