@@ -458,13 +458,17 @@ namespace CanvasDiploidCaller
                 AssignPloidyCallsDistance(Model, segments, medianVariantCoverage);
             }
 
+            CanvasSegment.AssignQualityScores(this.Segments, CanvasSegment.QScoreMethod.LogisticGermline, germlineScoreParameters);
+            
             // Merge neighboring segments that got the same copy number call.
+            // merging segments requires quality scores so we do it after quality scores have been assigned
             CanvasSegment.MergeSegments(ref this.Segments);
+            // recalculating qscores after merging segments improves performance!
             CanvasSegment.AssignQualityScores(this.Segments, CanvasSegment.QScoreMethod.LogisticGermline, germlineScoreParameters);
             CanvasSegment.FilterSegments(QualityFilterThreshold, Segments);
 
             List<string> extraHeaders = new List<string>();
-            string coverageOutputPath = CanvasCommon.Utilities.GetCoverageAndVariantFrequencyOutputPath(outFile);
+            string coverageOutputPath = Utilities.GetCoverageAndVariantFrequencyOutputPath(outFile);
             CanvasSegment.WriteCoveragePlotData(this.Segments, Model.DiploidCoverage, ploidy, coverageOutputPath, referenceFolder);
 
             if (this.CNOracle != null)

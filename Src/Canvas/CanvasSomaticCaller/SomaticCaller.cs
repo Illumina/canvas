@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.IO;
-using System.Runtime.CompilerServices;
 using SequencingFiles;
 using CanvasCommon;
 using SequencingFiles.Vcf;
@@ -435,8 +434,9 @@ namespace CanvasSomaticCaller
             }
 
             CanvasSegment.AssignQualityScores(this.Segments, CanvasSegment.QScoreMethod.Logistic, this.somaticCallerQscoreParameters);
-            
+
             // Merge *neighboring* segments that got the same copy number call.
+            // merging segments requires quality scores so we do it after quality scores have been assigned
             // Enrichment is not allowed to merge non-adjacent segments, since many of those merges would
             // jump across non-manifest intervals.
             if (this.IsEnrichment)
@@ -447,7 +447,8 @@ namespace CanvasSomaticCaller
             {
                 CanvasSegment.MergeSegmentsUsingExcludedIntervals(ref this.Segments, somaticCallerParameters.MinimumCallSize, ExcludedIntervals);
             }
-
+            // recalculating quality scores doesn't seem to have any effect, but we do it for consistency with the diploid caller where it seems to matter
+            CanvasSegment.AssignQualityScores(this.Segments, CanvasSegment.QScoreMethod.Logistic, this.somaticCallerQscoreParameters);
             CanvasSegment.FilterSegments(QualityFilterThreshold, Segments);
 
             if (this.CNOracle != null)
