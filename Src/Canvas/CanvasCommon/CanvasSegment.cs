@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.IO;
-using System.Runtime.CompilerServices;
 using SequencingFiles;
 
 namespace CanvasCommon
@@ -127,7 +126,7 @@ namespace CanvasCommon
                         counts.Add((double)count);
                 }
             }
-            double mu = CanvasCommon.Utilities.Median(counts);
+            double mu = Utilities.Median(counts);
             return mu;
         }
 
@@ -271,7 +270,7 @@ namespace CanvasCommon
         /// Outputs the copy number calls to a text file.
         /// </summary>
         public static void WriteSegments(string outVcfPath, List<CanvasSegment> segments, double? diploidCoverage, string wholeGenomeFastaDirectory, string sampleName,
-            List<string> extraHeaders, PloidyInfo ploidy, int qualityThreshold = 10)
+            List<string> extraHeaders, PloidyInfo ploidy, int qualityThreshold)
         {
             using (BgzipOrStreamWriter writer = new BgzipOrStreamWriter(outVcfPath))
             {
@@ -851,7 +850,7 @@ namespace CanvasCommon
                 case QScorePredictor.BinCv:
                     if (this.Counts.Count == 0) return 0;
                     if (this.Counts.Average() == 0) return 0;
-                    return CanvasCommon.Utilities.CoefficientOfVariation(this.Counts);
+                    return Utilities.CoefficientOfVariation(this.Counts);
 
                 case QScorePredictor.MafCount:
                     return this.VariantFrequencies.Count;
@@ -863,7 +862,7 @@ namespace CanvasCommon
                 case QScorePredictor.MafCv:
                     if (this.VariantFrequencies.Count == 0) return 0;
                     if (this.VariantFrequencies.Average() == 0) return 0;
-                    return CanvasCommon.Utilities.CoefficientOfVariation(this.VariantFrequencies);
+                    return Utilities.CoefficientOfVariation(this.VariantFrequencies);
 
                 case QScorePredictor.LogMafCv:
                     return Math.Log10(1 + GetQScorePredictor(QScorePredictor.MafCv));
@@ -889,5 +888,31 @@ namespace CanvasCommon
             return 0;
         }
 
+        /// <summary>
+        /// Set segment.Filter for each of our segments.
+        /// </summary>
+        public static void FilterSegments(int qualityFilterThreshold, List<CanvasSegment> segments)
+        {
+            string qualityFilter = $"q{qualityFilterThreshold}";
+            foreach (var segment in segments)
+            {
+                string filter = null;
+                if (segment.QScore < qualityFilterThreshold)
+                {
+                    filter = qualityFilter;
+                }
+                if (segment.End - segment.Begin < 10000)
+                {
+                    if (filter != null)
+                        filter = filter + ";L10kb";
+                    else
+                        filter = "L10kb";
+                }
+                if (filter == null)
+                    filter = "PASS";
+
+                segment.Filter = filter;
+            }
+        }
     }
 }
