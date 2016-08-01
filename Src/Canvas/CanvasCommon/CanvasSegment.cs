@@ -374,6 +374,26 @@ namespace CanvasCommon
         }
 
         /// <summary>
+        /// Work out how many counts we expect to see for a "typical" plot point, and exclude plotting
+        /// of points which have very little data available (e.g. parts of chrY), given our coverage and bin size.
+        /// Old hard-coded cutoff was 30.
+        /// </summary>
+        /// <returns></returns>
+        private static int GetMinimumBinsForCoveragePlotPoint(List<CanvasSegment> segments, int pointLength)
+        {
+            long totalBins = 0;
+            long totalLength = 0;
+            foreach (var segment in segments)
+            {
+                totalBins += segment.Counts.Count;
+                totalLength += segment.End - segment.Begin;
+            }
+            
+            // Plot points that have at least 25% as much coverage info as we expect to see on average
+            return Math.Max(1, (int)(0.25f * totalBins / (totalLength / pointLength)));
+        }
+
+        /// <summary>
         /// Generate a tabular file with information about coverage and allele frequency for each chunk of the genome.
         /// This file can be used to generate a pretty plot of coverage versus MAF.  
         /// </summary>
@@ -382,19 +402,8 @@ namespace CanvasCommon
         {
             if (segments.Any() && !normalDiploidCoverage.HasValue)
                 throw new ApplicationException("normal diploid coverage must be specified");
-
-            // Tuning the plot: Let's work out how many counts we expect to see for a "typical" plot point, and exclude plotting
-            // of points which have very little data available (e.g. parts of chrY) given our coverage / bin size.
-            long totalBins = 0;
-            long totalLength = 0;
-            foreach (var segment in segments)
-            {
-                totalBins += segment.Counts.Count;
-                totalLength += segment.End - segment.Begin;
-            }
             int pointLength = 100000;
-            // Plot points that have at least 25% as much coverage info as we expect to see on average
-            int minimumBinsToPlot = Math.Max(1, (int)(0.25f * totalBins / (totalLength / pointLength))); // instead of old hard-coded cutoff of 30
+            int minimumBinsToPlot = GetMinimumBinsForCoveragePlotPoint(segments, pointLength);
 
             Dictionary<string, List<CanvasSegment>> segmentsByChromosome = GetSegmentsByChromosome(segments);
             GenomeMetadata genome = new GenomeMetadata();
