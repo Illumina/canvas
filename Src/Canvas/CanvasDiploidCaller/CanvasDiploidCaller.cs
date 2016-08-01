@@ -409,8 +409,6 @@ namespace CanvasDiploidCaller
             float[] diploidCounts = AggregateCounts(ref this.Segments);
             DiploidCoverage = CanvasCommon.Utilities.Mean(diploidCounts);
             CoverageWeightingFactor = CoverageWeighting / DiploidCoverage;
-
-
             // new coverage model
             this.Model = new CoverageModel();
             Model.DiploidCoverage = DiploidCoverage;

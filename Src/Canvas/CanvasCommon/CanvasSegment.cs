@@ -383,10 +383,23 @@ namespace CanvasCommon
             if (segments.Any() && !normalDiploidCoverage.HasValue)
                 throw new ApplicationException("normal diploid coverage must be specified");
 
+            // Tuning the plot: Let's work out how many counts we expect to see for a "typical" plot point, and exclude plotting
+            // of points which have very little data available (e.g. parts of chrY) given our coverage / bin size.
+            long totalBins = 0;
+            long totalLength = 0;
+            foreach (var segment in segments)
+            {
+                totalBins += segment.Counts.Count;
+                totalLength += segment.End - segment.Begin;
+            }
+            int pointLength = 100000;
+            // Plot points that have at least 25% as much coverage info as we expect to see on average
+            int minimumBinsToPlot = Math.Max(1, (int)(0.25f * totalBins / (totalLength / pointLength))); // instead of old hard-coded cutoff of 30
+
             Dictionary<string, List<CanvasSegment>> segmentsByChromosome = GetSegmentsByChromosome(segments);
             GenomeMetadata genome = new GenomeMetadata();
             genome.Deserialize(Path.Combine(referenceFolder, "GenomeSize.xml"));
-            int pointLength = 100000;
+            
             List<float> counts = new List<float>();
             List<float> MAF = new List<float>();
             List<float> VF = new List<float>();
@@ -500,7 +513,7 @@ namespace CanvasCommon
 
                         // Write counts if we have reasonable amounts of data; write MAF if we have reasonable amounts of data.
                         // (Note: Observed that for germline data on chrY we often had well under 100 counts given the new, smaller bin size)
-                        if (counts.Count >= 30)
+                        if (counts.Count >= minimumBinsToPlot)
                         {
                             writer.Write("{0}\t", majorCopyNumber);
                             writer.Write("{0}\t", majorChromosomeCount);

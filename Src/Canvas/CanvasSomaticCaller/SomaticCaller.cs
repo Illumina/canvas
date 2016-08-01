@@ -396,8 +396,6 @@ namespace CanvasSomaticCaller
             {
                 ExtraHeaders = CallCNVUsingSNVFrequency(localSDmertic, referenceFolder, clusteringMode);
             }
-
-
             catch (Exception e)
             {
                 // In a training mode (INTERNAL) somatic model is initialized with a large number of parameter trials. 
