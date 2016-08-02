@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Diagnostics;
 using Canvas.CommandLineParsing;
 using CanvasCommon;
 
