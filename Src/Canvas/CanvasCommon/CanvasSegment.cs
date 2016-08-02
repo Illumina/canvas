@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.IO;
-using System.Runtime.CompilerServices;
 using SequencingFiles;
 
 namespace CanvasCommon
@@ -127,7 +126,7 @@ namespace CanvasCommon
                         counts.Add((double)count);
                 }
             }
-            double mu = CanvasCommon.Utilities.Median(counts);
+            double mu = Utilities.Median(counts);
             return mu;
         }
 
@@ -271,7 +270,7 @@ namespace CanvasCommon
         /// Outputs the copy number calls to a text file.
         /// </summary>
         public static void WriteSegments(string outVcfPath, List<CanvasSegment> segments, double? diploidCoverage, string wholeGenomeFastaDirectory, string sampleName,
-            List<string> extraHeaders, PloidyInfo ploidy, int qualityThreshold = 10)
+            List<string> extraHeaders, PloidyInfo ploidy, int qualityThreshold)
         {
             using (BgzipOrStreamWriter writer = new BgzipOrStreamWriter(outVcfPath))
             {
@@ -374,6 +373,26 @@ namespace CanvasCommon
         }
 
         /// <summary>
+        /// Work out how many counts we expect to see for a "typical" plot point, and exclude plotting
+        /// of points which have very little data available (e.g. parts of chrY), given our coverage and bin size.
+        /// Old hard-coded cutoff was 30.
+        /// </summary>
+        /// <returns></returns>
+        private static int GetMinimumBinsForCoveragePlotPoint(List<CanvasSegment> segments, int pointLength)
+        {
+            long totalBins = 0;
+            long totalLength = 0;
+            foreach (var segment in segments)
+            {
+                totalBins += segment.Counts.Count;
+                totalLength += segment.End - segment.Begin;
+            }
+            
+            // Plot points that have at least 25% as much coverage info as we expect to see on average
+            return Math.Max(1, (int)(0.25f * totalBins / (totalLength / pointLength)));
+        }
+
+        /// <summary>
         /// Generate a tabular file with information about coverage and allele frequency for each chunk of the genome.
         /// This file can be used to generate a pretty plot of coverage versus MAF.  
         /// </summary>
@@ -382,11 +401,13 @@ namespace CanvasCommon
         {
             if (segments.Any() && !normalDiploidCoverage.HasValue)
                 throw new ApplicationException("normal diploid coverage must be specified");
+            int pointLength = 100000;
+            int minimumBinsToPlot = GetMinimumBinsForCoveragePlotPoint(segments, pointLength);
 
             Dictionary<string, List<CanvasSegment>> segmentsByChromosome = GetSegmentsByChromosome(segments);
             GenomeMetadata genome = new GenomeMetadata();
             genome.Deserialize(Path.Combine(referenceFolder, "GenomeSize.xml"));
-            int pointLength = 100000;
+            
             List<float> counts = new List<float>();
             List<float> MAF = new List<float>();
             List<float> VF = new List<float>();
@@ -500,7 +521,7 @@ namespace CanvasCommon
 
                         // Write counts if we have reasonable amounts of data; write MAF if we have reasonable amounts of data.
                         // (Note: Observed that for germline data on chrY we often had well under 100 counts given the new, smaller bin size)
-                        if (counts.Count >= 30)
+                        if (counts.Count >= minimumBinsToPlot)
                         {
                             writer.Write("{0}\t", majorCopyNumber);
                             writer.Write("{0}\t", majorChromosomeCount);
@@ -851,7 +872,7 @@ namespace CanvasCommon
                 case QScorePredictor.BinCv:
                     if (this.Counts.Count == 0) return 0;
                     if (this.Counts.Average() == 0) return 0;
-                    return CanvasCommon.Utilities.CoefficientOfVariation(this.Counts);
+                    return Utilities.CoefficientOfVariation(this.Counts);
 
                 case QScorePredictor.MafCount:
                     return this.VariantFrequencies.Count;
@@ -863,7 +884,7 @@ namespace CanvasCommon
                 case QScorePredictor.MafCv:
                     if (this.VariantFrequencies.Count == 0) return 0;
                     if (this.VariantFrequencies.Average() == 0) return 0;
-                    return CanvasCommon.Utilities.CoefficientOfVariation(this.VariantFrequencies);
+                    return Utilities.CoefficientOfVariation(this.VariantFrequencies);
 
                 case QScorePredictor.LogMafCv:
                     return Math.Log10(1 + GetQScorePredictor(QScorePredictor.MafCv));
@@ -889,5 +910,31 @@ namespace CanvasCommon
             return 0;
         }
 
+        /// <summary>
+        /// Set segment.Filter for each of our segments.
+        /// </summary>
+        public static void FilterSegments(int qualityFilterThreshold, List<CanvasSegment> segments)
+        {
+            string qualityFilter = $"q{qualityFilterThreshold}";
+            foreach (var segment in segments)
+            {
+                string filter = null;
+                if (segment.QScore < qualityFilterThreshold)
+                {
+                    filter = qualityFilter;
+                }
+                if (segment.End - segment.Begin < 10000)
+                {
+                    if (filter != null)
+                        filter = filter + ";L10kb";
+                    else
+                        filter = "L10kb";
+                }
+                if (filter == null)
+                    filter = "PASS";
+
+                segment.Filter = filter;
+            }
+        }
     }
 }

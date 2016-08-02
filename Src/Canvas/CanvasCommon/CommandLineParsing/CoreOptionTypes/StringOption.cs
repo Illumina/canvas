@@ -1,6 +1,6 @@
-using Canvas.CommandLineParsing.OptionProcessing;
+using CanvasCommon.CommandLineParsing.OptionProcessing;
 
-namespace Canvas.CommandLineParsing.CoreOptionTypes
+namespace CanvasCommon.CommandLineParsing.CoreOptionTypes
 {
     public class StringOption : ValueOption<string>
     {
@@ -20,7 +20,7 @@ namespace Canvas.CommandLineParsing.CoreOptionTypes
 
         public override ParsingResult<string> Parse(string value)
         {
-            return ParsingResult<string>.SuccesfulResult(value);
+            return ParsingResult<string>.SuccessfulResult(value);
         }
     }
 }

@@ -1,13 +1,11 @@
-using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using Canvas.CommandLineParsing.CoreOptionTypes;
-using Canvas.CommandLineParsing.OptionProcessing;
+using CanvasCommon.CommandLineParsing.CoreOptionTypes;
 using NDesk.Options;
 
-namespace Canvas.CommandLineParsing
+namespace CanvasCommon.CommandLineParsing.OptionProcessing
 {
     public class OptionData
     {
@@ -111,7 +109,7 @@ namespace Canvas.CommandLineParsing
 
         private static IParsingResult GetParseResult(OptionInfo<string> optionInfo, OptionData optionData)
         {
-            ParsingResult<string> result = ParsingResult<string>.SuccesfulResult(optionData.Data.FirstOrDefault());
+            ParsingResult<string> result = ParsingResult<string>.SuccessfulResult(optionData.Data.FirstOrDefault());
             if (optionData.Data.Count > 1)
                 result = ParsingResult<string>.FailedResult($"Error: {optionInfo.Name} can only be specified once");
             return optionInfo.Parse(new SuccessfulResultCollection(optionInfo, result));
@@ -119,7 +117,7 @@ namespace Canvas.CommandLineParsing
 
         private static IParsingResult GetParseResult(OptionInfo<List<string>> multiOptionInfo, OptionData optionData)
         {
-            return multiOptionInfo.Parse(new SuccessfulResultCollection(multiOptionInfo, ParsingResult<List<string>>.SuccesfulResult(optionData.Data)));
+            return multiOptionInfo.Parse(new SuccessfulResultCollection(multiOptionInfo, ParsingResult<List<string>>.SuccessfulResult(optionData.Data)));
         }
 
         private OptionData AddOption(IOptionInfo info, OptionSet set)

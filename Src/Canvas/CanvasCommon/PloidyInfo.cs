@@ -1,8 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using SequencingFiles;
 
 namespace CanvasCommon
@@ -15,6 +12,40 @@ namespace CanvasCommon
         public const int UndersegmentedClusterFlag = -2;
         public string HeaderLine;
         public Dictionary<string, List<PloidyInterval>> PloidyByChromosome = new Dictionary<string, List<PloidyInterval>>();
+        
+        /// <summary>
+        /// Make sure the list of ploidy intervals for a particular chromosome in the PloidyByChromosome dictionary 
+        /// can be found for either chromosome naming convention (e.g. "chrX" and "X") 
+        /// Also make sure that each input chromosome appears in the PloidyByChromosome dictionary.
+        /// If there is currently no entry for a particular chromosome add an empty List of ploidy intervals 
+        /// </summary>
+        public void MakeChromsomeNameAgnosticWithAllChromosomes(IEnumerable<string> chromosomes)
+        {
+            Dictionary<string, List<PloidyInterval>> ploidyByChromosomeAllChromosomes = new Dictionary<string, List<PloidyInterval>>(PloidyByChromosome);
+            foreach (var chromosome in chromosomes)
+            {
+                var altChromosome = chromosome.StartsWith("chr") ? chromosome.Substring(3) : "chr" + chromosome;
+                var ploidyIntervals = new List<PloidyInterval>();
+                if (ploidyByChromosomeAllChromosomes.ContainsKey(chromosome))
+                {
+                    ploidyIntervals = ploidyByChromosomeAllChromosomes[chromosome];
+                }
+                else if (ploidyByChromosomeAllChromosomes.ContainsKey(altChromosome))
+                {
+                    ploidyIntervals = ploidyByChromosomeAllChromosomes[altChromosome];
+                }
+                if (!ploidyByChromosomeAllChromosomes.ContainsKey(chromosome))
+                {
+                    ploidyByChromosomeAllChromosomes.Add(chromosome, ploidyIntervals);
+                }
+                if (!ploidyByChromosomeAllChromosomes.ContainsKey(altChromosome))
+                {
+                    ploidyByChromosomeAllChromosomes.Add(altChromosome, ploidyIntervals);
+                }
+            }
+            PloidyByChromosome = ploidyByChromosomeAllChromosomes;
+        }
+
         #endregion
 
         /// <summary>
@@ -54,6 +85,7 @@ namespace CanvasCommon
         public static PloidyInfo LoadPloidyFromBedFile(string filePath)
         {
             PloidyInfo ploidy = new PloidyInfo();
+            if (string.IsNullOrEmpty(filePath)) return ploidy;
             int count = 0;
             using (GzipReader reader = new GzipReader(filePath))
             {
@@ -75,7 +107,7 @@ namespace CanvasCommon
                     {
                         ploidy.PloidyByChromosome[chromosome] = new List<PloidyInterval>();
                     }
-                    PloidyInterval interval = new PloidyInterval();
+                    PloidyInterval interval = new PloidyInterval(chromosome);
                     interval.Start = int.Parse(bits[1]);
                     interval.End = int.Parse(bits[2]);
                     interval.Ploidy = int.Parse(bits[4]);
@@ -90,9 +122,20 @@ namespace CanvasCommon
 
     public class PloidyInterval
     {
+        public string Chromosome { get; }
         public int Start;
         public int End;
         public int Ploidy;
+
+        public PloidyInterval(string chromosome)
+        {
+            Chromosome = chromosome;
+        }
+
+        public override string ToString()
+        {
+            return $"{Chromosome}:{Start + 1}-{End}";
+        }
     }
 
     /// <summary>

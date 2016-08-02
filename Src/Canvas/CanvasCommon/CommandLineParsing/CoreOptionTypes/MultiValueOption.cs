@@ -1,7 +1,7 @@
 using System.Collections.Generic;
-using Canvas.CommandLineParsing.OptionProcessing;
+using CanvasCommon.CommandLineParsing.OptionProcessing;
 
-namespace Canvas.CommandLineParsing.CoreOptionTypes
+namespace CanvasCommon.CommandLineParsing.CoreOptionTypes
 {
     public class MultiValueOption<T> : Option<List<T>>
     {
@@ -32,7 +32,7 @@ namespace Canvas.CommandLineParsing.CoreOptionTypes
                     return ParsingResult<List<T>>.FailedResult(result.ErrorMessage);
                 results.Add(result.Result);
             }
-            return ParsingResult<List<T>>.SuccesfulResult(results);
+            return ParsingResult<List<T>>.SuccessfulResult(results);
         }
 
         public override OptionCollection<List<T>> GetOptions()

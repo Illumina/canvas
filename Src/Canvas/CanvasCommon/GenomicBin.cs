@@ -60,5 +60,9 @@ namespace CanvasCommon
             get { return Stop - Start; }
         }
 
+        public bool IsSameBin(GenomicBin bin)
+        {
+            return Chromosome == bin.Chromosome && Start == bin.Start && Stop == bin.Stop;
+        }
     }
 }
