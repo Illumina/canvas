@@ -49,6 +49,23 @@ namespace CanvasCommon
             return IterateThroughTextFile(infile).ToList();
         }
 
+        public static void GetGenomicBinsByChrom(string path, out List<string> chromosomes,
+            out Dictionary<string, List<GenomicBin>> binsByChrom)
+        {
+            chromosomes = new List<string>();
+            binsByChrom = new Dictionary<string, List<GenomicBin>>();
+
+            foreach (var bin in IterateThroughTextFile(path))
+            {
+                if (!binsByChrom.ContainsKey(bin.Chromosome))
+                {
+                    chromosomes.Add(bin.Chromosome);
+                    binsByChrom[bin.Chromosome] = new List<GenomicBin>();
+                }
+                binsByChrom[bin.Chromosome].Add(bin);
+            }
+        }
+
         // write localSD metric
         public static void WriteLocalSDToTextFile(string outfile, double localSD) 
         {

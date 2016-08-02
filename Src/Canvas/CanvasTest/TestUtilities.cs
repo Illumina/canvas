@@ -193,5 +193,18 @@ namespace CanvasTest
             double dotProduct = Utilities.DotProduct(x, y); // should be 0
             Assert.True(Math.Abs(dotProduct) < 0.001);
         }
+
+        [Fact]
+        public void TestMedianFilter()
+        {
+            float[] values = new float[] { 2, 1, 3, 5, 4, 6, 7, 8};
+            float[] expected = new float[] { 1.5f, 2, 3, 4, 5, 6, 7, 7.5f };
+            var smoothedValues = Utilities.MedianFilter(values, 1).ToArray();
+
+            for (int i = 0; i < values.Length; i++)
+            {
+                Assert.True(Math.Abs(smoothedValues[i] - expected[i]) < 0.001);
+            }
+        }
     }
 }

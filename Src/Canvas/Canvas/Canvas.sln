@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 14
-VisualStudioVersion = 14.0.25123.0
+VisualStudioVersion = 14.0.23107.0
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CanvasCommon", "..\CanvasCommon\CanvasCommon.csproj", "{EC8755F1-74BD-4A1F-9B82-5133D2F6A93B}"
 EndProject
@@ -147,12 +147,12 @@ Global
 		{A08C4A1E-133E-4339-89E4-54651D37BAF0}.Release|x64.Build.0 = Release|x64
 		{74169E0F-DB8F-4A86-AEBE-C7DC4E15F916}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{74169E0F-DB8F-4A86-AEBE-C7DC4E15F916}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{74169E0F-DB8F-4A86-AEBE-C7DC4E15F916}.Debug|x64.ActiveCfg = Debug|Any CPU
-		{74169E0F-DB8F-4A86-AEBE-C7DC4E15F916}.Debug|x64.Build.0 = Debug|Any CPU
+		{74169E0F-DB8F-4A86-AEBE-C7DC4E15F916}.Debug|x64.ActiveCfg = Debug|x64
+		{74169E0F-DB8F-4A86-AEBE-C7DC4E15F916}.Debug|x64.Build.0 = Debug|x64
 		{74169E0F-DB8F-4A86-AEBE-C7DC4E15F916}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{74169E0F-DB8F-4A86-AEBE-C7DC4E15F916}.Release|Any CPU.Build.0 = Release|Any CPU
-		{74169E0F-DB8F-4A86-AEBE-C7DC4E15F916}.Release|x64.ActiveCfg = Release|Any CPU
-		{74169E0F-DB8F-4A86-AEBE-C7DC4E15F916}.Release|x64.Build.0 = Release|Any CPU
+		{74169E0F-DB8F-4A86-AEBE-C7DC4E15F916}.Release|x64.ActiveCfg = Release|x64
+		{74169E0F-DB8F-4A86-AEBE-C7DC4E15F916}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
