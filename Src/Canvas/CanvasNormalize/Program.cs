@@ -14,6 +14,19 @@ namespace CanvasNormalize
 {
     class Program
     {
+        /// <summary>
+        /// Displays help at the command line.
+        /// </summary>
+        /// <param name="p">NDesk OptionSet containing command line parameters.</param>
+        static void ShowHelp(OptionSet p)
+        {
+            Console.WriteLine("Usage: CanvasSmooth.exe [OPTIONS]+");
+            Console.WriteLine("Smooth bin counts by repeated median filters");
+            Console.WriteLine();
+            Console.WriteLine("Options:");
+            p.WriteOptionDescriptions(Console.Out);
+        }
+
         static int Main(string[] args)
         {
             CanvasCommon.Utilities.LogCommandLine(args);
