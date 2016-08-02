@@ -1,8 +1,8 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
-using Canvas.CommandLineParsing.CoreOptionTypes;
+using CanvasCommon.CommandLineParsing.CoreOptionTypes;
 
-namespace Canvas.CommandLineParsing.OptionProcessing
+namespace CanvasCommon.CommandLineParsing.OptionProcessing
 {
     public interface IResultCollection
     {

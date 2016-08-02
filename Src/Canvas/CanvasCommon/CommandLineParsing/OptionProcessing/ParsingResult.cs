@@ -1,7 +1,7 @@
 ﻿using System;
 using ILMNcommon.Common;
 
-namespace Canvas.CommandLineParsing.OptionProcessing
+namespace CanvasCommon.CommandLineParsing.OptionProcessing
 {
     public interface IParsingResult
     {
@@ -29,7 +29,7 @@ namespace Canvas.CommandLineParsing.OptionProcessing
             }
             return new ParsingResult<T>(false, default(T), errorMessage);
         }
-        public static ParsingResult<T> SuccesfulResult(T result)
+        public static ParsingResult<T> SuccessfulResult(T result)
         {
             return new ParsingResult<T>(true, result, "");
         }

@@ -1,5 +1,5 @@
-using Canvas.CommandLineParsing.CoreOptionTypes;
-using Canvas.CommandLineParsing.OptionProcessing;
+using CanvasCommon.CommandLineParsing.CoreOptionTypes;
+using CanvasCommon.CommandLineParsing.OptionProcessing;
 
 namespace Canvas.CommandLineParsing
 {
@@ -20,7 +20,7 @@ namespace Canvas.CommandLineParsing
             TumorNormalOptions tumorNormalOptions = parseInput.Get(TumorNormalOptionsParser);
             var normalBam = parseInput.Get(NormalBam);
             var manifest = parseInput.Get(Manifest);
-            return ParsingResult<IModeRunner>.SuccesfulResult(new TumorNormalEnrichmentRunner(commonOptions, tumorNormalOptions, normalBam, manifest));
+            return ParsingResult<IModeRunner>.SuccessfulResult(new TumorNormalEnrichmentRunner(commonOptions, tumorNormalOptions, normalBam, manifest));
         }
 
         public override OptionCollection<IModeRunner> GetOptions()

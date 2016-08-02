@@ -1,10 +1,9 @@
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using Canvas.CommandLineParsing.CoreOptionTypes;
-using Canvas.CommandLineParsing.OptionProcessing;
+using CanvasCommon.CommandLineParsing.CoreOptionTypes;
+using CanvasCommon.CommandLineParsing.OptionProcessing;
 using ILMNcommon.Common;
 
 namespace Canvas.CommandLineParsing
@@ -34,7 +33,7 @@ namespace Canvas.CommandLineParsing
             var result = options.Parse(args.Skip(1));
             ParsingResult<IModeLauncher> failedResult;
             if (!result.RemainingArgs.Any() && HandleBaseOptions(result.Get(BaseOptionsParser).Result, standardWriter, mode))
-                return ParsingResult<IModeLauncher>.SuccesfulResult(new NullModeLauncher());
+                return ParsingResult<IModeLauncher>.SuccessfulResult(new NullModeLauncher());
 
             if (!result.Validate(out failedResult))
             {
@@ -44,7 +43,7 @@ namespace Canvas.CommandLineParsing
                 return failedResult;
             }
             var runner = result.Get(mode).Result;
-            return ParsingResult<IModeLauncher>.SuccesfulResult(new ModeLauncher(runner, args, GetVersion(), mode.Name));
+            return ParsingResult<IModeLauncher>.SuccessfulResult(new ModeLauncher(runner, args, GetVersion(), mode.Name));
         }
 
         private ParsingResult<IModeLauncher> GetMissingModeResult(IEnumerable<string> args, TextWriter standardWriter, TextWriter errorWriter)
@@ -54,7 +53,7 @@ namespace Canvas.CommandLineParsing
             if (baseOptionsResult.Success)
             {
                 if (HandleBaseOptions(baseOptionsResult.Result, standardWriter))
-                    return ParsingResult<IModeLauncher>.SuccesfulResult(new NullModeLauncher());
+                    return ParsingResult<IModeLauncher>.SuccessfulResult(new NullModeLauncher());
             }
             else
             {

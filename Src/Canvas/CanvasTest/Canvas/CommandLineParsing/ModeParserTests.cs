@@ -1,7 +1,7 @@
 ﻿using System.IO;
 using Canvas.CommandLineParsing;
-using Canvas.CommandLineParsing.CoreOptionTypes;
-using Canvas.CommandLineParsing.OptionProcessing;
+using CanvasCommon.CommandLineParsing.CoreOptionTypes;
+using CanvasCommon.CommandLineParsing.OptionProcessing;
 using Isas.Shared;
 using Ploeh.AutoFixture.Xunit2;
 using UnitTests;

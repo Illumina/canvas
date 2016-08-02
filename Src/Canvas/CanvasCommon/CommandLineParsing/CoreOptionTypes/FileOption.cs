@@ -1,7 +1,7 @@
-using Canvas.CommandLineParsing.OptionProcessing;
+using CanvasCommon.CommandLineParsing.OptionProcessing;
 using Isas.Shared;
 
-namespace Canvas.CommandLineParsing.CoreOptionTypes
+namespace CanvasCommon.CommandLineParsing.CoreOptionTypes
 {
     public class FileOption : ValueOption<IFileLocation>
     {
@@ -23,7 +23,7 @@ namespace Canvas.CommandLineParsing.CoreOptionTypes
         {
             IFileLocation location = value == null ? null : new FileLocation(value);
             if (location == null || location.Exists)
-                return ParsingResult<IFileLocation>.SuccesfulResult(location);
+                return ParsingResult<IFileLocation>.SuccessfulResult(location);
             return ParsingResult<IFileLocation>.FailedResult($"Error: {location} does not exist");
         }
     }

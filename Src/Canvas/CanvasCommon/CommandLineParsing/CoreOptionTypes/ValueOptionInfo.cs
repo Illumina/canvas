@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace Canvas.CommandLineParsing.CoreOptionTypes
+namespace CanvasCommon.CommandLineParsing.CoreOptionTypes
 {
     public class ValueOptionInfo<T> : OptionInfo<T>
     {

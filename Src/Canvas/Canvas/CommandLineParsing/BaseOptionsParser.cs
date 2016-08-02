@@ -1,5 +1,5 @@
-﻿using Canvas.CommandLineParsing.CoreOptionTypes;
-using Canvas.CommandLineParsing.OptionProcessing;
+﻿using CanvasCommon.CommandLineParsing.CoreOptionTypes;
+using CanvasCommon.CommandLineParsing.OptionProcessing;
 
 namespace Canvas.CommandLineParsing
 {
@@ -12,7 +12,7 @@ namespace Canvas.CommandLineParsing
         {
             var helpResult = parseInput.Get(Help);
             var versionResult = parseInput.Get(Version);
-            return ParsingResult<BaseOptions>.SuccesfulResult(new BaseOptions(helpResult, versionResult));
+            return ParsingResult<BaseOptions>.SuccessfulResult(new BaseOptions(helpResult, versionResult));
         }
 
         public override OptionCollection<BaseOptions> GetOptions()

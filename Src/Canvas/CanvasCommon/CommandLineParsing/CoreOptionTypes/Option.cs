@@ -1,8 +1,8 @@
 using System.Collections.Generic;
 using System.IO;
-using Canvas.CommandLineParsing.OptionProcessing;
+using CanvasCommon.CommandLineParsing.OptionProcessing;
 
-namespace Canvas.CommandLineParsing.CoreOptionTypes
+namespace CanvasCommon.CommandLineParsing.CoreOptionTypes
 {
     public interface IOption
     {
