@@ -1,5 +1,5 @@
-using Canvas.CommandLineParsing.CoreOptionTypes;
-using Canvas.CommandLineParsing.OptionProcessing;
+using CanvasCommon.CommandLineParsing.CoreOptionTypes;
+using CanvasCommon.CommandLineParsing.OptionProcessing;
 
 namespace Canvas.CommandLineParsing
 {
@@ -16,7 +16,7 @@ namespace Canvas.CommandLineParsing
         {
             CommonOptions commonOptions = parseInput.Get(CommonOptionsParser);
             var bam = parseInput.Get(Bam);
-            return ParsingResult<IModeRunner>.SuccesfulResult(new GermlineWgsRunner(commonOptions, bam));
+            return ParsingResult<IModeRunner>.SuccessfulResult(new GermlineWgsRunner(commonOptions, bam));
         }
 
         public override OptionCollection<IModeRunner> GetOptions()

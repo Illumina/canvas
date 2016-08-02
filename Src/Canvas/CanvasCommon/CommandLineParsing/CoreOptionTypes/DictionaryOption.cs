@@ -1,9 +1,9 @@
 using System.Collections.Generic;
 using System.Linq;
-using Canvas.CommandLineParsing.OptionProcessing;
+using CanvasCommon.CommandLineParsing.OptionProcessing;
 using ILMNcommon.Common;
 
-namespace Canvas.CommandLineParsing.CoreOptionTypes
+namespace CanvasCommon.CommandLineParsing.CoreOptionTypes
 {
     public class DictionaryOption : Option<Dictionary<string, string>>
     {
@@ -51,7 +51,7 @@ namespace Canvas.CommandLineParsing.CoreOptionTypes
                 }
                 result.Add(key, value);
             }
-            return ParsingResult<Dictionary<string, string>>.SuccesfulResult(result);
+            return ParsingResult<Dictionary<string, string>>.SuccessfulResult(result);
         }
     }
 }

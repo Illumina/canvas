@@ -1,8 +1,8 @@
 using System.Collections.Generic;
 using System.Linq;
-using Canvas.CommandLineParsing.OptionProcessing;
+using CanvasCommon.CommandLineParsing.OptionProcessing;
 
-namespace Canvas.CommandLineParsing.CoreOptionTypes
+namespace CanvasCommon.CommandLineParsing.CoreOptionTypes
 {
     public class RequiredMultiOptionInfo : ValueOptionInfo<List<string>>
     {
@@ -19,7 +19,7 @@ namespace Canvas.CommandLineParsing.CoreOptionTypes
             List<string> value = parseInput.Get(this);
             if (!value.Any())
                 return ParsingResult<List<string>>.FailedResult($"Error: {Name} is a required option");
-            return ParsingResult<List<string>>.SuccesfulResult(value);
+            return ParsingResult<List<string>>.SuccessfulResult(value);
         }
     }
 }

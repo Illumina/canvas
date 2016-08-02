@@ -1,6 +1,6 @@
-using Canvas.CommandLineParsing.OptionProcessing;
+using CanvasCommon.CommandLineParsing.OptionProcessing;
 
-namespace Canvas.CommandLineParsing.CoreOptionTypes
+namespace CanvasCommon.CommandLineParsing.CoreOptionTypes
 {
     public class FlagOption : Option<bool>
     {
@@ -13,7 +13,7 @@ namespace Canvas.CommandLineParsing.CoreOptionTypes
 
         public ParsingResult<bool> Parse(string value)
         {
-            return ParsingResult<bool>.SuccesfulResult(value != null);
+            return ParsingResult<bool>.SuccessfulResult(value != null);
         }
 
         public override OptionCollection<bool> GetOptions()

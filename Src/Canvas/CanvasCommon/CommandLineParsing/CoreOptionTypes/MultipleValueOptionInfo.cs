@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 
-namespace Canvas.CommandLineParsing.CoreOptionTypes
+namespace CanvasCommon.CommandLineParsing.CoreOptionTypes
 {
     public class MultipleValueOptionInfo : ValueOptionInfo<List<string>>
     {

@@ -1,5 +1,5 @@
-﻿using Canvas.CommandLineParsing.CoreOptionTypes;
-using Canvas.CommandLineParsing.OptionProcessing;
+﻿using CanvasCommon.CommandLineParsing.CoreOptionTypes;
+using CanvasCommon.CommandLineParsing.OptionProcessing;
 
 namespace Canvas.CommandLineParsing
 {
@@ -39,7 +39,7 @@ namespace Canvas.CommandLineParsing
             var customParameters = parseInput.Get(CustomParameters);
             string startCheckpoint = parseInput.Get(StartCheckpoint);
             string stopCheckpoint = parseInput.Get(StopCheckpoint);
-            return ParsingResult<CommonOptions>.SuccesfulResult(
+            return ParsingResult<CommonOptions>.SuccessfulResult(
                 new CommonOptions(
                     bAlleleSites,
                     isDbSnpVcf,

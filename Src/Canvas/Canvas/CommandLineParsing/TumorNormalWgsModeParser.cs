@@ -1,5 +1,5 @@
-using Canvas.CommandLineParsing.CoreOptionTypes;
-using Canvas.CommandLineParsing.OptionProcessing;
+using CanvasCommon.CommandLineParsing.CoreOptionTypes;
+using CanvasCommon.CommandLineParsing.OptionProcessing;
 using Isas.Shared;
 
 namespace Canvas.CommandLineParsing
@@ -17,7 +17,7 @@ namespace Canvas.CommandLineParsing
         {
             CommonOptions commonOptions = parseInput.Get(CommonOptionsParser);
             TumorNormalOptions tumorNormalOptions = parseInput.Get(TumorNormalOptionsParser);
-            return ParsingResult<IModeRunner>.SuccesfulResult(new TumorNormalWgsRunner(commonOptions, tumorNormalOptions));
+            return ParsingResult<IModeRunner>.SuccessfulResult(new TumorNormalWgsRunner(commonOptions, tumorNormalOptions));
         }
 
         public override OptionCollection<IModeRunner> GetOptions()
@@ -49,7 +49,7 @@ namespace Canvas.CommandLineParsing
             var tumorBam = parseInput.Get(TumorBam);
             var somaticVcf = parseInput.Get(SomaticVcf);
 
-            return ParsingResult<TumorNormalOptions>.SuccesfulResult(
+            return ParsingResult<TumorNormalOptions>.SuccessfulResult(
                 new TumorNormalOptions(tumorBam, somaticVcf));
         }
     }

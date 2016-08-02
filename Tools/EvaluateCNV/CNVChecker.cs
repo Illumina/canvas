@@ -386,7 +386,7 @@ namespace EvaluateCNV
                 ? GetCnvCallsFromVcf(cnvCallsPath, includePassingOnly)
                 : GetCnvCallsFromBed(cnvCallsPath);
 
-            ploidyInfo.MakeChromsomeNameAgnosticWithAllChromosomes(calls.Select(call=>call.Chr));
+            ploidyInfo.MakeChromsomeNameAgnosticWithAllChromosomes(calls.Select(call => call.Chr));
             foreach (CNVCall call in calls)
             {
                 int CN = call.CN;
@@ -474,7 +474,7 @@ namespace EvaluateCNV
                     if (interval.CN == 2) continue;
                     int baseCount = interval.Length - interval.BasesExcluded;
                     if (baseCount <= 0) continue;
-                    double accuracy = interval.BasesCalledCorrectly/(double) baseCount;
+                    double accuracy = interval.BasesCalledCorrectly / (double)baseCount;
                     eventAccuracies.Add(accuracy);
                     meanAccuracy += accuracy;
                     //Console.WriteLine("{0}\t{1:F4}", interval.End - interval.Start, accuracy);
@@ -484,7 +484,7 @@ namespace EvaluateCNV
             meanAccuracy /= Math.Max(1, eventAccuracies.Count);
             double medianAccuracy = double.NaN;
             if (eventAccuracies.Count > 0)
-                medianAccuracy = eventAccuracies[eventAccuracies.Count/2];
+                medianAccuracy = eventAccuracies[eventAccuracies.Count / 2];
             Console.WriteLine("Event-level accuracy mean {0:F4} median {1:F4}", meanAccuracy, medianAccuracy);
 
             IEnumerable<CNInterval> allIntervals = KnownCN.SelectMany(kvp => kvp.Value);
