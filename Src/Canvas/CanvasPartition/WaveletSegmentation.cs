@@ -262,7 +262,6 @@ namespace CanvasPartition
             
             while (bpSum != 0)
             {
-
                 int no_parent_coeffs = (int)Math.Floor((double)tree[j].Count() / 5);
                 int no_child_coeffs = 0;
                 for (int i = 0; i < no_parent_coeffs; i++)
@@ -295,7 +294,6 @@ namespace CanvasPartition
                         tree[j + 1][(no_child_coeffs - 1) * 5 + 3 - 1] = tree[j][i * 5 + 3 - 1];
                         tree[j + 1][(no_child_coeffs - 1) * 5 + 5 - 1] = tree[j][i * 5 + 4 - 1];
                         tree[j + 1][(no_child_coeffs - 1) * 5 + 4 - 1] = ind_max + tree[j][i * 5 + 3 - 1] - 1;
-
 
                     } //end if (tree.at(j)[4+5*(i-1)-1]-tree.at(j)[3+5*(i-1)-1]>=1) {
 
