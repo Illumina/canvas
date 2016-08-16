@@ -77,7 +77,11 @@ namespace CanvasNormalize
             Console.WriteLine("CanvasNormalize {0}", System.Reflection.Assembly.GetEntryAssembly().GetName().Version.ToString());
 
             List<string> extraArgs = p.Parse(args);
-
+            if (extraArgs.Count > 0)
+            {
+                Console.WriteLine("* Error: I don't understand the argument '{0}'", extraArgs[0]);
+                needHelp = true;
+            }
             // Check for required arguments. Display the help message if any of them are missing.
             if (parameters.tumorBedFile == null)
             {

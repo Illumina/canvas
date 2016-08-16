@@ -100,7 +100,6 @@ namespace CanvasSomaticCaller
             };
 
             List<string> extraArgs = p.Parse(args);
-
             if (extraArgs.Count > 0)
             {
                 Console.WriteLine("Error: Argument '{0}' not understood", extraArgs[0]);
