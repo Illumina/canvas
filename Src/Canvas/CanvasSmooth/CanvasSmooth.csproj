@@ -54,6 +54,10 @@
     <Prefer32Bit>true</Prefer32Bit>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="Illumina.Common, Version=1.10.0.0, Culture=neutral, processorArchitecture=AMD64">
+      <HintPath>..\Canvas\packages\Illumina.Common.1.10.0\lib\net40\Illumina.Common.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
     <Reference Include="IlluminaCommon, Version=1.5.0.0, Culture=neutral, processorArchitecture=AMD64">
       <HintPath>..\Canvas\packages\IlluminaCommon.1.5.0\lib\net40\IlluminaCommon.dll</HintPath>
       <Private>True</Private>
