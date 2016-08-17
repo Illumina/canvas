@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading;
 using System.Threading.Tasks;
 
 using Isas.Shared;
@@ -31,16 +29,16 @@ namespace CanvasSmooth
 
             // smooth bins on each chromosome
             Dictionary<string, List<GenomicBin>> smoothedBinsByChrom = new Dictionary<string, List<GenomicBin>>();
-            List<ThreadStart> smoothingThreads = new List<ThreadStart>();
+            List<SmoothTask> tasks = new List<SmoothTask>();
             foreach (string chrom in chromosomes)
             {
                 smoothedBinsByChrom[chrom] = new List<GenomicBin>();
                 SmoothTask task = new SmoothTask(MaxHalfWindowSize, binsByChrom[chrom], smoothedBinsByChrom[chrom]);
-                smoothingThreads.Add(new ThreadStart(() => { task.Run(); }));
+                tasks.Add(task);
             }
             Console.WriteLine("Launch smoothing jobs...");
             Console.Out.WriteLine();
-            Parallel.ForEach(smoothingThreads, t => { t.Invoke(); });
+            Parallel.ForEach(tasks, t => t.Run());
             Console.WriteLine("Completed smoothing jobs.");
             Console.Out.WriteLine();
 
