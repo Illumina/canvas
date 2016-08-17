@@ -1,9 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Collections.Specialized;
 using System.Linq;
 using System.Threading.Tasks;
 
+using Illumina.Common;
 using Isas.Shared;
 using CanvasCommon;
 
@@ -24,17 +24,17 @@ namespace CanvasSmooth
         public int Run(IFileLocation inputFile, IFileLocation outputFile)
         {
             // read input bins
-            OrderedDictionary binsByChrom = CanvasIO.GetGenomicBinsByChrom(inputFile.FullName);
+            var binsByChrom = CanvasIO.GetGenomicBinsByChrom(inputFile.FullName);
 
             // smooth bins on each chromosome
             RepeatedMedianSmoother smoother = new RepeatedMedianSmoother(MaxHalfWindowSize);
-            var chromosomes = binsByChrom.Keys.Cast<string>();
+            var chromosomes = binsByChrom.Keys;
             Dictionary<string, List<GenomicBin>> smoothedBinsByChrom = new Dictionary<string, List<GenomicBin>>();
             Console.WriteLine("Launch smoothing jobs...");
             Console.Out.WriteLine();
             Parallel.ForEach(chromosomes, chrom =>
             {
-                smoothedBinsByChrom[chrom] = smoother.Smooth((List<GenomicBin>)binsByChrom[chrom]);
+                smoothedBinsByChrom[chrom] = smoother.Smooth(binsByChrom[chrom]);
             });
             Console.WriteLine("Completed smoothing jobs.");
             Console.Out.WriteLine();

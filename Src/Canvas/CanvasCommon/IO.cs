@@ -1,10 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Collections.Specialized;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.IO;
+using Illumina.Common;
 using SequencingFiles;
 
 namespace CanvasCommon
@@ -55,17 +55,17 @@ namespace CanvasCommon
         /// </summary>
         /// <param name="path"></param>
         /// <returns>OrderedDictionary with string key and List<GenomicBin> value</returns>
-        public static OrderedDictionary GetGenomicBinsByChrom(string path)
+        public static OrderedDictionary<string, List<GenomicBin>> GetGenomicBinsByChrom(string path)
         {
-            OrderedDictionary binsByChrom = new OrderedDictionary();
+            OrderedDictionary<string, List<GenomicBin>> binsByChrom = new OrderedDictionary<string, List<GenomicBin>>();
 
             foreach (var bin in IterateThroughTextFile(path))
             {
-                if (!binsByChrom.Contains(bin.Chromosome))
+                if (!binsByChrom.ContainsKey(bin.Chromosome))
                 {
                     binsByChrom[bin.Chromosome] = new List<GenomicBin>();
                 }
-                ((List<GenomicBin>)binsByChrom[bin.Chromosome]).Add(bin);
+                binsByChrom[bin.Chromosome].Add(bin);
             }
 
             return binsByChrom;
