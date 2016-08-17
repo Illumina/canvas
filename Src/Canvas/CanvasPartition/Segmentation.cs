@@ -11,6 +11,8 @@ using System.Diagnostics;
 using SequencingFiles;
 using MathNet.Numerics.Random;
 using CanvasCommon;
+using Isas.Shared;
+using Utilities = CanvasCommon.Utilities;
 
 namespace CanvasPartition
 {
@@ -47,14 +49,14 @@ namespace CanvasPartition
             this.ReadBEDInput();
         }
 
-        public void SegmentGenome(string outPath, SegmentationMethod method, bool isGermline)
+        public void SegmentGenome(string outPath, SegmentationMethod method, bool isGermline, string commonCNVsbedPath)
         {
             switch (method)
             {
                 case SegmentationMethod.Wavelets:
                 default:// use Wavelets if CBS is not selected       
                     Console.WriteLine("{0} Running Wavelet Partitioning", DateTime.Now);
-                    this.Wavelets(isGermline, madFactor: MadFactor, verbose: 2);
+                    this.Wavelets(isGermline, commonCNVsbedPath, madFactor: MadFactor, verbose: 2);
                     break;
                 case SegmentationMethod.CBS:
                     Console.WriteLine("{0} Running CBS Partitioning", DateTime.Now);
@@ -76,7 +78,7 @@ namespace CanvasPartition
         /// Wavelets: unbalanced HAAR wavelets segmentation 
         /// </summary>
         /// <param name="threshold">wavelets coefficient threshold</param>
-        private void Wavelets(bool isGermline, double thresholdLower = 5, double thresholdUpper = 80, double madFactor = 2, int minSize = 10, int verbose = 1)
+        private void Wavelets(bool isGermline, string commonCNVs, double thresholdLower = 5, double thresholdUpper = 80, double madFactor = 2, int minSize = 10, int verbose = 1)
         {
             Dictionary<string, int[]> inaByChr = new Dictionary<string, int[]>();
             Dictionary<string, double[]> finiteScoresByChr = new Dictionary<string, double[]>();
@@ -123,12 +125,13 @@ namespace CanvasPartition
 
             Dictionary<string, Segment[]> segmentByChr = new Dictionary<string, Segment[]>();
 
-            // when parallelizing we need an RNG for each chromosome to get deterministic results
-            Random seedGenerator = new MersenneTwister(0);
-            Dictionary<string, Random> perChromosomeRandom = new Dictionary<string, Random>();
-            foreach (string chr in this.ScoreByChr.Keys)
+
+            // load common CNV segments
+            Dictionary<string, List<GenomicBin>> commonCNVintervals = null;
+            if (commonCNVs != null)
             {
-                perChromosomeRandom[chr] = new MersenneTwister(seedGenerator.NextFullRangeInt32(), true);
+                commonCNVintervals = Utilities.LoadBedFile(commonCNVs);
+                Utilities.SortAndOverlapCheck(commonCNVintervals, commonCNVs);
             }
 
             tasks = new List<ThreadStart>();
@@ -148,6 +151,20 @@ namespace CanvasPartition
                     List<int> startBreakpointsPos = new List<int>();
                     List<int> endBreakpointPos = new List<int>();
                     List<int> lengthSeg = new List<int>();
+
+                    if (commonCNVs != null)
+                    {
+                        if (commonCNVintervals.ContainsKey(chr))
+                        {
+                            List<GenomicBin> commonCNVintervalsByChr = commonCNVintervals[chr];
+                            List<int> commonBreakpointsStart = new List<int>();
+                            List<int> commonBreakpointsEnd = new List<int>();
+                            MergeCommonRegions(commonCNVintervalsByChr, this.StartByChr[chr], this.EndByChr[chr],
+                                ref commonBreakpointsStart, ref commonBreakpointsEnd);
+                            List<int> oldbreakpoints = breakpoints;
+                            breakpoints = OverlapCommonRegions(oldbreakpoints, commonBreakpointsStart, commonBreakpointsEnd);
+                        }
+                    }
 
                     if (breakpoints.Count() >= 2 && sizeScoreByChr > 10)
                     {
@@ -406,7 +423,92 @@ namespace CanvasPartition
             }
         }
 
-        private void WriteCanvasPartitionResults(string outPath)
+
+        private void MergeCommonRegions(List<GenomicBin> commonRegions, uint[] startByChr, uint[] endByChr, ref List<int> bestMinDistanceStarts, ref List<int> bestMinDistanceStops)
+        {
+            int length = startByChr.Length;
+            int indexByChr = 0;
+            const int distanceThreshold = 10000;
+
+            foreach (GenomicBin commonRegion in commonRegions)
+            {
+
+                if (indexByChr > length)
+                    break;
+                var bestMinDistanceStart = Int32.MaxValue;
+                var startSegment = 0;
+                while (indexByChr < length)
+                {
+                    int tmpMinDistanceStart = Math.Abs(Convert.ToInt32(startByChr[indexByChr] + (endByChr[indexByChr] - startByChr[indexByChr])) - commonRegion.Start);
+                    indexByChr++;
+                    if (tmpMinDistanceStart < bestMinDistanceStart)
+                    {
+                        bestMinDistanceStart = tmpMinDistanceStart;
+                        startSegment = indexByChr - 1;
+                    }
+                    else
+                        break;
+                }
+                var bestMinDistanceStop = Int32.MaxValue;
+                var endSegment = 0;
+                while (indexByChr < length)
+                {
+                    int tmpMinDistanceStop = Math.Abs(Convert.ToInt32(startByChr[indexByChr] + (endByChr[indexByChr] - startByChr[indexByChr])) - commonRegion.Stop);
+                    indexByChr++;
+                    if (tmpMinDistanceStop < bestMinDistanceStop)
+                    {
+                        bestMinDistanceStop = tmpMinDistanceStop;
+                        endSegment = indexByChr - 1;
+                    }               
+                    else
+                        break;
+                }
+                if (bestMinDistanceStart < distanceThreshold && bestMinDistanceStop < distanceThreshold)
+                {
+                    bestMinDistanceStarts.Add(startSegment);
+                    bestMinDistanceStops.Add(endSegment);
+                }
+            }
+        }
+
+        public static List<int> OverlapCommonRegions(List<int> breakpoints, List<int> commonBreakpointsStart,
+            List<int> commonBreakpointsEnd)
+        {
+            List<int> newBreakpoints = new List<int>();
+            int commonBreakpointsIndex = 0;
+            int length = commonBreakpointsStart.Count;
+            foreach (int bkpt in breakpoints)
+            {
+                while (commonBreakpointsIndex < length)
+                {
+
+                    if(bkpt <= commonBreakpointsStart[commonBreakpointsIndex])
+                    {
+                        newBreakpoints.Add(bkpt);
+                        break;
+                    }
+                    else if (bkpt > commonBreakpointsStart[commonBreakpointsIndex] && bkpt < commonBreakpointsEnd[commonBreakpointsIndex])
+                    {
+                        newBreakpoints.Add(commonBreakpointsStart[commonBreakpointsIndex]);
+                        newBreakpoints.Add(commonBreakpointsEnd[commonBreakpointsIndex]);
+                        commonBreakpointsIndex++;
+                        break;
+                    }
+                    else if (bkpt >= commonBreakpointsEnd[commonBreakpointsIndex])
+                    {
+                        newBreakpoints.Add(commonBreakpointsStart[commonBreakpointsIndex]);
+                        newBreakpoints.Add(commonBreakpointsEnd[commonBreakpointsIndex]);
+                        commonBreakpointsIndex++;
+                    }
+                }
+                if (commonBreakpointsIndex > length)
+                    newBreakpoints.Add(bkpt);
+            }
+            return newBreakpoints;
+        }
+
+        private
+            void WriteCanvasPartitionResults(string outPath)
         {
             Dictionary<string, bool> starts = new Dictionary<string, bool>();
             Dictionary<string, bool> stops = new Dictionary<string, bool>();

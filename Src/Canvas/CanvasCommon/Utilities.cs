@@ -802,6 +802,27 @@ namespace CanvasCommon
             return excludedIntervals;
         }
 
+        static public void SortAndOverlapCheck(Dictionary<string, List<GenomicBin>> intervals, string bedPath)
+        {
+            List<string> chrs = new List<string>(intervals.Keys);
+            for (int chrIndex = 0; chrIndex < chrs.Count; chrIndex++)
+            {
+                string chr = chrs[chrIndex];
+                if (intervals[chr].Count < 2)
+                    continue;
+                List<GenomicBin> intervalByChrSorted = intervals[chr].OrderBy(o => o.Start).ToList();
+                for (int index = 0; index < intervalByChrSorted.Count - 1; index++)
+                {
+                    if (intervalByChrSorted[index + 1].Start < intervalByChrSorted[index].Stop)
+                    {
+                        Console.Error.WriteLine("Bed interval file {0} could only contain non-overlapping intervals", bedPath);
+                        Environment.Exit(1);
+                    }
+                }
+                intervals[chr] = intervalByChrSorted;
+            }
+        }
+
         /// <summary>
         /// Estimate the minor allele frequency (MAF) for diploid data at a given coverage level.  This lets us model the fact
         /// that the minor allele frequency will be close to 0.5 but a little bit less (the lower the coverage, the further from 
