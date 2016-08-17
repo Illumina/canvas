@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -49,21 +50,20 @@ namespace CanvasCommon
             return IterateThroughTextFile(infile).ToList();
         }
 
-        public static void GetGenomicBinsByChrom(string path, out List<string> chromosomes,
-            out Dictionary<string, List<GenomicBin>> binsByChrom)
+        public static OrderedDictionary GetGenomicBinsByChrom(string path)
         {
-            chromosomes = new List<string>();
-            binsByChrom = new Dictionary<string, List<GenomicBin>>();
+            OrderedDictionary binsByChrom = new OrderedDictionary();
 
             foreach (var bin in IterateThroughTextFile(path))
             {
-                if (!binsByChrom.ContainsKey(bin.Chromosome))
+                if (!binsByChrom.Contains(bin.Chromosome))
                 {
-                    chromosomes.Add(bin.Chromosome);
                     binsByChrom[bin.Chromosome] = new List<GenomicBin>();
                 }
-                binsByChrom[bin.Chromosome].Add(bin);
+                ((List<GenomicBin>)binsByChrom[bin.Chromosome]).Add(bin);
             }
+
+            return binsByChrom;
         }
 
         // write localSD metric

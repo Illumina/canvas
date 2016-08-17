@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -23,17 +24,17 @@ namespace CanvasSmooth
         public int Run(IFileLocation inputFile, IFileLocation outputFile)
         {
             // read input bins
-            List<string> chromosomes;
-            Dictionary<string, List<GenomicBin>> binsByChrom;
-            CanvasIO.GetGenomicBinsByChrom(inputFile.FullName, out chromosomes, out binsByChrom);
+            OrderedDictionary binsByChrom = CanvasIO.GetGenomicBinsByChrom(inputFile.FullName);
 
             // smooth bins on each chromosome
+            List<string> chromosomes = new List<string>();
             Dictionary<string, List<GenomicBin>> smoothedBinsByChrom = new Dictionary<string, List<GenomicBin>>();
             List<SmoothTask> tasks = new List<SmoothTask>();
-            foreach (string chrom in chromosomes)
+            foreach (string chrom in binsByChrom.Keys)
             {
+                chromosomes.Add(chrom);
                 smoothedBinsByChrom[chrom] = new List<GenomicBin>();
-                SmoothTask task = new SmoothTask(MaxHalfWindowSize, binsByChrom[chrom], smoothedBinsByChrom[chrom]);
+                SmoothTask task = new SmoothTask(MaxHalfWindowSize, (List<GenomicBin>)binsByChrom[chrom], smoothedBinsByChrom[chrom]);
                 tasks.Add(task);
             }
             Console.WriteLine("Launch smoothing jobs...");
