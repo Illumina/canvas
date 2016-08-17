@@ -27,19 +27,15 @@ namespace CanvasSmooth
             OrderedDictionary binsByChrom = CanvasIO.GetGenomicBinsByChrom(inputFile.FullName);
 
             // smooth bins on each chromosome
-            List<string> chromosomes = new List<string>();
+            RepeatedMedianSmoother smoother = new RepeatedMedianSmoother(MaxHalfWindowSize);
+            var chromosomes = binsByChrom.Keys.Cast<string>();
             Dictionary<string, List<GenomicBin>> smoothedBinsByChrom = new Dictionary<string, List<GenomicBin>>();
-            List<SmoothTask> tasks = new List<SmoothTask>();
-            foreach (string chrom in binsByChrom.Keys)
-            {
-                chromosomes.Add(chrom);
-                smoothedBinsByChrom[chrom] = new List<GenomicBin>();
-                SmoothTask task = new SmoothTask(MaxHalfWindowSize, (List<GenomicBin>)binsByChrom[chrom], smoothedBinsByChrom[chrom]);
-                tasks.Add(task);
-            }
             Console.WriteLine("Launch smoothing jobs...");
             Console.Out.WriteLine();
-            Parallel.ForEach(tasks, t => t.Run());
+            Parallel.ForEach(chromosomes, chrom =>
+            {
+                smoothedBinsByChrom[chrom] = smoother.Smooth((List<GenomicBin>)binsByChrom[chrom]);
+            });
             Console.WriteLine("Completed smoothing jobs.");
             Console.Out.WriteLine();
 
@@ -48,40 +44,38 @@ namespace CanvasSmooth
 
             return 0;
         }
+    }
 
-        public class SmoothTask
+    public class RepeatedMedianSmoother
+    {
+        private readonly uint MaxHalfWindowSize;
+
+        public RepeatedMedianSmoother(uint maxHalfWindowSize)
         {
-            private readonly uint MaxHalfWindowSize;
-            private readonly List<GenomicBin> Bins;
-            private List<GenomicBin> SmoothedBins;
+            MaxHalfWindowSize = maxHalfWindowSize;
+        }
 
-            public SmoothTask(uint maxHalfWindowSize, List<GenomicBin> bins, List<GenomicBin> smoothedBins)
+        public List<GenomicBin> Smooth(List<GenomicBin> bins)
+        {
+            IEnumerable<float> counts = bins.Select(b => b.Count);
+            IEnumerable<float> smoothedCounts = RepeatedMedianFilter(counts, MaxHalfWindowSize);
+            List<GenomicBin> smoothedBins = new List<GenomicBin>();
+            smoothedBins.AddRange(Enumerable.Zip(bins, smoothedCounts, (bin, count)
+                => new GenomicBin(bin.Chromosome, bin.Start, bin.Stop, bin.GC, count)));
+            return smoothedBins;
+        }
+
+        private static IEnumerable<float> RepeatedMedianFilter(IEnumerable<float> counts, uint maxHalfWindowSize)
+        {
+            IEnumerable<float> smoothedCounts = counts;
+
+            for (uint halfWindowSize = 1; halfWindowSize <= maxHalfWindowSize; halfWindowSize++)
             {
-                MaxHalfWindowSize = maxHalfWindowSize;
-                Bins = bins;
-                SmoothedBins = smoothedBins;
+                smoothedCounts = CanvasCommon.Utilities.MedianFilter(counts, halfWindowSize);
+                counts = smoothedCounts;
             }
 
-            public void Run()
-            {
-                IEnumerable<float> counts = Bins.Select(b => b.Count);
-                IEnumerable<float> smoothedCounts = RepeatedMedianFilter(counts, MaxHalfWindowSize);
-                SmoothedBins.AddRange(Enumerable.Zip(Bins, smoothedCounts, (bin, count) 
-                    => new GenomicBin(bin.Chromosome, bin.Start, bin.Stop, bin.GC, count)));
-            }
-
-            private static IEnumerable<float> RepeatedMedianFilter(IEnumerable<float> counts, uint maxHalfWindowSize)
-            {
-                IEnumerable<float> smoothedCounts = counts;
-                
-                for (uint halfWindowSize = 1; halfWindowSize <= maxHalfWindowSize; halfWindowSize++)
-                {
-                    smoothedCounts = CanvasCommon.Utilities.MedianFilter(counts, halfWindowSize);
-                    counts = smoothedCounts;
-                }
-
-                return smoothedCounts;
-            }
+            return smoothedCounts;
         }
     }
 }
