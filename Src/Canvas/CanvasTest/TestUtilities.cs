@@ -203,7 +203,7 @@ namespace CanvasTest
 
             for (int i = 0; i < values.Length; i++)
             {
-                Assert.True(Math.Abs(smoothedValues[i] - expected[i]) < 0.001);
+                Assert.Equal(expected[i], smoothedValues[i]);
             }
         }
     }
