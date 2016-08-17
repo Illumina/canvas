@@ -50,6 +50,11 @@ namespace CanvasCommon
             return IterateThroughTextFile(infile).ToList();
         }
 
+        /// <summary>
+        /// Gets GenomicBins by chromosome as an OrderedDictionary. The order of chromosomes in path is preserved.
+        /// </summary>
+        /// <param name="path"></param>
+        /// <returns>OrderedDictionary with string key and List<GenomicBin> value</returns>
         public static OrderedDictionary GetGenomicBinsByChrom(string path)
         {
             OrderedDictionary binsByChrom = new OrderedDictionary();
