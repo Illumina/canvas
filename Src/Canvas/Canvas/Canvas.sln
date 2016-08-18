@@ -1,4 +1,4 @@
-﻿
+﻿A1660795-CD4A-4FBC-9BF6-DF2A420AA3CA
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 14
 VisualStudioVersion = 14.0.24720.0
@@ -52,8 +52,8 @@ Global
 		{3EA57084-D8FD-4978-8CF9-0EF97CFA47D0}.Debug|x64.Build.0 = Debug|x64
 		{3EA57084-D8FD-4978-8CF9-0EF97CFA47D0}.Release|x64.ActiveCfg = Release|x64
 		{3EA57084-D8FD-4978-8CF9-0EF97CFA47D0}.Release|x64.Build.0 = Release|x64
-		{A1660795-CD4A-4FBC-9BF6-DF2A420AA3CA}.Debug|x64.ActiveCfg = Debug|Any CPU
-		{A1660795-CD4A-4FBC-9BF6-DF2A420AA3CA}.Debug|x64.Build.0 = Debug|Any CPU
+		{A1660795-CD4A-4FBC-9BF6-DF2A420AA3CA}.Debug|x64.ActiveCfg = Debug|x64
+		{A1660795-CD4A-4FBC-9BF6-DF2A420AA3CA}.Debug|x64.Build.0 = Debug|x64
 		{A1660795-CD4A-4FBC-9BF6-DF2A420AA3CA}.Release|x64.ActiveCfg = Release|x64
 		{A1660795-CD4A-4FBC-9BF6-DF2A420AA3CA}.Release|x64.Build.0 = Release|x64
 		{FFD9D459-C697-4E50-9E61-0B192A064211}.Debug|x64.ActiveCfg = Debug|x64
