@@ -11,12 +11,6 @@ For more information about Canvas and the algorithms it uses see the [software d
 
 [SDD]:SoftwareDesignDocument.pdf
 
-Canvas also  described in the publication Canvas: versatile and scalable detection of copy number variants in the journal Bioinformatics.
-
-Publication link: http://bioinformatics.oxfordjournals.org/content/early/2016/04/19/bioinformatics.btw163
-
-BioRxiv link: http://biorxiv.org/content/early/2016/01/13/036194
-
 License
 -------
 
@@ -129,7 +123,7 @@ With all files copied and installed, we are now ready to run Canvas. This demo w
 CNV.vcf.gz files will be saved to HCC2218_v2 output directory. Depending on the number of available CPUs, the demo will take from few minutes to under an hour to complete.
 
 #### Inspecting results 
-Now we can test Canvas performance by using a set of previously curated HCC2218 copy number calls from whole-genome data (HCC2218Truth.vcf) and a set of repetitive or ambiguous regions (HCC2218.cnaqc.excluded_regions.bed), which are available in the TruthSets directory under https://illumina.box.com/CanvasPublic.  The evaluation is accomplished by using EvaluateCNV; the latest binary distribution for the tool can be found in [releases]:https://github.com/Illumina/canvas/releases. Note that EvaluateCNV will only evaluate Canvas calls overlapping regions specified in the truth set, so having a more complete truth set will provide better estimates of Canvas' overall performance (e.g. recall and precision).
+Now we can test Canvas performance by using a set of previously curated HCC2218 copy number calls from whole-genome data (HCC2218Truth.vcf) and a set of repetitive or ambiguous regions (HCC2218.cnaqc.excluded_regions.bed), which are available in the TruthSets directory under https://illumina.box.com/CanvasPublic.  The evaluation is accomplished by using EvaluateCNV; the latest binary distribution for the tool can be found in [releases]:https://github.com/Illumina/canvas/releases.  
 EvaluateCNV usage info:
 ```
 EvaluateCNV $TruthSetPath $CNV.vcf $ExcludedRegionsBed $OutputPath  [$RegionOfInterestBed]

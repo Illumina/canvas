@@ -56,6 +56,7 @@ namespace CanvasDiploidCaller
             };
 
             List<string> extraArgs = p.Parse(args);
+
             if (extraArgs.Count > 0)
             {
                 Console.WriteLine("* Error: I don't understand the argument '{0}'", extraArgs[0]);
