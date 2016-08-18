@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -29,7 +30,7 @@ namespace CanvasSmooth
             // smooth bins on each chromosome
             RepeatedMedianSmoother smoother = new RepeatedMedianSmoother(MaxHalfWindowSize);
             var chromosomes = binsByChrom.Keys;
-            Dictionary<string, List<GenomicBin>> smoothedBinsByChrom = new Dictionary<string, List<GenomicBin>>();
+            ConcurrentDictionary<string, List<GenomicBin>> smoothedBinsByChrom = new ConcurrentDictionary<string, List<GenomicBin>>();
             Console.WriteLine("Launch smoothing jobs...");
             Console.Out.WriteLine();
             Parallel.ForEach(chromosomes, chrom =>
