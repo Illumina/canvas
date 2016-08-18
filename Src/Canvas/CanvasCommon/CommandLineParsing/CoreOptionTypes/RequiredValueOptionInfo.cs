@@ -1,7 +1,7 @@
 using System.Linq;
-using Canvas.CommandLineParsing.OptionProcessing;
+using CanvasCommon.CommandLineParsing.OptionProcessing;
 
-namespace Canvas.CommandLineParsing.CoreOptionTypes
+namespace CanvasCommon.CommandLineParsing.CoreOptionTypes
 {
     public class RequiredValueOptionInfo : ValueOptionInfo<string>
     {
@@ -17,7 +17,7 @@ namespace Canvas.CommandLineParsing.CoreOptionTypes
             string value = parseInput.Get(this);
             if (value == null)
                 return ParsingResult<string>.FailedResult($"Error: {Name} is a required option");
-            return ParsingResult<string>.SuccesfulResult(value);
+            return ParsingResult<string>.SuccessfulResult(value);
         }
     }
 }

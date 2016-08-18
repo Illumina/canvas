@@ -395,8 +395,6 @@ namespace CanvasSomaticCaller
             {
                 ExtraHeaders = CallCNVUsingSNVFrequency(localSDmertic, referenceFolder, clusteringMode);
             }
-
-
             catch (Exception e)
             {
                 // In a training mode (INTERNAL) somatic model is initialized with a large number of parameter trials. 
@@ -2056,6 +2054,7 @@ namespace CanvasSomaticCaller
                         segment.SecondBestCopyNumber = segment.CopyNumber; // indicator that CNs have swapped
                         segment.CopyNumber = tmpCopyNumber;
                         segment.CopyNumberSwapped = true;
+                        segment.MajorChromosomeCount = (segment.SecondBestCopyNumber == 1) ? 1 : 2;
 
                     }
                 }

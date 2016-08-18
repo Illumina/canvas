@@ -1,14 +1,16 @@
 using System;
-using Canvas.CommandLineParsing.OptionProcessing;
+using CanvasCommon.CommandLineParsing.OptionProcessing;
 
-namespace Canvas.CommandLineParsing.CoreOptionTypes
+namespace CanvasCommon.CommandLineParsing.CoreOptionTypes
 {
     public class ValueOption<T> : Option<T>
     {
+        private readonly T _defaultValue;
         public ValueOptionInfo<string> Info { get; }
 
-        protected ValueOption(ValueOptionInfo<string> info)
+        protected ValueOption(ValueOptionInfo<string> info, T defaultValue = default(T))
         {
+            _defaultValue = defaultValue;
             Info = info;
         }
 
@@ -22,6 +24,11 @@ namespace Canvas.CommandLineParsing.CoreOptionTypes
             return new ValueOption<T>(new ValueOptionInfo<string>(false, description, names));
         }
 
+        public static ValueOption<T> CreateWithDefault(T defaultValue, string description, params string[] names)
+        {
+            return new ValueOption<T>(new ValueOptionInfo<string>(false, description, names), defaultValue);
+        }
+
         public override ParsingResult<T> Parse(SuccessfulResultCollection value)
         {
             return Parse(value.Get(Info));
@@ -29,11 +36,11 @@ namespace Canvas.CommandLineParsing.CoreOptionTypes
 
         public virtual ParsingResult<T> Parse(string value)
         {
-            if (value == null) return ParsingResult<T>.SuccesfulResult(default(T));
+            if (value == null) return ParsingResult<T>.SuccessfulResult(_defaultValue);
             try
             {
                 T parsedValue = (T)Convert.ChangeType(value, typeof(T));
-                return ParsingResult<T>.SuccesfulResult(parsedValue);
+                return ParsingResult<T>.SuccessfulResult(parsedValue);
             }
             catch (Exception)
             {

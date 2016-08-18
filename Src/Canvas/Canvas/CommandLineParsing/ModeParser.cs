@@ -1,4 +1,4 @@
-using Canvas.CommandLineParsing.CoreOptionTypes;
+using CanvasCommon.CommandLineParsing.CoreOptionTypes;
 
 namespace Canvas.CommandLineParsing
 {

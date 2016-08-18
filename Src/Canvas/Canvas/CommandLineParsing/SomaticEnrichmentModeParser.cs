@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
-using Canvas.CommandLineParsing.CoreOptionTypes;
-using Canvas.CommandLineParsing.OptionProcessing;
+using CanvasCommon.CommandLineParsing.CoreOptionTypes;
+using CanvasCommon.CommandLineParsing.OptionProcessing;
 using Isas.Shared;
 
 namespace Canvas.CommandLineParsing
@@ -19,7 +19,7 @@ namespace Canvas.CommandLineParsing
         {
             CommonOptions commonOptions = parseInput.Get(CommonOptionsParser);
             SomaticEnrichmentOptions somaticEnrichmentOptions = parseInput.Get(SomaticEnrichmentOptionsParser);
-            return ParsingResult<IModeRunner>.SuccesfulResult(new SomaticEnrichmentRunner(commonOptions, somaticEnrichmentOptions));
+            return ParsingResult<IModeRunner>.SuccessfulResult(new SomaticEnrichmentRunner(commonOptions, somaticEnrichmentOptions));
         }
 
         public override OptionCollection<IModeRunner> GetOptions()
@@ -64,7 +64,7 @@ namespace Canvas.CommandLineParsing
             if (controlBinned != null && controlBinSize == null)
                 return ParsingResult<SomaticEnrichmentOptions>.FailedResult($"Error: {ControlBinSize.Info.Name} is required when using the {ControlBinned.Info.Name} option");
 
-            return ParsingResult<SomaticEnrichmentOptions>.SuccesfulResult(
+            return ParsingResult<SomaticEnrichmentOptions>.SuccessfulResult(
                 new SomaticEnrichmentOptions(
                     bam,
                     manifest,

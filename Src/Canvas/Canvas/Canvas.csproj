@@ -112,32 +112,15 @@
     <Compile Include="Program.cs" />
     <Compile Include="CommandLineParsing\BaseOptions.cs" />
     <Compile Include="CommandLineParsing\BaseOptionsParser.cs" />
-    <Compile Include="CommandLineParsing\CoreOptionTypes\DictionaryOption.cs" />
-    <Compile Include="CommandLineParsing\CoreOptionTypes\DirectoryOption.cs" />
-    <Compile Include="CommandLineParsing\CoreOptionTypes\FileOption.cs" />
-    <Compile Include="CommandLineParsing\CoreOptionTypes\FlagOption.cs" />
-    <Compile Include="CommandLineParsing\CoreOptionTypes\MultipleValueOptionInfo.cs" />
-    <Compile Include="CommandLineParsing\CoreOptionTypes\MultiValueOption.cs" />
-    <Compile Include="CommandLineParsing\CoreOptionTypes\OptionInfo.cs" />
-    <Compile Include="CommandLineParsing\CoreOptionTypes\RequiredMultiOptionInfo.cs" />
-    <Compile Include="CommandLineParsing\CoreOptionTypes\RequiredValueOptionInfo.cs" />
-    <Compile Include="CommandLineParsing\CoreOptionTypes\ValueOptionInfo.cs" />
-    <Compile Include="CommandLineParsing\OptionProcessing\SuccessfulResultCollection.cs" />
     <Compile Include="CommandLineParsing\SomaticEnrichmentModeParser.cs" />
-    <Compile Include="CommandLineParsing\CoreOptionTypes\StringOption.cs" />
-    <Compile Include="CommandLineParsing\CoreOptionTypes\ValueOption.cs" />
     <Compile Include="SomaticEnrichmentRunner.cs" />
     <Compile Include="CommandLineParsing\GermlineWgsModeParser.cs" />
     <Compile Include="CommandLineParsing\ModeParser.cs" />
     <Compile Include="CommandLineParsing\MainParser.cs" />
-    <Compile Include="CommandLineParsing\CoreOptionTypes\Option.cs" />
-    <Compile Include="CommandLineParsing\OptionProcessing\OptionCollection.cs" />
-    <Compile Include="CommandLineParsing\OptionProcessing\ResultCollection.cs" />
     <Compile Include="CommandLineParsing\CommonOptionsParser.cs" />
     <Compile Include="CommandLineParsing\CommonOptions.cs" />
     <Compile Include="GermlineWgsRunner.cs" />
     <Compile Include="ModeLauncher.cs" />
-    <Compile Include="CommandLineParsing\OptionProcessing\ParsingResult.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>

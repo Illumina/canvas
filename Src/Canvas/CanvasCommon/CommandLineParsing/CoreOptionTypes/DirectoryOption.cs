@@ -1,7 +1,7 @@
-using Canvas.CommandLineParsing.OptionProcessing;
+using CanvasCommon.CommandLineParsing.OptionProcessing;
 using Isas.Shared;
 
-namespace Canvas.CommandLineParsing.CoreOptionTypes
+namespace CanvasCommon.CommandLineParsing.CoreOptionTypes
 {
     public class DirectoryOption : ValueOption<IDirectoryLocation>
     {
@@ -22,7 +22,7 @@ namespace Canvas.CommandLineParsing.CoreOptionTypes
         {
             IDirectoryLocation location = value == null ? null : new DirectoryLocation(value);
             if (location == null || location.Exists)
-                return ParsingResult<IDirectoryLocation>.SuccesfulResult(location);
+                return ParsingResult<IDirectoryLocation>.SuccessfulResult(location);
             return ParsingResult<IDirectoryLocation>.FailedResult($"Error: {location} does not exist");
         }
     }

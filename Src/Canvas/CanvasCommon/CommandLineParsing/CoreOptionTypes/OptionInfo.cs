@@ -1,10 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Canvas.CommandLineParsing.OptionProcessing;
+using CanvasCommon.CommandLineParsing.OptionProcessing;
 using ILMNcommon.Common;
 
-namespace Canvas.CommandLineParsing.CoreOptionTypes
+namespace CanvasCommon.CommandLineParsing.CoreOptionTypes
 {
     public class OptionInfo<T> : Option<T>, IOptionInfo
     {
@@ -42,7 +42,7 @@ namespace Canvas.CommandLineParsing.CoreOptionTypes
 
         public override ParsingResult<T> Parse(SuccessfulResultCollection parseInput)
         {
-            return ParsingResult<T>.SuccesfulResult(parseInput.Get(this));
+            return ParsingResult<T>.SuccessfulResult(parseInput.Get(this));
         }
     }
 
