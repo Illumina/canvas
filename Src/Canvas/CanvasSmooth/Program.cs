@@ -1,12 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using Isas.Shared.Utilities.FileSystem;
 using NDesk.Options;
-
-using Isas.Shared;
-using CanvasCommon;
 
 namespace CanvasSmooth
 {

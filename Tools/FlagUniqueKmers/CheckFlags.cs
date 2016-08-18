@@ -1,9 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using SequencingFiles;
+using Isas.SequencingFiles;
+using Isas.Shared.Utilities;
 
 namespace FlagUniqueKmers
 {
@@ -16,7 +13,7 @@ namespace FlagUniqueKmers
         static public void CheckUniqueness()
         {
             string fastaPath = @"D:\Genomes\Homo_sapiens\UCSC\hg19\Sequence\WholeGenomeFasta\genome.fa";
-            string[] Reads = new string[] 
+            string[] Reads = new string[]
             {
                 "AACCCTAACCCAACCCTAACCCTAACCCTAACCCT", // 10097 B
                 "ACCCTAACCCAACCCTAACCCTAACCCTAACCCTA", // 10098 B
@@ -34,7 +31,7 @@ namespace FlagUniqueKmers
                     Console.WriteLine(chrA.Name);
                     string bases = chrA.Bases.ToUpperInvariant();
                     // Search for each:
-                    
+
                     for (int readIndex = 0; readIndex < Reads.Length; readIndex++)
                     {
                         int pos = -1;
@@ -45,7 +42,7 @@ namespace FlagUniqueKmers
                             Console.WriteLine("{0}\t{1}\t{2}\t{3}", readIndex, Reads[readIndex], chrA.Name, pos);
                         }
                         pos = -1;
-                        string revComp = Isas.Shared.Utilities.GetReverseComplement(Reads[readIndex]);
+                        string revComp = Utilities.GetReverseComplement(Reads[readIndex]);
                         while (true)
                         {
                             pos = bases.IndexOf(revComp, pos + 1);

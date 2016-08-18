@@ -3,10 +3,8 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-
-using Illumina.Common;
-using Isas.Shared;
 using CanvasCommon;
+using Isas.Shared.Utilities.FileSystem;
 
 namespace CanvasSmooth
 {

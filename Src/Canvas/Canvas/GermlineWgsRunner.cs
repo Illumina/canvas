@@ -2,8 +2,9 @@
 using Canvas.CommandLineParsing;
 using CanvasCommon;
 using Illumina.SecondaryAnalysis;
-using Isas.Shared;
 using Isas.Shared.Checkpointing;
+using Isas.Shared.Utilities;
+using Isas.Shared.Utilities.FileSystem;
 
 namespace Canvas
 {

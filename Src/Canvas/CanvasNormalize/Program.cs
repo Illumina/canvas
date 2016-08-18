@@ -1,14 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using NDesk.Options;
-
-using SequencingFiles;
-using Isas.Shared;
 using CanvasCommon;
+using Isas.Shared.Utilities.FileSystem;
+using NDesk.Options;
 
 namespace CanvasNormalize
 {

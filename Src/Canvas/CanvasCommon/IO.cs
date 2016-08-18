@@ -1,11 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.IO;
 using Illumina.Common;
-using SequencingFiles;
+using Isas.SequencingFiles;
 
 namespace CanvasCommon
 {

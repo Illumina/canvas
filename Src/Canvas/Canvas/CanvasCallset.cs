@@ -2,9 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using Illumina.SecondaryAnalysis;
-using Isas.Shared;
-using SequencingFiles;
+using Isas.SequencingFiles;
+using Isas.Shared.DataTypes;
+using Isas.Shared.Utilities.FileSystem;
 
 namespace Canvas
 {

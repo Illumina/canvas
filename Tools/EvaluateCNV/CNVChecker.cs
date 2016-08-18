@@ -3,9 +3,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.IO;
 using CanvasCommon;
-using ILMNcommon.Common;
-using SequencingFiles;
-using SequencingFiles.Vcf;
+using Illumina.Common;
+using Isas.SequencingFiles;
+using Isas.SequencingFiles.Vcf;
 
 namespace EvaluateCNV
 {
