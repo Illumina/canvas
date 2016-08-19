@@ -1,17 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Collections.Concurrent;
-using System.Runtime.InteropServices;
-using System.IO;
 using System.Linq;
-using System.Text;
 using System.Threading;
-using System.Threading.Tasks;
-using System.Diagnostics;
-using SequencingFiles;
-using MathNet.Numerics.Random;
 using CanvasCommon;
-using Isas.Shared;
+using Isas.SequencingFiles;
+using MathNet.Numerics.Random;
 using Utilities = CanvasCommon.Utilities;
 
 namespace CanvasPartition
@@ -110,7 +103,7 @@ namespace CanvasPartition
 
                 }));
             }
-            Isas.Shared.Utilities.DoWorkParallelThreads(tasks);
+            Isas.Shared.Utilities.Utilities.DoWorkParallelThreads(tasks);
             // Quick sanity-check: If we don't have any segments, then return a dummy result.
             int n = 0;
             foreach (var list in finiteScoresByChr.Values)
@@ -221,7 +214,7 @@ namespace CanvasPartition
 
             }
             Console.WriteLine("{0} Launching wavelet tasks", DateTime.Now);
-            Isas.Shared.Utilities.DoWorkParallelThreads(tasks);
+            Isas.Shared.Utilities.Utilities.DoWorkParallelThreads(tasks);
             Console.WriteLine("{0} Completed wavelet tasks", DateTime.Now);
             this.SegmentationResults = new GenomeSegmentationResults(segmentByChr);
             Console.WriteLine("{0} Segmentation results complete", DateTime.Now);
@@ -293,7 +286,7 @@ namespace CanvasPartition
 
                 }));
             }
-            Isas.Shared.Utilities.DoWorkParallelThreads(tasks);
+            Isas.Shared.Utilities.Utilities.DoWorkParallelThreads(tasks);
 
             // Quick sanity-check: If we don't have any segments, then return a dummy result.
             int n = 0;
@@ -354,7 +347,7 @@ namespace CanvasPartition
             }
 
             //Parallel.ForEach(tasks, t => { t.Invoke(); });
-            Isas.Shared.Utilities.DoWorkParallelThreads(tasks);
+            Isas.Shared.Utilities.Utilities.DoWorkParallelThreads(tasks);
             this.SegmentationResults = new GenomeSegmentationResults(segmentByChr);
         }
 

@@ -4,13 +4,14 @@ using System.Linq;
 using System.IO;
 using System.Text;
 using System.Threading.Tasks;
-using Isas.Shared;
-using SequencingFiles;
 using Canvas;
 using CanvasCommon;
 using Illumina.Common;
+using Isas.SequencingFiles;
 using Isas.Shared.Checkpointing;
-using Utilities = Isas.Shared.Utilities;
+using Isas.Shared.Utilities;
+using Isas.Shared.Utilities.FileSystem;
+using Utilities = Isas.Shared.Utilities.Utilities;
 
 namespace Illumina.SecondaryAnalysis
 {

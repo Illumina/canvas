@@ -1,13 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
 using CanvasCommon;
-using SequencingFiles;
+using Isas.SequencingFiles;
+using Isas.Shared.DataTypes;
+using Isas.Shared.Utilities.FileSystem;
 
 namespace CanvasBin
 {
@@ -97,7 +97,7 @@ namespace CanvasBin
         {
             public string FastaFile { get; private set; }
             public string Chromosome { get; private set; }
-            public Isas.Shared.Bam Bam { get; private set; }
+            public Bam Bam { get; private set; }
             public List<GenomicBin> Bins { get; private set; }
             public long UsableFragmentCount { get { return usableFragmentCount; } } // Passing-filter fragments overlapping bins
             private long usableFragmentCount;
@@ -113,7 +113,7 @@ namespace CanvasBin
             {
                 FastaFile = fastaFile;
                 Chromosome = chrom;
-                Bam = new Isas.Shared.Bam(new Isas.Shared.FileLocation(bamFile));
+                Bam = new Bam(new FileLocation(bamFile));
                 Bins = bins;
             }
 

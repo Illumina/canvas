@@ -1,10 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.IO;
-using SequencingFiles;
+using Illumina.Common;
+using Isas.SequencingFiles;
 
 namespace CanvasCommon
 {
@@ -47,6 +46,27 @@ namespace CanvasCommon
         public static List<GenomicBin> ReadFromTextFile(string infile)
         {
             return IterateThroughTextFile(infile).ToList();
+        }
+
+        /// <summary>
+        /// Gets GenomicBins by chromosome as an OrderedDictionary. The order of chromosomes in path is preserved.
+        /// </summary>
+        /// <param name="path"></param>
+        /// <returns>OrderedDictionary with string key and List<GenomicBin> value</returns>
+        public static OrderedDictionary<string, List<GenomicBin>> GetGenomicBinsByChrom(string path)
+        {
+            OrderedDictionary<string, List<GenomicBin>> binsByChrom = new OrderedDictionary<string, List<GenomicBin>>();
+
+            foreach (var bin in IterateThroughTextFile(path))
+            {
+                if (!binsByChrom.ContainsKey(bin.Chromosome))
+                {
+                    binsByChrom[bin.Chromosome] = new List<GenomicBin>();
+                }
+                binsByChrom[bin.Chromosome].Add(bin);
+            }
+
+            return binsByChrom;
         }
 
         // write localSD metric

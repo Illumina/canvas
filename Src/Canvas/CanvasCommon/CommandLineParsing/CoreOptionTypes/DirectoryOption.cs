@@ -1,5 +1,5 @@
 using CanvasCommon.CommandLineParsing.OptionProcessing;
-using Isas.Shared;
+using Isas.Shared.Utilities.FileSystem;
 
 namespace CanvasCommon.CommandLineParsing.CoreOptionTypes
 {

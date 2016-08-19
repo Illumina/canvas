@@ -1,8 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using Canvas.CommandLineParsing;
-using Isas.Shared;
 using Isas.Shared.Checkpointing;
+using Isas.Shared.Utilities;
+using Isas.Shared.Utilities.FileSystem;
 using Newtonsoft.Json;
 
 namespace Canvas
