@@ -815,7 +815,7 @@ namespace CanvasCommon
                 {
                     if (intervalByChrSorted[index + 1].Start < intervalByChrSorted[index].Stop)
                     {
-                        throw new Exception(string.Format("Bed interval file {0} could only contain non-overlapping intervals", bedPath));
+                        throw new Exception(string.Format($"Bed interval file {bedPath} could only contain non-overlapping intervals"));
                     }
                 }
                 intervals[chr] = intervalByChrSorted;
