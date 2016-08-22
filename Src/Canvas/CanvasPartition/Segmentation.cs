@@ -149,13 +149,9 @@ namespace CanvasPartition
                     {
                         if (commonCNVintervals.ContainsKey(chr))
                         {
-                            List<GenomicBin> commonCNVintervalsByChr = commonCNVintervals[chr];
-                            List<int> commonBreakpointsStart = new List<int>();
-                            List<int> commonBreakpointsEnd = new List<int>();
-                            MergeCommonRegions(commonCNVintervalsByChr, this.StartByChr[chr], this.EndByChr[chr],
-                                ref commonBreakpointsStart, ref commonBreakpointsEnd);
-                            List<int> oldbreakpoints = breakpoints;
-                            breakpoints = OverlapCommonRegions(oldbreakpoints, commonBreakpointsStart, commonBreakpointsEnd);
+                            List <GenomicBin> remappedCommonCNVintervals = RemapCommonRegions(commonCNVintervals[chr], this.StartByChr[chr], this.EndByChr[chr]);
+                            List <int> oldbreakpoints = breakpoints;
+                            breakpoints = OverlapCommonRegions(oldbreakpoints, remappedCommonCNVintervals);
                         }
                     }
 
@@ -416,86 +412,96 @@ namespace CanvasPartition
             }
         }
 
-
-        private void MergeCommonRegions(List<GenomicBin> commonRegions, uint[] startByChr, uint[] endByChr, ref List<int> bestMinDistanceStarts, ref List<int> bestMinDistanceStops)
+        /// <summary>
+        /// Remap index from genomic coordinates into CanvasBin coordinates
+        /// </summary>
+        private int? RemapIndex(uint[] startPos, uint[] endPos, int value, int length, ref int index)
         {
-            int length = startByChr.Length;
-            int indexByChr = 0;
             const int distanceThreshold = 10000;
+            var bestMinDistanceStart = Int32.MaxValue;
+            var remappedIndex = 0;
+            while (index < length)
+            {
+                int tmpMinDistanceStart = Math.Abs(Convert.ToInt32(startPos[index] + (endPos[index] - startPos[index])) - value);
+                index++;
+                if (tmpMinDistanceStart < bestMinDistanceStart)
+                {
+                    bestMinDistanceStart = tmpMinDistanceStart;
+                    remappedIndex = index - 1;
+                }
+                else if (bestMinDistanceStart < distanceThreshold)
+                {
+                    return remappedIndex;
+                }
+                else
+                {
+                    return null;
+                }
+            }
+            return null;
+        }
+
+        /// <summary>
+        /// Remap GenomicBin from genome coordiantes into CanvasBin coordiantes
+        /// </summary>
+        private List<GenomicBin> RemapCommonRegions(List<GenomicBin> commonRegions, uint[] startByChr, uint[] endByChr)
+        {
+            var length = startByChr.Length;
+            var index = 0;
+            List<GenomicBin> commonRegionsRemapped = new List<GenomicBin>();
 
             foreach (GenomicBin commonRegion in commonRegions)
             {
-
-                if (indexByChr > length)
+                if (index > length)
                     break;
-                var bestMinDistanceStart = Int32.MaxValue;
-                var startSegment = 0;
-                while (indexByChr < length)
+                var startSegment = RemapIndex(startByChr, endByChr, commonRegion.Start, length, ref index);
+                var endSegment   = RemapIndex(startByChr, endByChr, commonRegion.Stop,  length, ref index);
+
+                if (startSegment.HasValue && endSegment.HasValue)
                 {
-                    int tmpMinDistanceStart = Math.Abs(Convert.ToInt32(startByChr[indexByChr] + (endByChr[indexByChr] - startByChr[indexByChr])) - commonRegion.Start);
-                    indexByChr++;
-                    if (tmpMinDistanceStart < bestMinDistanceStart)
-                    {
-                        bestMinDistanceStart = tmpMinDistanceStart;
-                        startSegment = indexByChr - 1;
-                    }
-                    else
-                        break;
-                }
-                var bestMinDistanceStop = Int32.MaxValue;
-                var endSegment = 0;
-                while (indexByChr < length)
-                {
-                    int tmpMinDistanceStop = Math.Abs(Convert.ToInt32(startByChr[indexByChr] + (endByChr[indexByChr] - startByChr[indexByChr])) - commonRegion.Stop);
-                    indexByChr++;
-                    if (tmpMinDistanceStop < bestMinDistanceStop)
-                    {
-                        bestMinDistanceStop = tmpMinDistanceStop;
-                        endSegment = indexByChr - 1;
-                    }               
-                    else
-                        break;
-                }
-                if (bestMinDistanceStart < distanceThreshold && bestMinDistanceStop < distanceThreshold)
-                {
-                    bestMinDistanceStarts.Add(startSegment);
-                    bestMinDistanceStops.Add(endSegment);
+                    GenomicBin interval = new GenomicBin();
+                    interval.Start = startSegment.Value;
+                    interval.Stop = endSegment.Value;
+                    commonRegionsRemapped.Add(interval);
                 }
             }
+            return commonRegionsRemapped;
         }
 
-        public static List<int> OverlapCommonRegions(List<int> breakpoints, List<int> commonBreakpointsStart,
-            List<int> commonBreakpointsEnd)
+        /// <summary>
+        /// Merge segmentation breakpoints with common CNV intervals
+        /// </summary>
+        public static List<int> OverlapCommonRegions(List<int> breakpoints, List<GenomicBin> commonCNVintervals)
         {
             List<int> newBreakpoints = new List<int>();
-            int commonBreakpointsIndex = 0;
-            int length = commonBreakpointsStart.Count;
-            foreach (int bkpt in breakpoints)
+            int index = 0;
+            int length = commonCNVintervals.Count;
+            foreach (int breakpoint in breakpoints)
             {
-                while (commonBreakpointsIndex < length)
+                while (index < length)
                 {
 
-                    if(bkpt <= commonBreakpointsStart[commonBreakpointsIndex])
+                    if (breakpoint <= commonCNVintervals[index].Start)
                     {
-                        newBreakpoints.Add(bkpt);
+                        newBreakpoints.Add(breakpoint);
                         break;
                     }
-                    else if (bkpt > commonBreakpointsStart[commonBreakpointsIndex] && bkpt < commonBreakpointsEnd[commonBreakpointsIndex])
+                    else if (breakpoint > commonCNVintervals[index].Start && breakpoint < commonCNVintervals[index].Stop)
                     {
-                        newBreakpoints.Add(commonBreakpointsStart[commonBreakpointsIndex]);
-                        newBreakpoints.Add(commonBreakpointsEnd[commonBreakpointsIndex]);
-                        commonBreakpointsIndex++;
+                        newBreakpoints.Add(commonCNVintervals[index].Start);
+                        newBreakpoints.Add(commonCNVintervals[index].Stop);
+                        index++;
                         break;
                     }
-                    else if (bkpt >= commonBreakpointsEnd[commonBreakpointsIndex])
+                    else if (breakpoint >= commonCNVintervals[index].Stop)
                     {
-                        newBreakpoints.Add(commonBreakpointsStart[commonBreakpointsIndex]);
-                        newBreakpoints.Add(commonBreakpointsEnd[commonBreakpointsIndex]);
-                        commonBreakpointsIndex++;
+                        newBreakpoints.Add(commonCNVintervals[index].Start);
+                        newBreakpoints.Add(commonCNVintervals[index].Stop);
+                        index++;
                     }
                 }
-                if (commonBreakpointsIndex > length)
-                    newBreakpoints.Add(bkpt);
+                if (index > length)
+                    newBreakpoints.Add(breakpoint);
             }
             return newBreakpoints;
         }
