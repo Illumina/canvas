@@ -1,10 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.IO;
-using CanvasCommon;
 using NDesk.Options;
 
 namespace CanvasPartition
@@ -50,11 +46,6 @@ namespace CanvasPartition
             };
 
             List<string> extraArgs = p.Parse(args);
-            if (extraArgs.Count > 0)
-            {
-                Console.WriteLine("* Error: I don't understand the argument '{0}'", extraArgs[0]);
-                needHelp = true;
-            }
 
             if (needHelp)
             {

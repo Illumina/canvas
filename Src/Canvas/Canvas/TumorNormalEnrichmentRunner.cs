@@ -1,10 +1,10 @@
-﻿using System.Linq;
-using Canvas.CommandLineParsing;
+﻿using Canvas.CommandLineParsing;
 using CanvasCommon;
 using Illumina.SecondaryAnalysis;
-using Isas.Shared;
+using Isas.SequencingFiles;
 using Isas.Shared.Checkpointing;
-using SequencingFiles;
+using Isas.Shared.Utilities;
+using Isas.Shared.Utilities.FileSystem;
 
 namespace Canvas
 {

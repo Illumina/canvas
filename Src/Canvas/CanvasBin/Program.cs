@@ -1,9 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.IO;
-using System.Text;
-using System.Threading.Tasks;
 using NDesk.Options;
 
 
@@ -101,11 +98,7 @@ namespace CanvasBin
             Console.WriteLine("CanvasBin {0}", System.Reflection.Assembly.GetEntryAssembly().GetName().Version.ToString());
 
             List<string> extraArgs = p.Parse(args);
-            if (extraArgs.Count > 0)
-            {
-                Console.WriteLine("* Error: I don't understand the argument '{0}'", extraArgs[0]);
-                needHelp = true;
-            }
+
             // Check for required arguments. Display the help message if any of them are missing.
             if (string.IsNullOrEmpty(parameters.referenceFile))
             {

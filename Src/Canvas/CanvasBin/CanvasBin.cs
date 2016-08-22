@@ -4,10 +4,10 @@ using System.Collections;
 using System.Diagnostics;
 using System.Collections.Generic;
 using System.Threading;
-using SequencingFiles;
 using CanvasCommon;
 using ProtoBuf;
 using System.Linq;
+using Isas.SequencingFiles;
 
 namespace CanvasBin
 {
@@ -245,7 +245,7 @@ namespace CanvasBin
             Console.WriteLine("Launch CalculateNumberOfPossibleAlignmentsPerBin jobs...");
             Console.Out.WriteLine();
             //Parallel.ForEach(tasks, t => { t.Invoke(); }); //todo allow controling degree of parallelism
-            Isas.Shared.Utilities.DoWorkParallelThreads(tasks);
+            Isas.Shared.Utilities.Utilities.DoWorkParallelThreads(tasks);
             Console.WriteLine("CalculateNumberOfPossibleAlignmentsPerBin jobs complete.");
             Console.Out.WriteLine();
             double medianRate = CanvasCommon.Utilities.Median(rates);
@@ -448,7 +448,7 @@ namespace CanvasBin
 
                 Console.WriteLine("{0} Launching normalization tasks.", DateTime.Now);
                 Console.Out.Flush();
-                Isas.Shared.Utilities.DoWorkParallelThreads(normalizationTasks);
+                Isas.Shared.Utilities.Utilities.DoWorkParallelThreads(normalizationTasks);
                 Console.WriteLine("{0} Normalization tasks complete.", DateTime.Now);
                 Console.Out.Flush();
             }
@@ -485,7 +485,7 @@ namespace CanvasBin
             Console.WriteLine("{0} Launch BinCountsForChromosome jobs...", DateTime.Now);
             Console.Out.WriteLine();
             //Parallel.ForEach(binningTasks, t => { t.Invoke(); });
-            Isas.Shared.Utilities.DoWorkParallelThreads(binningTasks);
+            Isas.Shared.Utilities.Utilities.DoWorkParallelThreads(binningTasks);
             Console.WriteLine("{0} Completed BinCountsForChromosome jobs.", DateTime.Now);
             Console.Out.WriteLine();
 

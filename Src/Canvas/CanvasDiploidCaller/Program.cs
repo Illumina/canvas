@@ -1,13 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.IO;
+using Isas.Shared.Utilities;
+using Isas.Shared.Utilities.FileSystem;
 using NDesk.Options;
-using SequencingFiles;
 using Newtonsoft.Json;
-using Isas.Shared;
 
 namespace CanvasDiploidCaller
 {
@@ -39,7 +36,7 @@ namespace CanvasDiploidCaller
             bool needHelp = false;
             string truthDataPath = null;
 
-            string qualityScoreConfigPath = Path.Combine(Isas.Shared.Utilities.GetAssemblyFolder(typeof(Program)), "QualityScoreParameters.json");
+            string qualityScoreConfigPath = Path.Combine(Utilities.GetAssemblyFolder(typeof(Program)), "QualityScoreParameters.json");
 
             var p = new OptionSet()
             {
@@ -56,6 +53,7 @@ namespace CanvasDiploidCaller
             };
 
             List<string> extraArgs = p.Parse(args);
+
             if (extraArgs.Count > 0)
             {
                 Console.WriteLine("* Error: I don't understand the argument '{0}'", extraArgs[0]);

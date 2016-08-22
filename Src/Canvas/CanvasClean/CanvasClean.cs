@@ -2,9 +2,9 @@
 using System.Collections.Generic;
 using System.Linq;
 using CanvasCommon;
-using NDesk.Options;
 using System.IO;
-using SequencingFiles;
+using Isas.SequencingFiles;
+using NDesk.Options;
 
 namespace CanvasClean
 {
@@ -477,11 +477,6 @@ namespace CanvasClean
             };
 
             List<string> extraArgs = p.Parse(args);
-            if (extraArgs.Count > 0)
-            {
-                Console.WriteLine("* Error: I don't understand the argument '{0}'", extraArgs[0]);
-                needHelp = true;
-            }
 
             if (needHelp)
             {

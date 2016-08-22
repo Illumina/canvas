@@ -1,10 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Text;
+using Isas.Shared.Utilities.FileSystem;
 using NDesk.Options;
 using Newtonsoft.Json;
-using Isas.Shared;
 
 namespace CanvasSomaticCaller
 {
@@ -44,9 +43,9 @@ namespace CanvasSomaticCaller
             float? userPloidy = null;
             CanvasCommon.CanvasSomaticClusteringMode somaticClusteringMode =
                 CanvasCommon.CanvasSomaticClusteringMode.Density;
-            string parameterconfigPath = Path.Combine(Isas.Shared.Utilities.GetAssemblyFolder(typeof(Program)),
+            string parameterconfigPath = Path.Combine(Isas.Shared.Utilities.Utilities.GetAssemblyFolder(typeof(Program)),
                 "SomaticCallerParameters.json");
-            string qualityScoreConfigPath = Path.Combine(Isas.Shared.Utilities.GetAssemblyFolder(typeof(Program)),
+            string qualityScoreConfigPath = Path.Combine(Isas.Shared.Utilities.Utilities.GetAssemblyFolder(typeof(Program)),
                 "QualityScoreParameters.json");
 
 
@@ -100,6 +99,7 @@ namespace CanvasSomaticCaller
             };
 
             List<string> extraArgs = p.Parse(args);
+
             if (extraArgs.Count > 0)
             {
                 Console.WriteLine("Error: Argument '{0}' not understood", extraArgs[0]);

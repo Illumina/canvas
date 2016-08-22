@@ -4,7 +4,7 @@ using System.IO;
 using System.Linq;
 using CanvasCommon.CommandLineParsing.CoreOptionTypes;
 using CanvasCommon.CommandLineParsing.OptionProcessing;
-using ILMNcommon.Common;
+using Illumina.Common;
 
 namespace Canvas.CommandLineParsing
 {

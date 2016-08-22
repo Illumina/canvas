@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.IO;
 
+using Illumina.Common;
+
 namespace CanvasCommon
 {
 
@@ -300,34 +302,9 @@ namespace CanvasCommon
         /// <returns>Median of x.</returns>
         public static double Median(IEnumerable<double> x)
         {
-
-            List<double> sorted = new List<double>(x.Count());
-
-            foreach (double value in x)
-            {
-                sorted.Add(value);
-            }
-
-            sorted.Sort();
-
-            int n = sorted.Count;
-
-            double median = 0;
-
-            if (n % 2 == 0)
-            {
-                double val1 = sorted[(n / 2) - 1];
-                double val2 = sorted[(n / 2)];
-                median = (val1 + val2) / 2;
-            }
-            else
-            {
-                median = sorted[(n / 2)];
-            }
-
-            return median;
+            SortedList<double> sorted = new SortedList<double>(x);
+            return sorted.Median();
         }
-
 
         /// <summary>
         /// Calculates first and third quartiles of the input data vector
@@ -418,28 +395,13 @@ namespace CanvasCommon
             if (end.HasValue && end.Value <= start)
                 throw new ArgumentException("end must be greater than start");
 
-            double[] sorted;
+            SortedList<double> sorted;
             if (!end.HasValue)
-                sorted = x.Skip(start).ToArray();
+                sorted = new SortedList<double>(x.Skip(start));
             else
-                sorted = x.Skip(start).Take(end.Value - start).ToArray();
-            Array.Sort(sorted);
+                sorted = new SortedList<double>(x.Skip(start).Take(end.Value - start));
 
-            int n = sorted.Length;
-            double median = 0;
-
-            if (n % 2 == 0)
-            {
-                double val1 = sorted[(n / 2) - 1];
-                double val2 = sorted[(n / 2)];
-                median = (val1 + val2) / 2;
-            }
-            else
-            {
-                median = sorted[(n / 2)];
-            }
-
-            return median;
+            return sorted.Median();
         }
 
         /// <summary>
@@ -468,31 +430,10 @@ namespace CanvasCommon
         /// </summary>
         /// <param name="x">List of doubles.</param>
         /// <returns>Median of x.</returns>
-        public static double Median(List<float> x)
+        public static double Median(IEnumerable<float> x)
         {
-            int n = x.Count;
-
-            List<float> sorted = new List<float>(n);
-
-            foreach (float v in x)
-                sorted.Add(v);
-
-            sorted.Sort();
-
-            double median = 0;
-
-            if (n % 2 == 0)
-            {
-                double val1 = sorted[(n / 2) - 1];
-                double val2 = sorted[(n / 2)];
-                median = (val1 + val2) / 2;
-            }
-            else
-            {
-                median = sorted[(n / 2)];
-            }
-
-            return median;
+            SortedList<float> sorted = new SortedList<float>(x);
+            return sorted.Median();
         }
 
         /// <summary>
@@ -502,30 +443,8 @@ namespace CanvasCommon
         /// <returns></returns>
         public static int Median(IEnumerable<int> x)
         {
-            int n = x.Count();
-            if (n == 0) return 0;
-            List<int> sorted = new List<int>(n);
-
-            foreach (int v in x)
-                sorted.Add(v);
-
-            sorted.Sort();
-
-            int median = 0;
-
-            if (n % 2 == 0)
-            {
-                int val1 = sorted[(n / 2) - 1];
-                int val2 = sorted[(n / 2)];
-                median = (val1 + val2) / 2;
-            }
-            else
-            {
-                median = sorted[(n / 2)];
-            }
-
-            return median;
-
+            SortedList<int> sorted = new SortedList<int>(x);
+            return sorted.Median();
         }
 
         /// <summary>
@@ -763,6 +682,32 @@ namespace CanvasCommon
             }
 
             return projected;
+        }
+
+        public static IEnumerable<float> MedianFilter(IEnumerable<float> values, uint halfWindowSize)
+        {
+            uint boundaryWindowSize = halfWindowSize + 1;
+            uint windowSize = halfWindowSize * 2 + 1;
+            SortedList<float> window = new SortedList<float>();
+            Queue<float> previousValues = new Queue<float>();
+            foreach (float value in values)
+            {
+                if (window.Count >= windowSize && previousValues.Any())
+                {
+                    window.Remove(previousValues.Dequeue());
+                }
+                window.Add(value);
+                if (window.Count >= boundaryWindowSize)
+                {
+                    yield return window.Median();
+                }
+                previousValues.Enqueue(value);
+            }
+            while (window.Count > boundaryWindowSize && previousValues.Any())
+            {
+                window.Remove(previousValues.Dequeue());
+                yield return window.Median();
+            }
         }
 
         public static Dictionary<string, List<GenomicBin>> LoadBedFile(string bedPath, int? gcIndex = null)

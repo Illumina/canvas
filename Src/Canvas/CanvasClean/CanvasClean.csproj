@@ -31,6 +31,8 @@
     <UseApplicationTrust>false</UseApplicationTrust>
     <BootstrapperEnabled>true</BootstrapperEnabled>
     <TargetFrameworkProfile />
+    <NuGetPackageImportStamp>
+    </NuGetPackageImportStamp>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <PlatformTarget>AnyCPU</PlatformTarget>
@@ -72,8 +74,20 @@
     <Prefer32Bit>true</Prefer32Bit>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="IlluminaCommon, Version=1.5.0.0, Culture=neutral, processorArchitecture=AMD64">
-      <HintPath>..\Canvas\packages\IlluminaCommon.1.5.0\lib\net40\IlluminaCommon.dll</HintPath>
+    <Reference Include="Illumina.Common, Version=1.11.0.0, Culture=neutral, processorArchitecture=AMD64">
+      <HintPath>..\Canvas\packages\Illumina.Common.1.11.0\lib\net40\Illumina.Common.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Isas.SequencingFiles, Version=2.43.0.0, Culture=neutral, processorArchitecture=AMD64">
+      <HintPath>..\Canvas\packages\Isas.SequencingFiles.2.43.0\lib\net451\Isas.SequencingFiles.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Isas.Shared, Version=2.37.0.0, Culture=neutral, processorArchitecture=AMD64">
+      <HintPath>..\Canvas\packages\Isas.Shared.2.37.0\lib\net451\Isas.Shared.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="NDesk.Options, Version=0.2.1.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\Canvas\packages\NDesk.Options.0.2.1\lib\NDesk.Options.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="Newtonsoft.Json, Version=8.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
@@ -82,10 +96,6 @@
     </Reference>
     <Reference Include="protobuf-net, Version=2.0.0.668, Culture=neutral, PublicKeyToken=257b51d87d2e4d67, processorArchitecture=MSIL">
       <HintPath>..\Canvas\packages\protobuf-net.2.0.0.668\lib\net40\protobuf-net.dll</HintPath>
-      <Private>True</Private>
-    </Reference>
-    <Reference Include="SequencingFiles, Version=2.12.0.0, Culture=neutral, processorArchitecture=AMD64">
-      <HintPath>..\Canvas\packages\Isas.SequencingFiles.2.12.0\lib\net451\SequencingFiles.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="System" />
@@ -135,6 +145,13 @@
     <PostBuildEvent>
     </PostBuildEvent>
   </PropertyGroup>
+  <Import Project="..\Canvas\packages\Isas.FileCompression.2.43.0\build\net451\Isas.FileCompression.targets" Condition="Exists('..\Canvas\packages\Isas.FileCompression.2.43.0\build\net451\Isas.FileCompression.targets')" />
+  <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
+    <PropertyGroup>
+      <ErrorText>This project references NuGet package(s) that are missing on this computer. Use NuGet Package Restore to download them.  For more information, see http://go.microsoft.com/fwlink/?LinkID=322105. The missing file is {0}.</ErrorText>
+    </PropertyGroup>
+    <Error Condition="!Exists('..\Canvas\packages\Isas.FileCompression.2.43.0\build\net451\Isas.FileCompression.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\Canvas\packages\Isas.FileCompression.2.43.0\build\net451\Isas.FileCompression.targets'))" />
+  </Target>
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
   <Target Name="BeforeBuild">
