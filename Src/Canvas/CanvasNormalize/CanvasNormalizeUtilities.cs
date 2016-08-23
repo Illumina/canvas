@@ -63,6 +63,17 @@ namespace CanvasNormalize
                     "Start", "End", "Unsmoothed Log Ratio"));
                 while (eFragment.MoveNext() && eReference.MoveNext() && eRatio.MoveNext())
                 {
+                    // Some bins could have been skipped when calculating the ratios
+                    while (!eFragment.Current.IsSameBin(eRatio.Current))
+                    {
+                        if (!eFragment.MoveNext()) // Ran out of fragment bins
+                            throw new ApplicationException("Fragment bins and ratio bins are not in the same order.");
+                    }
+                    while (!eReference.Current.IsSameBin(eRatio.Current))
+                    {
+                        if (!eReference.MoveNext()) // Ran out of reference bins
+                            throw new ApplicationException("Reference bins and ratio bins are not in the same order.");
+                    }
                     if (!eFragment.Current.IsSameBin(eReference.Current)
                         || !eFragment.Current.IsSameBin(eRatio.Current))
                     {
