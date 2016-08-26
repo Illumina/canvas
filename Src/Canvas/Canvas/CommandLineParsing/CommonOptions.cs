@@ -1,5 +1,5 @@
 using System.Collections.Generic;
-using Isas.Shared;
+using Isas.Shared.Utilities.FileSystem;
 
 namespace Canvas.CommandLineParsing
 {

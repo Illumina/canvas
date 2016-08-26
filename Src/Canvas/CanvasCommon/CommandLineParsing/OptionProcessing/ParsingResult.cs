@@ -1,5 +1,5 @@
 ﻿using System;
-using ILMNcommon.Common;
+using Illumina.Common;
 
 namespace CanvasCommon.CommandLineParsing.OptionProcessing
 {

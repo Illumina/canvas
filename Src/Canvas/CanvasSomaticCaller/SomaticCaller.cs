@@ -3,9 +3,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.IO;
-using SequencingFiles;
 using CanvasCommon;
-using SequencingFiles.Vcf;
+using Isas.SequencingFiles;
+using Isas.SequencingFiles.Vcf;
 
 
 namespace CanvasSomaticCaller
@@ -2054,6 +2054,7 @@ namespace CanvasSomaticCaller
                         segment.SecondBestCopyNumber = segment.CopyNumber; // indicator that CNs have swapped
                         segment.CopyNumber = tmpCopyNumber;
                         segment.CopyNumberSwapped = true;
+                        segment.MajorChromosomeCount = (segment.SecondBestCopyNumber == 1) ? 1 : 2;
 
                     }
                 }

@@ -1,7 +1,6 @@
-﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 14
-VisualStudioVersion = 14.0.24720.0
+VisualStudioVersion = 14.0.23107.0
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CanvasCommon", "..\CanvasCommon\CanvasCommon.csproj", "{EC8755F1-74BD-4A1F-9B82-5133D2F6A93B}"
 EndProject
@@ -21,6 +20,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FlagUniqueKmers", "..\..\..
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Canvas", "Canvas.csproj", "{F7EB30CA-EB4A-4E80-A067-0D9498A9F5B6}"
 	ProjectSection(ProjectDependencies) = postProject
+		{74169E0F-DB8F-4A86-AEBE-C7DC4E15F916} = {74169E0F-DB8F-4A86-AEBE-C7DC4E15F916}
 		{A08C4A1E-133E-4339-89E4-54651D37BAF0} = {A08C4A1E-133E-4339-89E4-54651D37BAF0}
 		{4FE7DC26-BB44-4A6E-B02B-785328C41260} = {4FE7DC26-BB44-4A6E-B02B-785328C41260}
 		{2467744A-CDDA-4E79-9039-F7724188937F} = {2467744A-CDDA-4E79-9039-F7724188937F}
@@ -37,6 +37,8 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CanvasSNV", "..\CanvasSNV\CanvasSNV.csproj", "{4DC19472-77F6-4482-B5BE-8D15760F89F7}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CanvasSomaticCaller", "..\CanvasSomaticCaller\CanvasSomaticCaller.csproj", "{A08C4A1E-133E-4339-89E4-54651D37BAF0}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CanvasSmooth", "..\CanvasSmooth\CanvasSmooth.csproj", "{74169E0F-DB8F-4A86-AEBE-C7DC4E15F916}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -92,6 +94,10 @@ Global
 		{A08C4A1E-133E-4339-89E4-54651D37BAF0}.Debug|x64.Build.0 = Debug|x64
 		{A08C4A1E-133E-4339-89E4-54651D37BAF0}.Release|x64.ActiveCfg = Release|x64
 		{A08C4A1E-133E-4339-89E4-54651D37BAF0}.Release|x64.Build.0 = Release|x64
+		{74169E0F-DB8F-4A86-AEBE-C7DC4E15F916}.Debug|x64.ActiveCfg = Debug|x64
+		{74169E0F-DB8F-4A86-AEBE-C7DC4E15F916}.Debug|x64.Build.0 = Debug|x64
+		{74169E0F-DB8F-4A86-AEBE-C7DC4E15F916}.Release|x64.ActiveCfg = Release|x64
+		{74169E0F-DB8F-4A86-AEBE-C7DC4E15F916}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

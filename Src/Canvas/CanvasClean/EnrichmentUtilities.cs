@@ -1,10 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using SequencingFiles;
+﻿using System.Collections.Generic;
 using CanvasCommon;
+using Isas.SequencingFiles;
 
 namespace CanvasClean
 {

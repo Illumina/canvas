@@ -2,9 +2,9 @@
 using System.Collections.Generic;
 using System.Linq;
 using CanvasCommon;
-using NDesk.Options;
 using System.IO;
-using SequencingFiles;
+using Isas.SequencingFiles;
+using NDesk.Options;
 
 namespace CanvasClean
 {

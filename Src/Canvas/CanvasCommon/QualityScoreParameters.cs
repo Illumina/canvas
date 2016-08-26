@@ -1,8 +1,4 @@
-﻿using System.Runtime.Serialization;
-using System.Runtime.Serialization.Json;
-using System.Security.Policy;
-
-namespace CanvasCommon
+﻿namespace CanvasCommon
 {
     public class QualityScoreParameters
     {

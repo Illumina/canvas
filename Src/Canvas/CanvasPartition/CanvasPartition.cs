@@ -1,10 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.IO;
-using CanvasCommon;
 using NDesk.Options;
 
 namespace CanvasPartition
@@ -28,6 +24,7 @@ namespace CanvasPartition
             bool needHelp = false;
             bool isGermline = false;
             string bedPath = null;
+            string commonCNVsbedPath = null;
             double alpha = Segmentation.DefaultAlpha;
             double madFactor = Segmentation.DefaultMadFactor;
             SegmentSplitUndo undoMethod = SegmentSplitUndo.None;
@@ -43,6 +40,7 @@ namespace CanvasPartition
                 { "s|split=", "CBS split method (None/Prune/SDUndo). Default: " + undoMethod, v => undoMethod = (SegmentSplitUndo)Enum.Parse(typeof(SegmentSplitUndo), v) },
                 { "f|madFactor=", "MAD factor to Wavelets. Default: " + madFactor, v => madFactor = float.Parse(v) },
                 { "b|bedfile=", "bed file to exclude (don't span these intervals)", v => bedPath = v },
+                { "c|commoncnvs=", "bed file with common CNVs (always include these intervals into segmentation results)", v => commonCNVsbedPath = v },             
                 { "g|germline", "flag indicating that input file represents germline genome", v => isGermline = v != null },
                 { "d|maxInterBinDistInSegment=", "the maximum distance between adjacent bins in a segment (negative numbers turn off splitting segments after segmentation). Default: " + maxInterBinDistInSegment, v => maxInterBinDistInSegment = int.Parse(v) },
             };
@@ -78,7 +76,7 @@ namespace CanvasPartition
             SegmentationEngine.Alpha = alpha;
             SegmentationEngine.UndoMethod = undoMethod;
             SegmentationEngine.MadFactor = madFactor;
-            SegmentationEngine.SegmentGenome(outFile, partitionMethod, isGermline);
+            SegmentationEngine.SegmentGenome(outFile, partitionMethod, isGermline, commonCNVsbedPath);
             return 0;
         }
     }

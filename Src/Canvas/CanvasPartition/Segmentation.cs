@@ -1,16 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Collections.Concurrent;
-using System.Runtime.InteropServices;
-using System.IO;
 using System.Linq;
-using System.Text;
 using System.Threading;
-using System.Threading.Tasks;
-using System.Diagnostics;
-using SequencingFiles;
-using MathNet.Numerics.Random;
 using CanvasCommon;
+using Isas.SequencingFiles;
+using MathNet.Numerics.Random;
+using Utilities = CanvasCommon.Utilities;
 
 namespace CanvasPartition
 {
@@ -47,14 +42,14 @@ namespace CanvasPartition
             this.ReadBEDInput();
         }
 
-        public void SegmentGenome(string outPath, SegmentationMethod method, bool isGermline)
+        public void SegmentGenome(string outPath, SegmentationMethod method, bool isGermline, string commonCNVsbedPath)
         {
             switch (method)
             {
                 case SegmentationMethod.Wavelets:
                 default:// use Wavelets if CBS is not selected       
                     Console.WriteLine("{0} Running Wavelet Partitioning", DateTime.Now);
-                    this.Wavelets(isGermline, madFactor: MadFactor, verbose: 2);
+                    this.Wavelets(isGermline, commonCNVsbedPath, madFactor: MadFactor, verbose: 2);
                     break;
                 case SegmentationMethod.CBS:
                     Console.WriteLine("{0} Running CBS Partitioning", DateTime.Now);
@@ -76,7 +71,7 @@ namespace CanvasPartition
         /// Wavelets: unbalanced HAAR wavelets segmentation 
         /// </summary>
         /// <param name="threshold">wavelets coefficient threshold</param>
-        private void Wavelets(bool isGermline, double thresholdLower = 5, double thresholdUpper = 80, double madFactor = 2, int minSize = 10, int verbose = 1)
+        private void Wavelets(bool isGermline, string commonCNVs, double thresholdLower = 5, double thresholdUpper = 80, double madFactor = 2, int minSize = 10, int verbose = 1)
         {
             Dictionary<string, int[]> inaByChr = new Dictionary<string, int[]>();
             Dictionary<string, double[]> finiteScoresByChr = new Dictionary<string, double[]>();
@@ -108,7 +103,7 @@ namespace CanvasPartition
 
                 }));
             }
-            Isas.Shared.Utilities.DoWorkParallelThreads(tasks);
+            Isas.Shared.Utilities.Utilities.DoWorkParallelThreads(tasks);
             // Quick sanity-check: If we don't have any segments, then return a dummy result.
             int n = 0;
             foreach (var list in finiteScoresByChr.Values)
@@ -123,12 +118,13 @@ namespace CanvasPartition
 
             Dictionary<string, Segment[]> segmentByChr = new Dictionary<string, Segment[]>();
 
-            // when parallelizing we need an RNG for each chromosome to get deterministic results
-            Random seedGenerator = new MersenneTwister(0);
-            Dictionary<string, Random> perChromosomeRandom = new Dictionary<string, Random>();
-            foreach (string chr in this.ScoreByChr.Keys)
+
+            // load common CNV segments
+            Dictionary<string, List<GenomicBin>> commonCNVintervals = null;
+            if (commonCNVs != null)
             {
-                perChromosomeRandom[chr] = new MersenneTwister(seedGenerator.NextFullRangeInt32(), true);
+                commonCNVintervals = Utilities.LoadBedFile(commonCNVs);
+                Utilities.SortAndOverlapCheck(commonCNVintervals, commonCNVs);
             }
 
             tasks = new List<ThreadStart>();
@@ -148,6 +144,16 @@ namespace CanvasPartition
                     List<int> startBreakpointsPos = new List<int>();
                     List<int> endBreakpointPos = new List<int>();
                     List<int> lengthSeg = new List<int>();
+
+                    if (commonCNVs != null)
+                    {
+                        if (commonCNVintervals.ContainsKey(chr))
+                        {
+                            List <GenomicBin> remappedCommonCNVintervals = RemapCommonRegions(commonCNVintervals[chr], this.StartByChr[chr], this.EndByChr[chr]);
+                            List <int> oldbreakpoints = breakpoints;
+                            breakpoints = OverlapCommonRegions(oldbreakpoints, remappedCommonCNVintervals);
+                        }
+                    }
 
                     if (breakpoints.Count() >= 2 && sizeScoreByChr > 10)
                     {
@@ -204,7 +210,7 @@ namespace CanvasPartition
 
             }
             Console.WriteLine("{0} Launching wavelet tasks", DateTime.Now);
-            Isas.Shared.Utilities.DoWorkParallelThreads(tasks);
+            Isas.Shared.Utilities.Utilities.DoWorkParallelThreads(tasks);
             Console.WriteLine("{0} Completed wavelet tasks", DateTime.Now);
             this.SegmentationResults = new GenomeSegmentationResults(segmentByChr);
             Console.WriteLine("{0} Segmentation results complete", DateTime.Now);
@@ -276,7 +282,7 @@ namespace CanvasPartition
 
                 }));
             }
-            Isas.Shared.Utilities.DoWorkParallelThreads(tasks);
+            Isas.Shared.Utilities.Utilities.DoWorkParallelThreads(tasks);
 
             // Quick sanity-check: If we don't have any segments, then return a dummy result.
             int n = 0;
@@ -337,7 +343,7 @@ namespace CanvasPartition
             }
 
             //Parallel.ForEach(tasks, t => { t.Invoke(); });
-            Isas.Shared.Utilities.DoWorkParallelThreads(tasks);
+            Isas.Shared.Utilities.Utilities.DoWorkParallelThreads(tasks);
             this.SegmentationResults = new GenomeSegmentationResults(segmentByChr);
         }
 
@@ -406,7 +412,102 @@ namespace CanvasPartition
             }
         }
 
-        private void WriteCanvasPartitionResults(string outPath)
+        /// <summary>
+        /// Remap index from genomic coordinates into CanvasBin coordinates
+        /// </summary>
+        private int? RemapIndex(uint[] startPos, uint[] endPos, int value, int length, ref int index)
+        {
+            const int distanceThreshold = 10000;
+            var bestMinDistanceStart = Int32.MaxValue;
+            var remappedIndex = 0;
+            while (index < length)
+            {
+                int tmpMinDistanceStart = Math.Abs(Convert.ToInt32(startPos[index] + (endPos[index] - startPos[index])) - value);
+                index++;
+                if (tmpMinDistanceStart < bestMinDistanceStart)
+                {
+                    bestMinDistanceStart = tmpMinDistanceStart;
+                    remappedIndex = index - 1;
+                }
+                else if (bestMinDistanceStart < distanceThreshold)
+                {
+                    return remappedIndex;
+                }
+                else
+                {
+                    return null;
+                }
+            }
+            return null;
+        }
+
+        /// <summary>
+        /// Remap GenomicBin from genome coordiantes into CanvasBin coordiantes
+        /// </summary>
+        private List<GenomicBin> RemapCommonRegions(List<GenomicBin> commonRegions, uint[] startByChr, uint[] endByChr)
+        {
+            var length = startByChr.Length;
+            var index = 0;
+            List<GenomicBin> commonRegionsRemapped = new List<GenomicBin>();
+
+            foreach (GenomicBin commonRegion in commonRegions)
+            {
+                if (index > length)
+                    break;
+                var startSegment = RemapIndex(startByChr, endByChr, commonRegion.Start, length, ref index);
+                var endSegment   = RemapIndex(startByChr, endByChr, commonRegion.Stop,  length, ref index);
+
+                if (startSegment.HasValue && endSegment.HasValue)
+                {
+                    GenomicBin interval = new GenomicBin();
+                    interval.Start = startSegment.Value;
+                    interval.Stop = endSegment.Value;
+                    commonRegionsRemapped.Add(interval);
+                }
+            }
+            return commonRegionsRemapped;
+        }
+
+        /// <summary>
+        /// Merge segmentation breakpoints with common CNV intervals
+        /// </summary>
+        public static List<int> OverlapCommonRegions(List<int> breakpoints, List<GenomicBin> commonCNVintervals)
+        {
+            List<int> newBreakpoints = new List<int>();
+            int index = 0;
+            int length = commonCNVintervals.Count;
+            foreach (int breakpoint in breakpoints)
+            {
+                while (index < length)
+                {
+
+                    if (breakpoint <= commonCNVintervals[index].Start)
+                    {
+                        newBreakpoints.Add(breakpoint);
+                        break;
+                    }
+                    else if (breakpoint > commonCNVintervals[index].Start && breakpoint < commonCNVintervals[index].Stop)
+                    {
+                        newBreakpoints.Add(commonCNVintervals[index].Start);
+                        newBreakpoints.Add(commonCNVintervals[index].Stop);
+                        index++;
+                        break;
+                    }
+                    else if (breakpoint >= commonCNVintervals[index].Stop)
+                    {
+                        newBreakpoints.Add(commonCNVintervals[index].Start);
+                        newBreakpoints.Add(commonCNVintervals[index].Stop);
+                        index++;
+                    }
+                }
+                if (index > length)
+                    newBreakpoints.Add(breakpoint);
+            }
+            return newBreakpoints;
+        }
+
+        private
+            void WriteCanvasPartitionResults(string outPath)
         {
             Dictionary<string, bool> starts = new Dictionary<string, bool>();
             Dictionary<string, bool> stops = new Dictionary<string, bool>();
