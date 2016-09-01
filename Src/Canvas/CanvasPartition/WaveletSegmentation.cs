@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using CanvasCommon;
 
 namespace CanvasPartition
 {
@@ -72,8 +73,7 @@ namespace CanvasPartition
                     indexVector.Add(i + 1);
                 }
             }
-            int medIndex = CanvasCommon.Utilities.Median(indexVector);
-            return medIndex;
+            return indexVector.Any() ? Utilities.Median(indexVector) : 0;
         }
 
         /// <summary>
@@ -99,7 +99,7 @@ namespace CanvasPartition
                 double NewMin = 0.8;
                 thresholds = Enumerable.Range(1, treeSize).Select(x => ((double)x * (NewMax - NewMin)) / treeSize + NewMin).ToList();
             }
-            else 
+            else
             {
                 for (int nodeIndex = 0; nodeIndex < treeSize; nodeIndex++)
                 {
@@ -204,13 +204,13 @@ namespace CanvasPartition
             double totalMedian = CanvasCommon.Utilities.Median(coverage);
             for (int i = 1; i < breakpoints.Count - 1; i++)
             {
-                int leftInterval = Math.Min(halfWindow, (breakpoints[i] - breakpoints[i-1])/2);
-                int rightInterval = Math.Min(halfWindow, (breakpoints[i+1] - breakpoints[i])/2);
+                int leftInterval = Math.Min(halfWindow, (breakpoints[i] - breakpoints[i - 1]) / 2);
+                int rightInterval = Math.Min(halfWindow, (breakpoints[i + 1] - breakpoints[i]) / 2);
                 double bestMedianDifference = Math.Abs(CanvasCommon.Utilities.Median(coverage, breakpoints[i - 1], breakpoints[i]) - totalMedian);
                 int bestBreakpoint = breakpoints[i];
                 for (int j = breakpoints[i] - leftInterval; j < breakpoints[i] + rightInterval; j++)
                 {
-                    double tmpMedianDifference = Math.Abs(CanvasCommon.Utilities.Median(coverage, breakpoints[i-1], j) - totalMedian);
+                    double tmpMedianDifference = Math.Abs(CanvasCommon.Utilities.Median(coverage, breakpoints[i - 1], j) - totalMedian);
                     if (tmpMedianDifference > bestMedianDifference)
                     {
                         bestMedianDifference = tmpMedianDifference;
@@ -255,7 +255,7 @@ namespace CanvasPartition
             {
                 bpSum += tree[j][5 + i * 5 - 1] - tree[j][3 + i * 5 - 1] - 1.0;
             }
-            
+
             while (bpSum != 0)
             {
                 int no_parent_coeffs = (int)Math.Floor((double)tree[j].Count() / 5);
@@ -353,7 +353,7 @@ namespace CanvasPartition
             // coefficient; 3rd component - time point where the corresponding UH vector
             // starts; 4th component - last time point before the breakpoint of the UH vector;
             // 5th component - end point of the UH vector.
-            
+
             List<List<double>> tree = new List<List<double>>();
             double smooth = 0;
             FindBestUnbalancedHaarDecomposition(ratio, tree, smooth);
