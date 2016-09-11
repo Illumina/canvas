@@ -246,7 +246,7 @@ namespace CanvasSNV
 
         protected void WriteBAlleleFrequencies(string outputPath)
         {
-            using (GzipWriter writer = new GzipWriter(outputPath))
+            using (StreamWriter writer = new StreamWriter(outputPath))
             {
                 writer.WriteLine(CSVWriter.GetLine("Chromosome", "Position", "BAF"));
                 for (int index = 0; index < this.Variants.Count; index++)
