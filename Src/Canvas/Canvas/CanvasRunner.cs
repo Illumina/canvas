@@ -453,16 +453,17 @@ namespace Illumina.SecondaryAnalysis
             Console.WriteLine(">>>CanvasSNV complete!");
 
             // Concatenate CanvasSNV results:
-            using (GzipWriter writer = new GzipWriter(callset.VfSummaryPath))
+            ConcatenateCanvasSNVResults(callset.VfSummaryPath, outputPaths);
+            ConcatenateCanvasSNVBafResults(callset.VfSummaryBafPath, outputPaths.Select(path => path + ".baf"));
+        }
+
+        protected void ConcatenateCanvasSNVResults(string vfSummaryPath, IEnumerable<string> outputPaths)
+        {
+            using (GzipWriter writer = new GzipWriter(vfSummaryPath))
             {
                 bool headerWritten = false;
                 foreach (string outputPath in outputPaths)
                 {
-                    if (!File.Exists(outputPath))
-                    {
-                        Console.WriteLine("Error: Expected output file not found at {0}", outputPath);
-                        continue;
-                    }
                     using (GzipReader reader = new GzipReader(outputPath))
                     {
                         while (true)
@@ -474,6 +475,32 @@ namespace Illumina.SecondaryAnalysis
                                 if (headerWritten) continue;
                                 headerWritten = true;
                             }
+                            writer.WriteLine(fileLine);
+                        }
+                    }
+                }
+            }
+        }
+
+        protected void ConcatenateCanvasSNVBafResults(string vfSummaryBafPath, IEnumerable<string> outputBafPaths)
+        {
+            using (StreamWriter writer = new StreamWriter(vfSummaryBafPath))
+            {
+                string headers = null;
+                foreach (string outputPath in outputBafPaths)
+                {
+                    using (StreamReader reader = new StreamReader(outputPath))
+                    {
+                        string fileLine = reader.ReadLine(); // headers
+                        if (headers == null)
+                        {
+                            headers = fileLine;
+                            writer.WriteLine(headers);
+                        }
+                        while (true)
+                        {
+                            fileLine = reader.ReadLine();
+                            if (fileLine == null) break;
                             writer.WriteLine(fileLine);
                         }
                     }
