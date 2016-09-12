@@ -466,8 +466,9 @@ namespace Illumina.SecondaryAnalysis
                 {
                     if (!File.Exists(outputPath))
                     {
-                        Console.WriteLine("Error: Expected output file not found at {0}", outputPath);
-                        continue;
+                        string errorMessage = $"Expected output file not found at {outputPath}";
+                        _logger.Error(errorMessage);
+                        throw new FileNotFoundException(errorMessage);
                     }
                     using (GzipReader reader = new GzipReader(outputPath))
                     {
@@ -489,8 +490,6 @@ namespace Illumina.SecondaryAnalysis
 
         protected void ConcatenateCanvasSNVBafResults(string vfSummaryBafPath, IEnumerable<string> outputBafPaths)
         {
-            if (!outputBafPaths.Any(path => File.Exists(path))) // None of the BAF output files exists
-                return;
             using (StreamWriter writer = new StreamWriter(vfSummaryBafPath))
             {
                 string headers = null;
@@ -498,8 +497,9 @@ namespace Illumina.SecondaryAnalysis
                 {
                     if (!File.Exists(outputPath))
                     {
-                        Console.WriteLine("Error: Expected output file not found at {0}", outputPath);
-                        continue;
+                        string errorMessage = $"Expected output file not found at {outputPath}";
+                        _logger.Error(errorMessage);
+                        throw new FileNotFoundException(errorMessage);
                     }
                     using (StreamReader reader = new StreamReader(outputPath))
                     {
