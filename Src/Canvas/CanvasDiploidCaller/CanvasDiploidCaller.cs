@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 using System.IO;
+using System.Linq;
 using CanvasCommon;
 
 namespace CanvasDiploidCaller
@@ -282,16 +283,10 @@ namespace CanvasDiploidCaller
             return diploidCounts.ToArray();
         }
 
-        static public int AggregateVariantCoverage(ref List<CanvasSegment> segments)
+        public static int AggregateVariantCoverage(ref List<CanvasSegment> segments)
         {
-            List<int> VariantCoverage = new List<int>();
-
-            foreach (CanvasSegment segment in segments)
-            {
-                foreach (int coverage in segment.VariantTotalCoverage)
-                    VariantCoverage.Add(coverage);
-            }
-            return CanvasCommon.Utilities.Median(VariantCoverage);
+            var variantCoverage = segments.SelectMany(segment => segment.VariantTotalCoverage).ToList();
+            return variantCoverage.Any() ? Utilities.Median(variantCoverage) : 0;
         }
 
         /// <summary>
@@ -457,7 +452,7 @@ namespace CanvasDiploidCaller
             }
 
             CanvasSegment.AssignQualityScores(this.Segments, CanvasSegment.QScoreMethod.LogisticGermline, germlineScoreParameters);
-            
+
             // Merge neighboring segments that got the same copy number call.
             // merging segments requires quality scores so we do it after quality scores have been assigned
             CanvasSegment.MergeSegments(ref this.Segments);
