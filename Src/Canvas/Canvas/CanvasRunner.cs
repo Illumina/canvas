@@ -464,12 +464,6 @@ namespace Illumina.SecondaryAnalysis
                 bool headerWritten = false;
                 foreach (string outputPath in outputPaths)
                 {
-                    if (!File.Exists(outputPath))
-                    {
-                        string errorMessage = $"Expected output file not found at {outputPath}";
-                        _logger.Error(errorMessage);
-                        throw new FileNotFoundException(errorMessage);
-                    }
                     using (GzipReader reader = new GzipReader(outputPath))
                     {
                         while (true)
@@ -495,12 +489,6 @@ namespace Illumina.SecondaryAnalysis
                 string headers = null;
                 foreach (string outputPath in outputBafPaths)
                 {
-                    if (!File.Exists(outputPath))
-                    {
-                        string errorMessage = $"Expected output file not found at {outputPath}";
-                        _logger.Error(errorMessage);
-                        throw new FileNotFoundException(errorMessage);
-                    }
                     using (StreamReader reader = new StreamReader(outputPath))
                     {
                         string fileLine = reader.ReadLine(); // headers
