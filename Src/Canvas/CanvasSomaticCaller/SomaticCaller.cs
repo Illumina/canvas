@@ -2268,11 +2268,18 @@ namespace CanvasSomaticCaller
 
                     string refTagName = string.Format("{0}U", variant.ReferenceAllele[0]);
                     string altTagName = string.Format("{0}U", variant.VariantAlleles[0][0]);
-                    string[] counts = variant.GenotypeColumns.Last()[refTagName].Split(',');
+                    var lastGenotype = variant.GenotypeColumns.Last();
+                    if (!lastGenotype.ContainsKey(refTagName) || !lastGenotype.ContainsKey(altTagName))
+                    {
+                        Console.Error.WriteLine("Unexpected format for somatic call at {0}:{1} - expected AU/CU/GU/TU counts from Strelka",
+                            variant.ReferenceName, variant.ReferencePosition);
+                        continue;
+                    }
+                    string[] counts = lastGenotype[refTagName].Split(',');
                     int refCount = 0;
                     foreach (string bit in counts) refCount += int.Parse(bit);
                     int altCount = 0;
-                    counts = variant.GenotypeColumns.Last()[altTagName].Split(',');
+                    counts = lastGenotype[altTagName].Split(',');
                     foreach (string bit in counts) altCount += int.Parse(bit);
                     float VF = altCount / (float)(altCount + refCount);
                     if (VF >= 0.5) continue;
