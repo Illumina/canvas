@@ -82,6 +82,11 @@ namespace Canvas
             get { return Path.Combine(TempFolder, String.Format("VFResults{0}.txt.gz", Id)); }
         }
 
+        internal string VfSummaryBafPath
+        {
+            get { return VfSummaryPath + ".baf"; }
+        }
+
         internal string TempManifestPath
         {
             get { return Path.Combine(TempFolder, "manifest.txt"); }

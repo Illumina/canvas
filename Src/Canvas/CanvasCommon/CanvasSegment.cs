@@ -419,7 +419,10 @@ namespace CanvasCommon
                 writer.WriteLine();
                 foreach (GenomeMetadata.SequenceMetadata chromosome in genome.Sequences)
                 {
-                    if (chromosome.IsMito()) continue;
+                    if (!segmentsByChromosome.ContainsKey(chromosome.Name))
+                    {
+                        continue;
+                    }
                     int pointStartPos = 0; // 0-based start
                     while (pointStartPos < chromosome.Length)
                     {

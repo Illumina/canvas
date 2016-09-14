@@ -36,7 +36,7 @@ namespace CanvasSomaticCaller
             bool isDbsnpVcf = false;
             double? localSDmetric = null;
             double minimumCallSize;
-            int qualityFilterThreshold = 10;
+            int qualityFilterThreshold = 10; // Default quality filter threshold = 10, overridable via -q command-line argument
             // Parameters, for parameter-sweep, somatic model training:
             bool isTrainMode = false;
             float? userPurity = null;
