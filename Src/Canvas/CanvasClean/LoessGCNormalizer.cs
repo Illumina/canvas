@@ -42,7 +42,7 @@ namespace CanvasClean
             int i = 0; // index into x and y
             foreach (var bin in onTargetBins)
             {
-                double count = countTransformer(bin.Count); // Variance stablization
+                double count = countTransformer(bin.CountBin.Count); // Variance stablization
                 if (!double.IsInfinity(count))
                 {
                     x.Add(bin.GC);
@@ -76,8 +76,8 @@ namespace CanvasClean
             foreach (GenomicBin bin in bins)
             {
                 int i = Math.Min(fittedByGC.Length - 1, Math.Max(0, bin.GC - minGC));
-                double smoothed = countTransformer(bin.Count) - fittedByGC[i] + medianY;
-                bin.Count = invCountTransformer(smoothed);
+                double smoothed = countTransformer(bin.CountBin.Count) - fittedByGC[i] + medianY;
+                bin.CountBin.Count = invCountTransformer(smoothed);
             }
         }
 

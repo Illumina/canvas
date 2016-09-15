@@ -40,8 +40,8 @@ namespace CanvasNormalize
                     // The weighted average count of a bin could be less than 1.
                     // Using these small counts for coverage normalization creates large ratios.
                     // It would be better to just drop these bins so we don't introduce too much noise into segmentation and CNV calling.
-                    if (referenceBin.Count < 1) { continue; } // skip the bin
-                    double ratio = sampleBin.Count / referenceBin.Count * librarySizeFactor;
+                    if (referenceBin.CountBin.Count < 1) { continue; } // skip the bin
+                    double ratio = sampleBin.CountBin.Count / referenceBin.CountBin.Count * librarySizeFactor;
                     yield return new GenomicBin(sampleBin.Chromosome, sampleBin.Start, sampleBin.Stop, sampleBin.GC, (float)ratio);
                 }
             }

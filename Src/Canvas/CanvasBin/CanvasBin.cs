@@ -589,7 +589,7 @@ namespace CanvasBin
                     if (usePredefinedBins)
                     {
                         bins[predefinedBinIndex].GC = gc;
-                        bins[predefinedBinIndex].Count = currentBin.ObservedCount;
+                        bins[predefinedBinIndex].CountBin.Count = currentBin.ObservedCount;
                         predefinedBinIndex++;
                         if (predefinedBinIndex >= bins.Count) { break; } // we have processed all the bins
                         pos = bins[predefinedBinIndex].Start - 1; // jump to right before the next predefined bin
