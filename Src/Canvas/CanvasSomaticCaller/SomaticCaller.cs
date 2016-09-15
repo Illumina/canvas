@@ -851,10 +851,16 @@ namespace CanvasSomaticCaller
         /// </summary>
         protected double ComputeSilhouette(List<SegmentInfo> usableSegments, int numClusters)
         {
-            List<List<double>> withinClusterDistance = new List<List<double>>();
-            List<List<double>> betweenClusterDistance = new List<List<double>>();
-            for (int i = 0; i < numClusters; i++) withinClusterDistance.Add(new List<double>());
-            for (int i = 0; i < numClusters; i++) betweenClusterDistance.Add(new List<double>());
+            long sizeThreshold = 65536; // ~ based on 8GB memory and sizeof(float) = 4
+            int size = usableSegments.Count();
+            if (size > sizeThreshold)
+                throw new SomaticCaller.UncallableDataException($"Number of segments {size} exceeds allowed maximal number of segments {sizeThreshold}.");
+
+
+            List<List<float>> withinClusterDistance = new List<List<float>>(size);
+            List<List<float>> betweenClusterDistance = new List<List<float>>(size);
+            for (int i = 0; i < numClusters; i++) withinClusterDistance.Add(new List<float>(size));
+            for (int i = 0; i < numClusters; i++) betweenClusterDistance.Add(new List<float>(size));
 
             for (int k = 0; k < numClusters; k++)
             {
@@ -866,11 +872,11 @@ namespace CanvasSomaticCaller
                         {
                             if (usableSegments[i].ClusterId == usableSegments[j].ClusterId)
                             {
-                                withinClusterDistance[k].Add(GetModelDistance(usableSegments[i].Coverage, usableSegments[j].Coverage, usableSegments[i].MAF, usableSegments[j].MAF));
+                                withinClusterDistance[k].Add((float)GetModelDistance(usableSegments[i].Coverage, usableSegments[j].Coverage, usableSegments[i].MAF, usableSegments[j].MAF));
                             }
                             else
                             {
-                                betweenClusterDistance[k].Add(GetModelDistance(usableSegments[i].Coverage, usableSegments[j].Coverage, usableSegments[i].MAF, usableSegments[j].MAF));
+                                betweenClusterDistance[k].Add((float)GetModelDistance(usableSegments[i].Coverage, usableSegments[j].Coverage, usableSegments[i].MAF, usableSegments[j].MAF));
                             }
                         }
                     }
