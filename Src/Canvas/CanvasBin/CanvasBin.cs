@@ -8,6 +8,8 @@ using CanvasCommon;
 using ProtoBuf;
 using System.Linq;
 using Isas.SequencingFiles;
+using Isas.Shared.Utilities.FileSystem;
+using Newtonsoft.Json.Linq;
 
 namespace CanvasBin
 {
@@ -240,6 +242,69 @@ namespace CanvasBin
                     }
 
                 }));
+            }
+
+            Console.WriteLine("Launch CalculateNumberOfPossibleAlignmentsPerBin jobs...");
+            Console.Out.WriteLine();
+            //Parallel.ForEach(tasks, t => { t.Invoke(); }); //todo allow controling degree of parallelism
+            Isas.Shared.Utilities.Utilities.DoWorkParallelThreads(tasks);
+            Console.WriteLine("CalculateNumberOfPossibleAlignmentsPerBin jobs complete.");
+            Console.Out.WriteLine();
+            double medianRate = CanvasCommon.Utilities.Median(rates);
+            return (int)(countsPerBin / medianRate);
+        }
+
+
+        /// <summary>
+        /// Calculates how many possible alignments corresponds to the desired number of observed alignments per bin.
+        /// </summary>
+        /// <param name="countsPerBin">Desired number of observed alignments per bin.</param>
+        /// <param name="possibleAlignments">BitArrays of possible alignments (unique mers).</param>
+        /// <param name="observedAlignments">BitArrays storing the observed alignments.</param>
+        /// <returns>Median alignment rate observed on the autosomes.</returns>
+        static int CalculateNumberOfPossibleMultiSampleAlignmentsPerBin(int countsPerBin, List<IntermidiateDataHolder> intermidiateData, NexteraManifest manifest = null)
+        {
+            List<double> rates = new List<double>();
+
+            Dictionary<string, List<NexteraManifest.ManifestRegion>> manifestRegionsByChrom = null;
+            if (manifest != null)
+            {
+                manifestRegionsByChrom = manifest.GetManifestRegionsByChromosome();
+            }
+
+            List<ThreadStart> tasks = new List<ThreadStart>();
+            foreach (IntermidiateDataHolder singleSample in intermidiateData)
+            {
+                foreach (string chr in singleSample.possibleAlignments.Keys)
+                {
+                    // We don't want to include the sex chromosomes because they may not be copy number 2
+                    if (!GenomeMetadata.SequenceMetadata.IsAutosome(chr))
+                        continue;
+                    HitArray observed = singleSample.observedAlignments[chr];
+                    BitArray possible = singleSample.possibleAlignments[chr];
+                    List<NexteraManifest.ManifestRegion> regions = null;
+                    if (manifestRegionsByChrom != null)
+                    {
+                        if (!manifestRegionsByChrom.ContainsKey(chr))
+                        {
+                            continue;
+                        }
+                        regions = manifestRegionsByChrom[chr];
+                    }
+                    tasks.Add(new ThreadStart(() =>
+                    {
+                        int numberObserved = observed.CountSetBits(regions);
+                        int numberPossible = CountSetBits(possible, regions);
+
+                        double rate = numberObserved / (double)numberPossible;
+
+                        lock (rates)
+                        {
+                            rates.Add(rate);
+                        }
+
+                    }));
+                }
             }
 
             Console.WriteLine("Launch CalculateNumberOfPossibleAlignmentsPerBin jobs...");
@@ -739,6 +804,15 @@ namespace CanvasBin
             return 0;
         }
 
+        class IntermidiateDataHolder
+        {
+            public string sampleName;
+            public List<string> inputFiles;
+            public Dictionary<string, BitArray> possibleAlignments;
+            public Dictionary<string, HitArray> observedAlignments;
+            public Dictionary<string, Int16[]> fragmentLengths;
+        }
+
         /// <summary>
         /// Implements the Canvas binning algorithm
         /// </summary>
@@ -760,51 +834,67 @@ namespace CanvasBin
             // A value at a given index will represents fragment length of the read starting at that index
             Dictionary<string, Int16[]> fragmentLengths = new Dictionary<string, Int16[]>();
 
+            // Will hold information on intermidiate Canvas data
+            List<IntermidiateDataHolder> intermidiateData = new List<IntermidiateDataHolder>();
+
+            // Load manifest
+            NexteraManifest manifest = parameters.manifestFile == null ? null : new NexteraManifest(parameters.manifestFile, null, Console.WriteLine);
+
+            // CanvasBin BAM reading step
             if (parameters.intermediatePaths.Count == 0)
             {
                 BinOneGenomicInterval(parameters, possibleAlignments, observedAlignments, fragmentLengths);
                 return 0;
             }
 
-            //load our intermediate data files
-            List<string> inputFiles = new List<string>(parameters.intermediatePaths);
-            Object semaphore = new object(); // control access to possibleAlignments, observedAlignments, fragmentLengths
-            //int processorCoreCount = Environment.ProcessorCount;
-            int processorCoreCount = 1; // Limit # of deserialization threads to avoid (rare) protobuf issue.
-            List<Thread> threads = new List<Thread>();
-            Console.WriteLine("Start deserialization:");
-            Console.Out.Flush();
-            while (threads.Count > 0 || inputFiles.Count > 0)
+            // CanvasBin merging step
+            if (parameters.inJson != null)
             {
-                // Remove defunct threads:
-                threads.RemoveAll(t => !t.IsAlive);
-                if (threads.Count == processorCoreCount)
+                using (StreamReader reader = new StreamReader(parameters.inJson))
                 {
-                    Thread.Sleep(1000);
-                    continue;
-                }
-                while (inputFiles.Count > 0 && threads.Count < processorCoreCount)
-                {
-                    string inputFile = inputFiles.First();
-                    ThreadStart threadDelegate = new ThreadStart(() => DeserializeCanvasData(inputFile, possibleAlignments, observedAlignments, fragmentLengths, semaphore, parameters.coverageMode));
-                    Thread newThread = new Thread(threadDelegate);
-                    threads.Add(newThread);
-                    newThread.Name = "CanvasBin " + inputFiles[0];
-                    Console.WriteLine(newThread.Name);
-                    newThread.Start();
-                    inputFiles.RemoveAt(0);
+                    string jsonString = reader.ReadToEnd();
+                    dynamic jsonMultiSample = JArray.Parse(jsonString);
+                    foreach (JObject jsonSingleSample in jsonMultiSample.Children<JObject>())
+                    {
+                        IntermidiateDataHolder singleSample = new IntermidiateDataHolder();
+                        foreach (JProperty jsonChromosome in jsonSingleSample.Properties())
+                        {
+                            string name = jsonChromosome.Name;
+                            if (name == "sampleName")
+                                singleSample.sampleName = (string)jsonChromosome.Value;
+                            else
+                                singleSample.inputFiles.Add((string)jsonChromosome.Value);
+                        }
+                        singleSample.possibleAlignments = new Dictionary<string, BitArray>();
+                        singleSample.observedAlignments = new Dictionary<string, HitArray>();
+                        singleSample.fragmentLengths = new Dictionary<string, Int16[]>();
+                        intermidiateData.Add(singleSample);
+                    }
+
+                    Console.WriteLine("Start deserialization:");
+                    Console.Out.Flush();
+                    LoadIntermidiateMultiSampleData(parameters, intermidiateData);
+                    Console.WriteLine("{0} Deserialization complete", DateTime.Now);
+                    Console.Out.Flush();
+                    // Turn the desired # of alignments per bin into the number of possible alignments expected per bin.
+                    if (parameters.binSize == -1)
+                        parameters.binSize = CalculateNumberOfPossibleMultiSampleAlignmentsPerBin(parameters.countsPerBin, intermidiateData, manifest: manifest);
                 }
             }
-            Console.WriteLine("{0} Deserialization complete", DateTime.Now);
-            Console.Out.Flush();
-
-            NexteraManifest manifest = parameters.manifestFile == null ? null : new NexteraManifest(parameters.manifestFile, null, Console.WriteLine);
-
-            if (parameters.binSize == -1)
+            else
             {
+                // load our singlesample data files
+                List<string> inputFiles = new List<string>(parameters.intermediatePaths);
+                Console.WriteLine("Start deserialization:");
+                Console.Out.Flush();
+                LoadIntermidiateData(parameters, inputFiles, possibleAlignments, observedAlignments, fragmentLengths);
+                Console.WriteLine("{0} Deserialization complete", DateTime.Now);
+                Console.Out.Flush();
                 // Turn the desired # of alignments per bin into the number of possible alignments expected per bin.
-                parameters.binSize = CalculateNumberOfPossibleAlignmentsPerBin(parameters.countsPerBin, possibleAlignments, observedAlignments,
-                    manifest: manifest);
+                if (parameters.binSize == -1)
+                    // Turn the desired # of alignments per bin into the number of possible alignments expected per bin.
+                    parameters.binSize = CalculateNumberOfPossibleAlignmentsPerBin(parameters.countsPerBin, possibleAlignments, observedAlignments,
+                        manifest: manifest);
             }
 
             if (parameters.binSizeOnly)
@@ -822,14 +912,106 @@ namespace CanvasBin
             }
 
             // Bin alignments.
-            List<GenomicBin> bins = BinCounts(parameters.referenceFile, parameters.binSize, parameters.coverageMode, manifest,
-                possibleAlignments, observedAlignments, fragmentLengths, predefinedBins, parameters.outFile);
-            // Output!
-            Console.WriteLine("{0} Output binned counts:", DateTime.Now);
-            CanvasIO.WriteToTextFile(parameters.outFile, bins);
-            Console.WriteLine("{0} Output complete", DateTime.Now);
-            Console.Out.Flush();
+            if (parameters.inJson != null)
+            {
+                foreach (IntermidiateDataHolder singleSample in intermidiateData)
+                {
+                    List<GenomicBin> bins = BinCounts(parameters.referenceFile, parameters.binSize,
+                        parameters.coverageMode, manifest,
+                        singleSample.possibleAlignments, singleSample.observedAlignments, singleSample.fragmentLengths,
+                        predefinedBins, parameters.outFile);
+                    // Output!
+                    Console.WriteLine("{0} Output binned counts:", DateTime.Now);
+                    CanvasIO.WriteToTextFile(parameters.outFile, bins);
+                    Console.WriteLine("{0} Output complete", DateTime.Now);
+                    Console.Out.Flush();
+                }
+            }
+            else
+            {
+                List<GenomicBin> bins = BinCounts(parameters.referenceFile, parameters.binSize, parameters.coverageMode,
+                    manifest,
+                    possibleAlignments, observedAlignments, fragmentLengths, predefinedBins, parameters.outFile);
+                // Output!
+                Console.WriteLine("{0} Output binned counts:", DateTime.Now);
+                CanvasIO.WriteToTextFile(parameters.outFile, bins);
+                Console.WriteLine("{0} Output complete", DateTime.Now);
+                Console.Out.Flush();
+            }
             return 0;
+        }
+
+        private static void LoadIntermidiateData(CanvasBinParameters parameters, List<string> inputFiles, Dictionary<string, BitArray> possibleAlignments,
+            Dictionary<string, HitArray> observedAlignments, Dictionary<string, short[]> fragmentLengths)
+        {
+            Object semaphore = new object(); // control access to possibleAlignments, observedAlignments, fragmentLengths
+            // int processorCoreCount = Environment.ProcessorCount;
+            int processorCoreCount = 1; // Limit # of deserialization threads to avoid (rare) protobuf issue.
+            List<Thread> threads = new List<Thread>();
+
+            while (threads.Count > 0 || inputFiles.Count > 0)
+            {
+                // Remove defunct threads:
+                threads.RemoveAll(t => !t.IsAlive);
+                if (threads.Count == processorCoreCount)
+                {
+                    Thread.Sleep(1000);
+                    continue;
+                }
+                while (inputFiles.Count > 0 && threads.Count < processorCoreCount)
+                {
+                    string inputFile = inputFiles.First();
+                    ThreadStart threadDelegate =
+                        new ThreadStart(
+                            () =>
+                                DeserializeCanvasData(inputFile, possibleAlignments, observedAlignments, fragmentLengths,
+                                    semaphore, parameters.coverageMode));
+                    Thread newThread = new Thread(threadDelegate);
+                    threads.Add(newThread);
+                    newThread.Name = "CanvasBin " + inputFiles[0];
+                    Console.WriteLine(newThread.Name);
+                    newThread.Start();
+                    inputFiles.RemoveAt(0);
+                }
+            }
+        }
+
+        private static void LoadIntermidiateMultiSampleData(CanvasBinParameters parameters, List<IntermidiateDataHolder> intermidiateData)
+        {
+            Object semaphore = new object(); // control access to possibleAlignments, observedAlignments, fragmentLengths
+            // int processorCoreCount = Environment.ProcessorCount;
+            int processorCoreCount = 1; // Limit # of deserialization threads to avoid (rare) protobuf issue.
+            List<Thread> threads = new List<Thread>();
+            Console.WriteLine("Start deserialization:");
+            Console.Out.Flush();
+            foreach (IntermidiateDataHolder singleSample in intermidiateData)
+            {
+                while (threads.Count > 0 || singleSample.inputFiles.Count > 0)
+                {
+                    // Remove defunct threads:
+                    threads.RemoveAll(t => !t.IsAlive);
+                    if (threads.Count == processorCoreCount)
+                    {
+                        Thread.Sleep(1000);
+                        continue;
+                    }
+                    while (singleSample.inputFiles.Count > 0 && threads.Count < processorCoreCount)
+                    {
+                        string inputFile = singleSample.inputFiles.First();
+                        ThreadStart threadDelegate =
+                            new ThreadStart(
+                                () =>
+                                    DeserializeCanvasData(inputFile, singleSample.possibleAlignments, singleSample.observedAlignments,
+                                    singleSample.fragmentLengths, semaphore, parameters.coverageMode));
+                        Thread newThread = new Thread(threadDelegate);
+                        threads.Add(newThread);
+                        newThread.Name = "CanvasBin " + singleSample.inputFiles[0];
+                        Console.WriteLine(newThread.Name);
+                        newThread.Start();
+                        singleSample.inputFiles.RemoveAt(0);
+                    }
+                }
+            }
         }
 
         [ProtoContract]
