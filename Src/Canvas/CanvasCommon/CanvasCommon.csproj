@@ -113,6 +113,7 @@
     <Compile Include="CommandLineParsing\OptionProcessing\ParsingResult.cs" />
     <Compile Include="CommandLineParsing\OptionProcessing\ResultCollection.cs" />
     <Compile Include="CommandLineParsing\OptionProcessing\SuccessfulResultCollection.cs" />
+    <Compile Include="GenomicBinFilter.cs" />
     <Compile Include="QualityScoreParameters.cs" />
     <Compile Include="CanvasVersionInfo.cs" />
     <Compile Include="CnvType.cs" />
