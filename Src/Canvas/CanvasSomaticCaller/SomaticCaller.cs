@@ -851,42 +851,58 @@ namespace CanvasSomaticCaller
         /// </summary>
         protected double ComputeSilhouette(List<SegmentInfo> usableSegments, int numClusters)
         {
-            List<List<double>> withinClusterDistance = new List<List<double>>();
-            List<List<double>> betweenClusterDistance = new List<List<double>>();
-            for (int i = 0; i < numClusters; i++) withinClusterDistance.Add(new List<double>());
-            for (int i = 0; i < numClusters; i++) betweenClusterDistance.Add(new List<double>());
-
-            for (int k = 0; k < numClusters; k++)
+            const double RAMthreshold = 8e+9; // ~ based on 8GB memory and sizeof(float) = 4
+            List<SegmentInfo> usableClusterSegments = new List<SegmentInfo>(usableSegments.Count);
+            List<long> clustersSize = new List<long>(new long[numClusters]);
+            foreach (SegmentInfo segment in usableSegments)
             {
-                for (int i = 0; i < usableSegments.Count; i++)
+                if (segment.ClusterId != CanvasCommon.PloidyInfo.OutlierClusterFlag && segment.MAF >= 0 && segment.ClusterId.HasValue && segment.ClusterId.Value > 0)
                 {
-                    for (int j = 0; j < usableSegments.Count; j++)
-                    {
-                        if (i != j && usableSegments[i].ClusterId != CanvasCommon.PloidyInfo.OutlierClusterFlag && usableSegments[j].ClusterId != CanvasCommon.PloidyInfo.OutlierClusterFlag && usableSegments[i].ClusterId == k + 1 && usableSegments[i].MAF >= 0 && usableSegments[j].MAF >= 0)
-                        {
-                            if (usableSegments[i].ClusterId == usableSegments[j].ClusterId)
-                            {
-                                withinClusterDistance[k].Add(GetModelDistance(usableSegments[i].Coverage, usableSegments[j].Coverage, usableSegments[i].MAF, usableSegments[j].MAF));
-                            }
-                            else
-                            {
-                                betweenClusterDistance[k].Add(GetModelDistance(usableSegments[i].Coverage, usableSegments[j].Coverage, usableSegments[i].MAF, usableSegments[j].MAF));
-                            }
-                        }
-                    }
+                    usableClusterSegments.Add(segment);
+                    clustersSize[segment.ClusterId.Value - 1] += 1;
                 }
             }
-            double silhouette = 0;
+
+            // calculate RAM upper bound 
+            long totalSegmentsSize = usableClusterSegments.Count();
+            long totalRAM = 0;
+            foreach (var clusterSize in clustersSize)
+                totalRAM += clusterSize * clusterSize + clusterSize * (totalSegmentsSize - clusterSize) * sizeof(float);
+            if (totalRAM > RAMthreshold)
+                throw new SomaticCaller.UncallableDataException($"Number of segments {totalSegmentsSize} exceeds allowed maximal number of segments for {RAMthreshold} RAM threshold.");
+
+            // each element will hold a distance matrix showing distance between two segments from cluster k
+            List<List<float>> withinClusterDistance = new List<List<float>>(numClusters);
+            // each element will hold a distance matrix showing distance between a segment from cluster k and all other clusters
+            List<List<float>> betweenClusterDistance = new List<List<float>>(numClusters);
+            // Pre-allocate list
+            for (int i = 0; i < numClusters; i++) withinClusterDistance.Add(new List<float>((int)(clustersSize[i] * clustersSize[i])));
+            for (int i = 0; i < numClusters; i++) betweenClusterDistance.Add(new List<float>((int)(clustersSize[i] * (totalSegmentsSize - clustersSize[i]))));
+
+            foreach (var usableClusterSegmentA in usableClusterSegments)
+            {
+                foreach (var usableClusterSegmentB in usableClusterSegments)
+                {
+                    if (usableClusterSegmentA == usableClusterSegmentB) 
+                        continue;
+                    if (usableClusterSegmentA.ClusterId == usableClusterSegmentB.ClusterId)
+                        withinClusterDistance[usableClusterSegmentA.ClusterId.Value - 1].Add((float)GetModelDistance(usableClusterSegmentA.Coverage, usableClusterSegmentB.Coverage, usableClusterSegmentA.MAF, usableClusterSegmentB.MAF));
+                    else
+                        betweenClusterDistance[usableClusterSegmentA.ClusterId.Value - 1].Add((float)GetModelDistance(usableClusterSegmentA.Coverage, usableClusterSegmentB.Coverage, usableClusterSegmentA.MAF, usableClusterSegmentB.MAF));
+                }
+            }
+            
+            double silhouetteCoefficient = 0;
             for (int i = 0; i < numClusters; i++)
             {
                 if (withinClusterDistance[i].Count > 2 && betweenClusterDistance[i].Count > 2)
                 {
-                    double a = CanvasCommon.Utilities.Median(withinClusterDistance[i]);
-                    double b = CanvasCommon.Utilities.Median(betweenClusterDistance[i]);
-                    silhouette += (b - a) / Math.Max(a, b);
+                    var a = CanvasCommon.Utilities.Median(withinClusterDistance[i]);
+                    var b = CanvasCommon.Utilities.Median(betweenClusterDistance[i]);
+                    silhouetteCoefficient += (b - a) / Math.Max(a, b);
                 }
             }
-            return silhouette / numClusters;
+            return silhouetteCoefficient / numClusters;
         }
 
         /// <summary>
