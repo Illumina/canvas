@@ -10,8 +10,8 @@ namespace CanvasCommon
     {
         private readonly Dictionary<string, List<GenomicBin>> _excludedIntervals;
         private string _prevChrom = null;
-        private uint? _prevStart = null;
-        private List<GenomicBin> _intervals = null;
+        private uint _prevStart = 0;
+        private List<GenomicBin> _intervals = new List<GenomicBin>();
         private int _intervalIndex = -1;
 
         public GenomicBinFilter(string forbiddenIntervalBedPath)
@@ -21,15 +21,6 @@ namespace CanvasCommon
             {
                 _excludedIntervals = Utilities.LoadBedFile(forbiddenIntervalBedPath);
             }
-            Reset();
-        }
-
-        public void Reset()
-        {
-            _prevChrom = null;
-            _prevStart = null;
-            _intervals = null;
-            _intervalIndex = -1;
         }
 
         /// <summary>
@@ -44,20 +35,24 @@ namespace CanvasCommon
             if (chrom != _prevChrom)
             {
                 _prevChrom = chrom;
-                _intervals = _excludedIntervals.ContainsKey(chrom) ? _excludedIntervals[chrom] : null;
+                _intervals = _excludedIntervals.ContainsKey(chrom) ? _excludedIntervals[chrom] :
+                    new List<GenomicBin>();
                 _intervalIndex = 0;
             }
-            else if (_prevStart.HasValue && start < _prevStart.Value)
+            else if (start < _prevStart)
             {
                 _intervalIndex = 0;
             }
             _prevStart = start;
-            while (_intervals != null && _intervalIndex < _intervals.Count && _intervals[_intervalIndex].Stop < start + 1)
+            // while |- interval -|  |- bin -|
+            while (_intervalIndex < _intervals.Count && _intervals[_intervalIndex].Stop < start + 1)
             {
                 _intervalIndex++;
             }
+            // now we either run out of intervals or  |- interval -| or           |- interval -|
+            //                                            |- bin -|      |- bin -|
             // skip bins overlapping exclude intervals
-            if (_intervals != null && _intervalIndex < _intervals.Count && _intervals[_intervalIndex].Start < stop)
+            if (_intervalIndex < _intervals.Count && _intervals[_intervalIndex].Start < stop)
             {
                 return true;
             }
