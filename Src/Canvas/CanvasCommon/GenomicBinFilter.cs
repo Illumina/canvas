@@ -44,20 +44,21 @@ namespace CanvasCommon
                 _intervalIndex = 0;
             }
             _prevStart = start;
-            // while |- interval -|  |- bin -|
-            while (_intervalIndex < _intervals.Count && _intervals[_intervalIndex].Stop < start + 1)
+
+            for (; _intervalIndex < _intervals.Count; _intervalIndex++)
             {
-                _intervalIndex++;
-            }
-            // now we either run out of intervals or  |- interval -| or           |- interval -|
-            //                                            |- bin -|      |- bin -|
-            // skip bins overlapping exclude intervals
-            if (_intervalIndex < _intervals.Count && _intervals[_intervalIndex].Start < stop)
-            {
-                return true;
+                if (_intervals[_intervalIndex].Stop <= start) // |- interval -|  |- bin -|
+                {
+                    continue;
+                }
+                else if (_intervals[_intervalIndex].Start >= stop) // |- bin -|  |- interval -|
+                {
+                    return false;
+                }
+                return true; // overlaps
             }
 
-            return false;
+            return false; // ran out of intervals
         }
 
         public bool SkipBin(GenomicBin bin)
