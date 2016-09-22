@@ -370,13 +370,13 @@ namespace CanvasPartition
         /// </summary>
         private void ReadBEDInput()
         {
+            GenomicBinFilter binFilter = new GenomicBinFilter(ForbiddenIntervalBedPath);
+
             try
             {
                 Dictionary<string, List<uint>> startByChr = new Dictionary<string, List<uint>>(),
                     endByChr = new Dictionary<string, List<uint>>();
                 Dictionary<string, List<double>> scoreByChr = new Dictionary<string, List<double>>();
-                // Create an instance of StreamReader to read from a file. 
-                // The using statement also closes the StreamReader. 
                 using (GzipReader reader = new GzipReader(this.InputBinPath))
                 {
                     string line;
@@ -384,16 +384,20 @@ namespace CanvasPartition
                     while ((line = reader.ReadLine()) != null)
                     {
                         tokens = line.Split('\t');
-                        string chr = tokens[Segmentation.idxChr].Trim();
-                        if (!startByChr.ContainsKey(chr))
+                        string chrom = tokens[Segmentation.idxChr].Trim();
+                        uint start = Convert.ToUInt32(tokens[Segmentation.idxStart].Trim());
+                        uint end = Convert.ToUInt32(tokens[Segmentation.idxEnd].Trim());
+                        if (binFilter.SkipBin(chrom, start, end))
+                            continue;
+                        if (!startByChr.ContainsKey(chrom))
                         {
-                            startByChr.Add(chr, new List<uint>());
-                            endByChr.Add(chr, new List<uint>());
-                            scoreByChr.Add(chr, new List<double>());
+                            startByChr.Add(chrom, new List<uint>());
+                            endByChr.Add(chrom, new List<uint>());
+                            scoreByChr.Add(chrom, new List<double>());
                         }
-                        startByChr[chr].Add(Convert.ToUInt32(tokens[Segmentation.idxStart].Trim()));
-                        endByChr[chr].Add(Convert.ToUInt32(tokens[Segmentation.idxEnd].Trim()));
-                        scoreByChr[chr].Add(Convert.ToDouble(tokens[this.idxScore].Trim()));
+                        startByChr[chrom].Add(start);
+                        endByChr[chrom].Add(end);
+                        scoreByChr[chrom].Add(Convert.ToDouble(tokens[this.idxScore].Trim()));
                     }
                     foreach (string chr in startByChr.Keys)
                     {
@@ -506,8 +510,7 @@ namespace CanvasPartition
             return newBreakpoints;
         }
 
-        private
-            void WriteCanvasPartitionResults(string outPath)
+        private void WriteCanvasPartitionResults(string outPath)
         {
             Dictionary<string, bool> starts = new Dictionary<string, bool>();
             Dictionary<string, bool> stops = new Dictionary<string, bool>();
