@@ -9,7 +9,8 @@ namespace CanvasCommon
     public class GenomicBinFilter
     {
         private readonly Dictionary<string, List<GenomicBin>> _excludedIntervals;
-        private string _currChrom = null;
+        private string _prevChrom = null;
+        private uint? _prevStart = null;
         private List<GenomicBin> _intervals = null;
         private int _intervalIndex = -1;
 
@@ -25,13 +26,14 @@ namespace CanvasCommon
 
         public void Reset()
         {
-            _currChrom = null;
+            _prevChrom = null;
+            _prevStart = null;
             _intervals = null;
             _intervalIndex = -1;
         }
 
         /// <summary>
-        /// 
+        /// Assumes that the method is called on bins sorted by start in ascending order for each chromosome.
         /// </summary>
         /// <param name="chrom">chromosome</param>
         /// <param name="start">0-based start, inclusive</param>
@@ -39,12 +41,17 @@ namespace CanvasCommon
         /// <returns></returns>
         public bool SkipBin(string chrom, uint start, uint stop)
         {
-            if (chrom != _currChrom)
+            if (chrom != _prevChrom)
             {
-                _currChrom = chrom;
+                _prevChrom = chrom;
                 _intervals = _excludedIntervals.ContainsKey(chrom) ? _excludedIntervals[chrom] : null;
                 _intervalIndex = 0;
             }
+            else if (_prevStart.HasValue && start < _prevStart.Value)
+            {
+                _intervalIndex = 0;
+            }
+            _prevStart = start;
             while (_intervals != null && _intervalIndex < _intervals.Count && _intervals[_intervalIndex].Stop < start + 1)
             {
                 _intervalIndex++;
