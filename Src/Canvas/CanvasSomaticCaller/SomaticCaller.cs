@@ -7,7 +7,6 @@ using CanvasCommon;
 using Isas.SequencingFiles;
 using Isas.SequencingFiles.Vcf;
 
-
 namespace CanvasSomaticCaller
 {
     public class SomaticCaller
@@ -694,6 +693,36 @@ namespace CanvasSomaticCaller
             return selectedModelPoints;
         }
 
+        // Update all model ploidies given expected mean coverage and purity values 
+        protected void UpdateModelPoints(SomaticCaller.CoveragePurityModel model)
+        {
+
+            double[] mu = GetProjectedMeanCoverage(model.DiploidCoverage, somaticCallerParameters.MaximumCopyNumber);
+            double diploidMAF = this.AllPloidies[3].MinorAlleleFrequency; 
+
+            /////////////////////////////////////////////
+            // Update the parameters in each SegmentPloidy object, and construct corresponding SegmentInfo objects
+            foreach (SegmentPloidy ploidy in this.AllPloidies)
+            {
+                ModelPoint point = new ModelPoint();
+                double pureCoverage = mu[ploidy.CopyNumber];
+                point.Coverage = (model.Purity * pureCoverage) + (1 - model.Purity) * model.DiploidCoverage;
+                double pureMAF = ploidy.MinorAlleleFrequency;
+                if (ploidy.MajorChromosomeCount * 2 == ploidy.CopyNumber)
+                {
+                    point.MAF = (model.Purity * ploidy.CopyNumber * pureMAF) + ((1 - model.Purity) * 2 * diploidMAF);
+                    point.MAF /= model.Purity * ploidy.CopyNumber + (1 - model.Purity) * 2;
+                    if (double.IsNaN(point.MAF)) point.MAF = 0;
+                }
+                else
+                {
+                    point.MAF = (model.Purity * ploidy.CopyNumber * pureMAF) + ((1 - model.Purity) * 1);
+                    point.MAF /= model.Purity * ploidy.CopyNumber + (1 - model.Purity) * 2;
+                }
+                ploidy.MixedMinorAlleleFrequency = point.MAF;
+                ploidy.MixedCoverage = point.Coverage;
+            }
+        }
 
         // Initialize model points given expected ploidy and purity values 
         protected List<ModelPoint> InitializeModelPoints(SomaticCaller.CoveragePurityModel model)
@@ -1930,6 +1959,44 @@ namespace CanvasSomaticCaller
         }
 
         /// <summary>
+        /// Checks if non-diploid MAF values are significantly different from 0.48 to
+        /// identify choppiness artefacts where drops or gains of coverage are not 
+        /// supported by corresponding changes in MAF values.
+        /// Set the best model to ploidy = 2, purity = 1 if choppiness was detected 
+        /// </summary>
+        protected void CheckNonDiploidMAFs(List<CanvasSegment> canvasSegments)
+        {
+            const double diploidMAF = 0.48;
+            double minSizeMAFs = 1000; // to approximate chopiness for 100 to 500kb regions
+            const int tStatisticsSizeThreshold = 20;
+
+            if (this.IsEnrichment)
+                CanvasSegment.MergeSegments(ref canvasSegments, somaticCallerParameters.MinimumCallSize, 1);
+            else
+                CanvasSegment.MergeSegmentsUsingExcludedIntervals(ref canvasSegments, somaticCallerParameters.MinimumCallSize, ExcludedIntervals);
+            CanvasSegment.AssignQualityScores(canvasSegments, CanvasSegment.QScoreMethod.Logistic, this.somaticCallerQscoreParameters);
+
+            var nonDiploidMAFs = canvasSegments.Where(segment => (segment.CopyNumber == 1 && segment.MeanMAF >= 0 && segment.VariantFrequencies.Count > minSizeMAFs))
+                .Select(segment => segment.MeanMAF).ToArray();
+            Console.WriteLine($">>> nonDiploidMAFs length {nonDiploidMAFs.Length }");
+
+            if (nonDiploidMAFs.Length < tStatisticsSizeThreshold) // t-statistics becomes inaccurate below n=15
+                return;
+            double tTestStatistics = CanvasCommon.Utilities.tTest(nonDiploidMAFs, diploidMAF);
+            Console.WriteLine($">>> CheckNonDiploidMAFs t-test statistics {tTestStatistics}");
+            if (Math.Abs(tTestStatistics) < 2.576)
+            {
+                this.Model.Purity = 1.0;
+                this.Model.Ploidy = 2.0;
+                var coverage = canvasSegments.Select(segment => segment.MeanCount);
+                this.Model.DiploidCoverage = CanvasCommon.Utilities.Median(coverage);
+                // re-initialize model points
+                UpdateModelPoints(this.Model);
+                Console.WriteLine(">>> Coverage choppiness was detected as non-diploid segments have MAFs around 0.5. Purity and ploidy value estimates are unreliable and set to purity = 1.0, ploidy = 2.0.");
+            }
+        }
+
+        /// <summary>
         /// Extract segments from clusters that appear underclustered, i.e. subclonal CNV variants cluster with the closest clonal copy number 
         /// </summary>
         public static void ExtractSegments(int bestNumClusters, List<SegmentInfo> usableSegments, List<double> clusterVariance, List<int> clustersSize,
@@ -2148,12 +2215,20 @@ namespace CanvasSomaticCaller
             // Derive a model of diploid coverage, and overall tumor purity:
             this.Model = ModelOverallCoverageAndPurity(genomeMetaData.Length, clusteringMode);
 
+
             // Make preliminary ploidy calls for all segments.  For those segments which fit their ploidy reasonably well,
             // accumulate information about the MAF by site and coverage by bin.  
             double percentageHeterogeneity = 0;
             if (AllPloidies.First().Sigma == null)
             {
                 AssignPloidyCalls();
+                List <CanvasSegment> sizeFilteredSegment = new List<CanvasSegment>(this.Segments.
+                    Where(segment => segment.End - segment.Begin > 5000).Select(segment => segment));
+                CheckNonDiploidMAFs(sizeFilteredSegment);
+                // update MixedMinorAlleleFrequency and MixedCoverage
+                List<ModelPoint> modelPoints = InitializeModelPoints(this.Model);
+
+
                 // Do not run heterogeneity adjustment on enrichment data
                 if (!this.IsEnrichment)
                 {

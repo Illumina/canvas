@@ -55,6 +55,17 @@ namespace CanvasCommon
             }
         }
 
+        public double MeanMAF
+        {
+            get
+            {
+                if (this.VariantFrequencies.Count <= 5)
+                    return -1;
+
+                return this.VariantFrequencies.Average();
+            }
+        }
+
 
         public CnvType GetCnvType(int referenceCopyNumber)
         {
