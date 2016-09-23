@@ -1962,7 +1962,8 @@ namespace CanvasSomaticCaller
         /// Checks if non-diploid MAF values are significantly different from 0.48 to
         /// identify choppiness artefacts where drops or gains of coverage are not 
         /// supported by corresponding changes in MAF values.
-        /// Set the best model to ploidy = 2, purity = 1 if choppiness was detected 
+        /// Set the best model to ploidy = 2, purity = 1 if choppiness was detected, 
+        /// re-initialize model points and re-assign ploidy calls
         /// </summary>
         protected void CheckNonDiploidMAFs(List<CanvasSegment> canvasSegments)
         {
@@ -1984,14 +1985,15 @@ namespace CanvasSomaticCaller
                 return;
             double tTestStatistics = CanvasCommon.Utilities.tTest(nonDiploidMAFs, diploidMAF);
             Console.WriteLine($">>> CheckNonDiploidMAFs t-test statistics {tTestStatistics}");
-            if (Math.Abs(tTestStatistics) < 2.576)
+            if (Math.Abs(tTestStatistics) < 3.733) // for alpha = 0.001 and 15 degrees of freedom
             {
                 this.Model.Purity = 1.0;
                 this.Model.Ploidy = 2.0;
                 var coverage = canvasSegments.Select(segment => segment.MeanCount);
                 this.Model.DiploidCoverage = CanvasCommon.Utilities.Median(coverage);
-                // re-initialize model points
+                // re-initialize model points and re-assign ploidy calls
                 UpdateModelPoints(this.Model);
+                AssignPloidyCalls();
                 Console.WriteLine(">>> Coverage choppiness was detected as non-diploid segments have MAFs around 0.5. Purity and ploidy value estimates are unreliable and set to purity = 1.0, ploidy = 2.0.");
             }
         }
@@ -2225,8 +2227,6 @@ namespace CanvasSomaticCaller
                 List <CanvasSegment> sizeFilteredSegment = new List<CanvasSegment>(this.Segments.
                     Where(segment => segment.End - segment.Begin > 5000).Select(segment => segment));
                 CheckNonDiploidMAFs(sizeFilteredSegment);
-                // update MixedMinorAlleleFrequency and MixedCoverage
-                List<ModelPoint> modelPoints = InitializeModelPoints(this.Model);
 
 
                 // Do not run heterogeneity adjustment on enrichment data
