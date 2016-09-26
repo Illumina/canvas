@@ -548,7 +548,7 @@ namespace CanvasCommon
         }
 
         /// <summary>
-        /// Returns t-test staistics from two-sample t-test presuming equal variance
+        /// Returns t-test statistics from two-sample t-test presuming equal variance
         /// </summary>
         public static double tTest(double[] vector , double mean)
         {

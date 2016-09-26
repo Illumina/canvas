@@ -1977,8 +1977,8 @@ namespace CanvasSomaticCaller
                 CanvasSegment.MergeSegmentsUsingExcludedIntervals(ref canvasSegments, somaticCallerParameters.MinimumCallSize, ExcludedIntervals);
             CanvasSegment.AssignQualityScores(canvasSegments, CanvasSegment.QScoreMethod.Logistic, this.somaticCallerQscoreParameters);
 
-            var nonDiploidMAFs = canvasSegments.Where(segment => (segment.CopyNumber == 1 && segment.MeanMAF >= 0 && segment.VariantFrequencies.Count > minSizeMAFs))
-                .Select(segment => segment.MeanMAF).ToArray();
+            var nonDiploidMAFs = canvasSegments.Where(segment => (segment.CopyNumber == 1 && segment.MeanMAF.HasValue && segment.VariantFrequencies.Count > minSizeMAFs))
+                .Select(segment => (double)segment.MeanMAF).ToArray();
             Console.WriteLine($">>> nonDiploidMAFs length {nonDiploidMAFs.Length }");
 
             if (nonDiploidMAFs.Length < tStatisticsSizeThreshold) // t-statistics becomes inaccurate below n=15
@@ -2224,8 +2224,7 @@ namespace CanvasSomaticCaller
             if (AllPloidies.First().Sigma == null)
             {
                 AssignPloidyCalls();
-                List <CanvasSegment> sizeFilteredSegment = new List<CanvasSegment>(this.Segments.
-                    Where(segment => segment.End - segment.Begin > 5000).Select(segment => segment));
+                List <CanvasSegment> sizeFilteredSegment = this.Segments.Where(segment => segment.End - segment.Begin > 5000).ToList();
                 CheckNonDiploidMAFs(sizeFilteredSegment);
 
 

@@ -71,7 +71,7 @@ namespace CanvasPartition
         /// Wavelets: unbalanced HAAR wavelets segmentation 
         /// </summary>
         /// <param name="threshold">wavelets coefficient threshold</param>
-        private void Wavelets(bool isGermline, string commonCNVs, double thresholdLower = 5, double thresholdUpper = 120, double madFactor = 2, int minSize = 10, int verbose = 1)
+        private void Wavelets(bool isGermline, string commonCNVs, double thresholdLower = 5, double thresholdUpper = 80, double madFactor = 2, int minSize = 10, int verbose = 1)
         {
             Dictionary<string, int[]> inaByChr = new Dictionary<string, int[]>();
             Dictionary<string, double[]> finiteScoresByChr = new Dictionary<string, double[]>();
@@ -138,7 +138,7 @@ namespace CanvasPartition
                     if (sizeScoreByChr > minSize)
                     {
                         WaveletSegmentation.HaarWavelets(this.ScoreByChr[chr].ToArray(), thresholdLower, thresholdUpper,
-                            breakpoints, isGermline, madFactor: madFactor = 10);
+                            breakpoints, isGermline, madFactor: madFactor);
                     }
 
                     List<int> startBreakpointsPos = new List<int>();

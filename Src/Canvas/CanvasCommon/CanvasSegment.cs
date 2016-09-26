@@ -55,12 +55,12 @@ namespace CanvasCommon
             }
         }
 
-        public double MeanMAF
+        public double? MeanMAF
         {
             get
             {
                 if (this.VariantFrequencies.Count <= 5)
-                    return -1;
+                    return null;
 
                 return this.VariantFrequencies.Average();
             }
