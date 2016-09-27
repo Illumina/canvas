@@ -1280,14 +1280,14 @@ namespace CanvasSomaticCaller
                 {
                     using (StreamWriter debugWriter = new StreamWriter(debugPath))
                     {
-                        debugWriter.WriteLine("#MAF\tCoverage\t");
+                        debugWriter.WriteLine("#MAF\tCoverage\tGenotype");
                         foreach (ModelPoint modelPoint in modelPoints)
                         {
                             string gt = modelPoint.Ploidy.MajorChromosomeCount.ToString() + "/" + modelPoint.CN.ToString();
-                            debugWriter.WriteLine("{0}\t{1}\t{2}\t", modelPoint.MAF, modelPoint.Coverage, gt);
+                            debugWriter.WriteLine("{0}\t{1}\t{2}", modelPoint.MAF, modelPoint.Coverage, gt);
                         }
                         debugWriter.WriteLine();
-                        debugWriter.WriteLine("#MAF\tCoverage\tBestDistance\tChromosome\tBegin\tEnd\tLength");
+                        debugWriter.WriteLine("#MAF\tCoverage\tBestDistance\tChromosome\tBegin\tEnd\tLength\tTruthSetCN");
                         foreach (SegmentInfo info in segments)
                         {
                             // Find the best fit for this segment:
@@ -1301,6 +1301,9 @@ namespace CanvasSomaticCaller
                             debugWriter.Write("{0}\t{1}\t", info.MAF, info.Coverage);
                             debugWriter.Write("{0}\t{1}\t{2}\t{3}\t", bestDistance, info.Segment.Chr, info.Segment.Begin, info.Segment.End);
                             debugWriter.Write("{0}\t", info.Segment.End - info.Segment.Begin);
+                            int CN = GetKnownCNForSegment(info.Segment);
+                            debugWriter.Write("{0}", CN);
+                            debugWriter.WriteLine();
                         }
                     }
                 }
