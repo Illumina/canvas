@@ -811,6 +811,7 @@ namespace CanvasBin
             public Dictionary<string, BitArray> possibleAlignments;
             public Dictionary<string, HitArray> observedAlignments;
             public Dictionary<string, Int16[]> fragmentLengths;
+
         }
 
         /// <summary>
@@ -841,7 +842,7 @@ namespace CanvasBin
             NexteraManifest manifest = parameters.manifestFile == null ? null : new NexteraManifest(parameters.manifestFile, null, Console.WriteLine);
 
             // CanvasBin BAM reading step
-            if (parameters.intermediatePaths.Count == 0)
+            if (parameters.intermediatePaths.Count == 0 && parameters.inJson == null)
             {
                 BinOneGenomicInterval(parameters, possibleAlignments, observedAlignments, fragmentLengths);
                 return 0;
@@ -857,6 +858,7 @@ namespace CanvasBin
                     foreach (JObject jsonSingleSample in jsonMultiSample.Children<JObject>())
                     {
                         IntermidiateDataHolder singleSample = new IntermidiateDataHolder();
+                        singleSample.inputFiles = new List<string>();
                         foreach (JProperty jsonChromosome in jsonSingleSample.Properties())
                         {
                             string name = jsonChromosome.Name;
@@ -895,6 +897,8 @@ namespace CanvasBin
                     // Turn the desired # of alignments per bin into the number of possible alignments expected per bin.
                     parameters.binSize = CalculateNumberOfPossibleAlignmentsPerBin(parameters.countsPerBin, possibleAlignments, observedAlignments,
                         manifest: manifest);
+                Console.WriteLine("{0} binSize", parameters.binSize);
+
             }
 
             if (parameters.binSizeOnly)
@@ -922,6 +926,7 @@ namespace CanvasBin
                         predefinedBins, parameters.outFile);
                     // Output!
                     Console.WriteLine("{0} Output binned counts:", DateTime.Now);
+                    Console.WriteLine("Output binned counts file {0}", parameters.outFile);
                     CanvasIO.WriteToTextFile(parameters.outFile, bins);
                     Console.WriteLine("{0} Output complete", DateTime.Now);
                     Console.Out.Flush();

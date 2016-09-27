@@ -121,7 +121,8 @@ namespace CanvasBin
                 needHelp = true;
             }
             else if (parameters.coverageMode != CanvasCommon.CanvasCoverageMode.Fragment
-                && string.IsNullOrEmpty(parameters.chromosome) && parameters.intermediatePaths.Count == 0)
+                && string.IsNullOrEmpty(parameters.chromosome) && parameters.intermediatePaths.Count == 0 &&
+                string.IsNullOrEmpty(parameters.inJson))
             {
                 Console.Error.WriteLine("Please specify chromsome to measure coverage for.");
                 needHelp = true;
