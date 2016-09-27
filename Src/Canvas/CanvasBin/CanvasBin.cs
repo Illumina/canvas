@@ -8,11 +8,98 @@ using CanvasCommon;
 using ProtoBuf;
 using System.Linq;
 using Isas.SequencingFiles;
-using Isas.Shared.Utilities.FileSystem;
 using Newtonsoft.Json.Linq;
 
 namespace CanvasBin
 {
+
+    public class SampleHitArrays
+    {
+        private readonly Dictionary<string, HitArray> _observedAlignments;
+
+        public SampleHitArrays(Dictionary<string, HitArray> observedAlignments)
+        {
+            _observedAlignments = observedAlignments;
+        }
+
+        public List<double> GetRates(Dictionary<string, BitArray> possibleAlignments, NexteraManifest manifest = null)
+        {
+            List<double> rates = new List<double>();
+
+            Dictionary<string, List<NexteraManifest.ManifestRegion>> manifestRegionsByChrom = null;
+            if (manifest != null)
+            {
+                manifestRegionsByChrom = manifest.GetManifestRegionsByChromosome();
+            }
+
+            List<ThreadStart> tasks = new List<ThreadStart>();
+            foreach (string chr in possibleAlignments.Keys)
+            {
+                // We don't want to include the sex chromosomes because they may not be copy number 2
+                if (!GenomeMetadata.SequenceMetadata.IsAutosome(chr))
+                    continue;
+                HitArray observed = _observedAlignments[chr];
+                BitArray possible = possibleAlignments[chr];
+                List<NexteraManifest.ManifestRegion> regions = null;
+                if (manifestRegionsByChrom != null)
+                {
+                    if (!manifestRegionsByChrom.ContainsKey(chr)) { continue; }
+                    regions = manifestRegionsByChrom[chr];
+                }
+                tasks.Add(new ThreadStart(() =>
+                {
+                    int numberObserved = observed.CountSetBits(regions);
+                    int numberPossible = CanvasBin.CountSetBits(possible, regions);
+
+                    double rate = numberObserved / (double)numberPossible;
+
+                    lock (rates)
+                    {
+                        rates.Add(rate);
+                    }
+
+                }));
+            }
+            return rates;
+        }
+
+        public int GetBinSize(int countsPerBin, Dictionary<string, BitArray> possibleAlignments, NexteraManifest manifest)
+        {
+            List<double> rates = GetRates(possibleAlignments, manifest);
+            return GetBinSize(countsPerBin, rates);
+        }
+
+        public static int GetBinSize(int countsPerBin, List<double> rates)
+        {
+            double medianRate = Utilities.Median(rates);
+            return (int)(countsPerBin / medianRate);
+        }
+    }
+
+    public class MultiSampleHitArrays
+    {
+        private readonly List<SampleHitArrays> _sampleHitArrays;
+        public MultiSampleHitArrays(List<SampleHitArrays> sampleHitArrays)
+        {
+            _sampleHitArrays = sampleHitArrays;
+        }
+
+        public List<double> GetRates(Dictionary<string, BitArray> possibleAlignments, NexteraManifest manifest)
+        {
+            List<double> rates = new List<double>();
+            foreach (SampleHitArrays sampleHitArrays in _sampleHitArrays)
+            {
+                rates.AddRange(sampleHitArrays.GetRates(possibleAlignments, manifest));
+            }
+            return rates;
+        }
+
+        public int GetBinSize(int countsPerBin, Dictionary<string, BitArray> possibleAlignments, NexteraManifest manifest)
+        {
+            var rates = GetRates(possibleAlignments, manifest);
+            return SampleHitArrays.GetBinSize(countsPerBin, rates);
+        }
+    }
 
     class CanvasBin
     {
@@ -23,7 +110,7 @@ namespace CanvasBin
         /// </summary>
         /// <param name="bits">BitArray to count the bits of</param>
         /// <returns>number of 'on' bits</returns>
-        static int CountSetBits(BitArray bits, List<NexteraManifest.ManifestRegion> regions)
+        public static int CountSetBits(BitArray bits, List<NexteraManifest.ManifestRegion> regions)
         {
             if (regions == null) { return CountSetBits(bits); }
 
@@ -196,7 +283,6 @@ namespace CanvasBin
             }
         }
 
-
         /// <summary>
         /// Calculates how many possible alignments corresponds to the desired number of observed alignments per bin.
         /// </summary>
@@ -207,51 +293,23 @@ namespace CanvasBin
         static int CalculateNumberOfPossibleAlignmentsPerBin(int countsPerBin, Dictionary<string, BitArray> possibleAlignments,
             Dictionary<string, HitArray> observedAlignments, NexteraManifest manifest = null)
         {
-            List<double> rates = new List<double>();
+            var sampleHitArrays = new SampleHitArrays(observedAlignments);
+            return sampleHitArrays.GetBinSize(countsPerBin, possibleAlignments, manifest);
+        }
 
-            Dictionary<string, List<NexteraManifest.ManifestRegion>> manifestRegionsByChrom = null;
-            if (manifest != null)
-            {
-                manifestRegionsByChrom = manifest.GetManifestRegionsByChromosome();
-            }
 
-            List<ThreadStart> tasks = new List<ThreadStart>();
-            foreach (string chr in possibleAlignments.Keys)
-            {
-                // We don't want to include the sex chromosomes because they may not be copy number 2
-                if (!GenomeMetadata.SequenceMetadata.IsAutosome(chr))
-                    continue;
-                HitArray observed = observedAlignments[chr];
-                BitArray possible = possibleAlignments[chr];
-                List<NexteraManifest.ManifestRegion> regions = null;
-                if (manifestRegionsByChrom != null)
-                {
-                    if (!manifestRegionsByChrom.ContainsKey(chr)) { continue; }
-                    regions = manifestRegionsByChrom[chr];
-                }
-                tasks.Add(new ThreadStart(() =>
-                {
-                    int numberObserved = observed.CountSetBits(regions);
-                    int numberPossible = CountSetBits(possible, regions);
-
-                    double rate = numberObserved / (double)numberPossible;
-
-                    lock (rates)
-                    {
-                        rates.Add(rate);
-                    }
-
-                }));
-            }
-
-            Console.WriteLine("Launch CalculateNumberOfPossibleAlignmentsPerBin jobs...");
-            Console.Out.WriteLine();
-            //Parallel.ForEach(tasks, t => { t.Invoke(); }); //todo allow controling degree of parallelism
-            Isas.Shared.Utilities.Utilities.DoWorkParallelThreads(tasks);
-            Console.WriteLine("CalculateNumberOfPossibleAlignmentsPerBin jobs complete.");
-            Console.Out.WriteLine();
-            double medianRate = CanvasCommon.Utilities.Median(rates);
-            return (int)(countsPerBin / medianRate);
+        /// <summary>
+        /// Calculates how many possible alignments corresponds to the desired number of observed alignments per bin.
+        /// </summary>
+        /// <param name="countsPerBin">Desired number of observed alignments per bin.</param>
+        /// <param name="possibleAlignments">BitArrays of possible alignments (unique mers).</param>
+        /// <param name="observedAlignments">BitArrays storing the observed alignments.</param>
+        /// <returns>Median alignment rate observed on the autosomes.</returns>
+        static int CalculateNumberOfPossibleMultiSampleAlignmentsPerBin(int countsPerBin, List<IntermidiateDataHolder> intermidiateData, NexteraManifest manifest = null)
+        {
+            List<SampleHitArrays> allSampleHitArrays = intermidiateData.Select(data => new SampleHitArrays(data.observedAlignments)).ToList();
+            var multiSampleHitArrays = new MultiSampleHitArrays(allSampleHitArrays);
+            return multiSampleHitArrays.GetBinSize(countsPerBin, intermidiateData.First().possibleAlignments, manifest);
         }
 
 
@@ -443,7 +501,7 @@ namespace CanvasBin
                 meanFragmentSize = MeanFragmentSize(fragmentLengths);
                 if (meanFragmentSize <= 0)
                 {
-                    throw new Exception("CNV input data error - Unable to determine fragment size, likely because of very low genome coverage.");
+                    throw new Exception("CNV input observedAlignments error - Unable to determine fragment size, likely because of very low genome coverage.");
                 }
             }
 
@@ -792,7 +850,7 @@ namespace CanvasBin
             // Make sure we don't have an 'impossible' observed alignment.
             ScreenObservedTags(observedAlignments, possibleAlignments);
 
-            Console.WriteLine("{0} Serialize intermediate data", DateTime.Now);
+            Console.WriteLine("{0} Serialize intermediate observedAlignments", DateTime.Now);
             //output binary intermediate file
             IntermediateData data = new IntermediateData(possibleAlignments, observedAlignments, fragmentLengths, parameters.coverageMode);
             Directory.CreateDirectory(Path.GetDirectoryName(parameters.outFile));
@@ -800,7 +858,7 @@ namespace CanvasBin
             {
                 ProtoBuf.Serializer.Serialize<IntermediateData>(stream, data);
             }
-            Console.WriteLine("{0} Intermediate data serialized", DateTime.Now);
+            Console.WriteLine("{0} Intermediate observedAlignments serialized", DateTime.Now);
             return 0;
         }
 
@@ -812,6 +870,49 @@ namespace CanvasBin
             public Dictionary<string, HitArray> observedAlignments;
             public Dictionary<string, Int16[]> fragmentLengths;
 
+        }
+
+        public static void CalculateSingleSampleHits()
+        {
+
+        }
+
+        public static void CalculateMultiSampleHits()
+        {
+
+        }
+
+        public static void CalculateSingleSampleBinSize()
+        {
+
+        }
+
+        public static void CalculateMultiSampleBinSize()
+        {
+
+        }
+
+        public static void CalculateSingleSampleBins()
+        {
+
+        }
+        public static void CalculateMultiSampleBins()
+        {
+
+        }
+
+        public static void RunSingleSample()
+        {
+            CalculateSingleSampleHits();
+            CalculateSingleSampleBinSize();
+            CalculateSingleSampleBins();
+        }
+
+        public static void RunMultiSample()
+        {
+            CalculateMultiSampleHits();
+            CalculateMultiSampleBinSize();
+            CalculateMultiSampleBins();
         }
 
         /// <summary>
