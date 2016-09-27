@@ -50,6 +50,7 @@ namespace CanvasCommon
 
         /// <summary>
         /// Gets GenomicBins by chromosome as an OrderedDictionary. The order of chromosomes in path is preserved.
+        /// Assumes that bins are sorted in ascending order by the start position within each chromosome.
         /// </summary>
         /// <param name="path"></param>
         /// <returns>OrderedDictionary with string key and List<GenomicBin> value</returns>
@@ -57,13 +58,20 @@ namespace CanvasCommon
         {
             OrderedDictionary<string, List<GenomicBin>> binsByChrom = new OrderedDictionary<string, List<GenomicBin>>();
 
+            GenomicBin prevBin = null;
             foreach (var bin in IterateThroughTextFile(path))
             {
                 if (!binsByChrom.ContainsKey(bin.Chromosome))
                 {
                     binsByChrom[bin.Chromosome] = new List<GenomicBin>();
+                    prevBin = null;
                 }
+                if (prevBin != null && bin.Start < prevBin.Start)
+                    throw new Exception("Bins are not sorted in ascending order by the start position." + 
+                        $" First offending bin: {bin.Chromosome}\t{bin.Start}\t{bin.Stop}");
+
                 binsByChrom[bin.Chromosome].Add(bin);
+                prevBin = bin;
             }
 
             return binsByChrom;
