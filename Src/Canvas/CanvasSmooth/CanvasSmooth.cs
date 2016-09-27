@@ -54,28 +54,12 @@ namespace CanvasSmooth
 
         public List<GenomicBin> Smooth(List<GenomicBin> bins)
         {
-            if (!IsSorted(bins))
-                throw new Exception("Bins are not sorted in ascending order by the start position.");
             IEnumerable<float> counts = bins.Select(b => b.Count);
             IEnumerable<float> smoothedCounts = RepeatedMedianFilter(counts, MaxHalfWindowSize);
             List<GenomicBin> smoothedBins = new List<GenomicBin>();
             smoothedBins.AddRange(Enumerable.Zip(bins, smoothedCounts, (bin, count)
                 => new GenomicBin(bin.Chromosome, bin.Start, bin.Stop, bin.GC, count)));
             return smoothedBins;
-        }
-
-        private static bool IsSorted(IEnumerable<GenomicBin> bins)
-        {
-            GenomicBin prevBin = null;
-
-            foreach (GenomicBin bin in bins)
-            {
-                if (prevBin != null && bin.Start < prevBin.Start)
-                    return false;
-                prevBin = bin;
-            }
-
-            return true;
         }
 
         private static IEnumerable<float> RepeatedMedianFilter(IEnumerable<float> counts, uint maxHalfWindowSize)
