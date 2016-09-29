@@ -59,10 +59,9 @@ namespace Illumina.SecondaryAnalysis
                 var options = Utilities.GetCommandOptions(_customParameters["CanvasBin"], out beforeFirstOption);
                 foreach (var option in options)
                 {
-                    string key = option.Key.TrimEnd(' ', '=');
-                    if (key != "-m" && key != "--mode")
+                    if (option.Key != "-m" && option.Key != "--mode")
                         continue;
-                    mode = CanvasCommon.Utilities.ParseCanvasCoverageMode(option.Value.Trim());
+                    mode = CanvasCommon.Utilities.ParseCanvasCoverageMode(option.Value.TrimStart('=').Trim());
                 }
                 // remove mode from custom parameters
                 _customParameters["CanvasBin"] = Utilities.MergeCommandLineOptions(_customParameters["CanvasBin"], "#m #mode");
@@ -310,10 +309,9 @@ namespace Illumina.SecondaryAnalysis
                 var options = Utilities.GetCommandOptions(_customParameters["CanvasBin"], out beforeFirstOption);
                 foreach (var option in options)
                 {
-                    string key = option.Key.TrimEnd(' ', '=');
-                    if (key != "-n" && key != "--bins")
+                    if (option.Key != "-n" && option.Key != "--bins")
                         continue;
-                    path = option.Value.Trim();
+                    path = option.Value.TrimStart('=').Trim();
                 }
                 // remove bins from custom parameters
                 _customParameters["CanvasBin"] = Utilities.MergeCommandLineOptions(_customParameters["CanvasBin"], "#n #bins");
