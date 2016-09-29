@@ -301,8 +301,9 @@ namespace Illumina.SecondaryAnalysis
             return new FileLocation(outputPath);
         }
 
-        private bool HasPredefinedBins()
+        private string GetPredefinedBinsPath()
         {
+            string path = null;
             if (_customParameters.ContainsKey("CanvasBin"))
             {
                 string beforeFirstOption;
@@ -312,10 +313,12 @@ namespace Illumina.SecondaryAnalysis
                     string key = option.Key.TrimEnd(' ', '=');
                     if (key != "-n" && key != "--bins")
                         continue;
-                    return true;
+                    path = option.Value.Trim();
                 }
+                // remove bins from custom parameters
+                _customParameters["CanvasBin"] = Utilities.MergeCommandLineOptions(_customParameters["CanvasBin"], "#n #bins");
             }
-            return false;
+            return path;
         }
 
         /// <summary>
@@ -330,7 +333,8 @@ namespace Illumina.SecondaryAnalysis
                 executablePath = Utilities.GetMonoPath();
 
             // require predefined bins
-            if (!HasPredefinedBins()) // passed in as a custom parameter
+            string predefinedBinsPath = GetPredefinedBinsPath();
+            if (string.IsNullOrEmpty(predefinedBinsPath))
             {
                 Console.WriteLine("Predefined bins are required to run CanvasBin in the Fragment mode");
                 return null;
@@ -370,6 +374,7 @@ namespace Illumina.SecondaryAnalysis
                 commandLine.AppendFormat("-r {0} ", canvasReferencePath.WrapWithShellQuote());
                 commandLine.AppendFormat("-m {0} ", _coverageMode);
                 commandLine.AppendFormat("-f {0} -o {1} ", canvasBedPath.WrapWithShellQuote(), binnedPath.WrapWithShellQuote());
+                commandLine.AppendFormat("-n {0} ", predefinedBinsPath); // assumes that predefinedBinsPath has been properly quoted
 
                 UnitOfWork binJob = new UnitOfWork()
                 {
