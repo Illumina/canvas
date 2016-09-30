@@ -39,13 +39,21 @@ namespace CanvasCommon.CommandLineParsing.CoreOptionTypes
             if (value == null) return ParsingResult<T>.SuccessfulResult(_defaultValue);
             try
             {
-                T parsedValue = (T)Convert.ChangeType(value, typeof(T));
+                T parsedValue = (T)Convert.ChangeType(value, GetUnderlyingType(typeof(T)));
                 return ParsingResult<T>.SuccessfulResult(parsedValue);
             }
             catch (Exception)
             {
                 return ParsingResult<T>.FailedResult($"Error parsing {Info.Name} option: failed to convert {value} to {typeof(T)}");
             }
+        }
+
+        private static Type GetUnderlyingType(Type type)
+        {
+            Type underlyingType = Nullable.GetUnderlyingType(type);
+            if (underlyingType == null)
+                return type;
+            return underlyingType;
         }
 
         public override OptionCollection<T> GetOptions()

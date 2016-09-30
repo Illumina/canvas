@@ -3,12 +3,14 @@ using System.Collections.Generic;
 using System.Linq;
 using System.IO;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Canvas;
 using CanvasCommon;
 using Illumina.Common;
 using Isas.SequencingFiles;
 using Isas.Shared.Checkpointing;
+using Isas.Shared.DataTypes;
 using Isas.Shared.Utilities;
 using Isas.Shared.Utilities.FileSystem;
 using Utilities = Isas.Shared.Utilities.Utilities;
@@ -24,6 +26,7 @@ namespace Illumina.SecondaryAnalysis
 
         private readonly string _canvasFolder;
         private readonly CanvasCoverageMode _coverageMode = CanvasCoverageMode.TruncatedDynamicRange;
+        private readonly CanvasNormalizeMode _normalizeMode = CanvasNormalizeMode.WeightedAverage;
         private readonly int _countsPerBin;
         private readonly ILogger _logger;
         private readonly IWorkManager _workManager;
@@ -45,6 +48,42 @@ namespace Illumina.SecondaryAnalysis
             if (customParameters != null)
             {
                 _customParameters = new Dictionary<string, string>(customParameters, StringComparer.InvariantCultureIgnoreCase);
+                UpdateCoverageMode(ref _coverageMode);
+                UpdateNormalizeMode(ref _normalizeMode);
+            }
+        }
+
+        private void UpdateCoverageMode(ref CanvasCoverageMode mode)
+        {
+            if (_customParameters.ContainsKey("CanvasBin"))
+            {
+                string beforeFirstOption;
+                var options = Utilities.GetCommandOptions(_customParameters["CanvasBin"], out beforeFirstOption);
+                foreach (var option in options)
+                {
+                    if (option.Key != "-m" && option.Key != "--mode")
+                        continue;
+                    mode = CanvasCommon.Utilities.ParseCanvasCoverageMode(option.Value.TrimStart('=').Trim());
+                }
+                // remove mode from custom parameters
+                _customParameters["CanvasBin"] = Utilities.MergeCommandLineOptions(_customParameters["CanvasBin"], "#m #mode");
+            }
+        }
+
+        private void UpdateNormalizeMode(ref CanvasNormalizeMode mode)
+        {
+            if (_customParameters.ContainsKey("CanvasNormalize"))
+            {
+                string beforeFirstOption;
+                var options = Utilities.GetCommandOptions(_customParameters["CanvasNormalize"], out beforeFirstOption);
+                foreach (var option in options)
+                {
+                    if (option.Key != "-m" && option.Key != "--mode")
+                        continue;
+                    mode = CanvasCommon.Utilities.ParseCanvasNormalizeMode(option.Value.TrimStart('=').Trim());
+                }
+                // remove mode from custom parameters
+                _customParameters["CanvasNormalize"] = Utilities.MergeCommandLineOptions(_customParameters["CanvasNormalize"], "#m #mode");
             }
         }
 
@@ -124,18 +163,34 @@ namespace Illumina.SecondaryAnalysis
         /// </summary>
         protected IFileLocation InvokeCanvasBin(CanvasCallset callset, string canvasReferencePath, string canvasBedPath, string ploidyBedPath)
         {
+            // use bam as input
+            if (callset.Bam == null)
+            {
+                Console.WriteLine("Input bam file not seen for sample {0}_{1} - no CNV calls", callset.SampleName, callset.Id);
+                return null;
+            }
+
+            if (_coverageMode == CanvasCoverageMode.Fragment)
+            {
+                return InvokeCanvasBinFragment(callset, canvasReferencePath, canvasBedPath, ploidyBedPath);
+            }
+            else
+            {
+                return InvokeCanvasBin35Mers(callset, canvasReferencePath, canvasBedPath, ploidyBedPath);
+            }
+        }
+
+        /// <summary>
+        /// Invoke CanvasBin in a mode that is not the Fragment mode.  Return null if this fails and we need to abort CNV calling for this sample.
+        /// </summary>
+        protected IFileLocation InvokeCanvasBin35Mers(CanvasCallset callset, string canvasReferencePath, string canvasBedPath, string ploidyBedPath)
+        {
             StringBuilder commandLine = new StringBuilder();
             string canvasBinPath = Path.Combine(_canvasFolder, "CanvasBin.exe");
             string executablePath = canvasBinPath;
             if (CrossPlatform.IsThisMono())
                 executablePath = Utilities.GetMonoPath();
 
-            //use bam as input
-            if (callset.Bam == null)
-            {
-                Console.WriteLine("Input bam file not seen for sample {0}_{1} - no CNV calls", callset.SampleName, callset.Id);
-                return null;
-            }
             List<string> bamPaths = new List<string>();
             bamPaths.Add(callset.Bam.BamFile.FullName);
             if (!(callset.IsEnrichment && callset.Manifest.CanvasControlAvailable)) // do not add normal BAMs if Canvas Control is available
@@ -254,9 +309,109 @@ namespace Illumina.SecondaryAnalysis
             }
             _workManager.DoWorkParallel(finalBinJobs, new TaskResourceRequirements(8, 25)); // CanvasBin itself is multi-threaded
 
+            return NormalizeCoverage(callset, bamToBinned, ploidyBedPath);
+        }
+
+        private string GetPredefinedBinsPath()
+        {
+            string path = null;
+            if (_customParameters.ContainsKey("CanvasBin"))
+            {
+                string beforeFirstOption;
+                var options = Utilities.GetCommandOptions(_customParameters["CanvasBin"], out beforeFirstOption);
+                foreach (var option in options)
+                {
+                    if (option.Key != "-n" && option.Key != "--bins")
+                        continue;
+                    path = option.Value.TrimStart('=').Trim();
+                }
+                // remove bins from custom parameters
+                _customParameters["CanvasBin"] = Utilities.MergeCommandLineOptions(_customParameters["CanvasBin"], "#n #bins");
+            }
+            return path;
+        }
+
+        /// <summary>
+        /// Invoke CanvasBin in the Fragment mode.  Return null if this fails and we need to abort CNV calling for this sample.
+        /// </summary>
+        protected IFileLocation InvokeCanvasBinFragment(CanvasCallset callset, string canvasReferencePath, string canvasBedPath, string ploidyBedPath)
+        {
+            StringBuilder commandLine = new StringBuilder();
+            string canvasBinPath = Path.Combine(_canvasFolder, "CanvasBin.exe");
+            string executablePath = canvasBinPath;
+            if (CrossPlatform.IsThisMono())
+                executablePath = Utilities.GetMonoPath();
+
+            // require predefined bins
+            string predefinedBinsPath = GetPredefinedBinsPath();
+            if (string.IsNullOrEmpty(predefinedBinsPath))
+            {
+                Console.WriteLine("Predefined bins are required to run CanvasBin in the Fragment mode");
+                return null;
+            }
+
+            List<string> bamPaths = new List<string>();
+            bool isPairedEnd = true;
+            bamPaths.Add(callset.Bam.BamFile.FullName);
+            isPairedEnd = isPairedEnd && callset.Bam.IsPairedEnd;
+            if (!(callset.IsEnrichment && callset.Manifest.CanvasControlAvailable)) // do not add normal BAMs if Canvas Control is available
+            {
+                bamPaths.AddRange(callset.NormalBamPaths.Select(bam => bam.BamFile.FullName));
+                isPairedEnd = isPairedEnd && callset.NormalBamPaths.All(bam => bam.IsPairedEnd);
+            }
+
+            // require paired-end reads
+            if (!isPairedEnd)
+            {
+                Console.WriteLine("Paired-end reads are required to run CanvasBin in the Fragment mode");
+                return null;
+            }
+
+            Dictionary<string, string> bamToBinned = new Dictionary<string, string>();
+            List<UnitOfWork> binJobs = new List<UnitOfWork>();
+            for (int bamIndex = 0; bamIndex < bamPaths.Count; bamIndex++)
+            {
+                string bamPath = bamPaths[bamIndex];
+                string binnedPath = Path.Combine(callset.TempFolder, string.Format("{0}_{1}.binned", callset.Id, bamIndex));
+                bamToBinned[bamPath] = binnedPath;
+
+                commandLine.Clear();
+                if (CrossPlatform.IsThisMono())
+                {
+                    commandLine.AppendFormat("{0} ", canvasBinPath);
+                }
+                commandLine.AppendFormat(" -p -b {0} ", bamPath.WrapWithShellQuote());
+                commandLine.AppendFormat("-r {0} ", canvasReferencePath.WrapWithShellQuote());
+                commandLine.AppendFormat("-m {0} ", _coverageMode);
+                commandLine.AppendFormat("-f {0} -o {1} ", canvasBedPath.WrapWithShellQuote(), binnedPath.WrapWithShellQuote());
+                commandLine.AppendFormat("-n {0} ", predefinedBinsPath); // assumes that predefinedBinsPath has been properly quoted
+
+                UnitOfWork binJob = new UnitOfWork()
+                {
+                    ExecutablePath = executablePath,
+                    LoggingFolder = _workManager.LoggingFolder.FullName,
+                    LoggingStub = Path.GetFileName(binnedPath),
+                    CommandLine = commandLine.ToString()
+                };
+                if (_customParameters.ContainsKey("CanvasBin"))
+                {
+                    binJob.CommandLine = Utilities.MergeCommandLineOptions(binJob.CommandLine, _customParameters["CanvasBin"], true);
+                }
+                binJobs.Add(binJob);
+            }
+            _workManager.DoWorkParallel(binJobs, new TaskResourceRequirements(8, 25)); // CanvasBin itself is multi-threaded
+
+            return NormalizeCoverage(callset, bamToBinned, ploidyBedPath);
+        }
+
+
+        protected IFileLocation NormalizeCoverage(CanvasCallset callset, Dictionary<string, string> bamToBinned, string ploidyBedPath)
+        {
             string tumorBinnedPath = bamToBinned[callset.Bam.BamFile.FullName]; // binned tumor sample
             string outputPath = tumorBinnedPath;
-            if (callset.NormalBamPaths.Any() || (callset.IsEnrichment && callset.Manifest.CanvasControlAvailable))
+            if (callset.NormalBamPaths.Any() ||
+                (callset.IsEnrichment && (callset.Manifest.CanvasControlAvailable)) ||
+                _normalizeMode == CanvasNormalizeMode.PCA)
             {
                 outputPath = InvokeCanvasNormalize(callset, tumorBinnedPath, bamToBinned, ploidyBedPath);
             }
@@ -270,7 +425,7 @@ namespace Illumina.SecondaryAnalysis
         /// <param name="callset"></param>
         /// <returns>path to the bin ratio bed file</returns>
         protected string InvokeCanvasNormalize(CanvasCallset callset, string tumorBinnedPath, Dictionary<string, string> bamToBinned,
-            string ploidyBedPath, string mode = "weightedaverage")
+            string ploidyBedPath)
         {
             string ratioBinnedPath = Path.Combine(callset.TempFolder, string.Format("{0}.ratio.binned", callset.Id));
 
@@ -287,7 +442,8 @@ namespace Illumina.SecondaryAnalysis
 
             commandLine.AppendFormat("-t {0} ", tumorBinnedPath.WrapWithShellQuote()); // tumor bed
 
-            if (callset.IsEnrichment && callset.Manifest.CanvasControlAvailable)
+            if ((callset.IsEnrichment && callset.Manifest.CanvasControlAvailable) ||
+                _normalizeMode == CanvasNormalizeMode.PCA)
             {
                 commandLine.AppendFormat("-n {0} ", callset.Manifest.CanvasControlBinnedPath.WrapWithShellQuote()); // normal bed
             }
@@ -309,7 +465,7 @@ namespace Illumina.SecondaryAnalysis
                 commandLine.AppendFormat("-f {0} ", callset.TempManifestPath.WrapWithShellQuote());
             }
 
-            commandLine.AppendFormat("-m {0} ", mode.WrapWithShellQuote());
+            commandLine.AppendFormat("-m {0} ", _normalizeMode);
 
             if (!string.IsNullOrEmpty(ploidyBedPath))
             {
