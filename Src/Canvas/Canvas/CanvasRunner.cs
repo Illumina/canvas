@@ -442,7 +442,8 @@ namespace Illumina.SecondaryAnalysis
 
             commandLine.AppendFormat("-t {0} ", tumorBinnedPath.WrapWithShellQuote()); // tumor bed
 
-            if (callset.IsEnrichment && callset.Manifest.CanvasControlAvailable)
+            if ((callset.IsEnrichment && callset.Manifest.CanvasControlAvailable) ||
+                _normalizeMode == CanvasNormalizeMode.PCA)
             {
                 commandLine.AppendFormat("-n {0} ", callset.Manifest.CanvasControlBinnedPath.WrapWithShellQuote()); // normal bed
             }
