@@ -26,6 +26,7 @@ namespace Illumina.SecondaryAnalysis
 
         private readonly string _canvasFolder;
         private readonly CanvasCoverageMode _coverageMode = CanvasCoverageMode.TruncatedDynamicRange;
+        private readonly CanvasNormalizeMode _normalizeMode = CanvasNormalizeMode.WeightedAverage;
         private readonly int _countsPerBin;
         private readonly ILogger _logger;
         private readonly IWorkManager _workManager;
@@ -48,6 +49,7 @@ namespace Illumina.SecondaryAnalysis
             {
                 _customParameters = new Dictionary<string, string>(customParameters, StringComparer.InvariantCultureIgnoreCase);
                 UpdateCoverageMode(ref _coverageMode);
+                UpdateNormalizeMode(ref _normalizeMode);
             }
         }
 
@@ -65,6 +67,23 @@ namespace Illumina.SecondaryAnalysis
                 }
                 // remove mode from custom parameters
                 _customParameters["CanvasBin"] = Utilities.MergeCommandLineOptions(_customParameters["CanvasBin"], "#m #mode");
+            }
+        }
+
+        private void UpdateNormalizeMode(ref CanvasNormalizeMode mode)
+        {
+            if (_customParameters.ContainsKey("CanvasNormalize"))
+            {
+                string beforeFirstOption;
+                var options = Utilities.GetCommandOptions(_customParameters["CanvasNormalize"], out beforeFirstOption);
+                foreach (var option in options)
+                {
+                    if (option.Key != "-m" && option.Key != "--mode")
+                        continue;
+                    mode = CanvasCommon.Utilities.ParseCanvasNormalizeMode(option.Value.TrimStart('=').Trim());
+                }
+                // remove mode from custom parameters
+                _customParameters["CanvasNormalize"] = Utilities.MergeCommandLineOptions(_customParameters["CanvasNormalize"], "#m #mode");
             }
         }
 
@@ -290,14 +309,7 @@ namespace Illumina.SecondaryAnalysis
             }
             _workManager.DoWorkParallel(finalBinJobs, new TaskResourceRequirements(8, 25)); // CanvasBin itself is multi-threaded
 
-            string tumorBinnedPath = bamToBinned[callset.Bam.BamFile.FullName]; // binned tumor sample
-            string outputPath = tumorBinnedPath;
-            if (callset.NormalBamPaths.Any() || (callset.IsEnrichment && callset.Manifest.CanvasControlAvailable))
-            {
-                outputPath = InvokeCanvasNormalize(callset, tumorBinnedPath, bamToBinned, ploidyBedPath);
-            }
-
-            return new FileLocation(outputPath);
+            return NormalizeCoverage(callset, bamToBinned, ploidyBedPath);
         }
 
         private string GetPredefinedBinsPath()
@@ -387,17 +399,19 @@ namespace Illumina.SecondaryAnalysis
                 }
                 binJobs.Add(binJob);
             }
-            _workManager.DoWorkParallelThreads(binJobs);
+            _workManager.DoWorkParallel(binJobs, new TaskResourceRequirements(8, 25)); // CanvasBin itself is multi-threaded
 
             return NormalizeCoverage(callset, bamToBinned, ploidyBedPath);
         }
+
 
         protected IFileLocation NormalizeCoverage(CanvasCallset callset, Dictionary<string, string> bamToBinned, string ploidyBedPath)
         {
             string tumorBinnedPath = bamToBinned[callset.Bam.BamFile.FullName]; // binned tumor sample
             string outputPath = tumorBinnedPath;
             if (callset.NormalBamPaths.Any() ||
-                (callset.IsEnrichment && (callset.Manifest.CanvasControlAvailable)))
+                (callset.IsEnrichment && (callset.Manifest.CanvasControlAvailable)) ||
+                _normalizeMode == CanvasNormalizeMode.PCA)
             {
                 outputPath = InvokeCanvasNormalize(callset, tumorBinnedPath, bamToBinned, ploidyBedPath);
             }
@@ -411,7 +425,7 @@ namespace Illumina.SecondaryAnalysis
         /// <param name="callset"></param>
         /// <returns>path to the bin ratio bed file</returns>
         protected string InvokeCanvasNormalize(CanvasCallset callset, string tumorBinnedPath, Dictionary<string, string> bamToBinned,
-            string ploidyBedPath, string mode = "weightedaverage")
+            string ploidyBedPath)
         {
             string ratioBinnedPath = Path.Combine(callset.TempFolder, string.Format("{0}.ratio.binned", callset.Id));
 
@@ -450,7 +464,7 @@ namespace Illumina.SecondaryAnalysis
                 commandLine.AppendFormat("-f {0} ", callset.TempManifestPath.WrapWithShellQuote());
             }
 
-            commandLine.AppendFormat("-m {0} ", mode.WrapWithShellQuote());
+            commandLine.AppendFormat("-m {0} ", _normalizeMode);
 
             if (!string.IsNullOrEmpty(ploidyBedPath))
             {
