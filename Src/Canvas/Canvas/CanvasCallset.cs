@@ -113,55 +113,29 @@ namespace Canvas
         }
     }
 
-    public class SmallPedigreeCallset : BaseCallset
+    public class SmallPedigreeCallset
     {
-        private IDirectoryLocation outputDirectory;
-        private IEnumerable<IFileLocation> _bam;
-        private List<string> list;
-        private string sampleName;
-        private IDirectoryLocation wholeGenomeFasta;
-        private IEnumerable<IFileLocation> enumerable;
 
-        public IDirectoryLocation OutputFolder { get; }
-        public IEnumerable<string> SampleNames { get; }
-        public IEnumerable<Bam> BamPaths { get; }
+        public IDirectoryLocation OutputFolder { get { return _singleSampleCallset.Select(x => x.OutputFolder).First(); } }
+        public IEnumerable<string> SampleNames { get { return _singleSampleCallset.Select(x => x.SampleName); } }
+        public IEnumerable<Bam> BamPaths { get { return _singleSampleCallset.Select(x => x.Bam); } }
         public IEnumerable<IFileLocation> NormalVcfPaths { get; } // set to the Starling VCF path (if tumor normal, the normal vcf path) 
+        public IDirectoryLocation WholeGenomeFastaFolder { get; set; }
+        public IFileLocation KmerFasta { get { return _singleSampleCallset.Select(x => x.KmerFasta).First(); } }
+        public GenomeMetadata GenomeMetadata { get { return _singleSampleCallset.Select(x => x.GenomeMetadata).First(); } }
+        public IFileLocation FilterBed { get { return _singleSampleCallset.Select(x => x.FilterBed).First(); } }
+        public IFileLocation PloidyBed { get { return _singleSampleCallset.Select(x => x.PloidyBed).First(); } }
         public bool IsDbSnpVcf { get; set; } // NormalVcfPath points to a dbSNP VCF file
-        public IFileLocation SomaticVcfPath { get; } // set to the strelka VCF path
         public IFileLocation OutputVcfPath { get; }
         public NexteraManifest Manifest { get; }
 
-
-        public SmallPedigreeCallset(
-            IDirectoryLocation outputFolder,
-            IEnumerable<IFileLocation> bamPaths,
-            IEnumerable<string> sampleNames,
-            IDirectoryLocation wholeGenomeFastaFolder,
-            IFileLocation kmerFasta,
-            IFileLocation filterBed,
-            IFileLocation ploidyBed,
-            IEnumerable<IFileLocation> normalVcfPaths,
-            IFileLocation outputVcfPath) :
-            base(outputFolder,
-                wholeGenomeFastaFolder,
-                kmerFasta,
-                filterBed,
-                ploidyBed)
+        private readonly List<CanvasCallset> _singleSampleCallset;
+        public SmallPedigreeCallset(List<CanvasCallset> callset)
         {
-            BamPaths = bamPaths.Select(file => new Bam(file));
-            SampleNames = sampleNames;
-            NormalVcfPaths = normalVcfPaths;
-            WholeGenomeFastaFolder = wholeGenomeFastaFolder;
-            OutputFolder = outputFolder;
-            KmerFasta = kmerFasta;
-            FilterBed = filterBed;
-            PloidyBed = ploidyBed;
-            OutputVcfPath = outputVcfPath;
-            var genomeSizeXml = WholeGenomeFastaFolder.GetFileLocation("GenomeSize.xml");
-            GenomeMetadata = new GenomeMetadata();
-            GenomeMetadata.Deserialize(genomeSizeXml.FullName);
+            _singleSampleCallset = callset;
         }
 
+        public List<CanvasCallset> Callset { get {return _singleSampleCallset; } }
 
         internal string TempFolder
         {

@@ -2,8 +2,8 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.IO;
-
 using Illumina.Common;
+using Isas.Shared.Utilities.FileSystem;
 
 namespace CanvasCommon
 {
@@ -710,7 +710,8 @@ namespace CanvasCommon
             }
         }
 
-        public static Dictionary<string, List<GenomicBin>> LoadBedFile(string bedPath, int? gcIndex = null)
+
+        public static Dictionary<string, List<GenomicBin>> LoadBedFile(string bedPath, int? gcIndex = null, int? segmentIndex = null)
         {
             Dictionary<string, List<GenomicBin>> excludedIntervals = new Dictionary<string, List<GenomicBin>>();
             int count = 0;
@@ -739,12 +740,104 @@ namespace CanvasCommon
                     {
                         interval.GC = int.Parse(bits[gcIndex.Value]);
                     }
+                    if (segmentIndex.HasValue && segmentIndex.Value < bits.Length)
+                    {
+                        interval.CountBin.SegmentId = int.Parse(bits[segmentIndex.Value]);
+                    }
                     excludedIntervals[chr].Add(interval);
                     count++;
                 }
             }
             Console.WriteLine(">>> Loaded {0} intervals for {1} sequences", count, excludedIntervals.Keys.Count);
             return excludedIntervals;
+        }
+
+        public static Dictionary<string, List<GenomicBin>> LoadMultiBedFile(List<IFileLocation> bedPaths)
+        {
+            // initialize variables 
+            Dictionary<string, List<GenomicBin>> intervals = new Dictionary<string, List<GenomicBin>>();
+            Dictionary<string, List<List<float>>> binCounts = new Dictionary<string, List<List<float>>>();
+            Dictionary<string, List<List<int?>>> segmentIDs = new Dictionary<string, List<List<int?>>>();
+            List<int> counts = new List<int>();
+            foreach (IFileLocation bedPath in bedPaths)
+            {
+                int count = 0;
+                using (StreamReader reader = new StreamReader(bedPath.FullName))
+                {
+                    while (true)
+                    {
+                        string fileLine = reader.ReadLine();
+                        if (fileLine == null) break;
+                        string[] bits = fileLine.Split('\t');
+                        string chr = bits[0];
+                        if (!binCounts.ContainsKey(chr)) binCounts[chr] = new List<List<float>>();
+                        if (!segmentIDs.ContainsKey(chr)) segmentIDs[chr] = new List<List<int?>>();
+                        count++;
+                    }
+                }
+                counts.Add(count);
+                foreach (string chr in binCounts.Keys)
+                {
+                    binCounts[chr] = new List<List<float>>(count);
+                    segmentIDs[chr] = new List<List<int?>>(count);
+                }
+            }
+            var uniqueCounts = new HashSet<int>(counts);
+            if (uniqueCounts.Count != 1)
+                throw new Exception("CanvasPartition files do not have the same length.");
+            Console.WriteLine(">>> Loaded {0} intervals for {1} sequences", counts[0], counts.Count);
+
+
+            // read counts and segmentIDs
+            foreach (IFileLocation bedPath in bedPaths)
+            {
+                using (StreamReader reader = new StreamReader(bedPath.FullName))
+                {
+                    int count = 0;
+                    while (true)
+                    {
+                        string fileLine = reader.ReadLine();
+                        if (fileLine == null) break;
+                        string[] bits = fileLine.Split('\t');
+                        string chr = bits[0];
+                        binCounts[chr][count].Add(float.Parse(bits[3]));
+                        segmentIDs[chr][count].Add(int.Parse(bits[3]));
+                        count++;
+                    }
+                }
+            }
+            // create GenomeBin intervals
+            string bedFile = bedPaths.First().FullName;
+            using (StreamReader reader = new StreamReader(bedFile))
+            {
+                int count = 0;
+                while (true)
+                {
+                    string fileLine = reader.ReadLine();
+                    if (fileLine == null) break;
+                    string[] bits = fileLine.Split('\t');
+                    string chr = bits[0];
+                    if (!intervals.ContainsKey(chr)) intervals[chr] = new List<GenomicBin>();
+                    GenomicBin interval = new GenomicBin();
+                    interval.Chromosome = chr;
+                    interval.Start = int.Parse(bits[1]);
+                    interval.Stop = int.Parse(bits[2]);
+                    if (interval.Start < 0)
+                    {
+                        throw new ApplicationException(String.Format("Start must be non-negative in a BED file: {0}",
+                            fileLine));
+                    }
+                    if (interval.Start >= interval.Stop) // Do not allow empty intervals
+                    {
+                        throw new ApplicationException(String.Format("Start must be less than Stop in a BED file: {0}",
+                            fileLine));
+                    }
+                    interval.CountBins.Count = binCounts[chr][count];
+                    interval.CountBins.SegmentId = segmentIDs[chr][count];
+                    intervals[chr].Add(interval);
+                }
+            }
+            return intervals;
         }
 
         static public void SortAndOverlapCheck(Dictionary<string, List<GenomicBin>> intervals, string bedPath)

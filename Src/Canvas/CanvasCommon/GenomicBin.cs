@@ -7,19 +7,33 @@ namespace CanvasCommon
     public class SingleSampleCount
     {
         public float Count { get; set; }
+        public int? SegmentId { get; set; }
+
 
         public SingleSampleCount(float count)
         {
             this.Count = count;
+        }
+        public SingleSampleCount(float count, int segmentId)
+        {
+            this.Count = count;
+            this.SegmentId = segmentId;
         }
     }
 
     public class MultiSampleCount
     {
         public List<float> Count { get; set; }
+        public List<int?> SegmentId { get; set; }
+
         public MultiSampleCount(List<float> count)
         {
             this.Count = count;
+        }
+        public MultiSampleCount(List<float> count, List<int?> segmentId)
+        {
+            this.Count = count;
+            this.SegmentId = segmentId;
         }
     }
 
@@ -64,6 +78,16 @@ namespace CanvasCommon
             this.CountBins = new MultiSampleCount(count);
             this.MadOfDiffs = -1;
         }
+
+        public GenomicBin(string chr, int start, int stop, int gc, List<float> count, List<int?> segmentIds)
+        {
+            this.Chromosome = chr;
+            this.Interval = new GenomicInterval() { Start = start, End = stop };
+            this.GC = gc;
+            this.CountBins = new MultiSampleCount(count, segmentIds);
+            this.MadOfDiffs = -1;
+        }
+
 
 
         public GenomicBin(string chr, int start, int stop, int gc, float count)

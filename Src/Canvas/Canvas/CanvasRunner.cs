@@ -6,6 +6,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Canvas;
 using CanvasBin;
+using CanvasPartition;
 using CanvasCommon;
 using Illumina.Common;
 using Isas.SequencingFiles;
@@ -343,9 +344,10 @@ namespace Illumina.SecondaryAnalysis
             return intermediateDataPathsByBamPath;
         }
 
+
         /// <summary>
         /// Invoke CanvasNormalize.
-        /// </summary>
+        /// </summary
         /// <param name="callset"></param>
         /// <returns>path to the bin ratio bed file</returns>
         protected string InvokeCanvasNormalize(CanvasCallset callset, string tumorBinnedPath, Dictionary<string, string> bamToBinned,
@@ -485,6 +487,15 @@ namespace Illumina.SecondaryAnalysis
             }
 
             return partitionedPath;
+        }
+
+        /// <summary>
+        /// Invoke CanvasSNV on SmallPedigreeCallset callsets.  Return null if this fails and we need to abort CNV calling for this sample.
+        /// </summary>
+        protected void InvokeCanvasSnv(SmallPedigreeCallset callsets)
+        {
+            foreach (CanvasCallset callset in callsets.Callset)
+                InvokeCanvasSnv(callset);
         }
 
         /// <summary>
@@ -685,23 +696,64 @@ namespace Illumina.SecondaryAnalysis
                 throw new ApplicationException(string.Format("Error: Missing filter bed file required for CNV calling at '{0}'", canvasBedPath));
             }
 
-            // stings below are not implemented 
-
             // CanvasSNV
+            var canvasSnvTask = _checkpointRunner.RunCheckpointAsync("CanvasSNV", () => InvokeCanvasSnv(callset));
 
             // Prepare ploidy file:
+            List<string> ploidyBedPaths = callset.Callset.Select(x=>x.PloidyBed?.FullName).ToList();
 
             // CanvasBin:
-            var binnedPath = _checkpointRunner.RunCheckpoint("CanvasBin", () => InvokeCanvasBin(callset, canvasReferencePath, canvasBedPath, callset.PloidyBed.ToString()));
-            if (binnedPath == null) return;
+            var binnedPaths = _checkpointRunner.RunCheckpoint("CanvasBin", () => InvokeCanvasBin(callset, canvasReferencePath, canvasBedPath, callset.PloidyBed.ToString()));
+            if (binnedPaths == null) return;
 
             // CanvasClean:
+            var canvasCleanOutput = _checkpointRunner.RunCheckpoint("CanvasClean", () => InvokeCanvasClean(callset, binnedPaths));
 
             // CanvasPartition:
-
-            // Intersect bins with manifest
+            var partitionedPaths = _checkpointRunner.RunCheckpoint("CanvasPartition", () => InvokeCanvasPartition(callset, canvasCleanOutput, canvasBedPath));
 
             // Variant calling
+            await canvasSnvTask;
+            RunGermlineCalling(partitionedPaths, callset, ploidyBedPaths);
+        }
+
+        private List<IFileLocation> WriteMergedCanvasPartition(List<IFileLocation> partitionedPaths, string tempFolder, List<string> sampleNames)
+        {
+            Dictionary<string, List<GenomicBin>> multisamplePartitions = CanvasCommon.Utilities.LoadMultiBedFile(partitionedPaths);
+            List <IFileLocation> outPaths = new List<IFileLocation>();
+            int count = 0;
+            foreach (string sampleName in sampleNames)
+            {
+                string outPath = Path.Combine(tempFolder, string.Format("{0}_merged.partitioned", sampleName));
+                using (GzipWriter writer = new GzipWriter(outPath))
+                {
+                    foreach (string chr in multisamplePartitions.Keys)
+                    {
+                        foreach (GenomicBin genomicBin in multisamplePartitions[chr])
+                        {
+                            int segmentNum = genomicBin.CountBins.SegmentId.Max().Value;
+                            writer.WriteLine(string.Format("{0}\t{1}\t{2}\t{3}\t{4}", genomicBin.Chromosome,
+                                genomicBin.Start, genomicBin.Stop, genomicBin.CountBins.Count[count], segmentNum));
+                        }
+                    }
+                }
+                count++;
+                outPaths.Add(new FileLocation(outPath));
+            }
+            return outPaths;
+        }
+
+
+        private List<IFileLocation> InvokeCanvasPartition(SmallPedigreeCallset callsets, List<IFileLocation> cleanedPaths, string canvasBedPath)
+        {
+            List<IFileLocation> partitionedPaths = new List<IFileLocation>();
+            if (callsets.Callset.Count != cleanedPaths.Count)
+                throw new Exception($"Number of output CanvasClean files {cleanedPaths.Count} is not equal to the number of Canvas callsets {callsets.Callset.Count}");
+            for (int i = 0; i < callsets.Callset.Count; i++)
+                partitionedPaths.Add(InvokeCanvasPartition(callsets.Callset[i], cleanedPaths[i], canvasBedPath));
+            List<string> sampleNames = callsets.Callset.Select(x => x.SampleName).ToList();
+            string tmpFolder = callsets.Callset.First().TempFolder;
+            return WriteMergedCanvasPartition(partitionedPaths, tmpFolder, sampleNames);
         }
 
         private IFileLocation InvokeCanvasPartition(CanvasCallset callset, IFileLocation cleanedPath, string canvasBedPath)
@@ -733,6 +785,22 @@ namespace Illumina.SecondaryAnalysis
             }
             _workManager.DoWorkSingleThread(partitionJob);
             return new FileLocation(partitionedPath);
+        }
+
+        /// <summary>
+        /// Invoke CanvasClean on SmallPedigreeCallset callsets. 
+        /// </summary>
+        protected List<IFileLocation> InvokeCanvasClean(SmallPedigreeCallset callsets, List<string> binnedPaths)
+        {
+            List<IFileLocation> cleanedPaths = new List<IFileLocation>();
+            if (callsets.Callset.Count != binnedPaths.Count)
+                throw new Exception($"Number of output CanvasBin files {binnedPaths.Count} is not equal to the number of Canvas callsets {callsets.Callset.Count}");
+            for (int i = 0; i < callsets.Callset.Count; i++)
+            {
+                IFileLocation binnedPath = new FileLocation(binnedPaths[i]);
+                cleanedPaths.Add(InvokeCanvasClean(callsets.Callset[i], binnedPath).CleanedPath);
+            }
+            return cleanedPaths;
         }
 
         private CanvasCleanOutput InvokeCanvasClean(CanvasCallset callset, IFileLocation binnedPath)
@@ -838,6 +906,18 @@ namespace Illumina.SecondaryAnalysis
             callerJob.LoggingFolder = _workManager.LoggingFolder.FullName;
             callerJob.LoggingStub = string.Format("SomaticCNV-{0}", callset.Id);
             _workManager.DoWorkSingleThread(callerJob);
+        }
+
+        protected void RunGermlineCalling(List<IFileLocation> partitionedPaths, SmallPedigreeCallset callsets, List<string> ploidyBedPaths)
+        {
+            List<CanvasCleanOutput> cleanedPaths = new List<CanvasCleanOutput>();
+            if (callsets.Callset.Count != partitionedPaths.Count)
+                throw new Exception($"Number of output CanvasPartition files {partitionedPaths.Count} is not equal to the number of Canvas callsets {callsets.Callset.Count}");
+            for (int i = 0; i < callsets.Callset.Count; i++)
+            {
+                IFileLocation partitionedPath = partitionedPaths[i];
+                RunGermlineCalling(partitionedPath, callsets.Callset[i],  ploidyBedPaths[i]);
+            }
         }
 
         protected void RunGermlineCalling(IFileLocation partitionedPath, CanvasCallset callset, string ploidyBedPath)
