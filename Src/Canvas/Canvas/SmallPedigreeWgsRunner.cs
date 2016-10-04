@@ -33,8 +33,8 @@ namespace Canvas
         {
             List<CanvasCallset> callSets = new List<CanvasCallset>();        
             for (int i=0; i < _smallPedigreeOptions.Bams.Count(); i++) { 
-            IFileLocation outputVcfPath = CommonOptions.OutputDirectory.GetFileLocation("CNV.vcf.gz");
-            CanvasCallset callSet = new CanvasCallset(
+                    IFileLocation outputVcfPath = CommonOptions.OutputDirectory.GetFileLocation("CNV.vcf.gz");
+                    CanvasCallset callSet = new CanvasCallset(
                     _smallPedigreeOptions.Bams.ToList()[i],
                     _smallPedigreeOptions.SampleNames.ToList()[i],
                     CommonOptions.WholeGenomeFasta,
