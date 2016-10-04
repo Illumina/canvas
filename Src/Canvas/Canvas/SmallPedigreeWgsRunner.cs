@@ -11,14 +11,16 @@ namespace Canvas
 {
     public class SmallPedigreeWgsRunner : IModeRunner
     {
-        private readonly IEnumerable<IFileLocation> _bams;
         public CommonOptions CommonOptions { get; }
 
-        public SmallPedigreeWgsRunner(CommonOptions commonOptions, IEnumerable<IFileLocation> bams)
+        private readonly SmallPedigreeOptions _smallPedigreeOptions;
+
+        public SmallPedigreeWgsRunner(CommonOptions commonOptions, SmallPedigreeOptions smallPedigreeOptions)
         {
-            _bams = bams;
+            _smallPedigreeOptions = smallPedigreeOptions;
             CommonOptions = commonOptions;
         }
+
 
         public void Run(ILogger logger, ICheckpointRunnerAsync checkpointRunner, IWorkManager workManager)
         {
@@ -30,11 +32,11 @@ namespace Canvas
         private SmallPedigreeCallset GetCallset()
         {
             List<CanvasCallset> callSets = new List<CanvasCallset>();        
-            foreach (IFileLocation bam in _bams) { 
+            for (int i=0; i < _smallPedigreeOptions.Bams.Count(); i++) { 
             IFileLocation outputVcfPath = CommonOptions.OutputDirectory.GetFileLocation("CNV.vcf.gz");
             CanvasCallset callSet = new CanvasCallset(
-                    bam,
-                    CommonOptions.SampleName,
+                    _smallPedigreeOptions.Bams.ToList()[i],
+                    _smallPedigreeOptions.SampleNames.ToList()[i],
                     CommonOptions.WholeGenomeFasta,
                     CommonOptions.OutputDirectory,
                     CommonOptions.KmerFasta,
