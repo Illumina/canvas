@@ -17,6 +17,7 @@ namespace Canvas.CommandLineParsing
         public IFileLocation PloidyBed { get; }
         public bool IsDbSnpVcf { get; }
 
+        // general common options
         public CommonOptions(IFileLocation bAlleleSites, bool isDbSnpVcf, IFileLocation ploidyBed, IDirectoryLocation outputDirectory, IDirectoryLocation wholeGenomeFasta, IFileLocation kmerFasta, IFileLocation filterBed, string sampleName, Dictionary<string, string> customParams, string startCheckpoint, string stopCheckpoint)
         {
             BAlleleSites = bAlleleSites;
@@ -27,6 +28,18 @@ namespace Canvas.CommandLineParsing
             KmerFasta = kmerFasta;
             FilterBed = filterBed;
             SampleName = sampleName;
+            CustomParams = customParams;
+            StartCheckpoint = startCheckpoint;
+            StopCheckpoint = stopCheckpoint;
+        }
+        // common options for multisample workflows
+        public CommonOptions(bool isDbSnpVcf, IDirectoryLocation outputDirectory, IDirectoryLocation wholeGenomeFasta, IFileLocation kmerFasta, IFileLocation filterBed, Dictionary<string, string> customParams, string startCheckpoint, string stopCheckpoint)
+        {
+            IsDbSnpVcf = isDbSnpVcf;
+            OutputDirectory = outputDirectory;
+            WholeGenomeFasta = wholeGenomeFasta;
+            KmerFasta = kmerFasta;
+            FilterBed = filterBed;
             CustomParams = customParams;
             StartCheckpoint = startCheckpoint;
             StopCheckpoint = stopCheckpoint;

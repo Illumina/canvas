@@ -188,7 +188,7 @@ namespace Illumina.SecondaryAnalysis
         /// <summary>
         /// Invoke CanvasBin.  Return null if this fails and we need to abort CNV calling for this sample.
         /// </summary>
-        protected List<string> InvokeCanvasBin(SmallPedigreeCallset callset, string canvasReferencePath, string canvasBedPath, string ploidyBedPath)
+        protected List<string> InvokeCanvasBin(SmallPedigreeCallset callset, string canvasReferencePath, string canvasBedPath)
         {
             StringBuilder commandLine = new StringBuilder();
             string canvasBinPath = Path.Combine(_canvasFolder, "CanvasBin.exe");
@@ -212,6 +212,8 @@ namespace Illumina.SecondaryAnalysis
             // read bams 
             var intermediateDataPathsByBamPath = ReadBams(callset.GenomeMetadata, true, callset.SampleNames, callset.TempFolder,
                 canvasReferencePath, canvasBedPath, bamPaths, commandLine, canvasBinPath, executablePath, null);
+            Console.WriteLine("Size of intermediateDataPathsByBamPath: {0}", intermediateDataPathsByBamPath.Count);
+
 
             // get bin size (of the smallest BAM) if normal BAMs are given
             int binSize = -1;
@@ -239,7 +241,7 @@ namespace Illumina.SecondaryAnalysis
             {
                 string bamPath = bamPaths[bamIdx];
                 // finish up CanvasBin step by merging intermediate data and finally binning                
-                string binnedPath = Path.Combine(tempFolder, string.Format("{0}_{1}.binned", Id, bamIdx));
+                string binnedPath = Path.Combine(tempFolder, string.Format("{0}_{1}.binned", Id.ToList()[bamIdx], bamIdx));
                 bamToBinned[bamPath] = binnedPath;
                 commandLine.Clear();
                 if (CrossPlatform.IsThisMono())
@@ -316,7 +318,6 @@ namespace Illumina.SecondaryAnalysis
                     commandLine.AppendFormat("-r \"{0}\" ", canvasReferencePath);
                     commandLine.AppendFormat("-c {0} ", sequenceMetadata.Name);
                     commandLine.AppendFormat("-m {0} ", _coverageMode);
-
 
                     string intermediateDataPath = Path.Combine(tempFolder, string.Format("{0}_{1}_{2}.dat",
                         Id.ToList()[bamIndex], bamIndex, sequenceMetadata.Name));
@@ -703,7 +704,7 @@ namespace Illumina.SecondaryAnalysis
             List<string> ploidyBedPaths = callset.Callset.Select(x=>x.PloidyBed?.FullName).ToList();
 
             // CanvasBin:
-            var binnedPaths = _checkpointRunner.RunCheckpoint("CanvasBin", () => InvokeCanvasBin(callset, canvasReferencePath, canvasBedPath, callset.PloidyBed.ToString()));
+            var binnedPaths = _checkpointRunner.RunCheckpoint("CanvasBin", () => InvokeCanvasBin(callset, canvasReferencePath, canvasBedPath));
             if (binnedPaths == null) return;
 
             // CanvasClean:

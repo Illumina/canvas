@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using Canvas.CommandLineParsing;
 using CanvasCommon;
@@ -32,17 +33,19 @@ namespace Canvas
         private SmallPedigreeCallset GetCallset()
         {
             List<CanvasCallset> callSets = new List<CanvasCallset>();        
-            for (int i=0; i < _smallPedigreeOptions.Bams.Count(); i++) { 
-                    IFileLocation outputVcfPath = CommonOptions.OutputDirectory.GetFileLocation("CNV.vcf.gz");
+            for (int i=0; i < _smallPedigreeOptions.Bams.Count(); i++) {
+                    string sampleName = _smallPedigreeOptions.SampleNames.ToList()[i];
+                    IDirectoryLocation outputDirectory = new DirectoryLocation(Path.Combine(CommonOptions.OutputDirectory.FullName, sampleName));
+                    IFileLocation outputVcfPath = outputDirectory.GetFileLocation("CNV.vcf.gz");
                     CanvasCallset callSet = new CanvasCallset(
                     _smallPedigreeOptions.Bams.ToList()[i],
-                    _smallPedigreeOptions.SampleNames.ToList()[i],
+                    sampleName,
                     CommonOptions.WholeGenomeFasta,
                     CommonOptions.OutputDirectory,
                     CommonOptions.KmerFasta,
                     CommonOptions.FilterBed,
-                    CommonOptions.PloidyBed,
-                    CommonOptions.BAlleleSites,
+                    _smallPedigreeOptions.PloidyBed.ToList()[i],
+                    _smallPedigreeOptions.BAlleleSites.ToList()[i],
                     CommonOptions.IsDbSnpVcf,
                     Enumerable.Empty<IFileLocation>(),
                     null,
