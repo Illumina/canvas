@@ -62,7 +62,6 @@ namespace Canvas.CommandLineParsing
         public IEnumerable<IFileLocation> Bams { get; }
         public IEnumerable<IFileLocation> BAlleleSites { get; }
         public IEnumerable<IFileLocation> PloidyBed { get; }
-
         public IEnumerable<string> SampleNames { get; }
 
         public SmallPedigreeOptions(IEnumerable<IFileLocation> bams, IEnumerable<string> sampleNames, IEnumerable<IFileLocation> ploidyBed, IEnumerable<IFileLocation> bAlleleSites)

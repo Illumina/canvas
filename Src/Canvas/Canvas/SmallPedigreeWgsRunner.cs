@@ -36,6 +36,7 @@ namespace Canvas
             for (int i=0; i < _smallPedigreeOptions.Bams.Count(); i++) {
                     string sampleName = _smallPedigreeOptions.SampleNames.ToList()[i];
                     IDirectoryLocation outputDirectory = new DirectoryLocation(Path.Combine(CommonOptions.OutputDirectory.FullName, sampleName));
+                    Directory.CreateDirectory(outputDirectory.FullName);
                     IFileLocation outputVcfPath = outputDirectory.GetFileLocation("CNV.vcf.gz");
                     CanvasCallset callSet = new CanvasCallset(
                     _smallPedigreeOptions.Bams.ToList()[i],

@@ -55,7 +55,7 @@ namespace CanvasCommon
         public GenomicBin()
         {
             this.Chromosome = null;
-            this.Interval = null;
+            this.Interval = new GenomicInterval();
             this.CountBin = null;
             this.GC = -1;
             this.MadOfDiffs = -1;

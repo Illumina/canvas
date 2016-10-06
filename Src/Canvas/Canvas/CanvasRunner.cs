@@ -154,18 +154,19 @@ namespace Illumina.SecondaryAnalysis
                     NexteraManifestUtils.WriteNexteraManifests(callset.Manifest, callset.TempManifestPath);
                 }
             }
-
-            
+          
             // read bams 
             var intermediateDataPathsByBamPath = ReadBams(callset.GenomeMetadata, callset.Bam.IsPairedEnd, new List<string>(){callset.Id}, callset.TempFolder,
                 canvasReferencePath, canvasBedPath, bamPaths, commandLine, canvasBinPath, executablePath, callset.TempManifestPath);
 
             // get bin size (of the smallest BAM) if normal BAMs are given
+            var intermediateDataPathsByBamPathCopy = (from x in intermediateDataPathsByBamPath
+                                                      select x).ToDictionary(x => x.Key, x => x.Value.Select(y => y).ToList()); // deep dictionary copy
             int binSize = -1;
             if (bamPaths.Count > 1)
             {
                 string smallestBamPath = SmallestFile(bamPaths);
-                binSize = GetBinSize(callset, smallestBamPath, intermediateDataPathsByBamPath[smallestBamPath],
+                binSize = GetBinSize(callset, smallestBamPath, intermediateDataPathsByBamPathCopy[smallestBamPath],
                     canvasReferencePath, canvasBedPath);
             }
             else if (callset.IsEnrichment && callset.Manifest.CanvasControlAvailable)
@@ -208,23 +209,22 @@ namespace Illumina.SecondaryAnalysis
                 bamPaths.Add(bam.BamFile.FullName);
             }
 
-
             // read bams 
             var intermediateDataPathsByBamPath = ReadBams(callset.GenomeMetadata, true, callset.SampleNames, callset.TempFolder,
                 canvasReferencePath, canvasBedPath, bamPaths, commandLine, canvasBinPath, executablePath, null);
-            Console.WriteLine("Size of intermediateDataPathsByBamPath: {0}", intermediateDataPathsByBamPath.Count);
-
 
             // get bin size (of the smallest BAM) if normal BAMs are given
             int binSize = -1;
+            var intermediateDataPathsByBamPathCopy = (from x in intermediateDataPathsByBamPath
+                                                      select x).ToDictionary(x => x.Key, x => x.Value.Select(y=>y).ToList()); // deep dictionary copy
+
             if (bamPaths.Count > 1)
             {
                 string smallestBamPath = SmallestFile(bamPaths);
                 CanvasBin.CanvasBin canvasBin = new CanvasBin.CanvasBin();
-                binSize = canvasBin.CalculateMultiSampleBinSize(intermediateDataPathsByBamPath, 
+                binSize = canvasBin.CalculateMultiSampleBinSize(intermediateDataPathsByBamPathCopy, 
                     binSize, _countsPerBin, CanvasCommon.CanvasCoverageMode.TruncatedDynamicRange);
             }
-
 
             // derive Canvas bins
             var bamToBinned = BamToBinned(callset.TempFolder, true, callset.SampleNames, canvasReferencePath, canvasBedPath, bamPaths, commandLine, canvasBinPath, binSize, intermediateDataPathsByBamPath, executablePath);
@@ -232,13 +232,14 @@ namespace Illumina.SecondaryAnalysis
         }
 
         private Dictionary<string, string> BamToBinned(string tempFolder, bool isPairedEnd, IEnumerable<string> Id, string canvasReferencePath, string canvasBedPath, List<string> bamPaths,
-            StringBuilder commandLine, string canvasBinPath, int binSize, Dictionary<string, List<string>> intermediateDataPathsByBamPath,
+            StringBuilder commandLine, string canvasBinPath, int binSize, Dictionary<string, List<string>> intermediateDataPathsByBamPaths,
             string executablePath)
         {
             Dictionary<string, string> bamToBinned = new Dictionary<string, string>();
             List<UnitOfWork> finalBinJobs = new List<UnitOfWork>();
-            for (int bamIdx = 0; bamIdx < bamPaths.Count; bamIdx++)
-            {
+            int bamIdx = 0;
+            foreach (List<string> intermediateDataPathsByBamPath in intermediateDataPathsByBamPaths.Values)
+            { 
                 string bamPath = bamPaths[bamIdx];
                 // finish up CanvasBin step by merging intermediate data and finally binning                
                 string binnedPath = Path.Combine(tempFolder, string.Format("{0}_{1}.binned", Id.ToList()[bamIdx], bamIdx));
@@ -258,9 +259,10 @@ namespace Illumina.SecondaryAnalysis
                     commandLine.AppendFormat("-z \"{0}\" ", binSize);
                 }
 
-                foreach (string path in intermediateDataPathsByBamPath[bamPath])
+                foreach (string path in intermediateDataPathsByBamPath)
                 {
                     commandLine.AppendFormat("-i \"{0}\" ", path);
+                    Console.WriteLine("path: {0}", path);
                 }
 
                 commandLine.AppendFormat("-m {0} ", _coverageMode);
@@ -278,6 +280,7 @@ namespace Illumina.SecondaryAnalysis
                         _customParameters["CanvasBin"], true);
                 }
                 finalBinJobs.Add(finalBinJob);
+                bamIdx++;
             }
             _workManager.DoWorkParallel(finalBinJobs, new TaskResourceRequirements(8, 25));
                 // CanvasBin itself is multi-threaded
@@ -292,12 +295,9 @@ namespace Illumina.SecondaryAnalysis
             List<UnitOfWork> binJobs = new List<UnitOfWork>();
 
             Dictionary<string, List<string>> intermediateDataPathsByBamPath = new Dictionary<string, List<string>>();
-            foreach (string bamPath in bamPaths)
-            {
-                intermediateDataPathsByBamPath[bamPath] = new List<string>();
-            }
             for (int bamIndex = 0; bamIndex < bamPaths.Count; bamIndex++)
             {
+                intermediateDataPathsByBamPath[Id.ToList()[bamIndex]] = new List<string>();
                 foreach (
                     GenomeMetadata.SequenceMetadata sequenceMetadata in
                         genomeMetadata.Sequences.OrderByDescending(sequence => sequence.Length))
@@ -321,7 +321,7 @@ namespace Illumina.SecondaryAnalysis
 
                     string intermediateDataPath = Path.Combine(tempFolder, string.Format("{0}_{1}_{2}.dat",
                         Id.ToList()[bamIndex], bamIndex, sequenceMetadata.Name));
-                    intermediateDataPathsByBamPath[bamPath].Add(intermediateDataPath);
+                    intermediateDataPathsByBamPath[Id.ToList()[bamIndex]].Add(intermediateDataPath);
                     commandLine.AppendFormat("-f \"{0}\" -d {1} -o \"{2}\" ", canvasBedPath, _countsPerBin, intermediateDataPath);
                     if (tempManifestPath != null)
                         commandLine.AppendFormat("-t \"{0}\" ", tempManifestPath);
@@ -686,6 +686,9 @@ namespace Illumina.SecondaryAnalysis
         private async Task CallSampleInternal(SmallPedigreeCallset callset)
         {
             Directory.CreateDirectory(callset.TempFolder);
+            foreach (CanvasCallset singleSampleCallset in callset.Callset)
+                Directory.CreateDirectory(singleSampleCallset.TempFolder);
+
             string canvasReferencePath = callset.KmerFasta.FullName;
             string canvasBedPath = callset.FilterBed.FullName;
             if (!File.Exists(canvasReferencePath))
@@ -696,9 +699,6 @@ namespace Illumina.SecondaryAnalysis
             {
                 throw new ApplicationException(string.Format("Error: Missing filter bed file required for CNV calling at '{0}'", canvasBedPath));
             }
-
-            // CanvasSNV
-            var canvasSnvTask = _checkpointRunner.RunCheckpointAsync("CanvasSNV", () => InvokeCanvasSnv(callset));
 
             // Prepare ploidy file:
             List<string> ploidyBedPaths = callset.Callset.Select(x=>x.PloidyBed?.FullName).ToList();
@@ -713,19 +713,22 @@ namespace Illumina.SecondaryAnalysis
             // CanvasPartition:
             var partitionedPaths = _checkpointRunner.RunCheckpoint("CanvasPartition", () => InvokeCanvasPartition(callset, canvasCleanOutput, canvasBedPath));
 
+            // CanvasSNV
+            var canvasSnvTask = _checkpointRunner.RunCheckpointAsync("CanvasSNV", () => InvokeCanvasSnv(callset));
+
             // Variant calling
             await canvasSnvTask;
             RunGermlineCalling(partitionedPaths, callset, ploidyBedPaths);
         }
 
-        private List<IFileLocation> WriteMergedCanvasPartition(List<IFileLocation> partitionedPaths, string tempFolder, List<string> sampleNames)
+        private List<IFileLocation> WriteMergedCanvasPartition(List<IFileLocation> partitionedPaths, List<string> tempFolders, List<string> sampleNames)
         {
             Dictionary<string, List<GenomicBin>> multisamplePartitions = CanvasCommon.Utilities.LoadMultiBedFile(partitionedPaths);
             List <IFileLocation> outPaths = new List<IFileLocation>();
             int count = 0;
             foreach (string sampleName in sampleNames)
             {
-                string outPath = Path.Combine(tempFolder, string.Format("{0}_merged.partitioned", sampleName));
+                string outPath = Path.Combine(tempFolders[count], string.Format("{0}_merged.partitioned", sampleName));
                 using (GzipWriter writer = new GzipWriter(outPath))
                 {
                     foreach (string chr in multisamplePartitions.Keys)
@@ -753,8 +756,8 @@ namespace Illumina.SecondaryAnalysis
             for (int i = 0; i < callsets.Callset.Count; i++)
                 partitionedPaths.Add(InvokeCanvasPartition(callsets.Callset[i], cleanedPaths[i], canvasBedPath));
             List<string> sampleNames = callsets.Callset.Select(x => x.SampleName).ToList();
-            string tmpFolder = callsets.Callset.First().TempFolder;
-            return WriteMergedCanvasPartition(partitionedPaths, tmpFolder, sampleNames);
+            List<string> tmpFolders = callsets.Callset.Select(x => x.TempFolder).ToList();
+            return WriteMergedCanvasPartition(partitionedPaths, tmpFolders, sampleNames);
         }
 
         private IFileLocation InvokeCanvasPartition(CanvasCallset callset, IFileLocation cleanedPath, string canvasBedPath)
