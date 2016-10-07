@@ -726,6 +726,22 @@ namespace Illumina.SecondaryAnalysis
             Dictionary<string, List<GenomicBin>> multisamplePartitions = CanvasCommon.Utilities.LoadMultiSamplePartiotionedBedFile(partitionedPaths);
             List <IFileLocation> outPaths = new List<IFileLocation>();
             int count = 0;
+            string mergedOutPath = Path.Combine(Directory.GetParent(tempFolders[0]).ToString(), "merged.partitioned");
+
+            using (StreamWriter writer = new StreamWriter(mergedOutPath))
+            {
+                foreach (string chr in multisamplePartitions.Keys)
+                {
+                    foreach (GenomicBin genomicBin in multisamplePartitions[chr])
+                    {
+                        writer.Write(string.Format($"{genomicBin.Chromosome}\t{genomicBin.Start}\t{genomicBin.Stop}"));
+                        for (int i = 0; i < sampleNames.Count; i++)
+                            writer.Write(string.Format($"\t{genomicBin.CountBins.Count[i]}\t{genomicBin.CountBins.SegmentId[i]}"));
+                        writer.Write("\n");
+                    }
+                }
+            }
+
             foreach (string sampleName in sampleNames)
             {
                 string outPath = Path.Combine(tempFolders[count], string.Format("{0}_merged.partitioned", sampleName));
