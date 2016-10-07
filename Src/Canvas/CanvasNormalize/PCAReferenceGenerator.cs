@@ -35,16 +35,16 @@ namespace CanvasNormalize
 
             // set bin count to 1 if less than 1
             foreach (var bin in sampleBins)
-                bin.Count = Math.Max(1, bin.Count);
+                bin.CountBin.Count = Math.Max(1, bin.CountBin.Count);
 
             // center the sample
-            var centeredSampleVector = Enumerable.Zip(sampleBins, _model.Mu, (bin, mu) => (double)bin.Count - mu.Count).ToArray();
+            var centeredSampleVector = Enumerable.Zip(sampleBins, _model.Mu, (bin, mu) => (double)bin.CountBin.Count - mu.CountBin.Count).ToArray();
 
             // project onto the axes
             var projectedSampleVector = CanvasCommon.Utilities.Project(centeredSampleVector, _model.Axes);
 
             // undo centering and set bin count to 1 if less than 1
-            var referenceVector = Enumerable.Zip(_model.Mu, projectedSampleVector, (bin, count) => Math.Max(1, bin.Count + count));
+            var referenceVector = Enumerable.Zip(_model.Mu, projectedSampleVector, (bin, count) => Math.Max(1, bin.CountBin.Count + count));
 
             // write temporary reference count file
             var tempReferenceFile = new FileLocation(Path.GetTempFileName());

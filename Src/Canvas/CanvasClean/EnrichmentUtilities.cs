@@ -75,10 +75,10 @@ namespace CanvasClean
                 if (!GenomeMetadata.SequenceMetadata.IsAutosome(bin.Chromosome)) { continue; }
 
                 // Put the observed count in the GC-appropriate list.
-                countsByGC[bin.GC].Add(bin.Count);
+                countsByGC[bin.GC].Add(bin.CountBin.Count);
 
                 // Add to the global list of counts.
-                counts.Add(bin.Count);
+                counts.Add(bin.CountBin.Count);
             }
         }
     }

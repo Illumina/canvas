@@ -71,7 +71,7 @@ namespace CanvasPartition
         /// Wavelets: unbalanced HAAR wavelets segmentation 
         /// </summary>
         /// <param name="threshold">wavelets coefficient threshold</param>
-        private void Wavelets(bool isGermline, string commonCNVs, double thresholdLower = 5, double thresholdUpper = 80, double madFactor = 2, int minSize = 10, int verbose = 1)
+        void Wavelets(bool isGermline, string commonCNVs, double thresholdLower = 5, double thresholdUpper = 80, double madFactor = 2, int minSize = 10, int verbose = 1, bool isSmallPedegree = false)
         {
             Dictionary<string, int[]> inaByChr = new Dictionary<string, int[]>();
             Dictionary<string, double[]> finiteScoresByChr = new Dictionary<string, double[]>();

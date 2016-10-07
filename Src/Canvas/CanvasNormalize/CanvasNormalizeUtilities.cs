@@ -26,7 +26,7 @@ namespace CanvasNormalize
             {
                 // get the normal ploidy
                 double factor = CanvasDiploidBinRatioFactor * GetPloidy(referencePloidy, ratio.Chromosome, ratio.Start, ratio.Stop) / 2.0;
-                double count = ratio.Count * factor;
+                double count = ratio.CountBin.Count * factor;
                 yield return new GenomicBin(ratio.Chromosome, ratio.Start, ratio.Stop, ratio.GC, (float)count);
             }
         }
@@ -79,10 +79,10 @@ namespace CanvasNormalize
                     {
                         throw new ApplicationException("Bins are not in the same order.");
                     }
-                    writer.WriteLine(CSVWriter.GetLine(eFragment.Current.Count.ToString(),
-                        eReference.Current.Count.ToString(), eFragment.Current.Chromosome,
+                    writer.WriteLine(CSVWriter.GetLine(eFragment.Current.CountBin.Count.ToString(),
+                        eReference.Current.CountBin.Count.ToString(), eFragment.Current.Chromosome,
                         eFragment.Current.Start.ToString(), eFragment.Current.Stop.ToString(),
-                        eRatio.Current.Count.ToString()));
+                        eRatio.Current.CountBin.Count.ToString()));
                 }
             }
         }

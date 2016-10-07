@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using NDesk.Options;
+using Newtonsoft.Json.Linq;
 
 
 namespace CanvasBin
@@ -60,6 +61,9 @@ namespace CanvasBin
         public List<string> intermediatePaths = new List<string>();
         public bool isPairedEnd = false;
 
+        // Json file with intermediate Canvas data for multi-sample workflow
+        public string inJson = null;
+
         // coverage modes: 0 = binary (each kmer is either hit or not), 1 = dynamic range (count up to 255 hits per kmer),
         // 2 = dynamic with outlier removal (cap coverage for a kmer at 3 * median coverage across kmers in bin)
         public CanvasCommon.CanvasCoverageMode coverageMode = CanvasCommon.CanvasCoverageMode.TruncatedDynamicRange;
@@ -82,16 +86,16 @@ namespace CanvasBin
                     { "b|bam=",           "bam file containing unique alignments", v => parameters.bamFile = v },
                     { "r|reference=",     "Canvas-ready reference fasta file", v => parameters.referenceFile = v },
                     { "c|chr=",           "for bam input, only work on this chromosome. Output intermediate binary data. Must follow-up with a single CanvasBin call passing all the intermediate binary data files (see -i option)", v => parameters.chromosome = v},
-                    { "i|infile=",        "intermediate binary data file from individual chromosome. Pass this option multiple times, once for each chromosome", v => parameters.intermediatePaths.Add(v)}, 
-                    { "f|filter=",        "bed file containing regions to ignore",             v => parameters.filterFile = v },
+                    { "i|infile=",        "intermediate binary data file from individual chromosome. Pass this option multiple times, once for each chromosome", v => parameters.intermediatePaths.Add(v)},
+                    { "f|filter=",        "bed file containing regions to ignore",            v => parameters.filterFile = v },
                     { "d|bindepth=",      "median counts desired in each bin",                v => parameters.countsPerBin = Convert.ToInt32(v) },
                     { "z|binsize=",       "bin size; optional",                               v => parameters.binSize = Convert.ToInt32(v) },
                     { "o|outfile=",       "text file to output containing computed bins, or if -c option was specified the intermediate binary data file to output",     v => parameters.outFile = v },
                     { "y|binsizeonly",    "calcualte bin size and exit",                      v => parameters.binSizeOnly = v != null },
                     { "h|help",           "show this message and exit",                       v => needHelp = v != null },
                     { "p|paired-end",     "input .bam is a paired-end alignment (e.g. from Isaac)", v => parameters.isPairedEnd = v != null},
-                    { "m|mode=",          "coverage measurement mode",                       v => parameters.coverageMode = CanvasCommon.Utilities.ParseCanvasCoverageMode(v) },
-                    { "t|manifest=",      "Nextera manifest file",                       v => parameters.manifestFile = v },
+                    { "m|mode=",          "coverage measurement mode",                        v => parameters.coverageMode = CanvasCommon.Utilities.ParseCanvasCoverageMode(v) },
+                    { "t|manifest=",      "Nextera manifest file",                            v => parameters.manifestFile = v },
                     { "n|bins=",          "bed file containing predefined bins",              v => parameters.predefinedBinsFile = v },
                 };
 
@@ -116,7 +120,8 @@ namespace CanvasBin
                 needHelp = true;
             }
             else if (parameters.coverageMode != CanvasCommon.CanvasCoverageMode.Fragment
-                && string.IsNullOrEmpty(parameters.chromosome) && parameters.intermediatePaths.Count == 0)
+                && string.IsNullOrEmpty(parameters.chromosome) && parameters.intermediatePaths.Count == 0 &&
+                string.IsNullOrEmpty(parameters.inJson))
             {
                 Console.Error.WriteLine("Please specify chromsome to measure coverage for.");
                 needHelp = true;
@@ -147,6 +152,13 @@ namespace CanvasBin
             {
                 Console.WriteLine("CanvasBin.exe: File {0} does not exist! Exiting.", parameters.filterFile);
                 return null;
+            }
+
+            // Does the BED file exist?
+            else if (parameters.inJson != null && !File.Exists(parameters.inJson))
+            {
+                Console.WriteLine($"CanvasBin.exe: File {parameters.inJson} does not exist! Exiting.");
+                return null;          
             }
 
             // Did the user supply a non-negative number?

@@ -88,7 +88,7 @@ namespace CanvasNormalize
         {
             if (manifest == null)
             {
-                Counts = bins.Select(bin => (double)bin.Count).ToList();
+                Counts = bins.Select(bin => (double)bin.CountBin.Count).ToList();
             }
             else
             {
@@ -155,7 +155,7 @@ namespace CanvasNormalize
 
                 if (onTarget) { onTargetIndices.Add(binIdx); }
 
-                binCounts.Add(bin.Count);
+                binCounts.Add(bin.CountBin.Count);
                 binIdx++;
             }
         }

@@ -35,8 +35,8 @@ namespace CanvasClean
             for (int GC = 0; GC < HistogramByGC.Length; GC++) HistogramByGC[GC] = new int[1024];
             foreach (GenomicBin bin in bins)
             {
-                if (bin.Count < 0 || bin.Count >= 1024) continue;
-                HistogramByGC[bin.GC][(int)bin.Count]++;
+                if (bin.CountBin.Count < 0 || bin.CountBin.Count >= 1024) continue;
+                HistogramByGC[bin.GC][(int)bin.CountBin.Count]++;
             }
             using (StreamWriter writer = new StreamWriter(filePath))
             {
@@ -121,7 +121,7 @@ namespace CanvasClean
                 // ratio of GC bins and global IQRs
                 float iqrRatio = scaledLocalIqr / globalIQR;
                 var medianGCCount = localQuartiles[bin.GC].Item2;
-                bin.Count = medianGCCount + (bin.Count - medianGCCount) / iqrRatio;
+                bin.CountBin.Count = medianGCCount + (bin.CountBin.Count - medianGCCount) / iqrRatio;
             }
 
             // DebugPrintCountsByGC(bins, "CountsByGCVariance-After.txt");
@@ -224,7 +224,7 @@ namespace CanvasClean
             {
                 double? median = medians[bins[gcBinIndex].GC];
                 if (median != null && median > 0)
-                    bins[gcBinIndex].Count = (float)(globalMedian * (double)bins[gcBinIndex].Count / median);
+                    bins[gcBinIndex].CountBin.Count = (float)(globalMedian * (double)bins[gcBinIndex].CountBin.Count / median);
             }
             // DebugPrintCountsByGC(bins, "CountsByGC-After.txt");
         }
@@ -306,7 +306,7 @@ namespace CanvasClean
 
             for (int binIndex = 0; binIndex < bins.Count - 1; binIndex++)
             {
-                countsDiffs[binIndex] = Convert.ToDouble(bins[binIndex + 1].Count - bins[binIndex].Count);
+                countsDiffs[binIndex] = Convert.ToDouble(bins[binIndex + 1].CountBin.Count - bins[binIndex].CountBin.Count);
             }
 
             // holder of local SD values (SDs of 20 bins)
@@ -435,8 +435,8 @@ namespace CanvasClean
                     && (hasNextBin && !currentBinChromosome.Equals(nextBinChromosome)))
                     continue;
                 // Same chromosome on at least on side or it's the only bin
-                if ((hasPreviousBin && bins[binIndex].Chromosome.Equals(previousBinChromosome) && !SignificantlyDifferent(bins[binIndex].Count, bins[binIndex - 1].Count))
-                    || (hasNextBin && bins[binIndex].Chromosome.Equals(nextBinChromosome) && !SignificantlyDifferent(bins[binIndex].Count, bins[binIndex + 1].Count))
+                if ((hasPreviousBin && bins[binIndex].Chromosome.Equals(previousBinChromosome) && !SignificantlyDifferent(bins[binIndex].CountBin.Count, bins[binIndex - 1].CountBin.Count))
+                    || (hasNextBin && bins[binIndex].Chromosome.Equals(nextBinChromosome) && !SignificantlyDifferent(bins[binIndex].CountBin.Count, bins[binIndex + 1].CountBin.Count))
                     || (!hasPreviousBin && !hasNextBin))
                 {
                     stripped.Add(bins[binIndex]);
