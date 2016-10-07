@@ -56,7 +56,7 @@ namespace CanvasSmooth
 
         public List<GenomicBin> Smooth(List<GenomicBin> bins)
         {
-            IEnumerable<float> counts = bins.Select(b => b.Count);
+            IEnumerable<float> counts = bins.Select(b => b.CountBin.Count);
             IEnumerable<float> smoothedCounts = RepeatedMedianFilter(counts, MaxHalfWindowSize);
             List<GenomicBin> smoothedBins = new List<GenomicBin>();
             smoothedBins.AddRange(Enumerable.Zip(bins, smoothedCounts, (bin, count)

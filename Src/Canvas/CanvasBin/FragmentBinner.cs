@@ -138,7 +138,7 @@ namespace CanvasBin
             private void InitializeBins()
             {
                 Console.WriteLine("Initializing bin counts to 0 for {0}...", Chromosome);
-                foreach (GenomicBin bin in Bins) { bin.Count = 0; }
+                foreach (GenomicBin bin in Bins) { bin.CountBin.Count = 0; }
             }
 
             /// <summary>
@@ -272,7 +272,7 @@ namespace CanvasBin
                     if (duplicateFailedQCLowQuality)
                     {
                         usableFragmentCount--;
-                        bins[readNameToBinIndex[alignment.Name]].Count--;
+                        bins[readNameToBinIndex[alignment.Name]].CountBin.Count--;
                     }
                     readNameToBinIndex.Remove(alignment.Name); // clean up
                     return;
@@ -308,7 +308,7 @@ namespace CanvasBin
                 if (bestBinIndex >= 0) // Bin the fragment
                 {
                     usableFragmentCount++;
-                    bins[bestBinIndex].Count++;
+                    bins[bestBinIndex].CountBin.Count++;
                     readNameToBinIndex[alignment.Name] = bestBinIndex;
                 }
             }

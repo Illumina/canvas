@@ -2,8 +2,9 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.IO;
-
 using Illumina.Common;
+using Isas.SequencingFiles;
+using Isas.Shared.Utilities.FileSystem;
 
 namespace CanvasCommon
 {
@@ -905,7 +906,8 @@ namespace CanvasCommon
             }
         }
 
-        public static Dictionary<string, List<GenomicBin>> LoadBedFile(string bedPath, int? gcIndex = null)
+
+        public static Dictionary<string, List<GenomicBin>> LoadBedFile(string bedPath, int? gcIndex = null, int? segmentIndex = null)
         {
             Dictionary<string, List<GenomicBin>> excludedIntervals = new Dictionary<string, List<GenomicBin>>();
             int count = 0;
@@ -934,6 +936,10 @@ namespace CanvasCommon
                     {
                         interval.GC = int.Parse(bits[gcIndex.Value]);
                     }
+                    if (segmentIndex.HasValue && segmentIndex.Value < bits.Length)
+                    {
+                        interval.CountBin.SegmentId = int.Parse(bits[segmentIndex.Value]);
+                    }
                     excludedIntervals[chr].Add(interval);
                     count++;
                 }
@@ -942,7 +948,105 @@ namespace CanvasCommon
             return excludedIntervals;
         }
 
-        public static void SortAndOverlapCheck(Dictionary<string, List<GenomicBin>> intervals, string bedPath)
+
+        /// <summary>
+        /// Loads .partioned bed files, merges bins from multiple samples and returns MultiSampleCount GenomicBin objects 
+        /// </summary>
+        public static Dictionary<string, List<GenomicBin>> LoadMultiSamplePartiotionedBedFile(List<IFileLocation> bedPaths)
+        {
+            // initialize variables to hold multi-sample bed files 
+            Dictionary<string, List<GenomicBin>> intervals = new Dictionary<string, List<GenomicBin>>();
+            Dictionary<string, Dictionary<int, int>> start = new Dictionary<string, Dictionary<int, int>>();
+            Dictionary<string, Dictionary<int, int>> stop = new Dictionary<string, Dictionary<int, int>>();
+            Dictionary<string, Dictionary<int, List<float>>> binCounts = new Dictionary<string, Dictionary<int, List<float>>>();
+            Dictionary<string, Dictionary<int, List<int?>>> segmentIDs = new Dictionary<string, Dictionary<int, List<int?>>>();
+            List<int> counts = new List<int>();
+            HashSet<string> chromosomes = new HashSet<string>();
+            Console.WriteLine("LoadMultiBedFile");
+
+            foreach (IFileLocation bedPath in bedPaths)
+            {
+                int count = 0;
+                using (GzipReader reader = new GzipReader(bedPath.FullName))               
+                {
+                    while (true)
+                    {
+                        string fileLine = reader.ReadLine();
+                        if (fileLine == null) break;
+                        string[] bits = fileLine.Split('\t');
+                        string chr = bits[0];
+                        if (!chromosomes.Contains(chr)) chromosomes.Add(chr);
+                        count++;
+                    }
+                }
+                counts.Add(count);
+                Console.WriteLine($"count {count}");
+            }
+            foreach (string chr in chromosomes)
+            {
+                start[chr]  = new Dictionary<int, int>();
+                stop[chr]   = new Dictionary<int, int>();
+                binCounts[chr]  = new Dictionary<int, List<float>>();
+                segmentIDs[chr] = new Dictionary <int, List<int?>>();
+            }
+
+            // read counts and segmentIDs
+            foreach (IFileLocation bedPath in bedPaths)
+            {
+                using (GzipReader reader = new GzipReader(bedPath.FullName))
+                {
+                    while (true)
+                    {
+                        string fileLine = reader.ReadLine();
+                        if (fileLine == null) break;
+                        string[] bits = fileLine.Split('\t');
+                        string chr = bits[0];
+                        int pos = int.Parse(bits[1]);
+                        start[chr][pos] = pos;
+                        stop[chr][pos] = int.Parse(bits[2]);
+                        if (binCounts[chr].ContainsKey(pos))
+                        {
+                            binCounts[chr][pos].Add(float.Parse(bits[3]));
+                            segmentIDs[chr][pos].Add(int.Parse(bits[4]));
+                        }
+                        else
+                        {
+                            binCounts[chr][pos] = new List<float>();
+                            segmentIDs[chr][pos] = new List<int?>();
+                            binCounts[chr][pos].Add(float.Parse(bits[3]));
+                            segmentIDs[chr][pos].Add(int.Parse(bits[4]));
+                        }
+                    }
+                }
+            }
+            Console.WriteLine("create GenomeBin intervals");
+
+            // create GenomeBin intervals
+            foreach (string chr in chromosomes)
+            {
+                if (!intervals.ContainsKey(chr)) intervals[chr] = new List<GenomicBin>();
+                var pos = start[chr].Keys.ToList();
+                for (int i = 0; i < pos.Count; i++)
+                {
+                    // bins have been removed at Canvas clean
+                    if (binCounts[chr][pos[i]].Count != bedPaths.Count)
+                        continue;
+                    if (pos[i] < 0)
+                    {
+                        throw new ApplicationException($"Start must be non-negative");
+                    }
+                    if (pos[i] >= stop[chr][pos[i]]) // Do not allow empty intervals
+                    {
+                        throw new ApplicationException($"Start must be less than Stop");
+                    }
+                    GenomicBin interval = new GenomicBin(chr, pos[i], stop[chr][pos[i]], 0, binCounts[chr][pos[i]], segmentIDs[chr][pos[i]]);
+                    intervals[chr].Add(interval);
+                }
+            }
+            return intervals;
+        }
+
+        static public void SortAndOverlapCheck(Dictionary<string, List<GenomicBin>> intervals, string bedPath)
         {
             List<string> chrs = new List<string>(intervals.Keys);
             for (int chrIndex = 0; chrIndex < chrs.Count; chrIndex++)

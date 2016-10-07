@@ -15,7 +15,7 @@ namespace CanvasCommon
             {
                 foreach (GenomicBin bin in bins)
                 {
-                    writer.WriteLine(string.Format("{0}\t{1}\t{2}\t{3:F2}\t{4}", bin.Chromosome, bin.Start, bin.Stop, bin.Count, bin.GC));
+                    writer.WriteLine(string.Format("{0}\t{1}\t{2}\t{3:F2}\t{4}", bin.Chromosome, bin.Start, bin.Stop, bin.CountBin.Count, bin.GC));
                 }
             }
         }
