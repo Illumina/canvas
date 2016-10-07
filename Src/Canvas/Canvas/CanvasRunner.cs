@@ -723,7 +723,7 @@ namespace Illumina.SecondaryAnalysis
 
         private List<IFileLocation> WriteMergedCanvasPartition(List<IFileLocation> partitionedPaths, List<string> tempFolders, List<string> sampleNames)
         {
-            Dictionary<string, List<GenomicBin>> multisamplePartitions = CanvasCommon.Utilities.LoadMultiBedFile(partitionedPaths);
+            Dictionary<string, List<GenomicBin>> multisamplePartitions = CanvasCommon.Utilities.LoadMultiSamplePartiotionedBedFile(partitionedPaths);
             List <IFileLocation> outPaths = new List<IFileLocation>();
             int count = 0;
             foreach (string sampleName in sampleNames)

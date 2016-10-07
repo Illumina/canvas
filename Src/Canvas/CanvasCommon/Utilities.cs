@@ -753,9 +753,13 @@ namespace CanvasCommon
             return excludedIntervals;
         }
 
-        public static Dictionary<string, List<GenomicBin>> LoadMultiBedFile(List<IFileLocation> bedPaths)
+
+        /// <summary>
+        /// Loads .partioned bed files, merges bins from multiple samples and returns MultiSampleCount GenomicBin objects 
+        /// </summary>
+        public static Dictionary<string, List<GenomicBin>> LoadMultiSamplePartiotionedBedFile(List<IFileLocation> bedPaths)
         {
-            // initialize variables 
+            // initialize variables to hold multi-sample bed files 
             Dictionary<string, List<GenomicBin>> intervals = new Dictionary<string, List<GenomicBin>>();
             Dictionary<string, Dictionary<int, int>> start = new Dictionary<string, Dictionary<int, int>>();
             Dictionary<string, Dictionary<int, int>> stop = new Dictionary<string, Dictionary<int, int>>();
