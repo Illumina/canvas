@@ -1100,7 +1100,7 @@ namespace CanvasSomaticCaller
             if (CNOracle != null)
                 GenerateClonalityReportVersusKnownCN(segments, clusterInfos, modelPoints, numClusters, model);
             if (bestModel)
-                ComputeClonalityScore(segments, clusterInfos, modelPoints, numClusters, model);
+                ComputeClonalityScore(segments, modelPoints, numClusters, model);
             return clusterDeviation;
         }
 
@@ -2384,7 +2384,7 @@ namespace CanvasSomaticCaller
         /// Logistic regression workflow is accessible from git.illumina.com/Bioinformatics/CanvasTest/TrainingScripts.
         /// The variant is predicted as heterogeneous if score is below 0.5
         /// </summary>
-        private void ComputeClonalityScore(List<SegmentInfo> segments, List<ClusterInfo> ClusterInfos, List<ModelPoint> modelPoints, int numClusters, CoveragePurityModel model)
+        private void ComputeClonalityScore(List<SegmentInfo> segments, List<ModelPoint> modelPoints, int numClusters, CoveragePurityModel model)
         {
             foreach (SegmentInfo info in segments)
             {
@@ -2410,8 +2410,10 @@ namespace CanvasSomaticCaller
                     score += model.Deviation * somaticCallerParameters.ModelDeviation;
                     score = Math.Exp(score);
                     score = score / (score + 1.0);
-                    this.HeterogeneousSegmentsSignature.Add(info.Segment.Chr.GetHashCode() + info.Segment.Begin + info.Segment.End +
-                                                                info.Segment.Counts.Count + info.Segment.CopyNumber, score);
+                    long segmentHashKey = info.Segment.Chr.GetHashCode() + info.Segment.Begin + info.Segment.End +
+                                          info.Segment.Counts.Count + info.Segment.CopyNumber;
+                    if (!this.HeterogeneousSegmentsSignature.ContainsKey(segmentHashKey))
+                        this.HeterogeneousSegmentsSignature.Add(segmentHashKey, score);
                 }
             }
         }
@@ -2426,11 +2428,10 @@ namespace CanvasSomaticCaller
             foreach (CanvasSegment segment in this.Segments)
             {
                 allSegments += segment.End - segment.Begin;
-                if (this.HeterogeneousSegmentsSignature.ContainsKey(segment.Chr.GetHashCode() + segment.Begin + segment.End +
-                                                                    segment.Counts.Count + segment.CopyNumber))
+                long segmentHashKey = segment.Chr.GetHashCode() + segment.Begin + segment.End + segment.Counts.Count + segment.CopyNumber;
+                if (this.HeterogeneousSegmentsSignature.ContainsKey(segmentHashKey))
                 {
-                    if (this.HeterogeneousSegmentsSignature[segment.Chr.GetHashCode() + segment.Begin + segment.End +
-                                                            segment.Counts.Count + segment.CopyNumber] < 0.5)
+                    if (this.HeterogeneousSegmentsSignature[segmentHashKey] < 0.5)
                     {
                         segment.IsHeterogeneous = true;
                         heterogeneousSegments += segment.End - segment.Begin;
