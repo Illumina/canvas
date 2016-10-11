@@ -302,7 +302,7 @@ namespace CanvasPartition
                     double max = Double.MinValue;
                     for (int i = 0; i < nStates; i++)
                     {
-                        var tmpMax = Math.Log(bestScore[t-1][i]) + Math.Log(_transition[i][j]) + Math.Log(_emission.EstimateLikelihood(x[t], j));
+                        var tmpMax = bestScore[t-1][i] + Math.Log(_transition[i][j]) + Math.Log(_emission.EstimateLikelihood(x[t], j));
                         if (tmpMax > max)
                         {
                             state = i;

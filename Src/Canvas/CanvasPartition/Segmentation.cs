@@ -67,7 +67,7 @@ namespace CanvasPartition
                     this.CBS(verbose: 2);
                     break;
                 case SegmentationMethod.HMM:
-                    Console.WriteLine("{0} Running CBS Partitioning", DateTime.Now);
+                    Console.WriteLine("{0} Running HMM Partitioning", DateTime.Now);
                     this.HMM();
                     break;
             }
@@ -90,7 +90,7 @@ namespace CanvasPartition
 
             Dictionary<string, Segment[]> segmentByChr = new Dictionary<string, Segment[]>();
             List<ThreadStart>  tasks = new List<ThreadStart>();
-            string chr = ScoresByChr.Keys.ToList().First();
+            foreach (string chr in ScoresByChr.Keys)
             {
                 tasks.Add(new ThreadStart(() =>
                 {
@@ -170,9 +170,9 @@ namespace CanvasPartition
                 }));
 
             }
-            Console.WriteLine("{0} Launching wavelet tasks", DateTime.Now);
+            Console.WriteLine("{0} Launching HMM tasks", DateTime.Now);
             Isas.Shared.Utilities.Utilities.DoWorkParallelThreads(tasks);
-            Console.WriteLine("{0} Completed wavelet tasks", DateTime.Now);
+            Console.WriteLine("{0} Completed HMM tasks", DateTime.Now);
             this.SegmentationResults = new GenomeSegmentationResults(segmentByChr);
             Console.WriteLine("{0} Segmentation results complete", DateTime.Now);
         }
@@ -700,9 +700,7 @@ namespace CanvasPartition
             }
             return newBreakpoints;
         }
-
-        private
-            void WriteCanvasPartitionResults(string outPath)
+        private void WriteCanvasPartitionResults(string outPath)
         {
             Dictionary<string, bool> starts = new Dictionary<string, bool>();
             Dictionary<string, bool> stops = new Dictionary<string, bool>();
