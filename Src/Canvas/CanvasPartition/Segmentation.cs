@@ -18,9 +18,11 @@ namespace CanvasPartition
         private string DataType;
         private const int idxChr = 0, idxStart = 1, idxEnd = 2;
         private int idxScore = 3;
+        private List<int> idxScores = new List<int>{3,4,5};
         private Dictionary<string, uint[]> StartByChr = new Dictionary<string, uint[]>();
         private Dictionary<string, uint[]> EndByChr = new Dictionary<string, uint[]>();
         private Dictionary<string, double[]> ScoreByChr = new Dictionary<string, double[]>();
+        private Dictionary<string, List<List<double>>> ScoresByChr = new Dictionary<string, List<List<double>>>();
         private GenomeSegmentationResults SegmentationResults;
         public double Alpha = DefaultAlpha;
         public double MadFactor = DefaultMadFactor;
@@ -42,6 +44,15 @@ namespace CanvasPartition
             this.ReadBEDInput();
         }
 
+        public Segmentation(string inputBinPath, string forbiddenBedPath)
+        {
+            this.InputBinPath = inputBinPath;
+            this.SegmentationResults = null;
+            this.ForbiddenIntervalBedPath = forbiddenBedPath;
+            // Read the input file:
+            this.ReadMultiBEDInput();
+        }
+
         public void SegmentGenome(string outPath, SegmentationMethod method, bool isGermline, string commonCNVsbedPath)
         {
             switch (method)
@@ -55,6 +66,10 @@ namespace CanvasPartition
                     Console.WriteLine("{0} Running CBS Partitioning", DateTime.Now);
                     this.CBS(verbose: 2);
                     break;
+                case SegmentationMethod.HMM:
+                    Console.WriteLine("{0} Running CBS Partitioning", DateTime.Now);
+                    this.HMM();
+                    break;
             }
             Console.WriteLine("{0} Write CanvasPartition results:", DateTime.Now);
             this.WriteCanvasPartitionResults(outPath);
@@ -66,6 +81,140 @@ namespace CanvasPartition
             GenomeSegmentationResults results = new GenomeSegmentationResults(new Dictionary<string, Segment[]>());
             return results;
         }
+
+        /// <summary>
+        /// HMM wrapper
+        /// </summary>
+        void HMM(int minSize = 10, int nHiddenStates = 5)
+        {
+
+            Dictionary<string, Segment[]> segmentByChr = new Dictionary<string, Segment[]>();
+            List<ThreadStart>  tasks = new List<ThreadStart>();
+            string chr = ScoresByChr.Keys.ToList().First();
+            {
+                tasks.Add(new ThreadStart(() =>
+                {
+                    List<MultivariateGaussianDistribution> gaussianDistribution = InitializeEmission(this.ScoresByChr[chr], nHiddenStates);
+                    HiddenMarkovModel hmm = new HiddenMarkovModel(this.ScoresByChr[chr], gaussianDistribution);
+                    List<int> breakpoints = new List<int>();
+                    int length = this.ScoresByChr[chr].Count;
+                    if (length > minSize)
+                    {
+                        hmm.FindMaximalLikelyhood(this.ScoresByChr[chr]);
+                        List<int> hiddenStates = hmm.BestPathViterbi(this.ScoresByChr[chr]);
+                        breakpoints.Add(0);
+                        for (int i = 1; i < length; i++)
+                        {
+                            if (hiddenStates[i] - hiddenStates[i - 1] != 0)
+                            {
+                                breakpoints.Add(i);
+                            }
+                        }
+                    }
+
+                    List<int> startBreakpointsPos = new List<int>();
+                    List<int> endBreakpointPos = new List<int>();
+                    List<int> lengthSeg = new List<int>();
+
+                    if (breakpoints.Count() >= 2 && length > 10)
+                    {
+                        startBreakpointsPos.Add(breakpoints[0]);
+                        endBreakpointPos.Add(breakpoints[1] - 1);
+                        lengthSeg.Add(breakpoints[1] - 1);
+
+                        for (int i = 1; i < breakpoints.Count - 1; i++)
+                        {
+                            startBreakpointsPos.Add(breakpoints[i]);
+                            endBreakpointPos.Add(breakpoints[i + 1] - 1);
+                            lengthSeg.Add(breakpoints[i + 1] - 1 - breakpoints[i]);
+                        }
+                        startBreakpointsPos.Add(breakpoints[breakpoints.Count - 1]);
+                        endBreakpointPos.Add(length - 1);
+                        lengthSeg.Add(length - breakpoints[breakpoints.Count - 1] - 1);
+                    }
+                    else
+                    {
+                        startBreakpointsPos.Add(0);
+                        endBreakpointPos.Add(length - 1);
+                        lengthSeg.Add(length - 1);
+
+                    }
+                    // estimate segment means 
+
+                    double[] segmentMeans = new double[lengthSeg.Count()];
+                    int ss = 0, ee = 0;
+                    for (int i = 0; i < lengthSeg.Count(); i++)
+                    {
+                        ee += lengthSeg[i];
+                        // Works even if weights == null
+                        segmentMeans[i] = Helper.WeightedAverage(this.ScoreByChr[chr], null, iStart: ss, iEnd: ee);
+                        ss = ee;
+                    }
+
+                    Segment[] segments = new Segment[startBreakpointsPos.Count];
+                    for (int i = 0; i < startBreakpointsPos.Count; i++)
+                    {
+                        int start = startBreakpointsPos[i];
+                        int end = endBreakpointPos[i];
+                        segments[i] = new Segment();
+                        segments[i].start = this.StartByChr[chr][start]; // Genomic start
+                        segments[i].end = this.EndByChr[chr][end]; // Genomic end
+                        segments[i].nMarkers = lengthSeg[i];
+                        segments[i].mean = segmentMeans[i];
+                    }
+
+                    lock (segmentByChr)
+                    {
+                        segmentByChr[chr] = segments;
+                    }
+                }));
+
+            }
+            Console.WriteLine("{0} Launching wavelet tasks", DateTime.Now);
+            Isas.Shared.Utilities.Utilities.DoWorkParallelThreads(tasks);
+            Console.WriteLine("{0} Completed wavelet tasks", DateTime.Now);
+            this.SegmentationResults = new GenomeSegmentationResults(segmentByChr);
+            Console.WriteLine("{0} Segmentation results complete", DateTime.Now);
+        }
+
+        public List<MultivariateGaussianDistribution> InitializeEmission(List<List<double>> data, int nHiddenStates)
+        {
+            int nDimensions = data.First().Count;
+            List<double> haploidMean = new List<double>(nDimensions);
+            List<double> standardDeviation = new List<double>(nDimensions);
+            List<MultivariateGaussianDistribution> tmpDistributions = new List<MultivariateGaussianDistribution>();
+
+            for (int dimension = 0; dimension < nDimensions; dimension++)
+            {
+                double meanHolder = 0;
+                foreach (List<double> datapoint in data)
+                    meanHolder += datapoint[dimension];
+                haploidMean.Add((meanHolder / data.Count) /2.0);
+                standardDeviation.Add(CanvasCommon.Utilities.StandardDeviation(data.Select(x => x[dimension]).ToList()));
+            }
+
+            for (int CN = 0; CN < nHiddenStates; CN++)
+            {
+                double[][] tmpSds = CanvasCommon.Utilities.MatrixCreate(nDimensions, nDimensions);
+
+                for (int dimension = 0; dimension < nDimensions; dimension++)
+                {
+                    tmpSds[dimension][dimension] = standardDeviation[dimension];
+                }
+                var tmpMean = haploidMean.Select(x => Math.Max(CN, 0.1)*x).ToArray();
+                MultivariateGaussianDistribution tmpDistribution = new MultivariateGaussianDistribution(tmpMean, tmpSds);
+                tmpDistributions.Add(tmpDistribution);
+            }
+
+            // remobe outliers 
+            double maxThreshold = tmpDistributions.Last().Mean.Max() * 1.2;
+            for (int length = 0; length < data.Count; length++)
+                for (int dimension = 0; dimension < nDimensions; dimension++)
+                    data[length][dimension] = data[length][dimension] > maxThreshold ? maxThreshold : data[length][dimension];
+
+            return tmpDistributions;
+        }
+
 
         /// <summary>
         /// Wavelets: unbalanced HAAR wavelets segmentation 
@@ -402,6 +551,52 @@ namespace CanvasPartition
                         this.ScoreByChr[chr] = scoreByChr[chr].ToArray();
                     }
 
+                }
+            }
+            catch (Exception e)
+            {
+                Console.Error.WriteLine("File {0} could not be read:", this.InputBinPath);
+                Console.Error.WriteLine(e.Message);
+                Environment.Exit(1);
+            }
+        }
+
+        /// <summary>
+        /// Assume that the rows are sorted by the start position and ascending order
+        /// </summary>
+        private void ReadMultiBEDInput()
+        {
+            try
+            {
+                Dictionary<string, List<uint>> startByChr = new Dictionary<string, List<uint>>(),
+                    endByChr = new Dictionary<string, List<uint>>();
+                Dictionary<string, List<List<double>>> scoreByChr = new Dictionary<string, List<List<double>>>();
+                // Create an instance of StreamReader to read from a file. 
+                // The using statement also closes the StreamReader. 
+                using (GzipReader reader = new GzipReader(this.InputBinPath))
+                {
+                    string line;
+                    string[] tokens;
+                    while ((line = reader.ReadLine()) != null)
+                    {
+                        tokens = line.Split('\t');
+                        string chr = tokens[Segmentation.idxChr].Trim();
+                        if (!startByChr.ContainsKey(chr))
+                        {
+                            startByChr.Add(chr, new List<uint>());
+                            endByChr.Add(chr, new List<uint>());
+                            scoreByChr.Add(chr, new List<List<double>>());
+                        }
+                        startByChr[chr].Add(Convert.ToUInt32(tokens[Segmentation.idxStart].Trim()));
+                        endByChr[chr].Add(Convert.ToUInt32(tokens[Segmentation.idxEnd].Trim()));                      
+                        scoreByChr[chr].Add(this.idxScores.Select(ind => Convert.ToDouble(tokens[ind].Trim())).ToList());
+                    }
+                    foreach (string chr in startByChr.Keys)
+                    {
+                        this.StartByChr[chr] = startByChr[chr].ToArray();
+                        this.EndByChr[chr] = endByChr[chr].ToArray();
+                        this.ScoresByChr[chr] = scoreByChr[chr];
+                    }
                 }
             }
             catch (Exception e)

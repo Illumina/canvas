@@ -711,14 +711,14 @@ namespace Illumina.SecondaryAnalysis
             var canvasCleanOutput = _checkpointRunner.RunCheckpoint("CanvasClean", () => InvokeCanvasClean(callset, binnedPaths));
 
             // CanvasPartition:
-            var partitionedPaths = _checkpointRunner.RunCheckpoint("CanvasPartition", () => InvokeCanvasPartition(callset, canvasCleanOutput, canvasBedPath));
+            var partitionedPaths = _checkpointRunner.RunCheckpoint("CanvasPartition", () => InvokeCanvasPartitionHMM(callset, canvasCleanOutput, canvasBedPath));
 
             // CanvasSNV
             var canvasSnvTask = _checkpointRunner.RunCheckpointAsync("CanvasSNV", () => InvokeCanvasSnv(callset));
 
             // Variant calling
             await canvasSnvTask;
-            RunGermlineCalling(partitionedPaths, callset, ploidyBedPaths);
+            // RunGermlineCalling(partitionedPaths, callset, ploidyBedPaths);
         }
 
         private List<IFileLocation> WriteMergedCanvasPartition(List<IFileLocation> partitionedPaths, List<string> tempFolders, List<string> sampleNames)
@@ -763,7 +763,26 @@ namespace Illumina.SecondaryAnalysis
             return outPaths;
         }
 
+        private IFileLocation WriteMergedCanvasClean(List<IFileLocation> partitionedPaths, string tempFolder)
+        {
+            Dictionary<string, List<GenomicBin>> multisampleCanvasClean = CanvasCommon.Utilities.LoadMultiSampleCleanedBedFile(partitionedPaths);
+            string mergedOutPath = Path.Combine(tempFolder, "merged.partitioned");
+            using (GzipWriter writer = new GzipWriter(mergedOutPath))
+            {
+                foreach (string chr in multisampleCanvasClean.Keys)
+                {
+                    foreach (GenomicBin genomicBin in multisampleCanvasClean[chr])
+                    {
+                        string outLine = string.Format($"{genomicBin.Chromosome}\t{genomicBin.Start}\t{genomicBin.Stop}");
 
+                        for (int i = 0; i < partitionedPaths.Count; i++)
+                            outLine += string.Format($"\t{genomicBin.CountBins.Count[i]}");
+                        writer.WriteLine(outLine);
+                    }
+                }
+            }
+            return new FileLocation(mergedOutPath);
+        }
         private List<IFileLocation> InvokeCanvasPartition(SmallPedigreeCallset callsets, List<IFileLocation> cleanedPaths, string canvasBedPath)
         {
             List<IFileLocation> partitionedPaths = new List<IFileLocation>();
@@ -774,6 +793,12 @@ namespace Illumina.SecondaryAnalysis
             List<string> sampleNames = callsets.Callset.Select(x => x.SampleName).ToList();
             List<string> tmpFolders = callsets.Callset.Select(x => x.TempFolder).ToList();
             return WriteMergedCanvasPartition(partitionedPaths, tmpFolders, sampleNames);
+        }
+
+        private IFileLocation InvokeCanvasPartitionHMM(SmallPedigreeCallset callsets, List<IFileLocation> cleanedPaths, string canvasBedPath)
+        {
+            IFileLocation mergedCleanedFile = WriteMergedCanvasClean(cleanedPaths, callsets.TempFolder);
+            return InvokeCanvasPartition(callsets.Callset[0], mergedCleanedFile, canvasBedPath);
         }
 
         private IFileLocation InvokeCanvasPartition(CanvasCallset callset, IFileLocation cleanedPath, string canvasBedPath)

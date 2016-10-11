@@ -296,6 +296,22 @@ namespace CanvasCommon
             return Math.Sqrt(sum / (x.Count - 1));
         }
 
+        // estimate Standard Deviation of double list
+        public static double WeightedStandardDeviation(List<double> x, double[] weights)
+        {
+
+            double mu = x.Average();
+            double sum = 0;
+            double denominator = 0;
+            for (int i = 0; i < x.Count; i++)
+            {
+                double diff = x[i] - mu;
+                sum += diff * diff * weights[i];
+                denominator += weights[i];
+            }
+            return Math.Sqrt(sum / denominator);
+        }
+
         /// <summary>
         /// Calculates the median of a list.  Does not re-order the original list.
         /// </summary>
@@ -1040,6 +1056,102 @@ namespace CanvasCommon
                         throw new ApplicationException($"Start must be less than Stop");
                     }
                     GenomicBin interval = new GenomicBin(chr, pos[i], stop[chr][pos[i]], 0, binCounts[chr][pos[i]], segmentIDs[chr][pos[i]]);
+                    intervals[chr].Add(interval);
+                }
+            }
+            return intervals;
+        }
+
+        /// <summary>
+        /// Loads .partioned bed files, merges bins from multiple samples and returns MultiSampleCount GenomicBin objects 
+        /// </summary>
+        public static Dictionary<string, List<GenomicBin>> LoadMultiSampleCleanedBedFile(List<IFileLocation> bedPaths)
+        {
+            // initialize variables to hold multi-sample bed files 
+            Dictionary<string, List<GenomicBin>> intervals = new Dictionary<string, List<GenomicBin>>();
+            Dictionary<string, Dictionary<int, int>> start = new Dictionary<string, Dictionary<int, int>>();
+            Dictionary<string, Dictionary<int, int>> stop = new Dictionary<string, Dictionary<int, int>>();
+            Dictionary<string, Dictionary<int, int>> gc = new Dictionary<string, Dictionary<int, int>>();
+            Dictionary<string, Dictionary<int, List<float>>> binCounts = new Dictionary<string, Dictionary<int, List<float>>>();
+            List<int> counts = new List<int>();
+            HashSet<string> chromosomes = new HashSet<string>();
+            Console.WriteLine("LoadMultiBedFile");
+
+            foreach (IFileLocation bedPath in bedPaths)
+            {
+                int count = 0;
+                using (GzipReader reader = new GzipReader(bedPath.FullName))
+                {
+                    while (true)
+                    {
+                        string fileLine = reader.ReadLine();
+                        if (fileLine == null) break;
+                        string[] bits = fileLine.Split('\t');
+                        string chr = bits[0];
+                        if (!chromosomes.Contains(chr)) chromosomes.Add(chr);
+                        count++;
+                    }
+                }
+                counts.Add(count);
+                Console.WriteLine($"count {count}");
+            }
+            foreach (string chr in chromosomes)
+            {
+                start[chr] = new Dictionary<int, int>();
+                stop[chr] = new Dictionary<int, int>();
+                binCounts[chr] = new Dictionary<int, List<float>>();
+                gc[chr] = new Dictionary<int, int>();
+            }
+
+            // read counts and segmentIDs
+            foreach (IFileLocation bedPath in bedPaths)
+            {
+                using (GzipReader reader = new GzipReader(bedPath.FullName))
+                {
+                    while (true)
+                    {
+                        string fileLine = reader.ReadLine();
+                        if (fileLine == null) break;
+                        string[] bits = fileLine.Split('\t');
+                        string chr = bits[0];
+                        int pos = int.Parse(bits[1]);
+                        start[chr][pos] = pos;
+                        stop[chr][pos] = int.Parse(bits[2]);
+                        gc[chr][pos] = int.Parse(bits[4]);
+
+                        if (binCounts[chr].ContainsKey(pos))
+                        {
+                            binCounts[chr][pos].Add(float.Parse(bits[3]));
+                        }
+                        else
+                        {
+                            binCounts[chr][pos] = new List<float>();
+                            binCounts[chr][pos].Add(float.Parse(bits[3]));
+                        }
+                    }
+                }
+            }
+            Console.WriteLine("create GenomeBin intervals");
+
+            // create GenomeBin intervals
+            foreach (string chr in chromosomes)
+            {
+                if (!intervals.ContainsKey(chr)) intervals[chr] = new List<GenomicBin>();
+                var pos = start[chr].Keys.ToList();
+                for (int i = 0; i < pos.Count; i++)
+                {
+                    // bins have been removed at Canvas clean
+                    if (binCounts[chr][pos[i]].Count != bedPaths.Count)
+                        continue;
+                    if (pos[i] < 0)
+                    {
+                        throw new ApplicationException($"Start must be non-negative");
+                    }
+                    if (pos[i] >= stop[chr][pos[i]]) // Do not allow empty intervals
+                    {
+                        throw new ApplicationException($"Start must be less than Stop");
+                    }
+                    GenomicBin interval = new GenomicBin(chr, pos[i], stop[chr][pos[i]], gc[chr][pos[i]], binCounts[chr][pos[i]]);
                     intervals[chr].Add(interval);
                 }
             }

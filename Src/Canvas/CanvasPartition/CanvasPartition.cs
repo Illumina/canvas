@@ -28,7 +28,7 @@ namespace CanvasPartition
             double alpha = Segmentation.DefaultAlpha;
             double madFactor = Segmentation.DefaultMadFactor;
             SegmentSplitUndo undoMethod = SegmentSplitUndo.None;
-            SegmentationMethod partitionMethod = SegmentationMethod.Wavelets;
+            SegmentationMethod partitionMethod = SegmentationMethod.HMM;
             int maxInterBinDistInSegment = 1000000;
             OptionSet p = new OptionSet()
             {
@@ -72,7 +72,12 @@ namespace CanvasPartition
             }
 
             // no command line parameter for segmentation method
-            Segmentation SegmentationEngine = new Segmentation(inFile, bedPath, maxInterBinDistInSegment: maxInterBinDistInSegment);
+            Segmentation SegmentationEngine;
+            if (partitionMethod == SegmentationMethod.HMM)
+                SegmentationEngine = new Segmentation(inFile, bedPath);
+            else
+                SegmentationEngine = new Segmentation(inFile, bedPath, maxInterBinDistInSegment: maxInterBinDistInSegment);
+
             SegmentationEngine.Alpha = alpha;
             SegmentationEngine.UndoMethod = undoMethod;
             SegmentationEngine.MadFactor = madFactor;

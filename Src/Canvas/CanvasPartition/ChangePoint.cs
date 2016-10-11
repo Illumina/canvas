@@ -15,7 +15,8 @@ namespace CanvasPartition
     internal enum SegmentationMethod
     {
         Wavelets,
-        CBS
+        CBS,
+        HMM
     }
 
     /// <summary>

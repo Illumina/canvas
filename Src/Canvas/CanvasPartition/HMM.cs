@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security.Principal;
+using MathNet.Numerics.Distributions;
 
 namespace CanvasPartition
 {
@@ -20,42 +22,28 @@ namespace CanvasPartition
             return _mean.Length;
         }
 
-
-        public void UpdateMean(double[] gamma, List<List<double>> x)
+        public double[] Mean   // the Mean property
         {
-            var n = gamma.Length;
-            var m = this.GetDimensions();
-            double[] numerator = new double[n];
-            double denominator = 0;
-
-            for (int i = 0; i < n; i++)
+            get
             {
-                for (int j = 0; i < m; i++)
-                    numerator[i] += x[i][j] * gamma[i];
-                denominator += gamma[i];
+                return _mean;
             }
-            // update mean
-            for (int i = 0; i < gamma.Length; i++)
-                _mean[i] = numerator[i] / denominator;
+        }
+        public void UpdateMean(double[] gamma, List<List<double>> data)
+        {
+            var m = this.GetDimensions();
+            for (int dimension = 0; dimension < m; dimension++)
+                _mean[dimension] = CanvasCommon.Utilities.WeightedMean(data.Select(x => x[dimension]).ToList(), gamma.ToList());
         }
 
         /// <summary>
         /// Implements spherical covariance
         /// </summary>
-        public void UpdateCovariance(double[] gamma, List<List<double>> x)
+        public void UpdateCovariance(double[] gamma, List<List<double>> data)
         {
-            var n = gamma.Length;
             var m = this.GetDimensions();
-            double[] numerator = new double[n];
-            double denominator = 0;
-            for (int i = 0; i < n; i++)
-            {
-                for (int j = 0; i < m; i++)
-                    numerator[i] += Math.Pow(x[i][j] - _mean[j], 2) * gamma[i];
-                denominator += gamma[i];
-            }
-            for (int i = 0; i < gamma.Length; i++)
-                _covariance[i][i] = numerator[i] / denominator;
+            for (int dimension = 0; dimension < m; dimension++)
+                _covariance[dimension][dimension] = CanvasCommon.Utilities.WeightedStandardDeviation(data.Select(x => x[dimension]).ToList(), gamma);
         }
 
         public double EstimateLikelihood(List<double> x)
@@ -66,7 +54,7 @@ namespace CanvasPartition
                 diff[i] = x[i] - _mean[i];
             var inverseCovariance = CanvasCommon.Utilities.MatrixInverse(_covariance);
             var tempval = CanvasCommon.Utilities.MatrixVectorProduct(inverseCovariance, diff);
-            var exponent = CanvasCommon.Utilities.DotProduct(diff, tempval);
+            var exponent = -0.5 * CanvasCommon.Utilities.DotProduct(diff, tempval);
             if (!Double.IsNaN(exponent)) //check for nans
             {
                 var likelihood = 1.0 / (Math.Sqrt(2.0 * Math.PI * CanvasCommon.Utilities.MatrixDeterminant(_covariance))) *
@@ -132,42 +120,56 @@ namespace CanvasPartition
         // dimention variables
         public int nStates;
         public int T;
+        public const double selfTransition = 0.9;
 
 
-        public HiddenMarkovModel(int nStates, int T)
+        public HiddenMarkovModel(List<List<double>> data, List<MultivariateGaussianDistribution> gaussianMixtures)
         {
             // HMM set-up
+            nStates = gaussianMixtures.Count;
+            T = data.Count;
             _stateProbabilities = new double[nStates];
-            _emission = new GaussianMixture(new List<MultivariateGaussianDistribution>());
+            _emission = new GaussianMixture(gaussianMixtures);
             _transition = CanvasCommon.Utilities.MatrixCreate(nStates, nStates);
+            for (int i = 0; i < nStates; i++) { 
+                for (int j = 0; j < nStates; j++)
+                {
+                    if (i == j)
+                        _transition[i][j] = selfTransition;
+                    else
+                        _transition[i][j] = (1.0 - selfTransition)/(nStates - 1);
+                }
+            }
+
             // alpha-beta algorithm
             _beta = CanvasCommon.Utilities.MatrixCreate(T, nStates);
             _alpha = CanvasCommon.Utilities.MatrixCreate(T, nStates);
             // marginal posterior distibution
-            _gamma = CanvasCommon.Utilities.MatrixCreate(T, nStates);
+            _gamma = CanvasCommon.Utilities.MatrixCreate(nStates, T);
             // joint posterior distibution
             _epsilon = CanvasCommon.Utilities.MatrixCreate(T, nStates, nStates);
-            this.nStates = nStates;
-            this.T = T;
         }
 
         public void UpdateTransition()
         {
             double [][] numerator = CanvasCommon.Utilities.MatrixCreate(nStates, nStates);
             double [] denominator = new double[nStates];
-            for (int t = 0; t < T; t++)
+            for (int t = 0; t < T-1; t++)
             {
                 for (int i = 0; i < nStates; i++)
                 {
-                    for (int j = 0; j < nStates; i++)
+                    for (int j = 0; j < nStates; j++)
                         numerator[i][j] += _epsilon[t][i][j];
-                    denominator[i] = _gamma[t][i];
+                    denominator[i] += _gamma[i][t];
                 }
             }
             // update transition and initial state probabilities
             for (int i = 0; i < nStates; i++)
+                denominator[i] = Math.Max(denominator[i], Single.MinValue);           
+            
+            for (int i = 0; i < nStates; i++)
             {
-                for (int j = 0; j < nStates; i++)
+                for (int j = 0; j < nStates; j++)
                     _transition[i][j] = numerator[i][j] / denominator[i];
                 _stateProbabilities[i] = denominator[i] / denominator.Average();
             }
@@ -183,24 +185,18 @@ namespace CanvasPartition
         public double Forward(List<List<double>> x)
         {
             // Initialization 
-            double scaler = 0;
             double likelihood = 0;
             for (int j = 0; j < nStates; j++)
-            {
-                _alpha[0][j] *= _emission.EstimateLikelihood(x[0], j);
-                scaler += _alpha[0][j];
-            }
-            for (int j = 0; j < nStates; j++)
-                _alpha[0][j] = _alpha[0][j] / scaler;
+                _alpha[0][j] = 1/(double)nStates;
 
             // Induction 
-            for (int t = 1; t < T; t++)
+            for (int t = 0; t < T-1; t++)
             {
-                scaler = 0;
+                double scaler = 0;
                 for (int j = 0; j < nStates; j++)
                 {
                     for (int i = 0; i < nStates; i++)
-                        _alpha[t + 1][j] = _alpha[t][i] * _transition[i][j];
+                        _alpha[t + 1][j] += _alpha[t][i] * _transition[i][j];
 
                     _alpha[t + 1][j] *= _emission.EstimateLikelihood(x[t + 1], j);
                     scaler += _alpha[t + 1][j];
@@ -211,27 +207,29 @@ namespace CanvasPartition
                 }
                 likelihood += scaler;
             }
-            return likelihood;
+            return -Math.Log(likelihood);
         }
         public void Backward(List<List<double>> x)
         {
             // Initialization 
             for (int j = 0; j < nStates; j++)
-                _beta[0][j] = 1 / (double)nStates;
+                _beta[T-1][j] = 1 / (double)nStates;
 
 
             // Induction 
-            for (int t = T - 1; t > 1; t--)
+            int t = T - 2;
+            while (t >= 0)
             {
                 double scaler = 0;
                 for (int i = 0; i < nStates; i++)
                 {
                     for (int j = 0; j < nStates; j++)
-                        _beta[t][i] = _transition[i][j] * _emission.EstimateLikelihood(x[t + 1], j) * _beta[t + 1][j];
-                    scaler += _beta[i][t];
+                        _beta[t][i] += _transition[i][j] * _emission.EstimateLikelihood(x[t + 1], j) * _beta[t + 1][j];
+                    scaler += _beta[t][i];
                 }
                 for (int i = 0; i < nStates; i++)
                     _beta[t][i] = _beta[t][i] / scaler;
+                t--;
             }
         }
 
@@ -247,15 +245,15 @@ namespace CanvasPartition
             double likelihood = Forward(x);
             Backward(x);
 
-            for (int t = 0; t < T; t++)
+            for (int t = 0; t < T-1; t++)
             {
                 for (int i = 0; i < nStates; i++)
                 {
-                    var denominator = _alpha[t].Zip(_beta[t], (a, b) => a * b).Sum();
-                    _gamma[t][i] = _alpha[t][i] * _beta[t][i] / denominator;
-                    for (int j = 0; j < nStates; j++)
+                    for (int j = 0; j < nStates; j++) { 
                         _epsilon[t][i][j] = _alpha[t][i] * _transition[i][j] * _emission.EstimateLikelihood(x[t + 1], j) *
-                            _beta[t + 1][j] / denominator;
+                            _beta[t + 1][j] / likelihood;
+                        _gamma[i][t] += _epsilon[t][i][j];
+                    }
                 }
             }
             return likelihood;
@@ -263,15 +261,15 @@ namespace CanvasPartition
 
         public void FindMaximalLikelyhood(List<List<double>> x)
         {
-            double likelihoodDifferenceThreshold = 0;
-            const int maxIterations = 20;
+            double likelihoodDifferenceThreshold = 0.01;
+            const int maxIterations = 5;
             List<double> likelihoods = new List<double>();
             double oldLikelihood = EstimationStep(x);
             likelihoods.Add(oldLikelihood);
             MaximisationStep(x);
             int iterations = 1;
             double likelihoodDifference = Double.MaxValue;
-            while (iterations < maxIterations && likelihoodDifference < likelihoodDifferenceThreshold)
+            while (iterations < maxIterations && likelihoodDifference > likelihoodDifferenceThreshold)
             {
                 var newLikelihood = EstimationStep(x);
                 MaximisationStep(x);
@@ -285,31 +283,58 @@ namespace CanvasPartition
         public List<int> BestPathViterbi(List<List<double>> x)
         {
             // Initialization 
-            double[][] bestScore = CanvasCommon.Utilities.MatrixCreate(nStates, nStates);
-            List<int> bestStateSequence = new List<int>(T);
-            bestStateSequence.Add(0);
+            double[][] bestScore = CanvasCommon.Utilities.MatrixCreate(T + 1, nStates);
+            int[][] bestStateSequence = new int[T + 1][];
+            for (int i = 0; i < T; ++i)
+                bestStateSequence[i] = new int[nStates];
+
+            for (int j = 0; j < nStates; j++) { 
+                bestScore[0][j] = this._stateProbabilities[j];
+                bestStateSequence[0][j] = 0;
+            }
 
             // Induction 
-            for (int t = 1; t < T; t++)
+            for (int t = 1; t < T - 1; t++)
             {
                 for (int j = 0; j < nStates; j++)
                 {
-                    double max = Double.MaxValue;
                     int state = 0;
+                    double max = Double.MinValue;
                     for (int i = 0; i < nStates; i++)
                     {
-                        var tmpMax = bestScore[t][i]*_transition[i][j]*_emission.EstimateLikelihood(x[t + 1], j);
+                        var tmpMax = Math.Log(bestScore[t-1][i]) + Math.Log(_transition[i][j]) + Math.Log(_emission.EstimateLikelihood(x[t], j));
                         if (tmpMax > max)
                         {
-                            state = j;
+                            state = i;
                             max = tmpMax;
                         }
                     }
-                    bestScore[t + 1][j] = max;
-                    bestStateSequence.Add(state);
+                    bestScore[t][j] = max;
+                    bestStateSequence[t][j] = state;
                 }
             }
-            return bestStateSequence;
+
+            var backtrack = T-1;
+            int bestState = 0;
+            List<int> bestStates = new List<int>(T+1);
+            for (int i = 0; i < nStates; i++)
+            {
+                double max = Double.MinValue;
+                var tmpMax = bestScore[T][i];
+                if (tmpMax > max)
+                {
+                    bestState = i;
+                    max = tmpMax;
+                }
+            }
+            bestStates.Add(backtrack);
+            while (backtrack >= 0)
+            {
+                bestStates.Add(bestStateSequence[backtrack][bestState]);
+                backtrack--;
+            }
+            bestStates.Reverse();
+            return bestStates;
         }
     }
 }
