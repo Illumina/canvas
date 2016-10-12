@@ -786,17 +786,6 @@ namespace Illumina.SecondaryAnalysis
             }
             return new FileLocation(mergedOutPath);
         }
-        private List<IFileLocation> InvokeCanvasPartition(SmallPedigreeCallset callsets, List<IFileLocation> cleanedPaths, string canvasBedPath)
-        {
-            List<IFileLocation> partitionedPaths = new List<IFileLocation>();
-            if (callsets.Callset.Count != cleanedPaths.Count)
-                throw new Exception($"Number of output CanvasClean files {cleanedPaths.Count} is not equal to the number of Canvas callsets {callsets.Callset.Count}");
-            for (int i = 0; i < callsets.Callset.Count; i++)
-                partitionedPaths.Add(InvokeCanvasPartition(callsets.Callset[i], cleanedPaths[i], canvasBedPath));
-            List<string> sampleNames = callsets.Callset.Select(x => x.SampleName).ToList();
-            List<string> tmpFolders = callsets.Callset.Select(x => x.TempFolder).ToList();
-            return WriteMergedCanvasPartition(partitionedPaths, tmpFolders, sampleNames);
-        }
 
         private List<IFileLocation> InvokeCanvasPartitionMultisample(SmallPedigreeCallset callsets, List<IFileLocation> cleanedPaths, string canvasBedPath, string commonCnvsBed)
         {
