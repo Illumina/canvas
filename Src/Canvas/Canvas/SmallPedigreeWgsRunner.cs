@@ -38,7 +38,7 @@ namespace Canvas
                     IDirectoryLocation outputDirectory = new DirectoryLocation(Path.Combine(CommonOptions.OutputDirectory.FullName, sampleName));
                     Directory.CreateDirectory(outputDirectory.FullName);
                     IFileLocation outputVcfPath = outputDirectory.GetFileLocation("CNV.vcf.gz");
-                    CanvasCallset callSet = new CanvasCallset(
+                CanvasCallset callSet = new CanvasCallset(
                     _smallPedigreeOptions.Bams.ToList()[i],
                     sampleName,
                     CommonOptions.WholeGenomeFasta,
@@ -54,7 +54,7 @@ namespace Canvas
                     outputVcfPath);
                 callSets.Add(callSet);
             }
-            return new SmallPedigreeCallset(callSets);
+            return new SmallPedigreeCallset(callSets, _smallPedigreeOptions.CommonCnvsBed);
         }
     }
 }

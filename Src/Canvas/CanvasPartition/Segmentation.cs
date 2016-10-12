@@ -18,7 +18,7 @@ namespace CanvasPartition
         private string DataType;
         private const int idxChr = 0, idxStart = 1, idxEnd = 2;
         private int idxScore = 3;
-        private List<int> idxScores = new List<int>{3,4,5};
+        public List<int> idxScores = new List<int>(); // index of sample coverage
         private Dictionary<string, uint[]> StartByChr = new Dictionary<string, uint[]>();
         private Dictionary<string, uint[]> EndByChr = new Dictionary<string, uint[]>();
         private Dictionary<string, double[]> ScoreByChr = new Dictionary<string, double[]>();
@@ -44,35 +44,37 @@ namespace CanvasPartition
             this.ReadBEDInput();
         }
 
-        public Segmentation(string inputBinPath, string forbiddenBedPath)
+        public Segmentation(string inputBinPath, string forbiddenBedPath, int nSamples)
         {
             this.InputBinPath = inputBinPath;
             this.SegmentationResults = null;
             this.ForbiddenIntervalBedPath = forbiddenBedPath;
             // Read the input file:
+            idxScores = Enumerable.Range(3, nSamples).ToList();
             this.ReadMultiBEDInput();
         }
 
-        public void SegmentGenome(string outPath, SegmentationMethod method, bool isGermline, string commonCNVsbedPath)
+        public void SegmentGenome(List<string> outPaths, SegmentationMethod method, bool isGermline, string commonCNVsbedPath)
         {
             switch (method)
             {
-                case SegmentationMethod.Wavelets:
                 default:// use Wavelets if CBS is not selected       
                     Console.WriteLine("{0} Running Wavelet Partitioning", DateTime.Now);
                     this.Wavelets(isGermline, commonCNVsbedPath, madFactor: MadFactor, verbose: 2);
+                    this.WriteCanvasPartitionResults(outPaths[0]);
                     break;
                 case SegmentationMethod.CBS:
                     Console.WriteLine("{0} Running CBS Partitioning", DateTime.Now);
                     this.CBS(verbose: 2);
+                    this.WriteCanvasPartitionResults(outPaths[0]);
                     break;
                 case SegmentationMethod.HMM:
                     Console.WriteLine("{0} Running HMM Partitioning", DateTime.Now);
-                    this.HMM();
+                    this.HiddenMarkovModels(commonCNVsbedPath);
+                    for (int i = 0; i < outPaths.Count; i++)
+                        this.WriteCanvasPartitionMultisampleResults(outPaths[i], i);
                     break;
-            }
-            Console.WriteLine("{0} Write CanvasPartition results:", DateTime.Now);
-            this.WriteCanvasPartitionResults(outPath);
+            }         
             Console.WriteLine("{0} CanvasPartition results written out", DateTime.Now);
         }
 
@@ -85,9 +87,15 @@ namespace CanvasPartition
         /// <summary>
         /// HMM wrapper
         /// </summary>
-        void HMM(int minSize = 10, int nHiddenStates = 5)
+        void HiddenMarkovModels(string commonCNVs, int minSize = 10, int nHiddenStates = 5)
         {
-
+            // load common CNV segments
+            Dictionary<string, List<GenomicBin>> commonCNVintervals = null;
+            if (commonCNVs != null)
+            {
+                commonCNVintervals = Utilities.LoadBedFile(commonCNVs);
+                Utilities.SortAndOverlapCheck(commonCNVintervals, commonCNVs);
+            }
             Dictionary<string, Segment[]> segmentByChr = new Dictionary<string, Segment[]>();
             List<ThreadStart>  tasks = new List<ThreadStart>();
             foreach (string chr in ScoresByChr.Keys)
@@ -100,8 +108,12 @@ namespace CanvasPartition
                     int length = this.ScoresByChr[chr].Count;
                     if (length > minSize)
                     {
-                        hmm.FindMaximalLikelyhood(this.ScoresByChr[chr]);
+                        Console.WriteLine($"{DateTime.Now} Launching HMM task for chromosome {chr}");
+                        hmm.IncreaseVariance();
+                        hmm.FindMaximalLikelyhood(this.ScoresByChr[chr], chr);
                         List<int> hiddenStates = hmm.BestPathViterbi(this.ScoresByChr[chr]);
+                        Console.WriteLine($"{DateTime.Now} Completed HMM task for chromosome {chr}");
+
                         breakpoints.Add(0);
                         for (int i = 1; i < length; i++)
                         {
@@ -111,57 +123,17 @@ namespace CanvasPartition
                             }
                         }
                     }
-
-                    List<int> startBreakpointsPos = new List<int>();
-                    List<int> endBreakpointPos = new List<int>();
-                    List<int> lengthSeg = new List<int>();
-
-                    if (breakpoints.Count() >= 2 && length > 10)
+                    if (commonCNVs != null)
                     {
-                        startBreakpointsPos.Add(breakpoints[0]);
-                        endBreakpointPos.Add(breakpoints[1] - 1);
-                        lengthSeg.Add(breakpoints[1] - 1);
-
-                        for (int i = 1; i < breakpoints.Count - 1; i++)
+                        if (commonCNVintervals.ContainsKey(chr))
                         {
-                            startBreakpointsPos.Add(breakpoints[i]);
-                            endBreakpointPos.Add(breakpoints[i + 1] - 1);
-                            lengthSeg.Add(breakpoints[i + 1] - 1 - breakpoints[i]);
+                            List<GenomicBin> remappedCommonCNVintervals = RemapCommonRegions(commonCNVintervals[chr], this.StartByChr[chr], this.EndByChr[chr]);
+                            List<int> oldbreakpoints = breakpoints;
+                            breakpoints = OverlapCommonRegions(oldbreakpoints, remappedCommonCNVintervals);
                         }
-                        startBreakpointsPos.Add(breakpoints[breakpoints.Count - 1]);
-                        endBreakpointPos.Add(length - 1);
-                        lengthSeg.Add(length - breakpoints[breakpoints.Count - 1] - 1);
-                    }
-                    else
-                    {
-                        startBreakpointsPos.Add(0);
-                        endBreakpointPos.Add(length - 1);
-                        lengthSeg.Add(length - 1);
-
-                    }
-                    // estimate segment means 
-
-                    double[] segmentMeans = new double[lengthSeg.Count()];
-                    int ss = 0, ee = 0;
-                    for (int i = 0; i < lengthSeg.Count(); i++)
-                    {
-                        ee += lengthSeg[i];
-                        // Works even if weights == null
-                        segmentMeans[i] = Helper.WeightedAverage(this.ScoreByChr[chr], null, iStart: ss, iEnd: ee);
-                        ss = ee;
                     }
 
-                    Segment[] segments = new Segment[startBreakpointsPos.Count];
-                    for (int i = 0; i < startBreakpointsPos.Count; i++)
-                    {
-                        int start = startBreakpointsPos[i];
-                        int end = endBreakpointPos[i];
-                        segments[i] = new Segment();
-                        segments[i].start = this.StartByChr[chr][start]; // Genomic start
-                        segments[i].end = this.EndByChr[chr][end]; // Genomic end
-                        segments[i].nMarkers = lengthSeg[i];
-                        segments[i].mean = segmentMeans[i];
-                    }
+                    var segments = DeriveSegments(breakpoints, length, chr);
 
                     lock (segmentByChr)
                     {
@@ -195,7 +167,7 @@ namespace CanvasPartition
 
             for (int CN = 0; CN < nHiddenStates; CN++)
             {
-                double[][] tmpSds = CanvasCommon.Utilities.MatrixCreate(nDimensions, nDimensions);
+                double[][] tmpSds = CanvasCommon.MatrixUtilities.MatrixCreate(nDimensions, nDimensions);
 
                 for (int dimension = 0; dimension < nDimensions; dimension++)
                 {
@@ -206,7 +178,7 @@ namespace CanvasPartition
                 tmpDistributions.Add(tmpDistribution);
             }
 
-            // remobe outliers 
+            // remove outliers 
             double maxThreshold = tmpDistributions.Last().Mean.Max() * 1.2;
             for (int length = 0; length < data.Count; length++)
                 for (int dimension = 0; dimension < nDimensions; dimension++)
@@ -290,10 +262,6 @@ namespace CanvasPartition
                             breakpoints, isGermline, madFactor: madFactor);
                     }
 
-                    List<int> startBreakpointsPos = new List<int>();
-                    List<int> endBreakpointPos = new List<int>();
-                    List<int> lengthSeg = new List<int>();
-
                     if (commonCNVs != null)
                     {
                         if (commonCNVintervals.ContainsKey(chr))
@@ -304,52 +272,7 @@ namespace CanvasPartition
                         }
                     }
 
-                    if (breakpoints.Count() >= 2 && sizeScoreByChr > 10)
-                    {
-                        startBreakpointsPos.Add(breakpoints[0]);
-                        endBreakpointPos.Add(breakpoints[1] - 1);
-                        lengthSeg.Add(breakpoints[1] - 1);
-
-                        for (int i = 1; i < breakpoints.Count - 1; i++)
-                        {
-                            startBreakpointsPos.Add(breakpoints[i]);
-                            endBreakpointPos.Add(breakpoints[i + 1] - 1);
-                            lengthSeg.Add(breakpoints[i + 1] - 1 - breakpoints[i]);
-                        }
-                        startBreakpointsPos.Add(breakpoints[breakpoints.Count - 1]);
-                        endBreakpointPos.Add(sizeScoreByChr - 1);
-                        lengthSeg.Add(sizeScoreByChr - breakpoints[breakpoints.Count - 1] - 1);
-                    }
-                    else
-                    {
-                        startBreakpointsPos.Add(0);
-                        endBreakpointPos.Add(sizeScoreByChr - 1);
-                        lengthSeg.Add(sizeScoreByChr - 1);
-
-                    }
-                    // estimate segment means 
-
-                    double[] segmentMeans = new double[lengthSeg.Count()];
-                    int ss = 0, ee = 0;
-                    for (int i = 0; i < lengthSeg.Count(); i++)
-                    {
-                        ee += lengthSeg[i];
-                        // Works even if weights == null
-                        segmentMeans[i] = Helper.WeightedAverage(this.ScoreByChr[chr], null, iStart: ss, iEnd: ee);
-                        ss = ee;
-                    }
-
-                    Segment[] segments = new Segment[startBreakpointsPos.Count];
-                    for (int i = 0; i < startBreakpointsPos.Count; i++)
-                    {
-                        int start = startBreakpointsPos[i];
-                        int end = endBreakpointPos[i];
-                        segments[i] = new Segment();
-                        segments[i].start = this.StartByChr[chr][start]; // Genomic start
-                        segments[i].end = this.EndByChr[chr][end]; // Genomic end
-                        segments[i].nMarkers = lengthSeg[i];
-                        segments[i].mean = segmentMeans[i];
-                    }
+                    var segments = DeriveSegments(breakpoints, sizeScoreByChr, chr);
 
                     lock (segmentByChr)
                     {
@@ -363,6 +286,47 @@ namespace CanvasPartition
             Console.WriteLine("{0} Completed wavelet tasks", DateTime.Now);
             this.SegmentationResults = new GenomeSegmentationResults(segmentByChr);
             Console.WriteLine("{0} Segmentation results complete", DateTime.Now);
+        }
+
+        private Segment[] DeriveSegments(List<int> breakpoints, int sizeScoreByChr, string chr)
+        {
+            List<int> startBreakpointsPos = new List<int>();
+            List<int> endBreakpointPos = new List<int>();
+            List<int> lengthSeg = new List<int>();
+            if (breakpoints.Count() >= 2 && sizeScoreByChr > 10)
+            {
+                startBreakpointsPos.Add(breakpoints[0]);
+                endBreakpointPos.Add(breakpoints[1] - 1);
+                lengthSeg.Add(breakpoints[1] - 1);
+
+                for (int i = 1; i < breakpoints.Count - 1; i++)
+                {
+                    startBreakpointsPos.Add(breakpoints[i]);
+                    endBreakpointPos.Add(breakpoints[i + 1] - 1);
+                    lengthSeg.Add(breakpoints[i + 1] - 1 - breakpoints[i]);
+                }
+                startBreakpointsPos.Add(breakpoints[breakpoints.Count - 1]);
+                endBreakpointPos.Add(sizeScoreByChr - 1);
+                lengthSeg.Add(sizeScoreByChr - breakpoints[breakpoints.Count - 1] - 1);
+            }
+            else
+            {
+                startBreakpointsPos.Add(0);
+                endBreakpointPos.Add(sizeScoreByChr - 1);
+                lengthSeg.Add(sizeScoreByChr - 1);
+            }
+
+
+            Segment[] segments = new Segment[startBreakpointsPos.Count];
+            for (int i = 0; i < startBreakpointsPos.Count; i++)
+            {
+                int start = startBreakpointsPos[i];
+                int end = endBreakpointPos[i];
+                segments[i] = new Segment();
+                segments[i].start = this.StartByChr[chr][start]; // Genomic start
+                segments[i].end = this.EndByChr[chr][end]; // Genomic end
+            }
+            return segments;
         }
 
 
@@ -479,8 +443,6 @@ namespace CanvasPartition
                         segments[i] = new Segment();
                         segments[i].start = this.StartByChr[chr][start]; // Genomic start
                         segments[i].end = this.EndByChr[chr][end]; // Genomic end
-                        segments[i].nMarkers = lengthSeg[i];
-                        segments[i].mean = segmentMeans[i];
                         cs1 += lengthSeg[i];
                     }
 
@@ -500,8 +462,6 @@ namespace CanvasPartition
         {
             public uint start; // Genomic start location
             public uint end; // Genomic end location (inclusive)
-            public int nMarkers; // Number of markers in a segment
-            public double mean; // Mean signal acroos markers in a segment
         }
 
         private sealed class GenomeSegmentationResults
@@ -700,6 +660,8 @@ namespace CanvasPartition
             }
             return newBreakpoints;
         }
+
+
         private void WriteCanvasPartitionResults(string outPath)
         {
             Dictionary<string, bool> starts = new Dictionary<string, bool>();
@@ -735,29 +697,8 @@ namespace CanvasPartition
                     {
                         uint start = StartByChr[chr][pos];
                         uint end = EndByChr[chr][pos];
-                        bool newSegment = false;
                         string key = chr + ":" + start;
-                        if (starts.ContainsKey(key))
-                        {
-                            newSegment = true;
-                        }
-
-                        if (excludeIntervals != null)
-                        {
-                            while (excludeIndex < excludeIntervals.Count && excludeIntervals[excludeIndex].Stop < previousBinEnd) excludeIndex++;
-                            if (excludeIndex < excludeIntervals.Count)
-                            {
-                                // Note: forbiddenZoneMid should never fall inside a bin, becuase these intervals were already excluded 
-                                // from consideration during the call to CanvasBin.
-                                int forbiddenZoneMid = (excludeIntervals[excludeIndex].Start + excludeIntervals[excludeIndex].Stop) / 2;
-                                if (previousBinEnd < forbiddenZoneMid && end >= forbiddenZoneMid) newSegment = true;
-                            }
-                        }
-                        if (previousBinEnd > 0 && MaxInterBinDistInSegment >= 0 && previousBinEnd + MaxInterBinDistInSegment < start
-                            && !newSegment)
-                        {
-                            newSegment = true;
-                        }
+                        bool newSegment = IsNewSegment(starts, key, excludeIntervals, previousBinEnd, end, start, ref excludeIndex);
 
                         if (newSegment) segmentNum++;
                         writer.WriteLine(string.Format("{0}\t{1}\t{2}\t{3}\t{4}", chr, start, end, ScoreByChr[chr][pos], segmentNum));
@@ -765,6 +706,76 @@ namespace CanvasPartition
                     }
                 }
             }
+        }
+
+        private void WriteCanvasPartitionMultisampleResults(string outPath, int index )
+        {
+            Dictionary<string, bool> starts = new Dictionary<string, bool>();
+            Dictionary<string, bool> stops = new Dictionary<string, bool>();
+
+            foreach (string chr in SegmentationResults.SegmentByChr.Keys)
+            {
+                for (int segmentIndex = 0; segmentIndex < SegmentationResults.SegmentByChr[chr].Length; segmentIndex++)
+                {
+                    Segment segment = SegmentationResults.SegmentByChr[chr][segmentIndex];
+                    starts[chr + ":" + segment.start] = true;
+                    stops[chr + ":" + segment.end] = true;
+                }
+            }
+
+            Dictionary<string, List<GenomicBin>> ExcludedIntervals = new Dictionary<string, List<GenomicBin>>();
+            if (!string.IsNullOrEmpty(ForbiddenIntervalBedPath))
+            {
+                ExcludedIntervals = CanvasCommon.Utilities.LoadBedFile(ForbiddenIntervalBedPath);
+            }
+
+            using (GzipWriter writer = new GzipWriter(outPath))
+            {
+                int segmentNum = -1;
+
+                foreach (string chr in StartByChr.Keys)
+                {
+                    List<GenomicBin> excludeIntervals = null;
+                    if (ExcludedIntervals.ContainsKey(chr)) excludeIntervals = ExcludedIntervals[chr];
+                    int excludeIndex = 0; // Points to the first interval which *doesn't* end before our current position
+                    uint previousBinEnd = 0;
+                    for (int pos = 0; pos < StartByChr[chr].Length; pos++)
+                    {
+                        uint start = StartByChr[chr][pos];
+                        uint end = EndByChr[chr][pos];
+                        string key = chr + ":" + start;
+                        bool newSegment = IsNewSegment(starts, key, excludeIntervals, previousBinEnd, end, start, ref excludeIndex);
+                        if (newSegment) segmentNum++;
+                        writer.WriteLine(string.Format("{0}\t{1}\t{2}\t{3}\t{4}", chr, start, end, ScoresByChr[chr][pos][index], segmentNum));
+                        previousBinEnd = end;
+                    }
+                }
+            }
+        }
+
+        private bool IsNewSegment(Dictionary<string, bool> starts, string key, List<GenomicBin> excludeIntervals, uint previousBinEnd,
+            uint end, uint start, ref int excludeIndex)
+        {
+            bool newSegment = starts.ContainsKey(key) ? true : false;
+
+            if (excludeIntervals != null)
+            {
+                while (excludeIndex < excludeIntervals.Count && excludeIntervals[excludeIndex].Stop < previousBinEnd)
+                    excludeIndex++;
+                if (excludeIndex < excludeIntervals.Count)
+                {
+                    // Note: forbiddenZoneMid should never fall inside a bin, becuase these intervals were already excluded 
+                    // from consideration during the call to CanvasBin.
+                    int forbiddenZoneMid = (excludeIntervals[excludeIndex].Start + excludeIntervals[excludeIndex].Stop)/2;
+                    if (previousBinEnd < forbiddenZoneMid && end >= forbiddenZoneMid) newSegment = true;
+                }
+            }
+            if (previousBinEnd > 0 && MaxInterBinDistInSegment >= 0 && previousBinEnd + MaxInterBinDistInSegment < start
+                && !newSegment)
+            {
+                newSegment = true;
+            }
+            return newSegment;
         }
     }
 }

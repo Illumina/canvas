@@ -124,15 +124,17 @@ namespace Canvas
         public IFileLocation KmerFasta { get { return _singleSampleCallset.Select(x => x.KmerFasta).First(); } }
         public GenomeMetadata GenomeMetadata { get { return _singleSampleCallset.Select(x => x.GenomeMetadata).First(); } }
         public IFileLocation FilterBed { get { return _singleSampleCallset.Select(x => x.FilterBed).First(); } }
+        public IFileLocation CommonCnvsBed { get; set; }
         public IFileLocation PloidyBed { get { return _singleSampleCallset.Select(x => x.PloidyBed).First(); } }
         public bool IsDbSnpVcf { get; set; } // NormalVcfPath points to a dbSNP VCF file
         public IFileLocation OutputVcfPath { get; }
         public NexteraManifest Manifest { get; }
 
         private readonly List<CanvasCallset> _singleSampleCallset;
-        public SmallPedigreeCallset(List<CanvasCallset> callset)
+        public SmallPedigreeCallset(List<CanvasCallset> callset, IFileLocation commonCnvsBed)
         {
             _singleSampleCallset = callset;
+            CommonCnvsBed = commonCnvsBed;
         }
 
         public List<CanvasCallset> Callset { get {return _singleSampleCallset; } }
