@@ -810,7 +810,8 @@ namespace Illumina.SecondaryAnalysis
             }
             commandLine.AppendFormat("-i \"{0}\" ", mergedCleanedFile);
             commandLine.AppendFormat("-b \"{0}\" ", canvasBedPath);
-            commandLine.AppendFormat("-c \"{0}\" ", commonCnvsBed);
+            if (!commonCnvsBed.IsNullOrEmpty())
+                commandLine.AppendFormat("-c \"{0}\" ", commonCnvsBed);
 
             List<IFileLocation> partitionedPaths = new List<IFileLocation>();
             foreach (CanvasCallset callset in callsets.Callset)

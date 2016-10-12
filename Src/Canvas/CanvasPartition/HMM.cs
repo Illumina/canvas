@@ -180,7 +180,6 @@ namespace CanvasPartition
                     _transition[i][j] = numerator[i][j] / denominator[i];
                 _stateProbabilities[i] = denominator[i] / denominator.Average();
             }
-
         }
 
         public void UpdateEmission(List<List<double>> x)
@@ -214,7 +213,7 @@ namespace CanvasPartition
                 }
                 likelihood += scaler;
             }
-            return -Math.Log(likelihood);
+            return likelihood;
         }
         public void Backward(List<List<double>> x)
         {
@@ -255,10 +254,13 @@ namespace CanvasPartition
             tasks.Add(new ThreadStart(() => { Backward(x); }));
             Isas.Shared.Utilities.Utilities.DoWorkParallelThreads(tasks);
 
+
             for (int t = 0; t < T-1; t++)
             {
                 for (int i = 0; i < nStates; i++)
                 {
+                    _gamma[i][t] = 0;
+
                     for (int j = 0; j < nStates; j++) { 
                         _epsilon[t][i][j] = _alpha[t][i] * _transition[i][j] * _emission.EstimateLikelihood(x[t + 1], j) *
                             _beta[t + 1][j] / likelihood;
