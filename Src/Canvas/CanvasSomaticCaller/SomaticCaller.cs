@@ -21,7 +21,7 @@ namespace CanvasSomaticCaller
         CopyNumberOracle CNOracle = null;
         CoveragePurityModel Model;
         Dictionary<string, List<GenomicBin>> ExcludedIntervals = new Dictionary<string, List<GenomicBin>>();
-        Dictionary<long, double> HeterogeneousSegmentsSignature = new Dictionary<long, double>();
+        Dictionary<CanvasSegment, double> HeterogeneousSegmentsSignature = new Dictionary<CanvasSegment, double>();
 
 
         // File paths:
@@ -698,7 +698,7 @@ namespace CanvasSomaticCaller
         {
 
             double[] mu = GetProjectedMeanCoverage(model.DiploidCoverage, somaticCallerParameters.MaximumCopyNumber);
-            double diploidMAF = this.AllPloidies[3].MinorAlleleFrequency; 
+            double diploidMAF = this.AllPloidies[3].MinorAlleleFrequency;
 
             /////////////////////////////////////////////
             // Update the parameters in each SegmentPloidy object, and construct corresponding SegmentInfo objects
@@ -912,7 +912,7 @@ namespace CanvasSomaticCaller
             {
                 foreach (var usableClusterSegmentB in usableClusterSegments)
                 {
-                    if (usableClusterSegmentA == usableClusterSegmentB) 
+                    if (usableClusterSegmentA == usableClusterSegmentB)
                         continue;
                     if (usableClusterSegmentA.ClusterId == usableClusterSegmentB.ClusterId)
                         withinClusterDistance[usableClusterSegmentA.ClusterId.Value - 1].Add((float)GetModelDistance(usableClusterSegmentA.Coverage, usableClusterSegmentB.Coverage, usableClusterSegmentA.MAF, usableClusterSegmentB.MAF));
@@ -920,7 +920,7 @@ namespace CanvasSomaticCaller
                         betweenClusterDistance[usableClusterSegmentA.ClusterId.Value - 1].Add((float)GetModelDistance(usableClusterSegmentA.Coverage, usableClusterSegmentB.Coverage, usableClusterSegmentA.MAF, usableClusterSegmentB.MAF));
                 }
             }
-            
+
             double silhouetteCoefficient = 0;
             for (int i = 0; i < numClusters; i++)
             {
@@ -2213,7 +2213,7 @@ namespace CanvasSomaticCaller
             if (AllPloidies.First().Sigma == null)
             {
                 AssignPloidyCalls();
-                List <CanvasSegment> sizeFilteredSegment = this.Segments.Where(segment => segment.End - segment.Begin > 5000).ToList();
+                List<CanvasSegment> sizeFilteredSegment = this.Segments.Where(segment => segment.End - segment.Begin > 5000).ToList();
                 CheckNonDiploidMAFs(sizeFilteredSegment);
 
 
@@ -2412,8 +2412,8 @@ namespace CanvasSomaticCaller
                     score = score / (score + 1.0);
                     long segmentHashKey = info.Segment.Chr.GetHashCode() + info.Segment.Begin + info.Segment.End +
                                           info.Segment.Counts.Count + info.Segment.CopyNumber;
-                    if (!this.HeterogeneousSegmentsSignature.ContainsKey(segmentHashKey))
-                        this.HeterogeneousSegmentsSignature.Add(segmentHashKey, score);
+                    if (!this.HeterogeneousSegmentsSignature.ContainsKey(info.Segment))
+                        this.HeterogeneousSegmentsSignature.Add(info.Segment, score);
                 }
             }
         }
@@ -2428,10 +2428,9 @@ namespace CanvasSomaticCaller
             foreach (CanvasSegment segment in this.Segments)
             {
                 allSegments += segment.End - segment.Begin;
-                long segmentHashKey = segment.Chr.GetHashCode() + segment.Begin + segment.End + segment.Counts.Count + segment.CopyNumber;
-                if (this.HeterogeneousSegmentsSignature.ContainsKey(segmentHashKey))
+                if (this.HeterogeneousSegmentsSignature.ContainsKey(segment))
                 {
-                    if (this.HeterogeneousSegmentsSignature[segmentHashKey] < 0.5)
+                    if (this.HeterogeneousSegmentsSignature[segment] < 0.5)
                     {
                         segment.IsHeterogeneous = true;
                         heterogeneousSegments += segment.End - segment.Begin;
@@ -2543,8 +2542,8 @@ namespace CanvasSomaticCaller
                     writer.Write("{0}\t", segment.GetQScorePredictor(CanvasSegment.QScorePredictor.MajorChromosomeCount));
                     writer.Write("{0}\t", segment.GetQScorePredictor(CanvasSegment.QScorePredictor.DistanceRatio));
                     writer.Write("{0}\t", Math.Log(segment.GetQScorePredictor(CanvasSegment.QScorePredictor.MafCount)));
-                    if (this.HeterogeneousSegmentsSignature.ContainsKey(segment.Chr.GetHashCode() + segment.Begin + segment.End + segment.Counts.Count + segment.CopyNumber))
-                        writer.Write("{0}\t", this.HeterogeneousSegmentsSignature[segment.Chr.GetHashCode() + segment.Begin + segment.End + segment.Counts.Count + segment.CopyNumber]);
+                    if (this.HeterogeneousSegmentsSignature.ContainsKey(segment))
+                        writer.Write("{0}\t", this.HeterogeneousSegmentsSignature[segment]);
                     else
                         writer.Write("{0}\t", -1);
                     writer.Write("{0}\t", Model.Purity);
