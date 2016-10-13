@@ -39,7 +39,7 @@ namespace Canvas.CommandLineParsing
         private static readonly MultiValueOption<IFileLocation> BAlleleSites = new MultiValueOption<IFileLocation>(FileOption.CreateRequired("vcf containing SNV b-allele sites (only sites with PASS in the filter column will be used)", "b-allele-vcf"));
         private static readonly FileOption CommonCnvsBed = FileOption.Create(".bed file containing regions of known common CNVs", "common-cnvs-bed");
 
-        
+
 
 
         public override OptionCollection<SmallPedigreeOptions> GetOptions()
@@ -63,9 +63,8 @@ namespace Canvas.CommandLineParsing
 
     public class SmallPedigreeOptions
     {
-        public IEnumerable<IFileLocation> Bams { get; }
-        public IEnumerable<IFileLocation> BAlleleSites { get; }
-        public IEnumerable<IFileLocation> PloidyBed { get; }
+        private List<SmallPedigreeSampleOptions> Samples { get; }
+        public IFileLocation PloidyVcf { get; }
         public IEnumerable<string> SampleNames { get; }
         public IFileLocation CommonCnvsBed { get; }
 
@@ -77,5 +76,12 @@ namespace Canvas.CommandLineParsing
             PloidyBed = ploidyBed;
             CommonCnvsBed = commonCnvsBed;
         }
+    }
+
+    public class SmallPedigreeSampleOptions
+    {
+        public string SampleName { get; }
+        public IFileLocation Bam { get; }
+        public IFileLocation BAlleleSites { get; }
     }
 }

@@ -22,22 +22,24 @@ namespace Canvas
             CommonOptions = commonOptions;
         }
 
-
         public void Run(ILogger logger, ICheckpointRunnerAsync checkpointRunner, IWorkManager workManager)
         {
             CanvasRunner runner = new CanvasRunner(logger, workManager, checkpointRunner, false, CanvasCoverageMode.TruncatedDynamicRange, 100, CommonOptions.CustomParams);
             var callset = GetCallset();
             runner.CallPedigree(callset);
+            var spwWorkflow = new SmallPedigreeWorkflow(runner);
+            spwWorkflow.CallPedigree(callset);
         }
 
         private SmallPedigreeCallset GetCallset()
         {
-            List<CanvasCallset> callSets = new List<CanvasCallset>();        
-            for (int i=0; i < _smallPedigreeOptions.Bams.Count(); i++) {
-                    string sampleName = _smallPedigreeOptions.SampleNames.ToList()[i];
-                    IDirectoryLocation outputDirectory = new DirectoryLocation(Path.Combine(CommonOptions.OutputDirectory.FullName, sampleName));
-                    Directory.CreateDirectory(outputDirectory.FullName);
-                    IFileLocation outputVcfPath = outputDirectory.GetFileLocation("CNV.vcf.gz");
+            List<CanvasCallset> callSets = new List<CanvasCallset>();
+            for (int i = 0; i < _smallPedigreeOptions.Bams.Count(); i++)
+            {
+                string sampleName = _smallPedigreeOptions.SampleNames.ToList()[i];
+                IDirectoryLocation outputDirectory = new DirectoryLocation(Path.Combine(CommonOptions.OutputDirectory.FullName, sampleName));
+                Directory.CreateDirectory(outputDirectory.FullName);
+                IFileLocation outputVcfPath = outputDirectory.GetFileLocation("CNV.vcf.gz");
                 CanvasCallset callSet = new CanvasCallset(
                     _smallPedigreeOptions.Bams.ToList()[i],
                     sampleName,
