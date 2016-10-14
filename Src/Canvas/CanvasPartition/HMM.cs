@@ -5,6 +5,8 @@ using System.Security.Principal;
 using CanvasCommon;
 using MathNet.Numerics.Distributions;
 using System.Threading;
+using System.Threading.Tasks;
+using Isas.Shared.Utilities;
 
 namespace CanvasPartition
 {
@@ -29,6 +31,13 @@ namespace CanvasPartition
             get
             {
                 return _mean;
+            }
+        }
+        public double[][] Covariance   // the Mean property
+        {
+            get
+            {
+                return _covariance;
             }
         }
         public void UpdateMean(double[] gamma, List<List<double>> data)
@@ -79,21 +88,30 @@ namespace CanvasPartition
         }
         public void UpdateMeans(double[][] gamma, List<List<double>> x)
         {
-            int stateCounter = 0;
+            int stateCounter = -1;
             foreach (MultivariateGaussianDistribution gaussianDistribution in _gaussianDistributions)
             {
-                gaussianDistribution.UpdateMean(gamma[stateCounter], x);
                 stateCounter++;
+                if (stateCounter == 1)
+                    continue;
+                gaussianDistribution.UpdateMean(gamma[stateCounter], x);
             }
-
+        }
+        public void WriteMeans()
+        {
+            foreach (MultivariateGaussianDistribution gaussianDistribution in _gaussianDistributions)
+                for (int i = 0; i < gaussianDistribution.Mean.Length; i++)
+                    Console.WriteLine($"Gaussian mean for state {i} = {gaussianDistribution.Mean[i]}");
         }
         public void UpdateCovariances(double[][] gamma, List<List<double>> x)
         {
-            int stateCounter = 0;
+            int stateCounter = -1;
             foreach (MultivariateGaussianDistribution gaussianDistribution in _gaussianDistributions)
             {
-                gaussianDistribution.UpdateCovariance(gamma[stateCounter], x);
                 stateCounter++;
+                if (stateCounter == 1)
+                    continue;
+                gaussianDistribution.UpdateCovariance(gamma[stateCounter], x);
             }
         }
         public double EstimateLikelihood(List<double> x, int state)
@@ -121,47 +139,58 @@ namespace CanvasPartition
         private readonly double[][][] _epsilon;
         // dimention variables
         public int nStates;
-        public int T;
-        public const double selfTransition = 0.9;
+        public int length;
+        public const double selfTransition = 0.99;
 
 
         public HiddenMarkovModel(List<List<double>> data, List<MultivariateGaussianDistribution> gaussianMixtures)
         {
             // HMM set-up
             nStates = gaussianMixtures.Count;
-            T = data.Count;
+            length = data.Count;
             _stateProbabilities = new double[nStates];
             _emission = new GaussianMixture(gaussianMixtures);
             _transition = MatrixUtilities.MatrixCreate(nStates, nStates);
-            for (int i = 0; i < nStates; i++) { 
+            for (int i = 0; i < nStates; i++)
+            {
                 for (int j = 0; j < nStates; j++)
                 {
                     if (i == j)
                         _transition[i][j] = selfTransition;
                     else
-                        _transition[i][j] = (1.0 - selfTransition)/(nStates - 1);
+                        _transition[i][j] = (1.0 - selfTransition) / (nStates - 1);
                 }
             }
 
             // alpha-beta algorithm
-            _beta = MatrixUtilities.MatrixCreate(T, nStates);
-            _alpha = MatrixUtilities.MatrixCreate(T, nStates);
+            _beta = MatrixUtilities.MatrixCreate(length, nStates);
+            _alpha = MatrixUtilities.MatrixCreate(length, nStates);
             // marginal posterior distibution
-            _gamma = MatrixUtilities.MatrixCreate(nStates, T);
+            _gamma = MatrixUtilities.MatrixCreate(nStates, length);
             // joint posterior distibution
-            _epsilon = MatrixUtilities.MatrixCreate(T, nStates, nStates);
+            _epsilon = MatrixUtilities.MatrixCreate(length, nStates, nStates);
         }
 
-        public void IncreaseVariance(int state = 2, double multiplicationFactor = 2.0)
+        public void AdjustTransition(int state1 = 1, int state2 = 0)
         {
-            _transition[state][state] = _transition[state][state]*multiplicationFactor;
+            for (int i = 0; i < nStates; i++)
+                _transition[state1][i] = _transition[state2][i];
+        }
+
+        public void writeEmission()
+        {
+            Console.WriteLine("Emissions");
+            _emission.WriteMeans();
+            Console.WriteLine("Transitions");
+            for (int state = 0; state < nStates; state++)
+                Console.WriteLine($"Transitin for state {state} = {_transition[state][state]}");
         }
 
         public void UpdateTransition()
         {
-            double [][] numerator = MatrixUtilities.MatrixCreate(nStates, nStates);
-            double [] denominator = new double[nStates];
-            for (int t = 0; t < T-1; t++)
+            double[][] numerator = MatrixUtilities.MatrixCreate(nStates, nStates);
+            double[] denominator = new double[nStates];
+            for (int t = 0; t < length - 1; t++)
             {
                 for (int i = 0; i < nStates; i++)
                 {
@@ -172,8 +201,8 @@ namespace CanvasPartition
             }
             // update transition and initial state probabilities
             for (int i = 0; i < nStates; i++)
-                denominator[i] = Math.Max(denominator[i], Single.MinValue);           
-            
+                denominator[i] = Math.Max(denominator[i], Single.MinValue);
+
             for (int i = 0; i < nStates; i++)
             {
                 for (int j = 0; j < nStates; j++)
@@ -193,10 +222,10 @@ namespace CanvasPartition
             // Initialization 
             double likelihood = 0;
             for (int j = 0; j < nStates; j++)
-                _alpha[0][j] = 1/(double)nStates;
+                _alpha[0][j] = 1 / (double)nStates;
 
             // Induction 
-            for (int t = 0; t < T-1; t++)
+            for (int t = 0; t < length - 1; t++)
             {
                 double scaler = 0;
                 for (int j = 0; j < nStates; j++)
@@ -219,11 +248,11 @@ namespace CanvasPartition
         {
             // Initialization 
             for (int j = 0; j < nStates; j++)
-                _beta[T-1][j] = 1 / (double)nStates;
+                _beta[length - 1][j] = 1 / (double)nStates;
 
 
             // Induction 
-            int t = T - 2;
+            int t = length - 2;
             while (t >= 0)
             {
                 double scaler = 0;
@@ -248,20 +277,17 @@ namespace CanvasPartition
 
         public double EstimationStep(List<List<double>> x)
         {
-            List<ThreadStart> tasks = new List<ThreadStart>();
             double likelihood = 0;
-            tasks.Add(new ThreadStart(() => { likelihood = Forward(x); }));
-            tasks.Add(new ThreadStart(() => { Backward(x); }));
-            Isas.Shared.Utilities.Utilities.DoWorkParallelThreads(tasks);
+            Parallel.Invoke(() => likelihood = Forward(x), () => Backward(x));
 
-
-            for (int t = 0; t < T-1; t++)
+            for (int t = 0; t < length - 1; t++)
             {
                 for (int i = 0; i < nStates; i++)
                 {
                     _gamma[i][t] = 0;
 
-                    for (int j = 0; j < nStates; j++) { 
+                    for (int j = 0; j < nStates; j++)
+                    {
                         _epsilon[t][i][j] = _alpha[t][i] * _transition[i][j] * _emission.EstimateLikelihood(x[t + 1], j) *
                             _beta[t + 1][j] / likelihood;
                         _gamma[i][t] += _epsilon[t][i][j];
@@ -274,7 +300,7 @@ namespace CanvasPartition
         public void FindMaximalLikelyhood(List<List<double>> x, string chr)
         {
             double likelihoodDifferenceThreshold = 0.01;
-            const int maxIterations = 5;
+            const int maxIterations = 3;
             List<double> likelihoods = new List<double>();
             double oldLikelihood = EstimationStep(x);
             likelihoods.Add(oldLikelihood);
@@ -290,26 +316,191 @@ namespace CanvasPartition
                 likelihoods.Add(newLikelihood);
                 oldLikelihood = newLikelihood;
                 iteration++;
+                Console.WriteLine($"{DateTime.Now} Parameters for chromosome {chr}");
+                writeEmission();
             }
             Console.WriteLine($"Completed EM step for chromosome {chr}");
-
         }
+
+        public double[][] CalcStoreD(int M, List<int> means)
+        {
+            double[][] D = CanvasCommon.MatrixUtilities.MatrixCreate(M, M+1);
+            // Store D
+            for (int j = 0; j < nStates; j++)
+            {
+                for (int u = 1; u < M; u++)
+                {
+                    double x = 0;
+                    for (int v = u; v < M + 1; v++)
+                        x += Math.Log(Poisson.PMF(means[j], v));
+                    D[j][u] = x;
+                }
+                    D[j][M] = 0;
+            }
+            return D;
+        }
+
+
+
+        public List<int> BestHsmmPathViterbi(List<List<double>> x)
+        {
+
+            // Initialization 
+            AdjustTransition();
+            var length = x.Count;
+            double[][] bestScore = MatrixUtilities.MatrixCreate(length + 1, nStates);
+            int[][] maxU = new int[length + 1][];
+            int[][] maxI = new int[length + 1][];
+            int[][] bestStateSequence = new int[length + 1][];
+            for (int i = 0; i < length; ++i)
+            {
+                bestStateSequence[i] = new int[nStates];
+                maxI[i] = new int[nStates];
+                maxU[i] = new int[nStates];
+
+            }
+
+            int maxStateLength = 10000;
+            int cneq2Length = 5000;
+            int cnnq2Length = 10;
+
+            List<int> means = new List<int>(nStates);
+            for (int i = 0; i < nStates; i++)
+                means.Add(i == 2 ? cneq2Length : cnnq2Length);
+
+            double[][] D = CalcStoreD(maxStateLength, means);
+            double emissionSequence = 0;
+            double tempEmissionSequence = 0;
+            int bestState = 0;
+            var firstState = true;
+            var firstI = true;
+
+            // Induction 
+            for (int t = 0; t < length - 1; t++)
+            {
+                for (int j = 0; j < nStates; j++)
+                {
+                    emissionSequence = 0;
+                    firstState= true;
+
+                    for (int u = 1; u < Math.Min(maxStateLength, length); u++)
+                    {
+                        firstI = true;
+                        for (int i = 0; i <= nStates; i++)
+                        {
+                            if (i != j)
+                            {
+                                if (Math.Log(_transition[i][j]) + bestScore[i][t - u] > tempEmissionSequence || firstI)
+                                {
+                                    tempEmissionSequence = Math.Log(_transition[i][j]) + bestScore[i][t - u];
+                                    bestState = i;
+                                    firstI = false;
+                                }
+                            }
+                        }
+                        if (firstState ||
+                            (emissionSequence + Math.Log(Poisson.PMF(means[j], u)) + tempEmissionSequence >
+                             bestScore[j][t]))
+                        {
+                            bestScore[j][t] = emissionSequence + Math.Log(Poisson.PMF(means[j], u)) +
+                                              tempEmissionSequence;
+                            maxU[j][t] = u;
+                            maxI[j][t] = bestState;
+                            firstState = false;
+                        }
+                        emissionSequence += Math.Log(_emission.EstimateLikelihood(x[t - u], j));
+                    }
+
+                    if (t + 1 <= maxStateLength)
+                    {
+                        if (firstState ||
+                            (emissionSequence + Math.Log(Poisson.PMF(means[j], t + 1) * _stateProbabilities[j]) > bestScore[j][t]))
+                        {
+                            bestScore[j][t] = emissionSequence + Math.Log(Poisson.PMF(means[j], t + 1) * _stateProbabilities[j]);
+                            maxU[j][t] = -1;
+                            maxI[j][t] = -1;
+                        }
+                    }
+                    bestScore[j][t] += Math.Log(_emission.EstimateLikelihood(x[t], j));
+                    }
+                }
+
+
+            for (int j = 0; j < nStates; j++)
+            {
+                emissionSequence = 0;
+                firstState = true;
+                for (int u = 1; u <= length - 1; u++)
+                {
+                    firstI = true;
+                    for (int i = 0; i < nStates; i++)
+                    {
+                        if (i != j)
+                            if ((Math.Log(_transition[i][j]) + bestScore[i][length - 1 - u] > tempEmissionSequence) || firstI)
+                            {
+                                tempEmissionSequence = Math.Log(_transition[i][j]) + bestScore[i][length - 1 - u];
+                                bestState = i;
+                                firstI = false;
+                            }
+                    }
+
+                    if ((emissionSequence + Math.Log(D[j][Math.Max(u,maxStateLength)]) + tempEmissionSequence > bestScore[j][length - 1]) || firstState)
+                    {
+                        bestScore[j][length - 1] = emissionSequence + Math.Log(D[j][Math.Max(u, maxStateLength)]) + tempEmissionSequence;
+                        maxU[j][length - 1] = u;
+                        maxI[j][length - 1] = bestState;
+                        firstState = false;
+                    }
+                    emissionSequence += Math.Log(_emission.EstimateLikelihood(x[length - 1 - u], j));
+                }
+
+                if ((emissionSequence + Math.Log(D[j][Math.Max(length - 1, maxStateLength)] * _stateProbabilities[j]) > bestScore[j][length - 1]) || firstState)
+                {
+                    bestScore[j][length - 1] = emissionSequence + Math.Log(D[j][Math.Max(length, maxStateLength)] * _stateProbabilities[j]);
+                    maxU[j][length - 1] = -1;
+                    maxI[j][length - 1] = -1;
+                }
+                bestScore[j][length - 1] += Math.Log(_emission.EstimateLikelihood(x[length - 1], j));
+            }
+            // Save result
+            List<int> bestStates = new List<int>(length);
+
+            int T = length - 1;
+            while (maxI[bestState][T] >= 0)
+            {
+                for (int i = T; i >= T - maxU[bestState][T] + 1; i--)
+                {
+                    bestStates[i] = bestState;
+                }
+                var alternativeBestState = bestState;
+                bestState = maxI[bestState][T];
+
+                T -= maxU[alternativeBestState][T];
+            }
+            bestStates.Reverse();
+
+            return bestStates;
+        }
+
 
         public List<int> BestPathViterbi(List<List<double>> x)
         {
             // Initialization 
-            double[][] bestScore = MatrixUtilities.MatrixCreate(T + 1, nStates);
-            int[][] bestStateSequence = new int[T + 1][];
-            for (int i = 0; i < T; ++i)
+            AdjustTransition();
+            var length = x.Count;
+            double[][] bestScore = MatrixUtilities.MatrixCreate(length + 1, nStates);
+            int[][] bestStateSequence = new int[length + 1][];
+            for (int i = 0; i < length; ++i)
                 bestStateSequence[i] = new int[nStates];
 
-            for (int j = 0; j < nStates; j++) { 
+            for (int j = 0; j < nStates; j++)
+            {
                 bestScore[0][j] = this._stateProbabilities[j];
                 bestStateSequence[0][j] = 0;
             }
 
             // Induction 
-            for (int t = 1; t < T - 1; t++)
+            for (int t = 1; t < length - 1; t++)
             {
                 for (int j = 0; j < nStates; j++)
                 {
@@ -317,7 +508,7 @@ namespace CanvasPartition
                     double max = Double.MinValue;
                     for (int i = 0; i < nStates; i++)
                     {
-                        var tmpMax = bestScore[t-1][i] + Math.Log(_transition[i][j]) + Math.Log(_emission.EstimateLikelihood(x[t], j));
+                        var tmpMax = bestScore[t - 1][i] + Math.Log(_transition[i][j]) + Math.Log(_emission.EstimateLikelihood(x[t], j));
                         if (tmpMax > max)
                         {
                             state = i;
@@ -329,13 +520,13 @@ namespace CanvasPartition
                 }
             }
 
-            var backtrack = T-1;
+            var backtrack = length - 1;
             int bestState = 0;
-            List<int> bestStates = new List<int>(T+1);
+            List<int> bestStates = new List<int>(length + 1);
             for (int i = 0; i < nStates; i++)
             {
                 double max = Double.MinValue;
-                var tmpMax = bestScore[T][i];
+                var tmpMax = bestScore[length][i];
                 if (tmpMax > max)
                 {
                     bestState = i;

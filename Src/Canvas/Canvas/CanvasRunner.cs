@@ -810,9 +810,6 @@ namespace Illumina.SecondaryAnalysis
                 commandLine.AppendFormat("-o \"{0}\" ", partitionedPath);
             }
 
-            if (!_isSomatic)
-                commandLine.AppendFormat(" -g");
-
             UnitOfWork partitionJob = new UnitOfWork()
             {
                 ExecutablePath = executablePath,
