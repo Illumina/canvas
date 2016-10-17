@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using CanvasCommon;
 using Isas.SequencingFiles;
+using MathNet.Numerics.LinearAlgebra;
 using MathNet.Numerics.Random;
 using Utilities = CanvasCommon.Utilities;
 
@@ -72,8 +73,7 @@ namespace CanvasPartition
                 case SegmentationMethod.HMM:
                     Console.WriteLine("{0} Running HMM Partitioning", DateTime.Now);
                     this.HiddenMarkovModels(commonCNVsbedPath);
-                    for (int i = 0; i < outPaths.Count; i++)
-                        this.WriteCanvasPartitionMultisampleResults(outPaths[i], i);
+                    this.WriteCanvasPartitionMultisampleResults(outPaths);
                     break;
             }         
             Console.WriteLine("{0} CanvasPartition results written out", DateTime.Now);
@@ -172,16 +172,16 @@ namespace CanvasPartition
 
             for (int CN = 0; CN < nHiddenStates; CN++)
             {
-                double[][] tmpSds = CanvasCommon.MatrixUtilities.MatrixCreate(nDimensions, nDimensions);
+                Matrix<double> tmpSds = Matrix<double>.Build.Dense(nDimensions, nDimensions, 0);
 
                 for (int dimension = 0; dimension < nDimensions; dimension++)
                 {
-                    tmpSds[dimension][dimension] = standardDeviation[dimension];
+                    tmpSds[dimension, dimension] = standardDeviation[dimension];
                 }
-                var tmpMean = haploidMean.Select(x => Math.Max(CN, 0.05)*x).ToArray();
+                Vector<double> tmpMean = Vector<double>.Build.Dense(haploidMean.Select(x => Math.Max(CN, 0.05)*x).ToArray());
                 // if few hidden states, increase the last CN state by diploid rather than haploid increment
                 if (nHiddenStates < 5 && CN-1 == nHiddenStates)
-                    tmpMean = haploidMean.Select(x => Math.Max(CN, 0.5) * x + x).ToArray();
+                    tmpMean = Vector<double>.Build.Dense(haploidMean.Select(x => Math.Max(CN, 0.5) * x + x).ToArray());
                 MultivariateGaussianDistribution tmpDistribution = new MultivariateGaussianDistribution(tmpMean, tmpSds);
                 tmpDistributions.Add(tmpDistribution);
             }
@@ -723,48 +723,20 @@ namespace CanvasPartition
             }
         }
 
-        private void WriteCanvasPartitionMultisampleResults(string outPath, int index )
+        private void WriteCanvasPartitionMultisampleResults(List<string> outPaths)
         {
-            Dictionary<string, bool> starts = new Dictionary<string, bool>();
-            Dictionary<string, bool> stops = new Dictionary<string, bool>();
-
-            foreach (string chr in SegmentationResults.SegmentByChr.Keys)
+            for (int fileIndex = 0; fileIndex < outPaths.Count; fileIndex++)
             {
-                for (int segmentIndex = 0; segmentIndex < SegmentationResults.SegmentByChr[chr].Length; segmentIndex++)
-                {
-                    Segment segment = SegmentationResults.SegmentByChr[chr][segmentIndex];
-                    starts[chr + ":" + segment.start] = true;
-                    stops[chr + ":" + segment.end] = true;
-                }
-            }
-
-            Dictionary<string, List<GenomicBin>> ExcludedIntervals = new Dictionary<string, List<GenomicBin>>();
-            if (!string.IsNullOrEmpty(ForbiddenIntervalBedPath))
-            {
-                ExcludedIntervals = CanvasCommon.Utilities.LoadBedFile(ForbiddenIntervalBedPath);
-            }
-
-            using (GzipWriter writer = new GzipWriter(outPath))
-            {
-                int segmentNum = -1;
-
+                Dictionary<string, List<double>> scoreByChr = new Dictionary<string, List<double>>();
                 foreach (string chr in StartByChr.Keys)
                 {
-                    List<GenomicBin> excludeIntervals = null;
-                    if (ExcludedIntervals.ContainsKey(chr)) excludeIntervals = ExcludedIntervals[chr];
-                    int excludeIndex = 0; // Points to the first interval which *doesn't* end before our current position
-                    uint previousBinEnd = 0;
+                    scoreByChr.Add(chr, new List<double>());
                     for (int pos = 0; pos < StartByChr[chr].Length; pos++)
                     {
-                        uint start = StartByChr[chr][pos];
-                        uint end = EndByChr[chr][pos];
-                        string key = chr + ":" + start;
-                        bool newSegment = IsNewSegment(starts, key, excludeIntervals, previousBinEnd, end, start, ref excludeIndex);
-                        if (newSegment) segmentNum++;
-                        writer.WriteLine(string.Format("{0}\t{1}\t{2}\t{3}\t{4}", chr, start, end, ScoresByChr[chr][pos][index], segmentNum));
-                        previousBinEnd = end;
+                        scoreByChr[chr].Add(ScoresByChr[chr][pos][fileIndex]);
                     }
                 }
+                this.WriteCanvasPartitionResults(outPaths[0]);
             }
         }
 

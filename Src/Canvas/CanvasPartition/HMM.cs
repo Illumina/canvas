@@ -7,15 +7,16 @@ using MathNet.Numerics.Distributions;
 using System.Threading;
 using System.Threading.Tasks;
 using Isas.Shared.Utilities;
+using MathNet.Numerics.LinearAlgebra;
 
 namespace CanvasPartition
 {
     public class MultivariateGaussianDistribution
     {
-        private readonly double[] _mean;
-        private readonly double[][] _covariance;
+        private readonly Vector<double> _mean;
+        private readonly Matrix<double> _covariance;
 
-        public MultivariateGaussianDistribution(double[] mean, double[][] covariance)
+        public MultivariateGaussianDistribution(Vector<double> mean, Matrix<double> covariance)
         {
             _mean = mean;
             _covariance = covariance;
@@ -23,17 +24,17 @@ namespace CanvasPartition
 
         public int GetDimensions()
         {
-            return _mean.Length;
+            return _mean.Count;
         }
 
-        public double[] Mean   // the Mean property
+        public Vector<double> Mean   // the Mean property
         {
             get
             {
                 return _mean;
             }
         }
-        public double[][] Covariance   // the Mean property
+        public Matrix<double> Covariance   // the Mean property
         {
             get
             {
@@ -54,22 +55,19 @@ namespace CanvasPartition
         {
             var m = this.GetDimensions();
             for (int dimension = 0; dimension < m; dimension++)
-                _covariance[dimension][dimension] = CanvasCommon.Utilities.WeightedStandardDeviation(data.Select(x => x[dimension]).ToList(), gamma);
+                _covariance[dimension, dimension] = CanvasCommon.Utilities.WeightedStandardDeviation(data.Select(x => x[dimension]).ToList(), gamma);
         }
 
         public double EstimateLikelihood(List<double> x)
         {
             var m = this.GetDimensions();
-            double[] diff = new double[m];
+            Vector<double> diff = Vector<double>.Build.Dense(m, 0.0);
             for (int i = 0; i < m; i++)
                 diff[i] = x[i] - _mean[i];
-            var inverseCovariance = MatrixUtilities.MatrixInverse(_covariance);
-            var tempval = MatrixUtilities.MatrixVectorProduct(inverseCovariance, diff);
-            var exponent = -0.5 * CanvasCommon.Utilities.DotProduct(diff, tempval);
+            var exponent = -0.5 * diff * _covariance.Inverse() * diff;
             if (!Double.IsNaN(exponent)) //check for nans
             {
-                var likelihood = 1.0 / (Math.Sqrt(2.0 * Math.PI * MatrixUtilities.MatrixDeterminant(_covariance))) *
-                                 Math.Exp(exponent);
+                var likelihood = 1.0 / (Math.Sqrt(2.0 * Math.PI * _covariance.Determinant()) * Math.Exp(exponent));
                 if (Double.IsNaN(likelihood))
                     likelihood = 0;
                 return likelihood;
@@ -100,7 +98,7 @@ namespace CanvasPartition
         public void WriteMeans()
         {
             foreach (MultivariateGaussianDistribution gaussianDistribution in _gaussianDistributions)
-                for (int i = 0; i < gaussianDistribution.Mean.Length; i++)
+                for (int i = 0; i < gaussianDistribution.Mean.Count; i++)
                     Console.WriteLine($"Gaussian mean for state {i} = {gaussianDistribution.Mean[i]}");
         }
         public void UpdateCovariances(double[][] gamma, List<List<double>> x)
@@ -150,7 +148,7 @@ namespace CanvasPartition
             length = data.Count;
             _stateProbabilities = new double[nStates];
             _emission = new GaussianMixture(gaussianMixtures);
-            _transition = MatrixUtilities.MatrixCreate(nStates, nStates);
+            _transition = CanvasCommon.Utilities.MatrixCreate(nStates, nStates);
             for (int i = 0; i < nStates; i++)
             {
                 for (int j = 0; j < nStates; j++)
@@ -163,12 +161,12 @@ namespace CanvasPartition
             }
 
             // alpha-beta algorithm
-            _beta = MatrixUtilities.MatrixCreate(length, nStates);
-            _alpha = MatrixUtilities.MatrixCreate(length, nStates);
+            _beta = CanvasCommon.Utilities.MatrixCreate(length, nStates);
+            _alpha = CanvasCommon.Utilities.MatrixCreate(length, nStates);
             // marginal posterior distibution
-            _gamma = MatrixUtilities.MatrixCreate(nStates, length);
+            _gamma = CanvasCommon.Utilities.MatrixCreate(nStates, length);
             // joint posterior distibution
-            _epsilon = MatrixUtilities.MatrixCreate(length, nStates, nStates);
+            _epsilon = CanvasCommon.Utilities.MatrixCreate(length, nStates, nStates);
         }
 
         public void AdjustTransition(int state1 = 1, int state2 = 0)
@@ -188,7 +186,7 @@ namespace CanvasPartition
 
         public void UpdateTransition()
         {
-            double[][] numerator = MatrixUtilities.MatrixCreate(nStates, nStates);
+            double[][] numerator = CanvasCommon.Utilities.MatrixCreate(nStates, nStates);
             double[] denominator = new double[nStates];
             for (int t = 0; t < length - 1; t++)
             {
@@ -324,14 +322,14 @@ namespace CanvasPartition
 
         public double[][] CalcStoreD(int M, List<int> means)
         {
-            double[][] D = CanvasCommon.MatrixUtilities.MatrixCreate(M, M+1);
+            double[][] D = CanvasCommon.Utilities.MatrixCreate(M + 1, M + 2);
             // Store D
             for (int j = 0; j < nStates; j++)
             {
-                for (int u = 1; u < M; u++)
+                for (int u = 1; u < M + 1; u++)
                 {
                     double x = 0;
-                    for (int v = u; v < M + 1; v++)
+                    for (int v = u; v < M + 2; v++)
                         x += Math.Log(Poisson.PMF(means[j], v));
                     D[j][u] = x;
                 }
@@ -348,20 +346,21 @@ namespace CanvasPartition
             // Initialization 
             AdjustTransition();
             var length = x.Count;
-            double[][] bestScore = MatrixUtilities.MatrixCreate(length + 1, nStates);
-            int[][] maxU = new int[length + 1][];
-            int[][] maxI = new int[length + 1][];
-            int[][] bestStateSequence = new int[length + 1][];
-            for (int i = 0; i < length; ++i)
+            double[][] bestScore = CanvasCommon.Utilities.MatrixCreate(nStates, length + 1);
+            int[][] maxU = new int[nStates][];
+            int[][] maxI = new int[nStates][];
+            for (int i = 0; i < nStates; ++i)
             {
-                bestStateSequence[i] = new int[nStates];
-                maxI[i] = new int[nStates];
-                maxU[i] = new int[nStates];
-
+                maxI[i] = new int[length];
+                maxU[i] = new int[length];
+            }
+            for (int j = 0; j < nStates; j++)
+            {
+                bestScore[j][0] = this._stateProbabilities[j];
             }
 
-            int maxStateLength = 10000;
-            int cneq2Length = 5000;
+            int maxStateLength = 1000;
+            int cneq2Length = 500;
             int cnnq2Length = 10;
 
             List<int> means = new List<int>(nStates);
@@ -376,17 +375,17 @@ namespace CanvasPartition
             var firstI = true;
 
             // Induction 
-            for (int t = 0; t < length - 1; t++)
+            for (int t = 1; t < length - 1; t++)
             {
                 for (int j = 0; j < nStates; j++)
                 {
                     emissionSequence = 0;
                     firstState= true;
 
-                    for (int u = 1; u < Math.Min(maxStateLength, length); u++)
+                    for (int u = 1; u < Math.Min(maxStateLength, t); u++)
                     {
                         firstI = true;
-                        for (int i = 0; i <= nStates; i++)
+                        for (int i = 0; i < nStates; i++)
                         {
                             if (i != j)
                             {
@@ -430,7 +429,7 @@ namespace CanvasPartition
             {
                 emissionSequence = 0;
                 firstState = true;
-                for (int u = 1; u <= length - 1; u++)
+                for (int u = 1; u < length - 1; u++)
                 {
                     firstI = true;
                     for (int i = 0; i < nStates; i++)
@@ -488,7 +487,7 @@ namespace CanvasPartition
             // Initialization 
             AdjustTransition();
             var length = x.Count;
-            double[][] bestScore = MatrixUtilities.MatrixCreate(length + 1, nStates);
+            double[][] bestScore = CanvasCommon.Utilities.MatrixCreate(length + 1, nStates);
             int[][] bestStateSequence = new int[length + 1][];
             for (int i = 0; i < length; ++i)
                 bestStateSequence[i] = new int[nStates];

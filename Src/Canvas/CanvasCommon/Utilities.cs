@@ -580,6 +580,32 @@ namespace CanvasCommon
             return Math.Sqrt(norm2);
         }
 
+
+        public static double[][] MatrixCreate(int rows, int cols)
+        {
+
+            double[][] result = new double[rows][];
+            for (int i = 0; i < rows; ++i)
+                result[i] = new double[cols];
+            return result;
+        }
+
+        /// <summary>
+        /// Allocates/creates a 3D matrix initialized to all 0.0, assume rows and cols > 0
+        /// </summary>
+        public static double[][][] MatrixCreate(int rows, int cols1, int cols2)
+        {
+
+            double[][][] result = new double[rows][][];
+            for (int i = 0; i < rows; ++i)
+            {
+                result[i] = new double[cols1][];
+                for (int j = 0; j < cols1; ++j)
+                    result[i][j] = new double[cols2];
+            }
+            return result;
+        }
+
         /// <summary>
         /// Returns the normalized vector by 2-norm
         /// </summary>
