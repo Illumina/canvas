@@ -2,6 +2,7 @@
 using System.Linq;
 using CanvasCommon.CommandLineParsing.CoreOptionTypes;
 using CanvasCommon.CommandLineParsing.OptionProcessing;
+using Isas.Shared.DataTypes;
 using Isas.Shared.Utilities.FileSystem;
 
 namespace Canvas.CommandLineParsing
@@ -40,8 +41,6 @@ namespace Canvas.CommandLineParsing
         private static readonly FileOption CommonCnvsBed = FileOption.Create(".bed file containing regions of known common CNVs", "common-cnvs-bed");
 
 
-
-
         public override OptionCollection<SmallPedigreeOptions> GetOptions()
         {
             return new OptionCollection<SmallPedigreeOptions>
@@ -54,34 +53,44 @@ namespace Canvas.CommandLineParsing
         {
             var bams = parseInput.Get(Bams);
             var sampleNames = parseInput.Get(SampleNames);
-            var ploidyBed = parseInput.Get(PloidyBed);
+            var ploidyVcfs = parseInput.Get(PloidyBed);
             var bAlleleSites = parseInput.Get(BAlleleSites);
             var commonCnvsBed = parseInput.Get(CommonCnvsBed);
-            return ParsingResult<SmallPedigreeOptions>.SuccessfulResult(new SmallPedigreeOptions(bams, sampleNames, ploidyBed, bAlleleSites, commonCnvsBed));
+
+            List<SmallPedigreeSampleOptions> samples = new List<SmallPedigreeSampleOptions>();
+            for (int sampleIndex = 0; sampleIndex < bams.Count; sampleIndex++)
+                samples.Add(new SmallPedigreeSampleOptions(sampleNames[sampleIndex], bams[sampleIndex],
+                    bAlleleSites[sampleIndex], ploidyVcfs[sampleIndex]));
+
+            return ParsingResult<SmallPedigreeOptions>.SuccessfulResult(new SmallPedigreeOptions(samples, commonCnvsBed));
         }
     }
 
     public class SmallPedigreeOptions
     {
-        private List<SmallPedigreeSampleOptions> Samples { get; }
-        public IFileLocation PloidyVcf { get; }
-        public IEnumerable<string> SampleNames { get; }
+        public List<SmallPedigreeSampleOptions> Samples { get; }
         public IFileLocation CommonCnvsBed { get; }
 
-        public SmallPedigreeOptions(IEnumerable<IFileLocation> bams, IEnumerable<string> sampleNames, IEnumerable<IFileLocation> ploidyBed, IEnumerable<IFileLocation> bAlleleSites, IFileLocation commonCnvsBed)
+        public SmallPedigreeOptions(List<SmallPedigreeSampleOptions> samples, IFileLocation commonCnvsBed)
         {
-            Bams = bams;
-            SampleNames = sampleNames;
-            BAlleleSites = bAlleleSites;
-            PloidyBed = ploidyBed;
+            Samples = samples;
             CommonCnvsBed = commonCnvsBed;
         }
     }
 
     public class SmallPedigreeSampleOptions
     {
-        public string SampleName { get; }
-        public IFileLocation Bam { get; }
-        public IFileLocation BAlleleSites { get; }
+        public string SampleName { get; set; }
+        public IFileLocation Bam { get; set; }
+        public IFileLocation BAlleleSites { get; set; }
+        public IFileLocation PloidyVcf { get; set; }
+
+        public SmallPedigreeSampleOptions(string sampleName, IFileLocation bam, IFileLocation bAlleleSites, IFileLocation ploidyVcf)
+        {
+            SampleName = sampleName;
+            Bam = bam;
+            BAlleleSites = bAlleleSites;
+            PloidyVcf = ploidyVcf;
+        }
     }
 }

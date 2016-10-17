@@ -14,11 +14,11 @@ namespace Canvas
     {
         public CommonOptions CommonOptions { get; }
 
-        private readonly SmallPedigreeOptions _smallPedigreeOptions;
+        public SmallPedigreeOptions SmallPedigreeOptions { get; }
 
         public SmallPedigreeWgsRunner(CommonOptions commonOptions, SmallPedigreeOptions smallPedigreeOptions)
         {
-            _smallPedigreeOptions = smallPedigreeOptions;
+            SmallPedigreeOptions = smallPedigreeOptions;
             CommonOptions = commonOptions;
         }
 
@@ -34,21 +34,21 @@ namespace Canvas
         private SmallPedigreeCallset GetCallset()
         {
             List<CanvasCallset> callSets = new List<CanvasCallset>();
-            for (int i = 0; i < _smallPedigreeOptions.Bams.Count(); i++)
+            for (int i = 0; i < SmallPedigreeOptions.Samples.Count(); i++)
             {
-                string sampleName = _smallPedigreeOptions.SampleNames.ToList()[i];
+                string sampleName = SmallPedigreeOptions.Samples[i].SampleName;
                 IDirectoryLocation outputDirectory = new DirectoryLocation(Path.Combine(CommonOptions.OutputDirectory.FullName, sampleName));
                 Directory.CreateDirectory(outputDirectory.FullName);
                 IFileLocation outputVcfPath = outputDirectory.GetFileLocation("CNV.vcf.gz");
                 CanvasCallset callSet = new CanvasCallset(
-                    _smallPedigreeOptions.Bams.ToList()[i],
+                    SmallPedigreeOptions.Samples[i].Bam,
                     sampleName,
                     CommonOptions.WholeGenomeFasta,
                     CommonOptions.OutputDirectory,
                     CommonOptions.KmerFasta,
                     CommonOptions.FilterBed,
-                    _smallPedigreeOptions.PloidyBed.ToList()[i],
-                    _smallPedigreeOptions.BAlleleSites.ToList()[i],
+                    SmallPedigreeOptions.Samples[i].PloidyVcf,
+                    SmallPedigreeOptions.Samples[i].BAlleleSites,
                     CommonOptions.IsDbSnpVcf,
                     Enumerable.Empty<IFileLocation>(),
                     null,
@@ -56,7 +56,7 @@ namespace Canvas
                     outputVcfPath);
                 callSets.Add(callSet);
             }
-            return new SmallPedigreeCallset(callSets, _smallPedigreeOptions.CommonCnvsBed);
+            return new SmallPedigreeCallset(callSets, SmallPedigreeOptions.CommonCnvsBed);
         }
     }
 }

@@ -64,11 +64,11 @@ namespace CanvasPartition
             Vector<double> diff = Vector<double>.Build.Dense(m, 0.0);
             for (int i = 0; i < m; i++)
                 diff[i] = x[i] - _mean[i];
-            var exponent = -0.5 * diff * _covariance.Inverse() * diff;
+            var exponent = -0.5 * diff.DotProduct(_covariance.Inverse() * diff);
             if (!Double.IsNaN(exponent)) //check for nans
             {
-                var likelihood = 1.0 / (Math.Sqrt(2.0 * Math.PI * _covariance.Determinant()) * Math.Exp(exponent));
-                if (Double.IsNaN(likelihood))
+                var likelihood = 1.0 / (Math.Sqrt(2.0 * Math.PI * _covariance.Determinant())) * Math.Exp(exponent);
+                if (Double.IsNaN(likelihood) || Double.IsInfinity(likelihood))
                     likelihood = 0;
                 return likelihood;
             }
@@ -359,8 +359,8 @@ namespace CanvasPartition
                 bestScore[j][0] = this._stateProbabilities[j];
             }
 
-            int maxStateLength = 1000;
-            int cneq2Length = 500;
+            int maxStateLength = 100;
+            int cneq2Length = 50;
             int cnnq2Length = 10;
 
             List<int> means = new List<int>(nStates);
@@ -443,9 +443,9 @@ namespace CanvasPartition
                             }
                     }
 
-                    if ((emissionSequence + Math.Log(D[j][Math.Max(u,maxStateLength)]) + tempEmissionSequence > bestScore[j][length - 1]) || firstState)
+                    if ((emissionSequence + Math.Log(D[j][Math.Min(u,maxStateLength)]) + tempEmissionSequence > bestScore[j][length - 1]) || firstState)
                     {
-                        bestScore[j][length - 1] = emissionSequence + Math.Log(D[j][Math.Max(u, maxStateLength)]) + tempEmissionSequence;
+                        bestScore[j][length - 1] = emissionSequence + Math.Log(D[j][Math.Min(u, maxStateLength)]) + tempEmissionSequence;
                         maxU[j][length - 1] = u;
                         maxI[j][length - 1] = bestState;
                         firstState = false;
@@ -453,9 +453,9 @@ namespace CanvasPartition
                     emissionSequence += Math.Log(_emission.EstimateLikelihood(x[length - 1 - u], j));
                 }
 
-                if ((emissionSequence + Math.Log(D[j][Math.Max(length - 1, maxStateLength)] * _stateProbabilities[j]) > bestScore[j][length - 1]) || firstState)
+                if ((emissionSequence + Math.Log(D[j][Math.Min(length - 1, maxStateLength)] * _stateProbabilities[j]) > bestScore[j][length - 1]) || firstState)
                 {
-                    bestScore[j][length - 1] = emissionSequence + Math.Log(D[j][Math.Max(length, maxStateLength)] * _stateProbabilities[j]);
+                    bestScore[j][length - 1] = emissionSequence + Math.Log(D[j][Math.Min(length, maxStateLength)] * _stateProbabilities[j]);
                     maxU[j][length - 1] = -1;
                     maxI[j][length - 1] = -1;
                 }
