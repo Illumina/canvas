@@ -116,6 +116,7 @@
     <Compile Include="CommandLineParsing\TumorNormalEnrichmentModeParser.cs" />
     <Compile Include="CommandLineParsing\TumorNormalWgsModeParser.cs" />
     <Compile Include="SmallPedigreeWgsRunner.cs" />
+    <Compile Include="SmallPedigreeWorkflow.cs" />
     <Compile Include="TumorNormalEnrichmentRunner.cs" />
     <Compile Include="TumorNormalWgsRunner.cs" />
     <Compile Include="Program.cs" />
