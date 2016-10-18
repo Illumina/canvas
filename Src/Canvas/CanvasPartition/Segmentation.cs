@@ -88,7 +88,7 @@ namespace CanvasPartition
         /// <summary>
         /// HMM wrapper
         /// </summary>
-        void HiddenMarkovModels(string commonCNVs, int minSize = 10, int nHiddenStates = 5)
+        void HiddenMarkovModels(string commonCNVs, int minSize = 10, int nHiddenStates = 6)
         {
             // load common CNV segments
             Dictionary<string, List<GenomicBin>> commonCNVintervals = null;
@@ -97,12 +97,11 @@ namespace CanvasPartition
                 commonCNVintervals = Utilities.LoadBedFile(commonCNVs);
                 Utilities.SortAndOverlapCheck(commonCNVintervals, commonCNVs);
             }
-            // Learn HMM parameters from Chromosome 1
             Dictionary<string, Segment[]> segmentByChr = new Dictionary<string, Segment[]>();
 
             var cts = new CancellationTokenSource();
             Parallel.ForEach(
-                ScoresByChr.Keys.Take(2),
+                ScoresByChr.Keys,
                 new ParallelOptions
                 {
                     CancellationToken = cts.Token,
@@ -115,11 +114,11 @@ namespace CanvasPartition
                     int length = this.ScoresByChr[chr].Count;
                     if (length > minSize)
                     {
-                        List<MultivariateGaussianDistribution> gaussianDistribution = InitializeEmission(this.ScoresByChr, chr, nHiddenStates);
+                        List<MultivariatePoissonDistribution> gaussianDistribution = InitializePoissonEmission(this.ScoresByChr, chr, nHiddenStates);
                         HiddenMarkovModel hmm = new HiddenMarkovModel(this.ScoresByChr[chr], gaussianDistribution);
                         Console.WriteLine($"{DateTime.Now} Launching HMM task for chromosome {chr}");
                         hmm.FindMaximalLikelyhood(this.ScoresByChr[chr], chr);
-                        List<int> hiddenStates = hmm.BestHsmmPathViterbi(this.ScoresByChr[chr]);
+                        List<int> hiddenStates = hmm.BestPathViterbi(this.ScoresByChr[chr]);
                         Console.WriteLine($"{DateTime.Now} Completed HMM task for chromosome {chr}");
 
                         breakpoints.Add(0);
@@ -187,21 +186,53 @@ namespace CanvasPartition
             }
 
             // remove outliers 
-            Random rand = new Random();
-            double maxThreshold = tmpDistributions.Last().Mean.Max() * 1.2;
-            double minThreshold = tmpDistributions.First().Mean.Min();
-
-            foreach (string chr in data.Keys)
-                for (int length = 0; length < data[chr].Count; length++)
-                    for (int dimension = 0; dimension < nDimensions; dimension++)
-                    {
-                        data[chr][length][dimension] = data[chr][length][dimension] > maxThreshold ? maxThreshold : data[chr][length][dimension];
-                    }
-
+            double maxThreshold = tmpDistributions.Last().Mean().Max() * 1.2;
+            RemoveOutliers(data, maxThreshold, nDimensions);
 
             return tmpDistributions;
         }
 
+        public List<MultivariatePoissonDistribution> InitializePoissonEmission(Dictionary<string, List<List<double>>> data, string chromosome, int nHiddenStates)
+        {
+            int nDimensions = data[chromosome].First().Count;
+            List<double> haploidMean = new List<double>(nDimensions);
+            List<MultivariatePoissonDistribution> tmpDistributions = new List<MultivariatePoissonDistribution>();
+
+            for (int dimension = 0; dimension < nDimensions; dimension++)
+            {
+                double meanHolder = 0;
+                foreach (List<double> datapoint in data[chromosome])
+                    meanHolder += datapoint[dimension];
+                haploidMean.Add(meanHolder / data[chromosome].Count / 2.0);
+            }
+
+            for (int CN = 0; CN < nHiddenStates; CN++)
+            {
+                double scaler = 0.8;
+                Vector<double> tmpMean = Vector<double>.Build.Dense(haploidMean.Select(x => Math.Max(CN, 0.1) * scaler * x).ToArray());
+                // if few hidden states, increase the last CN state by diploid rather than haploid increment
+                if (nHiddenStates < 5 && CN - 1 == nHiddenStates)
+                    tmpMean = Vector<double>.Build.Dense(haploidMean.Select(x => Math.Max(CN, 0.5) * x + x).ToArray());
+                MultivariatePoissonDistribution tmpDistribution = new MultivariatePoissonDistribution(tmpMean.ToList());
+                tmpDistributions.Add(tmpDistribution);
+            }
+
+            // remove outliers 
+            double maxThreshold = tmpDistributions.Last().Mean().Max() * 1.2;
+            RemoveOutliers(data, maxThreshold, nDimensions);
+
+            return tmpDistributions;
+        }
+
+        private static void RemoveOutliers(Dictionary<string, List<List<double>>> data, double maxThreshold, int nDimensions)
+        {           
+            foreach (string chr in data.Keys)
+                for (int length = 0; length < data[chr].Count; length++)
+                    for (int dimension = 0; dimension < nDimensions; dimension++)
+                        data[chr][length][dimension] = data[chr][length][dimension] > maxThreshold
+                            ? maxThreshold
+                            : data[chr][length][dimension];
+        }
 
         /// <summary>
         /// Wavelets: unbalanced HAAR wavelets segmentation 
@@ -692,10 +723,10 @@ namespace CanvasPartition
                 }
             }
 
-            Dictionary<string, List<GenomicBin>> ExcludedIntervals = new Dictionary<string, List<GenomicBin>>();
+            Dictionary<string, List<GenomicBin>> excludedIntervals = new Dictionary<string, List<GenomicBin>>();
             if (!string.IsNullOrEmpty(ForbiddenIntervalBedPath))
             {
-                ExcludedIntervals = CanvasCommon.Utilities.LoadBedFile(ForbiddenIntervalBedPath);
+                excludedIntervals = CanvasCommon.Utilities.LoadBedFile(ForbiddenIntervalBedPath);
             }
 
             using (GzipWriter writer = new GzipWriter(outPath))
@@ -705,7 +736,7 @@ namespace CanvasPartition
                 foreach (string chr in StartByChr.Keys)
                 {
                     List<GenomicBin> excludeIntervals = null;
-                    if (ExcludedIntervals.ContainsKey(chr)) excludeIntervals = ExcludedIntervals[chr];
+                    if (excludedIntervals.ContainsKey(chr)) excludeIntervals = excludedIntervals[chr];
                     int excludeIndex = 0; // Points to the first interval which *doesn't* end before our current position
                     uint previousBinEnd = 0;
                     for (int pos = 0; pos < StartByChr[chr].Length; pos++)
@@ -716,7 +747,7 @@ namespace CanvasPartition
                         bool newSegment = IsNewSegment(starts, key, excludeIntervals, previousBinEnd, end, start, ref excludeIndex);
 
                         if (newSegment) segmentNum++;
-                        writer.WriteLine(string.Format("{0}\t{1}\t{2}\t{3}\t{4}", chr, start, end, ScoreByChr[chr][pos], segmentNum));
+                        writer.WriteLine(string.Format($"{chr}\t{start}\t{end}\t{ScoreByChr[chr][pos]}\t{segmentNum}"));
                         previousBinEnd = end;
                     }
                 }
@@ -736,7 +767,9 @@ namespace CanvasPartition
                         scoreByChr[chr].Add(ScoresByChr[chr][pos][fileIndex]);
                     }
                 }
-                this.WriteCanvasPartitionResults(outPaths[0]);
+                foreach (string chr in scoreByChr.Keys)
+                    this.ScoreByChr[chr] = scoreByChr[chr].ToArray();
+                this.WriteCanvasPartitionResults(outPaths[fileIndex]);
             }
         }
 

@@ -11,121 +11,11 @@ using MathNet.Numerics.LinearAlgebra;
 
 namespace CanvasPartition
 {
-    public class MultivariateGaussianDistribution
-    {
-        private readonly Vector<double> _mean;
-        private readonly Matrix<double> _covariance;
-
-        public MultivariateGaussianDistribution(Vector<double> mean, Matrix<double> covariance)
-        {
-            _mean = mean;
-            _covariance = covariance;
-        }
-
-        public int GetDimensions()
-        {
-            return _mean.Count;
-        }
-
-        public Vector<double> Mean   // the Mean property
-        {
-            get
-            {
-                return _mean;
-            }
-        }
-        public Matrix<double> Covariance   // the Mean property
-        {
-            get
-            {
-                return _covariance;
-            }
-        }
-        public void UpdateMean(double[] gamma, List<List<double>> data)
-        {
-            var m = this.GetDimensions();
-            for (int dimension = 0; dimension < m; dimension++)
-                _mean[dimension] = CanvasCommon.Utilities.WeightedMean(data.Select(x => x[dimension]).ToList(), gamma.ToList());
-        }
-
-        /// <summary>
-        /// Implements spherical covariance
-        /// </summary>
-        public void UpdateCovariance(double[] gamma, List<List<double>> data)
-        {
-            var m = this.GetDimensions();
-            for (int dimension = 0; dimension < m; dimension++)
-                _covariance[dimension, dimension] = CanvasCommon.Utilities.WeightedStandardDeviation(data.Select(x => x[dimension]).ToList(), gamma);
-        }
-
-        public double EstimateLikelihood(List<double> x)
-        {
-            var m = this.GetDimensions();
-            Vector<double> diff = Vector<double>.Build.Dense(m, 0.0);
-            for (int i = 0; i < m; i++)
-                diff[i] = x[i] - _mean[i];
-            var exponent = -0.5 * diff.DotProduct(_covariance.Inverse() * diff);
-            if (!Double.IsNaN(exponent)) //check for nans
-            {
-                var likelihood = 1.0 / (Math.Sqrt(2.0 * Math.PI * _covariance.Determinant())) * Math.Exp(exponent);
-                if (Double.IsNaN(likelihood) || Double.IsInfinity(likelihood))
-                    likelihood = 0;
-                return likelihood;
-            }
-            return 0;
-        }
-    }
-
-    public class GaussianMixture
-    {
-
-        private readonly List<MultivariateGaussianDistribution> _gaussianDistributions;
-        public GaussianMixture(List<MultivariateGaussianDistribution> gaussianDistributions)
-        {
-            _gaussianDistributions = gaussianDistributions;
-        }
-        public void UpdateMeans(double[][] gamma, List<List<double>> x)
-        {
-            int stateCounter = -1;
-            foreach (MultivariateGaussianDistribution gaussianDistribution in _gaussianDistributions)
-            {
-                stateCounter++;
-                if (stateCounter == 1)
-                    continue;
-                gaussianDistribution.UpdateMean(gamma[stateCounter], x);
-            }
-        }
-        public void WriteMeans()
-        {
-            foreach (MultivariateGaussianDistribution gaussianDistribution in _gaussianDistributions)
-                for (int i = 0; i < gaussianDistribution.Mean.Count; i++)
-                    Console.WriteLine($"Gaussian mean for state {i} = {gaussianDistribution.Mean[i]}");
-        }
-        public void UpdateCovariances(double[][] gamma, List<List<double>> x)
-        {
-            int stateCounter = -1;
-            foreach (MultivariateGaussianDistribution gaussianDistribution in _gaussianDistributions)
-            {
-                stateCounter++;
-                if (stateCounter == 1)
-                    continue;
-                gaussianDistribution.UpdateCovariance(gamma[stateCounter], x);
-            }
-        }
-        public double EstimateLikelihood(List<double> x, int state)
-        {
-            return _gaussianDistributions[state].EstimateLikelihood(x);
-        }
-        public int GetNumberOfStates()
-        {
-            return _gaussianDistributions.Count;
-        }
-    }
-
+ 
     public class HiddenMarkovModel
     {
         // hidden variable parameters
-        private readonly GaussianMixture _emission;
+        private readonly MixtureDistibution _emission;
         private readonly double[][] _transition;
         private readonly double[] _stateProbabilities;
         // alpha-beta algorithm
@@ -141,13 +31,13 @@ namespace CanvasPartition
         public const double selfTransition = 0.99;
 
 
-        public HiddenMarkovModel(List<List<double>> data, List<MultivariateGaussianDistribution> gaussianMixtures)
+        public HiddenMarkovModel(List<List<double>> data, List<MultivariatePoissonDistribution> gaussianMixtures)
         {
             // HMM set-up
             nStates = gaussianMixtures.Count;
             length = data.Count;
             _stateProbabilities = new double[nStates];
-            _emission = new GaussianMixture(gaussianMixtures);
+            _emission = new PoissonMixture(gaussianMixtures);
             _transition = CanvasCommon.Utilities.MatrixCreate(nStates, nStates);
             for (int i = 0; i < nStates; i++)
             {
@@ -175,11 +65,11 @@ namespace CanvasPartition
                 _transition[state1][i] = _transition[state2][i];
         }
 
-        public void writeEmission()
+        public void WriteEmission()
         {
-            Console.WriteLine("Emissions");
-            _emission.WriteMeans();
-            Console.WriteLine("Transitions");
+            //Console.WriteLine("Emissions");
+            //_emission.WriteMeans();
+            //Console.WriteLine("Transitions");
             for (int state = 0; state < nStates; state++)
                 Console.WriteLine($"Transitin for state {state} = {_transition[state][state]}");
         }
@@ -234,10 +124,15 @@ namespace CanvasPartition
                     _alpha[t + 1][j] *= _emission.EstimateLikelihood(x[t + 1], j);
                     scaler += _alpha[t + 1][j];
                 }
-                for (int j = 0; j < nStates; j++)
+                if (scaler > 0)
                 {
-                    _alpha[t + 1][j] = _alpha[t + 1][j] / scaler;
+                    for (int j = 0; j < nStates; j++)
+                    {
+                        _alpha[t + 1][j] = _alpha[t + 1][j]/scaler;
+                    }
                 }
+                else
+                    _alpha[t + 1][2] = 1;
                 likelihood += scaler;
             }
             return likelihood;
@@ -298,7 +193,7 @@ namespace CanvasPartition
         public void FindMaximalLikelyhood(List<List<double>> x, string chr)
         {
             double likelihoodDifferenceThreshold = 0.01;
-            const int maxIterations = 3;
+            const int maxIterations = 4;
             List<double> likelihoods = new List<double>();
             double oldLikelihood = EstimationStep(x);
             likelihoods.Add(oldLikelihood);
@@ -307,44 +202,46 @@ namespace CanvasPartition
             double likelihoodDifference = Double.MaxValue;
             while (iteration < maxIterations && likelihoodDifference > likelihoodDifferenceThreshold)
             {
-                Console.WriteLine($"{DateTime.Now} EM step {iteration} for chromosome {chr}");
                 var newLikelihood = EstimationStep(x);
                 MaximisationStep(x);
                 likelihoodDifference = Math.Abs(oldLikelihood - newLikelihood);
                 likelihoods.Add(newLikelihood);
                 oldLikelihood = newLikelihood;
                 iteration++;
-                Console.WriteLine($"{DateTime.Now} Parameters for chromosome {chr}");
-                writeEmission();
+                WriteEmission();
             }
-            Console.WriteLine($"Completed EM step for chromosome {chr}");
         }
 
-        public double[][] CalcStoreD(int M, List<int> means)
+        /// <summary>
+        /// BestHsmmPathViterbi helper method to calculate sojourn survival function
+        /// </summary>
+        public double[][] CalcStoreD(int maxStateLength, List<int> means)
         {
-            double[][] D = CanvasCommon.Utilities.MatrixCreate(M + 1, M + 2);
+            double[][] D = CanvasCommon.Utilities.MatrixCreate(maxStateLength + 1, maxStateLength + 2);
             // Store D
             for (int j = 0; j < nStates; j++)
             {
-                for (int u = 1; u < M + 1; u++)
+                for (int u = 1; u < maxStateLength + 1; u++)
                 {
                     double x = 0;
-                    for (int v = u; v < M + 2; v++)
+                    for (int v = u; v < maxStateLength + 2; v++)
                         x += Math.Log(Poisson.PMF(means[j], v));
                     D[j][u] = x;
                 }
-                    D[j][M] = 0;
+                    D[j][maxStateLength] = 0;
             }
             return D;
         }
 
 
-
+        /// <summary>
+        /// HSMM Viterbi implementtion based on:
+        /// Guedon, Y. (2003), Estimating hidden semi-Markov chains from discrete sequences, Journal of
+        /// Computational and Graphical Statistics, Volume 12, Number 3, page 604-639 - 2003
+        /// </summary>
         public List<int> BestHsmmPathViterbi(List<List<double>> x)
         {
-
             // Initialization 
-            AdjustTransition();
             var length = x.Count;
             double[][] bestScore = CanvasCommon.Utilities.MatrixCreate(nStates, length + 1);
             int[][] maxU = new int[nStates][];
@@ -461,8 +358,9 @@ namespace CanvasPartition
                 }
                 bestScore[j][length - 1] += Math.Log(_emission.EstimateLikelihood(x[length - 1], j));
             }
-            // Save result
-            List<int> bestStates = new List<int>(length);
+
+            // backtracking 
+            List<int> bestStates = Enumerable.Repeat(0, length).ToList();
 
             int T = length - 1;
             while (maxI[bestState][T] >= 0)
@@ -485,7 +383,6 @@ namespace CanvasPartition
         public List<int> BestPathViterbi(List<List<double>> x)
         {
             // Initialization 
-            AdjustTransition();
             var length = x.Count;
             double[][] bestScore = CanvasCommon.Utilities.MatrixCreate(length + 1, nStates);
             int[][] bestStateSequence = new int[length + 1][];
@@ -532,6 +429,8 @@ namespace CanvasPartition
                     max = tmpMax;
                 }
             }
+
+            // backtracking 
             bestStates.Add(backtrack);
             while (backtrack >= 0)
             {
