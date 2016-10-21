@@ -5,6 +5,7 @@ using Isas.Shared.Utilities;
 using Isas.Shared.Utilities.FileSystem;
 using NDesk.Options;
 using Newtonsoft.Json;
+using System.Linq;
 
 namespace CanvasPedigreeCaller
 {
@@ -26,12 +27,13 @@ namespace CanvasPedigreeCaller
         static int Main(string[] args)
         {
             CanvasCommon.Utilities.LogCommandLine(args);
-            string inFile = null;
-            string outFile = null;
-            string variantFrequencyFile = null;
-            string ploidyBedPath = null;
+            string outDir = null;
+            List<string> segmentFiles = new List<string>();
+            List<string> variantFrequencyFiles = new List<string>();
+            List<string> ploidyBedPaths = new List<string>();
+            List<string> pedigree = new List<string>();
             string referenceFolder = null;
-            string sampleName = "SAMPLE";
+            List<string> sampleNames = new List<string>();
             bool isDbsnpVcf = false;
             bool needHelp = false;
             string truthDataPath = null;
@@ -40,13 +42,14 @@ namespace CanvasPedigreeCaller
 
             var p = new OptionSet()
             {
-                { "i|infile=",        "file containing bins, their counts, and assigned segments (obtained from CanvasPartition.exe)",  v => inFile = v },
-                { "v|varfile=",       "file containing variant frequencies (obtained from CanvasSNV.exe)",                              v => variantFrequencyFile = v },
-                { "o|outfile=",       "file name prefix to ouput copy number calls to outfile.vcf",                                     v => outFile = v },
+                { "i|infile=",        "file containing bins, their counts, and assigned segments (obtained from CanvasPartition.exe)",  v => segmentFiles.Add(v) },
+                { "v|varfile=",       "file containing variant frequencies (obtained from CanvasSNV.exe)",                              v => variantFrequencyFiles.Add(v) },
+                { "o|outfile=",       "name of output directory",                                                                       v => outDir = v },
                 { "r|reference=",     "reference genome folder that contains GenomeSize.xml",                                           v => referenceFolder = v },
-                { "n|sampleName=",    "sample name for output VCF header (optional)",                                                   v => sampleName = v },
-                { "p|ploidyBed=",     "bed file specifying reference ploidy (e.g. for sex chromosomes) (optional)",                     v => ploidyBedPath = v },
-                { "d|dbsnpvcf", "flag indicating a dbSNP VCF file is used to generate the variant frequency file",                      v => isDbsnpVcf = v != null },
+                { "n|sampleName=",    "sample name for output VCF header (optional)",                                                   v => sampleNames.Add(v)},
+                { "f|pedigree=",      "relationship withoin pedigree (parents/proband)",                                                v => sampleNames.Add(v)},
+                { "p|ploidyBed=",     "bed file specifying reference ploidy (e.g. for sex chromosomes) (optional)",                     v => ploidyBedPaths.Add(v) },
+                { "d|dbsnpvcf",       "flag indicating a dbSNP VCF file is used to generate the variant frequency file",                v => isDbsnpVcf = v != null },
                 { "h|help",           "show this message and exit",                                                                     v => needHelp = v != null },
                 { "s|qscoreconfig=", $"parameter configuration path (default {qualityScoreConfigPath})", v => qualityScoreConfigPath = v },
                 { "t|truth=", "path to vcf/bed with CNV truth data (optional)", v => truthDataPath = v },
@@ -65,23 +68,30 @@ namespace CanvasPedigreeCaller
                 return 0;
             }
 
-            if (inFile == null || outFile == null || string.IsNullOrEmpty(variantFrequencyFile) || string.IsNullOrEmpty(referenceFolder))
+            if (!segmentFiles.Any() || outDir == null || !variantFrequencyFiles.Any() || string.IsNullOrEmpty(referenceFolder))
             {
                 ShowHelp(p);
                 return 0;
             }
 
-            if (!File.Exists(inFile))
+            foreach (string segmentFile in segmentFiles)
             {
-                Console.WriteLine("CanvasDiploidCaller.exe: File {0} does not exist! Exiting.", inFile);
-                return 1;
+                if (!File.Exists(segmentFile))
+                {
+                    Console.WriteLine($"CanvasDiploidCaller.exe: File {segmentFile} does not exist! Exiting.");
+                    return 1;
+                }
             }
 
-            if (!File.Exists(variantFrequencyFile))
+            foreach (string variantFrequencyFile in variantFrequencyFiles)
             {
-                Console.WriteLine("Canvas error: File {0} does not exist! Exiting.", variantFrequencyFile);
-                return 1;
+                if (!File.Exists(variantFrequencyFile))
+                {
+                    Console.WriteLine($"Canvas error: File {variantFrequencyFile} does not exist! Exiting.");
+                    return 1;
+                }
             }
+
 
             if (!File.Exists(Path.Combine(referenceFolder, "GenomeSize.xml")))
             {
@@ -93,10 +103,10 @@ namespace CanvasPedigreeCaller
             CanvasCommon.QualityScoreParameters qscoreParametersJSON = Deserialize<CanvasCommon.QualityScoreParameters>(qscoreConfigFile);
 
             // Set parameters:
-            CanvasDiploidCaller caller = new CanvasDiploidCaller();
+            CanvasPedigreeCaller caller = new CanvasPedigreeCaller();
             caller.IsDbsnpVcf = isDbsnpVcf;
             caller.germlineScoreParameters = qscoreParametersJSON;
-            return caller.CallVariants(variantFrequencyFile, inFile, outFile, ploidyBedPath, referenceFolder, sampleName, truthDataPath);
+            return caller.CallVariants(variantFrequencyFiles, segmentFiles, outDir, ploidyBedPaths, referenceFolder, sampleNames, truthDataPath);
         }
         private static T Deserialize<T>(IFileLocation path)
         {

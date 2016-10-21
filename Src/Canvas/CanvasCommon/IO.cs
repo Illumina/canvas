@@ -184,7 +184,7 @@ namespace CanvasCommon
                         chrSegments[mid].VariantFrequencies.Add(VF);
                         chrSegments[mid].VariantTotalCoverage.Add(countRef + countAlt);
                         count++;
-                        totalCoverage += (countRef + countAlt); // use only coverage information in segments
+                        totalCoverage += countRef + countAlt; // use only coverage information in segments
                         totalRecords++;
                         break;
                     }
