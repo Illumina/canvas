@@ -112,6 +112,11 @@ namespace CanvasCommon
             }
         }
 
+        public static double[][] MatrixCreate(int numCnStates1, int numCnStates2)
+        {
+            throw new NotImplementedException();
+        }
+
         static public CanvasSomaticClusteringMode ParseCanvasSomaticClusteringMode(string mode)
         {
             switch (mode.ToLowerInvariant().Trim())
