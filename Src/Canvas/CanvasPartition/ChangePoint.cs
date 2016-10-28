@@ -12,12 +12,6 @@ namespace CanvasPartition
         SDUndo
     }
 
-    internal enum SegmentationMethod
-    {
-        Wavelets,
-        CBS,
-        HMM
-    }
 
     /// <summary>
     /// Contains static funtions found in R/changepoints.R and src/changepoints.f

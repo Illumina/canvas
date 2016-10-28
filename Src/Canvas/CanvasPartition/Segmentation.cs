@@ -14,327 +14,70 @@ namespace CanvasPartition
     class Segmentation
     {
         #region Members
-        public static readonly double DefaultAlpha = 0.01; // default alpha for CBS
-        public static readonly double DefaultMadFactor = 2.0; // default MAD factor for Wavelets
+
         private string InputBinPath;
-        private string DataType;
         private const int idxChr = 0, idxStart = 1, idxEnd = 2;
         private int idxScore = 3;
         public List<int> idxScores = new List<int>(); // index of sample coverage
-        private Dictionary<string, uint[]> StartByChr = new Dictionary<string, uint[]>();
-        private Dictionary<string, uint[]> EndByChr = new Dictionary<string, uint[]>();
-        private Dictionary<string, double[]> ScoreByChr = new Dictionary<string, double[]>();
-        private Dictionary<string, List<List<double>>> ScoresByChr = new Dictionary<string, List<List<double>>>();
-        private GenomeSegmentationResults SegmentationResults;
-        public double Alpha = DefaultAlpha;
-        public double MadFactor = DefaultMadFactor;
-        public SegmentSplitUndo UndoMethod = SegmentSplitUndo.None;
-        private string ForbiddenIntervalBedPath = null;
-        private int MaxInterBinDistInSegment = 1000000;
+        public Dictionary<string, uint[]> StartByChr = new Dictionary<string, uint[]>();
+        public Dictionary<string, uint[]> EndByChr = new Dictionary<string, uint[]>();
+        public Dictionary<string, double[]> ScoreByChr = new Dictionary<string, double[]>();
+        public Dictionary<string, List<List<double>>> ScoresByChr = new Dictionary<string, List<List<double>>>();
+        public string ForbiddenIntervalBedPath = null;
+        public int MaxInterBinDistInSegment;
         #endregion
 
-        // dataType: "logratio" (aCGH, ROMA, etc.) or "binary" (LOH)
-        public Segmentation(string inputBinPath, string forbiddenBedPath, string dataType = "logratio",
-            int maxInterBinDistInSegment = 1000000)
+        public class Segment
+        {
+            public uint start; // Genomic start location
+            public uint end; // Genomic end location (inclusive)
+        }
+
+        public class GenomeSegmentationResults
+        {
+            public IDictionary<string, Segmentation.Segment[]> SegmentByChr;
+
+            public GenomeSegmentationResults(IDictionary<string, Segment[]> segmentByChr)
+            {
+                this.SegmentByChr = segmentByChr;
+            }
+        }
+
+        public enum SegmentationMethod
+        {
+            Wavelets,
+            CBS,
+            HMM
+        }
+
+        public Segmentation(string inputBinPath, string forbiddenBedPath, int maxInterBinDistInSegment, 
+            string dataType = "logratio")
         {
             this.InputBinPath = inputBinPath;
-            this.DataType = dataType;
-            this.SegmentationResults = null;
             this.ForbiddenIntervalBedPath = forbiddenBedPath;
             this.MaxInterBinDistInSegment = maxInterBinDistInSegment;
-            // Read the input file:
             this.ReadBEDInput();
         }
 
         public Segmentation(string inputBinPath, string forbiddenBedPath, int nSamples)
         {
+            
             this.InputBinPath = inputBinPath;
-            this.SegmentationResults = null;
             this.ForbiddenIntervalBedPath = forbiddenBedPath;
             // Read the input file:
             idxScores = Enumerable.Range(3, nSamples).ToList();
             this.ReadMultiBEDInput();
         }
 
-        public void SegmentGenome(List<string> outPaths, SegmentationMethod method, bool isGermline, string commonCNVsbedPath)
-        {
-            switch (method)
-            {
-                default:// use Wavelets if CBS is not selected       
-                    Console.WriteLine("{0} Running Wavelet Partitioning", DateTime.Now);
-                    this.Wavelets(isGermline, commonCNVsbedPath, madFactor: MadFactor, verbose: 2);
-                    this.WriteCanvasPartitionResults(outPaths[0]);
-                    break;
-                case SegmentationMethod.CBS:
-                    Console.WriteLine("{0} Running CBS Partitioning", DateTime.Now);
-                    this.CBS(verbose: 2);
-                    this.WriteCanvasPartitionResults(outPaths[0]);
-                    break;
-                case SegmentationMethod.HMM:
-                    Console.WriteLine("{0} Running HMM Partitioning", DateTime.Now);
-                    this.HiddenMarkovModels(commonCNVsbedPath);
-                    this.WriteCanvasPartitionMultisampleResults(outPaths);
-                    break;
-            }         
-            Console.WriteLine("{0} CanvasPartition results written out", DateTime.Now);
-        }
 
-        private GenomeSegmentationResults GetDummySegmentationResults()
+        private Segmentation.GenomeSegmentationResults GetDummySegmentationResults()
         {
-            GenomeSegmentationResults results = new GenomeSegmentationResults(new Dictionary<string, Segment[]>());
+            Segmentation.GenomeSegmentationResults results = new Segmentation.GenomeSegmentationResults(new Dictionary<string, Segmentation.Segment[]>());
             return results;
         }
 
-        /// <summary>
-        /// HMM wrapper
-        /// </summary>
-        void HiddenMarkovModels(string commonCNVs, int minSize = 10, int nHiddenStates = 6)
-        {
-            // load common CNV segments
-            Dictionary<string, List<GenomicBin>> commonCNVintervals = null;
-            if (commonCNVs != null)
-            {
-                commonCNVintervals = Utilities.LoadBedFile(commonCNVs);
-                Utilities.SortAndOverlapCheck(commonCNVintervals, commonCNVs);
-            }
-            Dictionary<string, Segment[]> segmentByChr = new Dictionary<string, Segment[]>();
 
-            var cts = new CancellationTokenSource();
-            Parallel.ForEach(
-                ScoresByChr.Keys,
-                new ParallelOptions
-                {
-                    CancellationToken = cts.Token,
-                    MaxDegreeOfParallelism = Environment.ProcessorCount,
-                    TaskScheduler = TaskScheduler.Default
-                },
-                chr =>
-                {
-                    List<int> breakpoints = new List<int>();
-                    int length = this.ScoresByChr[chr].Count;
-                    if (length > minSize)
-                    {
-                        List<MultivariatePoissonDistribution> gaussianDistribution = InitializePoissonEmission(this.ScoresByChr, chr, nHiddenStates);
-                        HiddenMarkovModel hmm = new HiddenMarkovModel(this.ScoresByChr[chr], gaussianDistribution);
-                        Console.WriteLine($"{DateTime.Now} Launching HMM task for chromosome {chr}");
-                        hmm.FindMaximalLikelyhood(this.ScoresByChr[chr], chr);
-                        List<int> hiddenStates = hmm.BestPathViterbi(this.ScoresByChr[chr]);
-                        Console.WriteLine($"{DateTime.Now} Completed HMM task for chromosome {chr}");
-
-                        breakpoints.Add(0);
-                        for (int i = 1; i < length; i++)
-                        {
-                            if (hiddenStates[i] - hiddenStates[i - 1] != 0)
-                            {
-                                breakpoints.Add(i);
-                            }
-                        }
-                        if (commonCNVs != null)
-                        {
-                            if (commonCNVintervals.ContainsKey(chr))
-                            {
-                                List<GenomicBin> remappedCommonCNVintervals = RemapCommonRegions(commonCNVintervals[chr], this.StartByChr[chr], this.EndByChr[chr]);
-                                List<int> oldbreakpoints = breakpoints;
-                                breakpoints = OverlapCommonRegions(oldbreakpoints, remappedCommonCNVintervals);
-                            }
-                        }
-
-                        var segments = DeriveSegments(breakpoints, length, chr);
-
-                        lock (segmentByChr)
-                        {
-                            segmentByChr[chr] = segments;
-                        }
-                    }
-                });
-            
-            Console.WriteLine("{0} Completed HMM tasks", DateTime.Now);
-            this.SegmentationResults = new GenomeSegmentationResults(segmentByChr);
-            Console.WriteLine("{0} Segmentation results complete", DateTime.Now);
-        }
-
-        public List<MultivariateGaussianDistribution> InitializeEmission(Dictionary<string, List<List<double>>> data ,string chromosome, int nHiddenStates)
-        {
-            int nDimensions = data[chromosome].First().Count;
-            List<double> haploidMean = new List<double>(nDimensions);
-            List<double> standardDeviation = new List<double>(nDimensions);
-            List<MultivariateGaussianDistribution> tmpDistributions = new List<MultivariateGaussianDistribution>();
-
-            for (int dimension = 0; dimension < nDimensions; dimension++)
-            {
-                double meanHolder = 0;
-                foreach (List<double> datapoint in data[chromosome])
-                    meanHolder += datapoint[dimension];
-                haploidMean.Add(meanHolder / data[chromosome].Count /2.0);
-                standardDeviation.Add(CanvasCommon.Utilities.StandardDeviation(data[chromosome].Select(x => x[dimension]).ToList()));
-            }
-
-            for (int CN = 0; CN < nHiddenStates; CN++)
-            {
-                Matrix<double> tmpSds = Matrix<double>.Build.Dense(nDimensions, nDimensions, 0);
-
-                for (int dimension = 0; dimension < nDimensions; dimension++)
-                {
-                    tmpSds[dimension, dimension] = standardDeviation[dimension];
-                }
-                Vector<double> tmpMean = Vector<double>.Build.Dense(haploidMean.Select(x => Math.Max(CN, 0.05)*x).ToArray());
-                // if few hidden states, increase the last CN state by diploid rather than haploid increment
-                if (nHiddenStates < 5 && CN-1 == nHiddenStates)
-                    tmpMean = Vector<double>.Build.Dense(haploidMean.Select(x => Math.Max(CN, 0.5) * x + x).ToArray());
-                MultivariateGaussianDistribution tmpDistribution = new MultivariateGaussianDistribution(tmpMean, tmpSds);
-                tmpDistributions.Add(tmpDistribution);
-            }
-
-            // remove outliers 
-            double maxThreshold = tmpDistributions.Last().Mean().Max() * 1.2;
-            RemoveOutliers(data, maxThreshold, nDimensions);
-
-            return tmpDistributions;
-        }
-
-        public List<MultivariatePoissonDistribution> InitializePoissonEmission(Dictionary<string, List<List<double>>> data, string chromosome, int nHiddenStates)
-        {
-            int nDimensions = data[chromosome].First().Count;
-            List<double> haploidMean = new List<double>(nDimensions);
-            List<MultivariatePoissonDistribution> tmpDistributions = new List<MultivariatePoissonDistribution>();
-
-            for (int dimension = 0; dimension < nDimensions; dimension++)
-            {
-                double meanHolder = 0;
-                foreach (List<double> datapoint in data[chromosome])
-                    meanHolder += datapoint[dimension];
-                haploidMean.Add(meanHolder / data[chromosome].Count / 2.0);
-            }
-
-            for (int CN = 0; CN < nHiddenStates; CN++)
-            {
-                double scaler = 0.8;
-                Vector<double> tmpMean = Vector<double>.Build.Dense(haploidMean.Select(x => Math.Max(CN, 0.1) * scaler * x).ToArray());
-                // if few hidden states, increase the last CN state by diploid rather than haploid increment
-                if (nHiddenStates < 5 && CN - 1 == nHiddenStates)
-                    tmpMean = Vector<double>.Build.Dense(haploidMean.Select(x => Math.Max(CN, 0.5) * x + x).ToArray());
-                MultivariatePoissonDistribution tmpDistribution = new MultivariatePoissonDistribution(tmpMean.ToList());
-                tmpDistributions.Add(tmpDistribution);
-            }
-
-            // remove outliers 
-            double maxThreshold = tmpDistributions.Last().Mean().Max() * 1.2;
-            RemoveOutliers(data, maxThreshold, nDimensions);
-
-            return tmpDistributions;
-        }
-
-        private static void RemoveOutliers(Dictionary<string, List<List<double>>> data, double maxThreshold, int nDimensions)
-        {           
-            foreach (string chr in data.Keys)
-                for (int length = 0; length < data[chr].Count; length++)
-                    for (int dimension = 0; dimension < nDimensions; dimension++)
-                        data[chr][length][dimension] = data[chr][length][dimension] > maxThreshold
-                            ? maxThreshold
-                            : data[chr][length][dimension];
-        }
-
-        /// <summary>
-        /// Wavelets: unbalanced HAAR wavelets segmentation 
-        /// </summary>
-        /// <param name="threshold">wavelets coefficient threshold</param>
-        void Wavelets(bool isGermline, string commonCNVs, double thresholdLower = 5, double thresholdUpper = 80, double madFactor = 2, int minSize = 10, int verbose = 1, bool isSmallPedegree = false)
-        {
-            Dictionary<string, int[]> inaByChr = new Dictionary<string, int[]>();
-            Dictionary<string, double[]> finiteScoresByChr = new Dictionary<string, double[]>();
-
-            List<ThreadStart> tasks = new List<ThreadStart>();
-            foreach (KeyValuePair<string, double[]> scoreByChrKVP in ScoreByChr)
-            {
-                tasks.Add(new ThreadStart(() =>
-                {
-                    string chr = scoreByChrKVP.Key;
-                    int[] ina;
-                    Helper.GetFiniteIndices(scoreByChrKVP.Value, out ina); // not NaN, -Inf, Inf
-
-                    double[] scores;
-                    if (ina.Length == scoreByChrKVP.Value.Length)
-                    {
-                        scores = scoreByChrKVP.Value;
-                    }
-                    else
-                    {
-                        Helper.ExtractValues<double>(scoreByChrKVP.Value, ina, out scores);
-                    }
-
-                    lock (finiteScoresByChr)
-                    {
-                        finiteScoresByChr[chr] = scores;
-                        inaByChr[chr] = ina;
-                    }
-
-                }));
-            }
-            Isas.Shared.Utilities.Utilities.DoWorkParallelThreads(tasks);
-            // Quick sanity-check: If we don't have any segments, then return a dummy result.
-            int n = 0;
-            foreach (var list in finiteScoresByChr.Values)
-            {
-                n += list.Length;
-            }
-            if (n == 0)
-            {
-                this.SegmentationResults = this.GetDummySegmentationResults();
-                return;
-            }
-
-            Dictionary<string, Segment[]> segmentByChr = new Dictionary<string, Segment[]>();
-
-
-            // load common CNV segments
-            Dictionary<string, List<GenomicBin>> commonCNVintervals = null;
-            if (commonCNVs != null)
-            {
-                commonCNVintervals = Utilities.LoadBedFile(commonCNVs);
-                Utilities.SortAndOverlapCheck(commonCNVintervals, commonCNVs);
-            }
-
-            tasks = new List<ThreadStart>();
-            foreach (string chr in ScoreByChr.Keys)
-            {
-                tasks.Add(new ThreadStart(() =>
-                {
-                    int[] ina = inaByChr[chr];
-                    List<int> breakpoints = new List<int>();
-                    int sizeScoreByChr = this.ScoreByChr[chr].Length;
-                    if (sizeScoreByChr > minSize)
-                    {
-                        WaveletSegmentation.HaarWavelets(this.ScoreByChr[chr].ToArray(), thresholdLower, thresholdUpper,
-                            breakpoints, isGermline, madFactor: madFactor);
-                    }
-
-                    if (commonCNVs != null)
-                    {
-                        if (commonCNVintervals.ContainsKey(chr))
-                        {
-                            List <GenomicBin> remappedCommonCNVintervals = RemapCommonRegions(commonCNVintervals[chr], this.StartByChr[chr], this.EndByChr[chr]);
-                            List <int> oldbreakpoints = breakpoints;
-                            breakpoints = OverlapCommonRegions(oldbreakpoints, remappedCommonCNVintervals);
-                        }
-                    }
-
-                    var segments = DeriveSegments(breakpoints, sizeScoreByChr, chr);
-
-                    lock (segmentByChr)
-                    {
-                        segmentByChr[chr] = segments;
-                    }
-                }));
-
-            }
-            Console.WriteLine("{0} Launching wavelet tasks", DateTime.Now);
-            Isas.Shared.Utilities.Utilities.DoWorkParallelThreads(tasks);
-            Console.WriteLine("{0} Completed wavelet tasks", DateTime.Now);
-            this.SegmentationResults = new GenomeSegmentationResults(segmentByChr);
-            Console.WriteLine("{0} Segmentation results complete", DateTime.Now);
-        }
-
-        private Segment[] DeriveSegments(List<int> breakpoints, int sizeScoreByChr, string chr)
+        public Segmentation.Segment[] DeriveSegments(List<int> breakpoints, int sizeScoreByChr, string chr)
         {
             List<int> startBreakpointsPos = new List<int>();
             List<int> endBreakpointPos = new List<int>();
@@ -363,162 +106,18 @@ namespace CanvasPartition
             }
 
 
-            Segment[] segments = new Segment[startBreakpointsPos.Count];
+            Segmentation.Segment[] segments = new Segmentation.Segment[startBreakpointsPos.Count];
             for (int i = 0; i < startBreakpointsPos.Count; i++)
             {
                 int start = startBreakpointsPos[i];
                 int end = endBreakpointPos[i];
-                segments[i] = new Segment();
+                segments[i] = new Segmentation.Segment();
                 segments[i].start = this.StartByChr[chr][start]; // Genomic start
                 segments[i].end = this.EndByChr[chr][end]; // Genomic end
             }
             return segments;
         }
 
-
-        /// <summary>
-        /// CBS: circular binary segmentation porting the R function segment in DNAcopy
-        /// </summary>
-        /// <param name="alpha">Now in this.Alpha</param>
-        /// <param name="nPerm"></param>
-        /// <param name="pMethod">"hybrid" or "perm"</param>
-        /// <param name="minWidth"></param>
-        /// <param name="kMax"></param>
-        /// <param name="nMin"></param>
-        /// <param name="eta"></param>
-        /// <param name="sbdry"></param>
-        /// <param name="trim"></param>
-        /// <param name="undoSplit">"none" or "prune" or "sdundo"; now in this.UndoMethod</param>
-        /// <param name="undoPrune"></param>
-        /// <param name="undoSD"></param>
-        /// <param name="verbose"></param>
-        private void CBS(uint nPerm = 10000, string pMethod = "hybrid", int minWidth = 2, int kMax = 25,
-            uint nMin = 200, double eta = 0.05, uint[] sbdry = null, double trim = 0.025,
-            double undoPrune = 0.05, double undoSD = 3, int verbose = 1)
-        {
-            if (minWidth < 2 || minWidth > 5)
-            {
-                Console.Error.WriteLine("Minimum segment width should be between 2 and 5");
-                Environment.Exit(1);
-            }
-            if (nMin < 4 * kMax)
-            {
-                Console.Error.WriteLine("nMin should be >= 4 * kMax");
-                Environment.Exit(1);
-            }
-            if (sbdry == null)
-            {
-                GetBoundary.ComputeBoundary(nPerm, this.Alpha, eta, out sbdry);
-            }
-
-            Dictionary<string, int[]> inaByChr = new Dictionary<string, int[]>();
-            Dictionary<string, double[]> finiteScoresByChr = new Dictionary<string, double[]>();
-
-            List<ThreadStart> tasks = new List<ThreadStart>();
-            foreach (KeyValuePair<string, double[]> scoreByChrKVP in ScoreByChr)
-            {
-                tasks.Add(new ThreadStart(() =>
-                {
-                    string chr = scoreByChrKVP.Key;
-                    int[] ina;
-                    Helper.GetFiniteIndices(scoreByChrKVP.Value, out ina); // not NaN, -Inf, Inf
-
-                    double[] scores;
-                    if (ina.Length == scoreByChrKVP.Value.Length)
-                    {
-                        scores = scoreByChrKVP.Value;
-                    }
-                    else
-                    {
-                        Helper.ExtractValues<double>(scoreByChrKVP.Value, ina, out scores);
-                    }
-
-                    lock (finiteScoresByChr)
-                    {
-                        finiteScoresByChr[chr] = scores;
-                        inaByChr[chr] = ina;
-                    }
-
-                }));
-            }
-            Isas.Shared.Utilities.Utilities.DoWorkParallelThreads(tasks);
-
-            // Quick sanity-check: If we don't have any segments, then return a dummy result.
-            int n = 0;
-            foreach (var list in finiteScoresByChr.Values)
-            {
-                n += list.Length;
-            }
-            if (n == 0)
-            {
-                this.SegmentationResults = this.GetDummySegmentationResults();
-                return;
-            }
-
-            double trimmedSD = Math.Sqrt(ChangePoint.TrimmedVariance(finiteScoresByChr, trim: trim));
-            Dictionary<string, Segment[]> segmentByChr = new Dictionary<string, Segment[]>();
-
-            // when parallelizing we need an RNG for each chromosome to get deterministic results
-            Random seedGenerator = new MersenneTwister(0);
-            Dictionary<string, Random> perChromosomeRandom = new Dictionary<string, Random>();
-            foreach (string chr in this.ScoreByChr.Keys)
-            {
-                perChromosomeRandom[chr] = new MersenneTwister(seedGenerator.NextFullRangeInt32(), true);
-            }
-
-            tasks = new List<ThreadStart>();
-            foreach (string chr in ScoreByChr.Keys)
-            {
-                tasks.Add(new ThreadStart(() =>
-                {
-                    int[] ina = inaByChr[chr];
-                    int[] lengthSeg;
-                    double[] segmentMeans;
-                    ChangePoint.ChangePoints(this.ScoreByChr[chr], sbdry, out lengthSeg, out segmentMeans, perChromosomeRandom[chr],
-                        dataType: this.DataType, alpha: this.Alpha, nPerm: nPerm,
-                        pMethod: pMethod, minWidth: minWidth, kMax: kMax, nMin: nMin, trimmedSD: trimmedSD,
-                        undoSplits: this.UndoMethod, undoPrune: undoPrune, undoSD: undoSD, verbose: verbose);
-
-                    Segment[] segments = new Segment[lengthSeg.Length];
-                    int cs1 = 0, cs2 = -1; // cumulative sum
-                    for (int i = 0; i < lengthSeg.Length; i++)
-                    {
-                        cs2 += lengthSeg[i];
-                        int start = ina[cs1];
-                        int end = ina[cs2];
-                        segments[i] = new Segment();
-                        segments[i].start = this.StartByChr[chr][start]; // Genomic start
-                        segments[i].end = this.EndByChr[chr][end]; // Genomic end
-                        cs1 += lengthSeg[i];
-                    }
-
-                    lock (segmentByChr)
-                    {
-                        segmentByChr[chr] = segments;
-                    }
-                }));
-            }
-
-            //Parallel.ForEach(tasks, t => { t.Invoke(); });
-            Isas.Shared.Utilities.Utilities.DoWorkParallelThreads(tasks);
-            this.SegmentationResults = new GenomeSegmentationResults(segmentByChr);
-        }
-
-        private sealed class Segment
-        {
-            public uint start; // Genomic start location
-            public uint end; // Genomic end location (inclusive)
-        }
-
-        private sealed class GenomeSegmentationResults
-        {
-            public IDictionary<string, Segment[]> SegmentByChr;
-
-            public GenomeSegmentationResults(IDictionary<string, Segment[]> segmentByChr)
-            {
-                this.SegmentByChr = segmentByChr;
-            }
-        }
 
         /// <summary>
         /// Assume that the rows are sorted by the start position and ascending order
@@ -616,7 +215,7 @@ namespace CanvasPartition
         /// <summary>
         /// Remap index from genomic coordinates into CanvasBin coordinates
         /// </summary>
-        private int? RemapIndex(uint[] startPos, uint[] endPos, int value, int length, ref int index)
+        private static int? RemapIndex(uint[] startPos, uint[] endPos, int value, int length, ref int index)
         {
             const int distanceThreshold = 10000;
             var bestMinDistanceStart = Int32.MaxValue;
@@ -645,7 +244,7 @@ namespace CanvasPartition
         /// <summary>
         /// Remap GenomicBin from genome coordiantes into CanvasBin coordiantes
         /// </summary>
-        private List<GenomicBin> RemapCommonRegions(List<GenomicBin> commonRegions, uint[] startByChr, uint[] endByChr)
+        public static List<GenomicBin> RemapCommonRegions(List<GenomicBin> commonRegions, uint[] startByChr, uint[] endByChr)
         {
             var length = startByChr.Length;
             var index = 0;
@@ -708,16 +307,16 @@ namespace CanvasPartition
         }
 
 
-        private void WriteCanvasPartitionResults(string outPath)
+        public void WriteCanvasPartitionResults(string outPath, GenomeSegmentationResults regmentationResults)
         {
             Dictionary<string, bool> starts = new Dictionary<string, bool>();
             Dictionary<string, bool> stops = new Dictionary<string, bool>();
 
-            foreach (string chr in SegmentationResults.SegmentByChr.Keys)
+            foreach (string chr in regmentationResults.SegmentByChr.Keys)
             {
-                for (int segmentIndex = 0; segmentIndex < SegmentationResults.SegmentByChr[chr].Length; segmentIndex++)
+                for (int segmentIndex = 0; segmentIndex < regmentationResults.SegmentByChr[chr].Length; segmentIndex++)
                 {
-                    Segment segment = SegmentationResults.SegmentByChr[chr][segmentIndex];
+                    Segmentation.Segment segment = regmentationResults.SegmentByChr[chr][segmentIndex];
                     starts[chr + ":" + segment.start] = true;
                     stops[chr + ":" + segment.end] = true;
                 }
@@ -754,7 +353,7 @@ namespace CanvasPartition
             }
         }
 
-        private void WriteCanvasPartitionMultisampleResults(List<string> outPaths)
+        public void WriteCanvasPartitionMultisampleResults(List<string> outPaths, GenomeSegmentationResults regmentationResults)
         {
             for (int fileIndex = 0; fileIndex < outPaths.Count; fileIndex++)
             {
@@ -769,7 +368,7 @@ namespace CanvasPartition
                 }
                 foreach (string chr in scoreByChr.Keys)
                     this.ScoreByChr[chr] = scoreByChr[chr].ToArray();
-                this.WriteCanvasPartitionResults(outPaths[fileIndex]);
+                this.WriteCanvasPartitionResults(outPaths[fileIndex], regmentationResults);
             }
         }
 

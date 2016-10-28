@@ -118,9 +118,11 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="CanvasPartition.cs" />
+    <Compile Include="CBSRunner.cs" />
     <Compile Include="CBSTStatistic.cs" />
     <Compile Include="ChangePoint.cs" />
     <Compile Include="Distributions.cs" />
+    <Compile Include="HiddenMarkovModelsRunner.cs" />
     <Compile Include="HMM.cs" />
     <Compile Include="Properties\Settings.Designer.cs">
       <AutoGen>True</AutoGen>
@@ -135,6 +137,7 @@
     <Compile Include="R.cs" />
     <Compile Include="TailProbability.cs" />
     <Compile Include="WaveletSegmentation.cs" />
+    <Compile Include="WaveletsRunner.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
