@@ -183,6 +183,7 @@ namespace CanvasCommon
                         }
                         chrSegments[mid].VariantFrequencies.Add(VF);
                         chrSegments[mid].VariantTotalCoverage.Add(countRef + countAlt);
+                        chrSegments[mid].VariantAlleleCounts.Add(new Tuple<int, int>(countRef, countAlt));
                         count++;
                         totalCoverage += countRef + countAlt; // use only coverage information in segments
                         totalRecords++;

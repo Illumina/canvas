@@ -31,7 +31,7 @@ namespace CanvasPedigreeCaller
             List<string> segmentFiles = new List<string>();
             List<string> variantFrequencyFiles = new List<string>();
             List<string> ploidyBedPaths = new List<string>();
-            List<string> pedigree = new List<string>();
+            string pedigreeFile = null;
             string referenceFolder = null;
             List<string> sampleNames = new List<string>();
             bool isDbsnpVcf = false;
@@ -47,7 +47,7 @@ namespace CanvasPedigreeCaller
                 { "o|outfile=",       "name of output directory",                                                                       v => outDir = v },
                 { "r|reference=",     "reference genome folder that contains GenomeSize.xml",                                           v => referenceFolder = v },
                 { "n|sampleName=",    "sample name for output VCF header (optional)",                                                   v => sampleNames.Add(v)},
-                { "f|pedigree=",      "relationship withoin pedigree (parents/proband)",                                                v => sampleNames.Add(v)},
+                { "f|pedigree=",      "relationship withoin pedigree (parents/proband)",                                                v => pedigreeFile = v },
                 { "p|ploidyBed=",     "bed file specifying reference ploidy (e.g. for sex chromosomes) (optional)",                     v => ploidyBedPaths.Add(v) },
                 { "d|dbsnpvcf",       "flag indicating a dbSNP VCF file is used to generate the variant frequency file",                v => isDbsnpVcf = v != null },
                 { "h|help",           "show this message and exit",                                                                     v => needHelp = v != null },

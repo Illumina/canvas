@@ -17,6 +17,7 @@ namespace CanvasCommon
         public int SecondBestCopyNumber { get; set; }
         public List<float> VariantFrequencies = new List<float>();
         public List<int> VariantTotalCoverage = new List<int>();
+        public List<Tuple<int, int>> VariantAlleleCounts = new List<Tuple<int, int>>();
         public int? MajorChromosomeCount;
         public double QScore;
         public double ModelDistance;

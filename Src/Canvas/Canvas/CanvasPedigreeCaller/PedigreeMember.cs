@@ -19,7 +19,13 @@ namespace CanvasPedigreeCaller
 
         public double GetCoverage(int segmentIndex)
         {
-            return Segments[segmentIndex].BinCount;
+            return Segments[segmentIndex].Counts.Average();
+        }
+        public Tuple<int,int> GetAlleleCounts(int segmentIndex)
+        {
+            double allele1 = Segments[segmentIndex].VariantAlleleCounts.Select(x=>x.Item1).Average();
+            double allele2 = Segments[segmentIndex].VariantAlleleCounts.Select(x => x.Item2).Average();
+            return new Tuple<int, int>(Convert.ToInt32(allele1), Convert.ToInt32(allele2))
         }
     }
 
