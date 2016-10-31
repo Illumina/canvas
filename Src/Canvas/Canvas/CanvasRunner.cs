@@ -691,6 +691,9 @@ namespace Illumina.SecondaryAnalysis
 
             string canvasReferencePath = callset.KmerFasta.FullName;
             string canvasBedPath = callset.FilterBed.FullName;
+            string commonCnvsBed = null;
+            if (callset.CommonCnvsBed != null)
+                commonCnvsBed = callset.CommonCnvsBed.FullName;
             if (!File.Exists(canvasReferencePath))
             {
                 throw new ApplicationException(string.Format("Error: Missing reference fasta file required for CNV calling at '{0}'", canvasReferencePath));
@@ -711,7 +714,7 @@ namespace Illumina.SecondaryAnalysis
             var canvasCleanOutput = _checkpointRunner.RunCheckpoint("CanvasClean", () => InvokeCanvasClean(callset, binnedPaths));
 
             // CanvasPartition:
-            var partitionedPaths = _checkpointRunner.RunCheckpoint("CanvasPartition", () => InvokeCanvasPartition(callset, canvasCleanOutput, canvasBedPath));
+            var partitionedPaths = _checkpointRunner.RunCheckpoint("CanvasPartition", () => InvokeCanvasPartitionMultisample(callset, canvasCleanOutput, canvasBedPath, commonCnvsBed));
 
             // CanvasSNV
             var canvasSnvTask = _checkpointRunner.RunCheckpointAsync("CanvasSNV", () => InvokeCanvasSnv(callset));
@@ -726,6 +729,22 @@ namespace Illumina.SecondaryAnalysis
             Dictionary<string, List<GenomicBin>> multisamplePartitions = CanvasCommon.Utilities.LoadMultiSamplePartiotionedBedFile(partitionedPaths);
             List <IFileLocation> outPaths = new List<IFileLocation>();
             int count = 0;
+            string mergedOutPath = Path.Combine(Directory.GetParent(tempFolders[0]).ToString(), "merged.partitioned");
+
+            using (StreamWriter writer = new StreamWriter(mergedOutPath))
+            {
+                foreach (string chr in multisamplePartitions.Keys)
+                {
+                    foreach (GenomicBin genomicBin in multisamplePartitions[chr])
+                    {
+                        writer.Write(string.Format($"{genomicBin.Chromosome}\t{genomicBin.Start}\t{genomicBin.Stop}"));
+                        for (int i = 0; i < sampleNames.Count; i++)
+                            writer.Write(string.Format($"\t{genomicBin.CountBins.Count[i]}\t{genomicBin.CountBins.SegmentId[i]}"));
+                        writer.Write("\n");
+                    }
+                }
+            }
+
             foreach (string sampleName in sampleNames)
             {
                 string outPath = Path.Combine(tempFolders[count], string.Format("{0}_merged.partitioned", sampleName));
@@ -747,17 +766,63 @@ namespace Illumina.SecondaryAnalysis
             return outPaths;
         }
 
-
-        private List<IFileLocation> InvokeCanvasPartition(SmallPedigreeCallset callsets, List<IFileLocation> cleanedPaths, string canvasBedPath)
+        private IFileLocation WriteMergedCanvasClean(List<IFileLocation> partitionedPaths, string tempFolder)
         {
+            Dictionary<string, List<GenomicBin>> multisampleCanvasClean = CanvasCommon.Utilities.LoadMultiSampleCleanedBedFile(partitionedPaths);
+            string mergedOutPath = Path.Combine(tempFolder, "merged.partitioned");
+            using (GzipWriter writer = new GzipWriter(mergedOutPath))
+            {
+                foreach (string chr in multisampleCanvasClean.Keys)
+                {
+                    foreach (GenomicBin genomicBin in multisampleCanvasClean[chr])
+                    {
+                        string outLine = string.Format($"{genomicBin.Chromosome}\t{genomicBin.Start}\t{genomicBin.Stop}");
+
+                        for (int i = 0; i < partitionedPaths.Count; i++)
+                            outLine += string.Format($"\t{genomicBin.CountBins.Count[i]}");
+                        writer.WriteLine(outLine);
+                    }
+                }
+            }
+            return new FileLocation(mergedOutPath);
+        }
+
+        private List<IFileLocation> InvokeCanvasPartitionMultisample(SmallPedigreeCallset callsets, List<IFileLocation> cleanedPaths, string canvasBedPath, string commonCnvsBed)
+        {
+            IFileLocation mergedCleanedFile = WriteMergedCanvasClean(cleanedPaths, callsets.TempFolder);
+            StringBuilder commandLine = new StringBuilder();
+            string executablePath = Path.Combine(_canvasFolder, "CanvasPartition.exe");
+            if (CrossPlatform.IsThisMono())
+            {
+                commandLine.AppendFormat("{0} ", executablePath);
+                executablePath = Utilities.GetMonoPath();
+            }
+            commandLine.AppendFormat("-i \"{0}\" ", mergedCleanedFile);
+            commandLine.AppendFormat("-b \"{0}\" ", canvasBedPath);
+            if (!commonCnvsBed.IsNullOrEmpty())
+                commandLine.AppendFormat("-c \"{0}\" ", commonCnvsBed);
+
             List<IFileLocation> partitionedPaths = new List<IFileLocation>();
-            if (callsets.Callset.Count != cleanedPaths.Count)
-                throw new Exception($"Number of output CanvasClean files {cleanedPaths.Count} is not equal to the number of Canvas callsets {callsets.Callset.Count}");
-            for (int i = 0; i < callsets.Callset.Count; i++)
-                partitionedPaths.Add(InvokeCanvasPartition(callsets.Callset[i], cleanedPaths[i], canvasBedPath));
-            List<string> sampleNames = callsets.Callset.Select(x => x.SampleName).ToList();
-            List<string> tmpFolders = callsets.Callset.Select(x => x.TempFolder).ToList();
-            return WriteMergedCanvasPartition(partitionedPaths, tmpFolders, sampleNames);
+            foreach (CanvasCallset callset in callsets.Callset)
+            {
+                IFileLocation partitionedPath = new FileLocation(Path.Combine(callset.TempFolder, $"{callset.Id}.partitioned"));
+                partitionedPaths.Add(partitionedPath);
+                commandLine.AppendFormat("-o \"{0}\" ", partitionedPath);
+            }
+
+            UnitOfWork partitionJob = new UnitOfWork()
+            {
+                ExecutablePath = executablePath,
+                LoggingFolder = _workManager.LoggingFolder.FullName,
+                LoggingStub = Path.GetFileName(partitionedPaths.First().ToString()),
+                CommandLine = commandLine.ToString()
+            };
+            if (_customParameters.ContainsKey("CanvasPartition"))
+            {
+                partitionJob.CommandLine = Utilities.MergeCommandLineOptions(partitionJob.CommandLine, _customParameters["CanvasPartition"], true);
+            }
+            _workManager.DoWorkSingleThread(partitionJob);
+            return partitionedPaths;
         }
 
         private IFileLocation InvokeCanvasPartition(CanvasCallset callset, IFileLocation cleanedPath, string canvasBedPath)

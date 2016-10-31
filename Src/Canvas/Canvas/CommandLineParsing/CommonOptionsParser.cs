@@ -5,9 +5,9 @@ namespace Canvas.CommandLineParsing
 {
     public class CommonOptionsParser : Option<CommonOptions>
     {
-        private static readonly FileOption BAlleleSites = FileOption.CreateRequired("vcf containing SNV b-allele sites (only sites with PASS in the filter column will be used)", "b-allele-vcf");
-        private static readonly FlagOption IsDbSnpVcf = new FlagOption("exclude SNV b-allele sites from the vcf that do not have sufficient read evidence for a heterozygous genotype in the sample. " +
-                                                                       "This option should be used when the b-allele vcf is not matched to the sample (e.g. from dbSNP)", "exclude-non-het-b-allele-sites");
+        private static readonly FileOption SampleBAlleleSites = FileOption.CreateRequired("vcf containing SNV b-allele sites in the sample (only sites with PASS in the filter column will be used)", "sample-b-allele-vcf");
+        private static readonly FileOption PopulationBAlleleSites = FileOption.CreateRequired("vcf containing SNV b-allele sites in the population (only sites with PASS in the filter column will be used)", "population-b-allele-vcf");
+        private static readonly ExclusiveFileOption BAlleleSites = ExclusiveFileOption.CreateRequired(SampleBAlleleSites, PopulationBAlleleSites);
         private static readonly FileOption PloidyBed = FileOption.Create(".bed file containing regions of known ploidy in the sample. Copy number calls matching the known ploidy in these regions will be considered non-variant", "ploidy-bed");
         private static readonly FileOption KmerFasta = FileOption.CreateRequired("Canvas-ready reference fasta file", "r", "reference");
         private static readonly DirectoryOption Output = DirectoryOption.CreateRequired("output directory", "o", "output");
@@ -22,14 +22,14 @@ namespace Canvas.CommandLineParsing
         {
             return new OptionCollection<CommonOptions>
             {
-                BAlleleSites, IsDbSnpVcf, PloidyBed, Output, KmerFasta, WholeGenomeFasta, FilterFile, SampleName, CustomParameters, StartCheckpoint, StopCheckpoint
+                BAlleleSites, PloidyBed, Output, KmerFasta, WholeGenomeFasta, FilterFile, SampleName, CustomParameters, StartCheckpoint, StopCheckpoint
             };
         }
 
         public override ParsingResult<CommonOptions> Parse(SuccessfulResultCollection parseInput)
         {
             var bAlleleSites = parseInput.Get(BAlleleSites);
-            bool isDbSnpVcf = parseInput.Get(IsDbSnpVcf);
+            bool isDbSnpVcf = false; //parseInput.Get(IsDbSnpVcf);
             var ploidyBed = parseInput.Get(PloidyBed);
             var output = parseInput.Get(Output);
             var wholeGenomeFasta = parseInput.Get(WholeGenomeFasta);
@@ -41,7 +41,7 @@ namespace Canvas.CommandLineParsing
             string stopCheckpoint = parseInput.Get(StopCheckpoint);
             return ParsingResult<CommonOptions>.SuccessfulResult(
                 new CommonOptions(
-                    bAlleleSites,
+                    bAlleleSites.Result,
                     isDbSnpVcf,
                     ploidyBed,
                     output,

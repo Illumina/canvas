@@ -2,6 +2,7 @@
 using System.Linq;
 using CanvasCommon.CommandLineParsing.CoreOptionTypes;
 using CanvasCommon.CommandLineParsing.OptionProcessing;
+using Isas.Shared.DataTypes;
 using Isas.Shared.Utilities.FileSystem;
 
 namespace Canvas.CommandLineParsing
@@ -37,13 +38,14 @@ namespace Canvas.CommandLineParsing
         private static readonly MultiValueOption<IFileLocation> PloidyBed = new MultiValueOption<IFileLocation>(FileOption.CreateRequired(".bed file containing regions of known ploidy in the sample. Copy number calls matching the known ploidy in these regions will be considered non-variant", "ploidy-bed"));
         private static readonly MultiValueOption<string> SampleNames = new MultiValueOption<string>(StringOption.CreateRequired("Sample names", "names"));
         private static readonly MultiValueOption<IFileLocation> BAlleleSites = new MultiValueOption<IFileLocation>(FileOption.CreateRequired("vcf containing SNV b-allele sites (only sites with PASS in the filter column will be used)", "b-allele-vcf"));
+        private static readonly FileOption CommonCnvsBed = FileOption.Create(".bed file containing regions of known common CNVs", "common-cnvs-bed");
 
 
         public override OptionCollection<SmallPedigreeOptions> GetOptions()
         {
             return new OptionCollection<SmallPedigreeOptions>
             {
-                Bams, PloidyBed, SampleNames, BAlleleSites
+                Bams, PloidyBed, SampleNames, BAlleleSites, CommonCnvsBed
             };
         }
 
@@ -51,25 +53,44 @@ namespace Canvas.CommandLineParsing
         {
             var bams = parseInput.Get(Bams);
             var sampleNames = parseInput.Get(SampleNames);
-            var ploidyBed = parseInput.Get(PloidyBed);
+            var ploidyVcfs = parseInput.Get(PloidyBed);
             var bAlleleSites = parseInput.Get(BAlleleSites);
-            return ParsingResult<SmallPedigreeOptions>.SuccessfulResult(new SmallPedigreeOptions(bams, sampleNames, ploidyBed, bAlleleSites));
+            var commonCnvsBed = parseInput.Get(CommonCnvsBed);
+
+            List<SmallPedigreeSampleOptions> samples = new List<SmallPedigreeSampleOptions>();
+            for (int sampleIndex = 0; sampleIndex < bams.Count; sampleIndex++)
+                samples.Add(new SmallPedigreeSampleOptions(sampleNames[sampleIndex], bams[sampleIndex],
+                    bAlleleSites[sampleIndex], ploidyVcfs[sampleIndex]));
+
+            return ParsingResult<SmallPedigreeOptions>.SuccessfulResult(new SmallPedigreeOptions(samples, commonCnvsBed));
         }
     }
 
     public class SmallPedigreeOptions
     {
-        public IEnumerable<IFileLocation> Bams { get; }
-        public IEnumerable<IFileLocation> BAlleleSites { get; }
-        public IEnumerable<IFileLocation> PloidyBed { get; }
-        public IEnumerable<string> SampleNames { get; }
+        public List<SmallPedigreeSampleOptions> Samples { get; }
+        public IFileLocation CommonCnvsBed { get; }
 
-        public SmallPedigreeOptions(IEnumerable<IFileLocation> bams, IEnumerable<string> sampleNames, IEnumerable<IFileLocation> ploidyBed, IEnumerable<IFileLocation> bAlleleSites)
+        public SmallPedigreeOptions(List<SmallPedigreeSampleOptions> samples, IFileLocation commonCnvsBed)
         {
-            Bams = bams;
-            SampleNames = sampleNames;
+            Samples = samples;
+            CommonCnvsBed = commonCnvsBed;
+        }
+    }
+
+    public class SmallPedigreeSampleOptions
+    {
+        public string SampleName { get; set; }
+        public IFileLocation Bam { get; set; }
+        public IFileLocation BAlleleSites { get; set; }
+        public IFileLocation PloidyVcf { get; set; }
+
+        public SmallPedigreeSampleOptions(string sampleName, IFileLocation bam, IFileLocation bAlleleSites, IFileLocation ploidyVcf)
+        {
+            SampleName = sampleName;
+            Bam = bam;
             BAlleleSites = bAlleleSites;
-            PloidyBed = ploidyBed;
+            PloidyVcf = ploidyVcf;
         }
     }
 }
