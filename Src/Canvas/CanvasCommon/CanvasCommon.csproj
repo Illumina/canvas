@@ -98,6 +98,7 @@
     <Compile Include="ClusterInfo.cs" />
     <Compile Include="CommandLineParsing\CoreOptionTypes\DictionaryOption.cs" />
     <Compile Include="CommandLineParsing\CoreOptionTypes\DirectoryOption.cs" />
+    <Compile Include="CommandLineParsing\CoreOptionTypes\ExclusiveFileOption.cs" />
     <Compile Include="CommandLineParsing\CoreOptionTypes\FileOption.cs" />
     <Compile Include="CommandLineParsing\CoreOptionTypes\FlagOption.cs" />
     <Compile Include="CommandLineParsing\CoreOptionTypes\MultipleValueOptionInfo.cs" />

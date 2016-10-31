@@ -120,13 +120,16 @@
     </When>
     <Otherwise>
       <ItemGroup>
-        <Reference Include="Microsoft.VisualStudio.QualityTools.UnitTestFramework" />
+        <Reference Include="Microsoft.VisualStudio.QualityTools.UnitTestFramework">
+          <Private>False</Private>
+        </Reference>
       </ItemGroup>
     </Otherwise>
   </Choose>
   <ItemGroup>
     <Compile Include="Canvas\CommandLineParsing\ModeParserTests.cs" />
     <Compile Include="InlineAutoNSubstituteDataAttribute.cs" />
+    <Compile Include="CanvasPartition\MultivariatePoissonDistributionTest.cs" />
     <Compile Include="TestCanvasBin.cs" />
     <Compile Include="TestCanvasSNV.cs" />
     <Compile Include="TestLoessInterpolator.cs" />

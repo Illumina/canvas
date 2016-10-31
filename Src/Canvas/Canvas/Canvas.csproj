@@ -111,8 +111,13 @@
   <ItemGroup>
     <Compile Include="CanvasCallset.cs" />
     <Compile Include="CanvasRunner.cs" />
+    <Compile Include="CommandLineParsing\CommonMultiSampleOptionsParser.cs" />
+    <Compile Include="CommandLineParsing\SmallPedigreeModeParser.cs" />
     <Compile Include="CommandLineParsing\TumorNormalEnrichmentModeParser.cs" />
     <Compile Include="CommandLineParsing\TumorNormalWgsModeParser.cs" />
+    <Compile Include="SmallPedigreeCallset.cs" />
+    <Compile Include="SmallPedigreeWgsRunner.cs" />
+    <Compile Include="SmallPedigreeWorkflow.cs" />
     <Compile Include="TumorNormalEnrichmentRunner.cs" />
     <Compile Include="TumorNormalWgsRunner.cs" />
     <Compile Include="Program.cs" />
@@ -140,9 +145,17 @@
     </None>
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\CanvasBin\CanvasBin.csproj">
+      <Project>{4fe7dc26-bb44-4a6e-b02b-785328c41260}</Project>
+      <Name>CanvasBin</Name>
+    </ProjectReference>
     <ProjectReference Include="..\CanvasCommon\CanvasCommon.csproj">
       <Project>{ec8755f1-74bd-4a1f-9b82-5133d2f6a93b}</Project>
       <Name>CanvasCommon</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\CanvasPartition\CanvasPartition.csproj">
+      <Project>{a1660795-cd4a-4fbc-9bf6-df2a420aa3ca}</Project>
+      <Name>CanvasPartition</Name>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
