@@ -10,6 +10,7 @@ namespace CanvasPedigreeCaller
     {
         public List<CanvasSegment> Segments = new List<CanvasSegment>();
         public double MeanCoverage { get; set; }
+        public double MeanMafCoverage { get; set; }
         public string Name { get; set; }
         public List<string> Parents { get; set; }
         public List<string> Offspring { get; set; }
@@ -25,7 +26,7 @@ namespace CanvasPedigreeCaller
         {
             double allele1 = Segments[segmentIndex].VariantAlleleCounts.Select(x=>x.Item1).Average();
             double allele2 = Segments[segmentIndex].VariantAlleleCounts.Select(x => x.Item2).Average();
-            return new Tuple<int, int>(Convert.ToInt32(allele1), Convert.ToInt32(allele2))
+            return new Tuple<int, int>(Convert.ToInt32(allele1), Convert.ToInt32(allele2));
         }
     }
 

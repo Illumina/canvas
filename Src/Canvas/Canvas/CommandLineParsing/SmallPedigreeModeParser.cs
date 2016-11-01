@@ -39,13 +39,13 @@ namespace Canvas.CommandLineParsing
         private static readonly MultiValueOption<string> SampleNames = new MultiValueOption<string>(StringOption.CreateRequired("Sample names", "names"));
         private static readonly MultiValueOption<IFileLocation> BAlleleSites = new MultiValueOption<IFileLocation>(FileOption.CreateRequired("vcf containing SNV b-allele sites (only sites with PASS in the filter column will be used)", "b-allele-vcf"));
         private static readonly FileOption CommonCnvsBed = FileOption.Create(".bed file containing regions of known common CNVs", "common-cnvs-bed");
-
+        private static readonly FileOption PedigreeInfo = FileOption.CreateRequired(".ped file containing pedigree kinship information", "pedigree-ped");
 
         public override OptionCollection<SmallPedigreeOptions> GetOptions()
         {
             return new OptionCollection<SmallPedigreeOptions>
             {
-                Bams, PloidyBed, SampleNames, BAlleleSites, CommonCnvsBed
+                Bams, PloidyBed, SampleNames, BAlleleSites, CommonCnvsBed, PedigreeInfo
             };
         }
 
@@ -56,13 +56,15 @@ namespace Canvas.CommandLineParsing
             var ploidyVcfs = parseInput.Get(PloidyBed);
             var bAlleleSites = parseInput.Get(BAlleleSites);
             var commonCnvsBed = parseInput.Get(CommonCnvsBed);
+            var pedigreeInfo = parseInput.Get(PedigreeInfo);
+
 
             List<SmallPedigreeSampleOptions> samples = new List<SmallPedigreeSampleOptions>();
             for (int sampleIndex = 0; sampleIndex < bams.Count; sampleIndex++)
                 samples.Add(new SmallPedigreeSampleOptions(sampleNames[sampleIndex], bams[sampleIndex],
                     bAlleleSites[sampleIndex], ploidyVcfs[sampleIndex]));
 
-            return ParsingResult<SmallPedigreeOptions>.SuccessfulResult(new SmallPedigreeOptions(samples, commonCnvsBed));
+            return ParsingResult<SmallPedigreeOptions>.SuccessfulResult(new SmallPedigreeOptions(samples, commonCnvsBed, pedigreeInfo));
         }
     }
 
@@ -70,11 +72,14 @@ namespace Canvas.CommandLineParsing
     {
         public List<SmallPedigreeSampleOptions> Samples { get; }
         public IFileLocation CommonCnvsBed { get; }
+        public IFileLocation PedigreeInfo { get; }
 
-        public SmallPedigreeOptions(List<SmallPedigreeSampleOptions> samples, IFileLocation commonCnvsBed)
+
+        public SmallPedigreeOptions(List<SmallPedigreeSampleOptions> samples, IFileLocation commonCnvsBed, IFileLocation pedigreeInfo)
         {
             Samples = samples;
             CommonCnvsBed = commonCnvsBed;
+            PedigreeInfo = pedigreeInfo;
         }
     }
 

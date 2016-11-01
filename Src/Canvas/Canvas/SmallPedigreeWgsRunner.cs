@@ -56,7 +56,7 @@ namespace Canvas
                     outputVcfPath);
                 callSets.Add(callSet);
             }
-            return new SmallPedigreeCallset(callSets, SmallPedigreeOptions.CommonCnvsBed);
+            return new SmallPedigreeCallset(callSets, SmallPedigreeOptions.CommonCnvsBed, SmallPedigreeOptions.PedigreeInfo);
         }
     }
 }
