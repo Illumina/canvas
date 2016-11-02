@@ -5,7 +5,7 @@ using System.IO;
 using System.Linq;
 using CanvasCommon;
 
-namespace CanvasPedigreeCaller
+namespace CanvasDiploidCaller
 {
     class CanvasDiploidCaller
     {

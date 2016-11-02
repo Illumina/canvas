@@ -6,7 +6,7 @@ using Isas.Shared.Utilities.FileSystem;
 using NDesk.Options;
 using Newtonsoft.Json;
 
-namespace CanvasPedigreeCaller
+namespace CanvasDiploidCaller
 {
     class Program
     {
