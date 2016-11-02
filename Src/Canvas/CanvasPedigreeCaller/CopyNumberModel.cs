@@ -22,7 +22,7 @@ namespace CanvasPedigreeCaller
             return new NegativeBinomial(r, p);
         }
 
-        public CopyNumberModel(int numCnStates, double haploidMean, double haploidMafMean, double variance)
+        public CopyNumberModel(int numCnStates, double haploidMean, double haploidMafMean, double variance, double mafVariance)
         {
             for (int cn = 0; cn < numCnStates; cn++)
             {
@@ -30,21 +30,15 @@ namespace CanvasPedigreeCaller
             }
             AlleleDistribution = new Tuple<NegativeBinomial, NegativeBinomial>[numCnStates][];
             for (int i = 0; i < numCnStates; i++)
-            {
                 AlleleDistribution[i] = new Tuple<NegativeBinomial, NegativeBinomial>[numCnStates];
-                for (int j = 0; j < numCnStates; j++)
-                {
-                    AlleleDistribution[i][j] = null;
-                }
-            }
 
-            for (int cn = 0; cn < numCnStates; cn++)
+            for (int gt1 = 0; gt1 < numCnStates; gt1++)
             {
-                for (int gt = 0; gt <= cn; gt++)
+                for (int gt2 = 0; gt2 < numCnStates; gt2++)
                 {
-                    var gt1 = NegativeBinomialWrapper(haploidMafMean * gt, variance);
-                    var gt2 = NegativeBinomialWrapper(haploidMafMean * (cn - gt), variance);
-                    AlleleDistribution[cn][gt] = new Tuple<NegativeBinomial, NegativeBinomial>(gt1, gt2);
+                    var gt1Prob = NegativeBinomialWrapper(haploidMafMean * gt1, mafVariance);
+                    var gt2Prob = NegativeBinomialWrapper(haploidMafMean * gt2, mafVariance);
+                    AlleleDistribution[gt1][gt2] = new Tuple<NegativeBinomial, NegativeBinomial>(gt1Prob, gt2Prob);
                 }
             }
         }
