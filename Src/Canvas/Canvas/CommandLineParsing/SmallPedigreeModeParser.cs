@@ -35,17 +35,21 @@ namespace Canvas.CommandLineParsing
     internal class SmallPedigreeOptionsParser : Option<SmallPedigreeOptions>
     {
         private static readonly MultiValueOption<IFileLocation> Bams = new MultiValueOption<IFileLocation>(FileOption.CreateRequired("Bam files", "bams"));
-        private static readonly MultiValueOption<IFileLocation> PloidyBed = new MultiValueOption<IFileLocation>(FileOption.CreateRequired(".bed file containing regions of known ploidy in the sample. Copy number calls matching the known ploidy in these regions will be considered non-variant", "ploidy-bed"));
-        private static readonly MultiValueOption<string> SampleNames = new MultiValueOption<string>(StringOption.CreateRequired("Sample names", "names"));
-        private static readonly MultiValueOption<IFileLocation> BAlleleSites = new MultiValueOption<IFileLocation>(FileOption.CreateRequired("vcf containing SNV b-allele sites (only sites with PASS in the filter column will be used)", "b-allele-vcf"));
+        private static readonly FileOption PloidyVcf = FileOption.Create("multisample .vcf file containing regions of known ploidy. Copy number calls matching the known ploidy in these regions will be considered non-variant", "ploidy-bed");
+        private static readonly FileOption PopulationBAlleleSites = FileOption.CreateRequired("vcf containing SNV b-allele sites in the population (only sites with PASS in the filter column will be used)", "population-b-allele-vcf");
+        private static readonly FileOption SampleBAlleleSites = FileOption.CreateRequired("vcf containing SNV b-allele sites (only sites with PASS in the filter column will be used)", "b-allele-vcf");
         private static readonly FileOption CommonCnvsBed = FileOption.Create(".bed file containing regions of known common CNVs", "common-cnvs-bed");
-        private static readonly FileOption PedigreeInfo = FileOption.CreateRequired(".ped file containing pedigree kinship information", "pedigree-ped");
+        private static readonly MultiValueOption<string> Proband = new MultiValueOption<string>(StringOption.Create("Proband sample name", "proband"));
+        private static readonly StringOption Mother = StringOption.Create("Mother sample name", "mother");
+        private static readonly StringOption Father = StringOption.Create("Father sample name", "father");
+        private static readonly ExclusiveFileOption BAlleleSites = ExclusiveFileOption.CreateRequired(SampleBAlleleSites, PopulationBAlleleSites);
+
 
         public override OptionCollection<SmallPedigreeOptions> GetOptions()
         {
             return new OptionCollection<SmallPedigreeOptions>
             {
-                Bams, PloidyBed, SampleNames, BAlleleSites, CommonCnvsBed, PedigreeInfo
+                Bams, PloidyVcf, SampleNames, BAlleleSites, CommonCnvsBed, Proband, Mother, Father
             };
         }
 
@@ -53,7 +57,7 @@ namespace Canvas.CommandLineParsing
         {
             var bams = parseInput.Get(Bams);
             var sampleNames = parseInput.Get(SampleNames);
-            var ploidyVcfs = parseInput.Get(PloidyBed);
+            var ploidyVcfs = parseInput.Get(PloidyVcf);
             var bAlleleSites = parseInput.Get(BAlleleSites);
             var commonCnvsBed = parseInput.Get(CommonCnvsBed);
             var pedigreeInfo = parseInput.Get(PedigreeInfo);
