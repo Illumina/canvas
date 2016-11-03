@@ -1,38 +1,46 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using Canvas.CommandLineParsing;
 using Isas.SequencingFiles;
 using Isas.Shared.DataTypes;
 using Isas.Shared.Utilities.FileSystem;
 
-namespace Canvas
+namespace Canvas.SmallPedigree
 {
+    public class SingleSampleCallset
+    {
+        public CanvasCallset Callset { get; }
+        public SampleType SampleType { get; }
+
+        public SingleSampleCallset(CanvasCallset callset, SampleType sampleType)
+        {
+            Callset = callset;
+            SampleType = sampleType;
+        }
+    }
     public class SmallPedigreeCallset
     {
-        public IDirectoryLocation OutputFolder { get { return _singleSampleCallset.Select(x => x.OutputFolder).First(); } }
-        public IEnumerable<string> SampleNames { get { return _singleSampleCallset.Select(x => x.SampleName); } }
-        public IEnumerable<Bam> BamPaths { get { return _singleSampleCallset.Select(x => x.Bam); } }
+        public IDirectoryLocation OutputFolder { get { return Callset.Select(x => x.Callset.OutputFolder).First(); } }
+        public IEnumerable<string> SampleNames { get { return Callset.Select(x => x.Callset.SampleName); } }
+        public IEnumerable<Bam> BamPaths { get { return Callset.Select(x => x.Callset.Bam); } }
         public IEnumerable<IFileLocation> NormalVcfPaths { get; } // set to the Starling VCF path (if tumor normal, the normal vcf path) 
         public IDirectoryLocation WholeGenomeFastaFolder { get; set; }
-        public IFileLocation KmerFasta { get { return _singleSampleCallset.Select(x => x.KmerFasta).First(); } }
-        public GenomeMetadata GenomeMetadata { get { return _singleSampleCallset.Select(x => x.GenomeMetadata).First(); } }
-        public IFileLocation FilterBed { get { return _singleSampleCallset.Select(x => x.FilterBed).First(); } }
+        public IFileLocation KmerFasta { get { return Callset.Select(x => x.Callset.KmerFasta).First(); } }
+        public GenomeMetadata GenomeMetadata { get { return Callset.Select(x => x.Callset.GenomeMetadata).First(); } }
+        public IFileLocation FilterBed { get { return Callset.Select(x => x.Callset.FilterBed).First(); } }
         public IFileLocation CommonCnvsBed { get; set; }
-        public IFileLocation PedigreeInfo { get; set; }
-        public IFileLocation PloidyBed { get { return _singleSampleCallset.Select(x => x.PloidyBed).First(); } }
+        public IFileLocation PloidyBed { get { return Callset.Select(x => x.Callset.PloidyBed).First(); } }
         public bool IsDbSnpVcf { get; set; } // NormalVcfPath points to a dbSNP VCF file
         public IFileLocation OutputVcfPath { get; }
         public NexteraManifest Manifest { get; }
 
-        private readonly List<CanvasCallset> _singleSampleCallset;
-        public SmallPedigreeCallset(List<CanvasCallset> callset, IFileLocation commonCnvsBed, IFileLocation pedigreeInfo)
+        public List<SingleSampleCallset> Callset;
+        public SmallPedigreeCallset(List<SingleSampleCallset> callset, IFileLocation commonCnvsBed)
         {
-            _singleSampleCallset = callset;
+            Callset = callset;
             CommonCnvsBed = commonCnvsBed;
-            PedigreeInfo = pedigreeInfo;
         }
-
-        public List<CanvasCallset> Callset { get { return _singleSampleCallset; } }
 
         internal string TempFolder
         {

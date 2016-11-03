@@ -5,6 +5,7 @@ using System.IO;
 using System.Text;
 using System.Threading.Tasks;
 using Canvas;
+using Canvas.SmallPedigree;
 using CanvasBin;
 using CanvasPartition;
 using CanvasCommon;
@@ -495,8 +496,8 @@ namespace Illumina.SecondaryAnalysis
         /// </summary>
         protected void InvokeCanvasSnv(SmallPedigreeCallset callsets)
         {
-            foreach (CanvasCallset callset in callsets.Callset)
-                InvokeCanvasSnv(callset);
+            foreach (var callset in callsets.Callset)
+                InvokeCanvasSnv(callset.Callset);
         }
 
         /// <summary>
@@ -686,8 +687,8 @@ namespace Illumina.SecondaryAnalysis
         private async Task CallSampleInternal(SmallPedigreeCallset callset)
         {
             Directory.CreateDirectory(callset.TempFolder);
-            foreach (CanvasCallset singleSampleCallset in callset.Callset)
-                Directory.CreateDirectory(singleSampleCallset.TempFolder);
+            foreach (var singleSampleCallset in callset.Callset)
+                Directory.CreateDirectory(singleSampleCallset.Callset.TempFolder);
 
             string canvasReferencePath = callset.KmerFasta.FullName;
             string canvasBedPath = callset.FilterBed.FullName;
@@ -704,7 +705,7 @@ namespace Illumina.SecondaryAnalysis
             }
 
             // Prepare ploidy file:
-            List<string> ploidyBedPaths = callset.Callset.Select(x=>x.PloidyBed?.FullName).ToList();
+            List<string> ploidyBedPaths = callset.Callset.Select(x=>x.Callset.PloidyBed?.FullName).ToList();
 
             // CanvasBin:
             var binnedPaths = _checkpointRunner.RunCheckpoint("CanvasBin", () => InvokeCanvasBin(callset, canvasReferencePath, canvasBedPath));
@@ -803,9 +804,9 @@ namespace Illumina.SecondaryAnalysis
                 commandLine.AppendFormat("-c \"{0}\" ", commonCnvsBed);
 
             List<IFileLocation> partitionedPaths = new List<IFileLocation>();
-            foreach (CanvasCallset callset in callsets.Callset)
+            foreach (var callset in callsets.Callset)
             {
-                IFileLocation partitionedPath = new FileLocation(Path.Combine(callset.TempFolder, $"{callset.Id}.partitioned"));
+                IFileLocation partitionedPath = new FileLocation(Path.Combine(callset.Callset.TempFolder, $"{callset.Callset.Id}.partitioned"));
                 partitionedPaths.Add(partitionedPath);
                 commandLine.AppendFormat("-o \"{0}\" ", partitionedPath);
             }
@@ -867,7 +868,7 @@ namespace Illumina.SecondaryAnalysis
             for (int i = 0; i < callsets.Callset.Count; i++)
             {
                 IFileLocation binnedPath = new FileLocation(binnedPaths[i]);
-                cleanedPaths.Add(InvokeCanvasClean(callsets.Callset[i], binnedPath).CleanedPath);
+                cleanedPaths.Add(InvokeCanvasClean(callsets.Callset[i].Callset, binnedPath).CleanedPath);
             }
             return cleanedPaths;
         }
@@ -985,7 +986,7 @@ namespace Illumina.SecondaryAnalysis
             for (int i = 0; i < callsets.Callset.Count; i++)
             {
                 IFileLocation partitionedPath = partitionedPaths[i];
-                RunGermlineCalling(partitionedPath, callsets.Callset[i],  ploidyBedPaths[i]);
+                RunGermlineCalling(partitionedPath, callsets.Callset[i].Callset,  ploidyBedPaths[i]);
             }
             StringBuilder commandLine = new StringBuilder();
             ////////////////////////////////////////////////////////
@@ -1002,14 +1003,14 @@ namespace Illumina.SecondaryAnalysis
             foreach (string ploidyBedPath in ploidyBedPaths)
                 commandLine.AppendFormat("-i \"{0}\" ", ploidyBedPath);
 
-            foreach (CanvasCallset callset in callsets.Callset)
+            foreach (var callset in callsets.Callset)
             {
-                commandLine.AppendFormat("-v \"{0}\" ", callset.VfSummaryPath);
-                commandLine.AppendFormat("-n \"{0}\" ", callset.SampleName);
-                commandLine.AppendFormat("-o \"{0}\" ", callset.OutputVcfPath);
+                commandLine.AppendFormat("-v \"{0}\" ", callset.Callset.VfSummaryPath);
+                commandLine.AppendFormat("-n \"{0}\" ", callset.Callset.SampleName);
+                commandLine.AppendFormat("-o \"{0}\" ", callset.Callset.OutputVcfPath);
 
             }
-            commandLine.AppendFormat("-r \"{0}\" ", callsets.Callset.First().WholeGenomeFastaFolder);
+            commandLine.AppendFormat("-r \"{0}\" ", callsets.Callset.First().Callset.WholeGenomeFastaFolder);
 
             UnitOfWork callJob = new UnitOfWork()
             {

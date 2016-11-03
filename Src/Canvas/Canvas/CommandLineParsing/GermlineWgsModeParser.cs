@@ -7,6 +7,7 @@ namespace Canvas.CommandLineParsing
     {
         private static readonly FileOption Bam = FileOption.CreateRequired("germline sample .bam file", "b", "bam");
         private static readonly CommonOptionsParser CommonOptionsParser = new CommonOptionsParser();
+        private static readonly SingleSampleCommonOptionsParser SingleSampleCommonOptionsParser = new SingleSampleCommonOptionsParser();
 
         public GermlineWgsModeParser(string name, string description) : base(name, description)
         {
@@ -15,8 +16,9 @@ namespace Canvas.CommandLineParsing
         public override ParsingResult<IModeRunner> Parse(SuccessfulResultCollection parseInput)
         {
             CommonOptions commonOptions = parseInput.Get(CommonOptionsParser);
+            SingleSampleCommonOptions singleSampleCommonOptions = parseInput.Get(SingleSampleCommonOptionsParser);
             var bam = parseInput.Get(Bam);
-            return ParsingResult<IModeRunner>.SuccessfulResult(new GermlineWgsRunner(commonOptions, bam));
+            return ParsingResult<IModeRunner>.SuccessfulResult(new GermlineWgsRunner(commonOptions, singleSampleCommonOptions, bam));
         }
 
         public override OptionCollection<IModeRunner> GetOptions()

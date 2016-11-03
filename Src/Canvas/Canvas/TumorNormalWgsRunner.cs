@@ -12,11 +12,13 @@ namespace Canvas
     {
         private readonly TumorNormalOptions _tumorNormalOptions;
         public CommonOptions CommonOptions { get; }
+        public SingleSampleCommonOptions SingleSampleCommonOptions { get; }
 
-        public TumorNormalWgsRunner(CommonOptions commonOptions, TumorNormalOptions tumorNormalOptions)
+        public TumorNormalWgsRunner(CommonOptions commonOptions, SingleSampleCommonOptions singleSampleCommonOptions, TumorNormalOptions tumorNormalOptions)
         {
             _tumorNormalOptions = tumorNormalOptions;
             CommonOptions = commonOptions;
+            SingleSampleCommonOptions = singleSampleCommonOptions;
         }
 
         public void Run(ILogger logger, ICheckpointRunnerAsync checkpointRunner, IWorkManager workManager)

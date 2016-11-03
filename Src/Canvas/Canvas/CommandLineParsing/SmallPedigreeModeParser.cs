@@ -1,17 +1,19 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using CanvasCommon.CommandLineParsing.CoreOptionTypes;
 using CanvasCommon.CommandLineParsing.OptionProcessing;
 using Isas.SequencingFiles;
 using Isas.Shared.DataTypes;
 using Isas.Shared.Utilities.FileSystem;
+using Illumina.Common;
 
 namespace Canvas.CommandLineParsing
 {
     public class SmallPedigreeModeParser : ModeParser
     {
-        private static readonly CommonMultiSampleOptionsParser CommonOptionsParser = new CommonMultiSampleOptionsParser();
+        private static readonly CommonOptionsParser CommonOptionsParser = new CommonOptionsParser();
         private static readonly SmallPedigreeOptionsParser SmallPedigreeOptionsParser = new SmallPedigreeOptionsParser();
 
         public SmallPedigreeModeParser(string name, string description) : base(name, description)
@@ -41,16 +43,11 @@ namespace Canvas.CommandLineParsing
             FileOption.Create(
                 "multisample .vcf file containing regions of known ploidy. Copy number calls matching the known ploidy in these regions will be considered non-variant",
                 "ploidy-bed");
-        private static readonly FileOption PopulationBAlleleSites =
-            FileOption.CreateRequired(
-                "vcf containing SNV b-allele sites in the population (only sites with PASS in the filter column will be used)",
-                "population-b-allele-vcf");
-        private static readonly FileOption SampleBAlleleSites =
-            FileOption.CreateRequired(
-                "vcf containing SNV b-allele sites (only sites with PASS in the filter column will be used)",
+        private static readonly FileOption PopulationBAlleleSites = SingleSampleCommonOptionsParser.PopulationBAlleleSites;
+        private static readonly FileOption SampleBAlleleSites = FileOption.CreateRequired(
+                "multisample .vcf file containing SNV b-allele sites (only sites with PASS in the filter column will be used)",
                 "b-allele-vcf");
-        private static readonly FileOption CommonCnvsBed =
-            FileOption.Create(".bed file containing regions of known common CNVs", "common-cnvs-bed");
+        private static readonly FileOption CommonCnvsBed = FileOption.Create(".bed file containing regions of known common CNVs", "common-cnvs-bed");
         private static readonly MultiValueOption<string> Proband =
             new MultiValueOption<string>(StringOption.Create("Proband sample name", "proband"));
         private static readonly StringOption Mother = StringOption.Create("Mother sample name", "mother");
@@ -77,40 +74,34 @@ namespace Canvas.CommandLineParsing
         {
             var bams = parseInput.Get(Bams);
             var sampleNameToBam = MapSampleNameToBam(bams);
-            var ploidyVcfs = parseInput.Get(PloidyVcf);
+            var ploidyVcf = parseInput.Get(PloidyVcf);
             var bAlleleSites = parseInput.Get(BAlleleSites);
             var mother = parseInput.Get(Mother);
             var father = parseInput.Get(Father);
             var proband = parseInput.Get(Proband);
             var commonCnvsBed = parseInput.Get(CommonCnvsBed);
-            
+
             List<SmallPedigreeSampleOptions> samples = new List<SmallPedigreeSampleOptions>();
             foreach (var sample in sampleNameToBam)
-                samples.Add(new SmallPedigreeSampleOptions(sample.Key, GetSampleType(sample.Key, mother, father, proband) , sample.Value));
+            {
+                var sampleType = GetSampleType(sample.Key, mother, father, proband);
+                samples.Add(new SmallPedigreeSampleOptions(sample.Key, sampleType, sample.Value));
+            }
 
-            return
-                ParsingResult<SmallPedigreeOptions>.SuccessfulResult(new SmallPedigreeOptions(samples, commonCnvsBed,
-                    pedigreeInfo));
+            return ParsingResult<SmallPedigreeOptions>.SuccessfulResult(new SmallPedigreeOptions(samples, commonCnvsBed, bAlleleSites.Result, bAlleleSites.MatchedOption.Equals(PopulationBAlleleSites), ploidyVcf));
         }
 
         private SampleType GetSampleType(string sampleName, string mother, string father, List<string> probands)
         {
-            int uniqSampleCounter = 0;
-            if (sampleName == mother)
-                uniqSampleCounter++;
-            if (sampleName == father)
-                uniqSampleCounter++;
-            if (probands.Any(proband => sampleName == proband))
-                uniqSampleCounter++;
-            if (uniqSampleCounter > 1)
-                throw new ArgumentException($"Sample {sampleName} must only have one sample type (mother | string | proband)");
+            var isMother = sampleName == mother;
+            var isFather = sampleName == father;
+            var isProband = probands.Any(proband => sampleName == proband);
+            if (new[] { isMother, isFather, isProband }.Where(item => item).Count() > 1)
+                throw new ArgumentException($"Sample {sampleName} can only have one sample type (mother | father | proband)");
 
-            if (sampleName == mother)
-                return SampleType.Mother;
-            if (sampleName == father)
-                return SampleType.Father;
-            if (probands.Any(proband => sampleName == proband))
-                return SampleType.Proband;   
+            if (isMother) return SampleType.Mother;
+            if (isFather) return SampleType.Father;
+            if (isProband) return SampleType.Proband;
             return SampleType.Other;
         }
 
@@ -138,14 +129,18 @@ namespace Canvas.CommandLineParsing
     {
         public List<SmallPedigreeSampleOptions> Samples { get; }
         public IFileLocation CommonCnvsBed { get; }
-        public IFileLocation PedigreeInfo { get; }
+        public IFileLocation BAlleleSites { get; }
+        public bool IsPopulationBAlleleSites { get; }
+        public IFileLocation MultiSamplePloidyVcf { get; }
 
 
-        public SmallPedigreeOptions(List<SmallPedigreeSampleOptions> samples, IFileLocation commonCnvsBed, IFileLocation pedigreeInfo)
+        public SmallPedigreeOptions(List<SmallPedigreeSampleOptions> samples, IFileLocation commonCnvsBed, IFileLocation bAlleleSites, bool isPopulationBAlleleSites, IFileLocation multiSamplePloidyVcf)
         {
             Samples = samples;
             CommonCnvsBed = commonCnvsBed;
-            PedigreeInfo = pedigreeInfo;
+            BAlleleSites = bAlleleSites;
+            MultiSamplePloidyVcf = multiSamplePloidyVcf;
+            IsPopulationBAlleleSites = isPopulationBAlleleSites;
         }
     }
 
