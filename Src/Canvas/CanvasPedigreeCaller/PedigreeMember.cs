@@ -27,7 +27,7 @@ namespace CanvasPedigreeCaller
 
         public double GetCoverage(int segmentIndex)
         {
-            return Segments[segmentIndex].Counts.Average();
+            return Segments[segmentIndex].MedianCount;
         }
         public Tuple<int,int> GetAlleleCounts(int segmentIndex)
         {

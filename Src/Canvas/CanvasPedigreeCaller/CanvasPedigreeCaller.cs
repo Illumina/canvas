@@ -17,6 +17,8 @@ namespace CanvasPedigreeCaller
         #region Members
         // Static:
         static int MaximumCopyNumber = 5;
+        private static int DefaultAlleleDensityThreshold = 1000;
+        private static int DefaultAlleleCountThreshold = 4;
         public int QualityFilterThreshold { get; set; } = 10;
         #endregion
 
@@ -33,9 +35,9 @@ namespace CanvasPedigreeCaller
                 pedigreeMember.Name = sampleName;
                 pedigreeMember.Segments = CanvasSegment.ReadSegments(segmentFiles[fileCounter]);
                 pedigreeMember.MeanMafCoverage = CanvasIO.LoadVariantFrequencies(variantFrequencyFiles[fileCounter], pedigreeMember.Segments);
-                pedigreeMember.Variance = Math.Pow(Utilities.StandardDeviation(pedigreeMember.Segments.Select(x => x.Counts.Average()).ToArray()), 2);
+                pedigreeMember.Variance = Math.Pow(Utilities.StandardDeviation(pedigreeMember.Segments.Select(x => x.MedianCount).ToArray()), 2);
                 pedigreeMember.MafVariance = Math.Pow(Utilities.StandardDeviation(pedigreeMember.Segments.Where(x => x.VariantTotalCoverage.Count > 0).Select(x => x.VariantTotalCoverage.Average()).ToArray()), 2);
-                pedigreeMember.MeanCoverage = pedigreeMember.Segments.Select(x => x.Counts.Average()).Average();
+                pedigreeMember.MeanCoverage = pedigreeMember.Segments.Select(x => x.MedianCount).Average();
                 pedigreeMember.Ploidy = PloidyInfo.LoadPloidyFromBedFile(ploidyBedPaths[fileCounter]);
                 pedigreeMember.Kin = kinships[pedigreeMember.Name] == PedigreeMember.Kinship.Offspring ?
                     PedigreeMember.Kinship.Offspring : PedigreeMember.Kinship.Parent;
@@ -62,18 +64,21 @@ namespace CanvasPedigreeCaller
                 segmentIntervals,
                 new ParallelOptions
                 {
-                    MaxDegreeOfParallelism = Environment.ProcessorCount,
+                    MaxDegreeOfParallelism = 1,//Environment.ProcessorCount,
                     TaskScheduler = TaskScheduler.Default
                 },
                 interval =>
                 {
                     Console.WriteLine($"{DateTime.Now} Launching SPW task for segment {interval.Start} - {interval.End}");
-                    var segmentIndex = 0;
+                    var segmentIndex = 41575;
                     while (segmentIndex < numberOfSegments)
                     {
                         if (segmentIndex > interval.Start && segmentIndex < interval.End)
                         {
-                            if (pedigreeMembers.Select(x => x.Segments[segmentIndex].VariantAlleleCounts.Count > 0).Any(c => c == false))
+                            var alleleCounts = pedigreeMembers.Select(x => x.Segments[segmentIndex].VariantAlleleCounts.Count);
+                            var alleleDensity = alleleCounts.Average()/pedigreeMembers.First().Segments[segmentIndex].Length;
+
+                            if (alleleCounts.Select(x=>x>DefaultAlleleCountThreshold).Any(c => c == false) && alleleDensity < DefaultAlleleDensityThreshold)
                                 MaximalCnLikelyhood(parents, offsprings, segmentIndex, transitionMatrix, offspringsGenotypes);
                             else
                                 MaximalGtLikelyhood(parents, offsprings, segmentIndex, parentalGenotypes, offspringsGenotypes);
@@ -114,10 +119,14 @@ namespace CanvasPedigreeCaller
         double[][] GetTransitionMatrix(int numCnStates)
         {
             double[][] transitionMatrix = CanvasCommon.Utilities.MatrixCreate(numCnStates, numCnStates);
-            for (int cn = 0; cn < numCnStates; cn++)
+            transitionMatrix[0][0] = 1.0;
+            for (int gt = 1; gt < numCnStates; gt++)
+                transitionMatrix[0][gt] = 0;
+
+            for (int cn = 1; cn < numCnStates; cn++)
             {
                 var gtLikelyhood = new Poisson(Math.Max(cn / 2.0, 0.1));
-                for (int gt = 0; gt < cn; gt++)
+                for (int gt = 0; gt < numCnStates; gt++)
                     transitionMatrix[cn][gt] = gtLikelyhood.Probability(gt);
             }
             return transitionMatrix;

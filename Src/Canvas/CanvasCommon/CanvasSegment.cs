@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.IO;
+using Illumina.Common;
 using Isas.SequencingFiles;
 
 namespace CanvasCommon
@@ -42,6 +43,10 @@ namespace CanvasCommon
         public int End { get; private set; }
         #endregion
 
+        public int Length {
+            get { return End - Begin; }
+        }
+
         /// <summary>
         /// Mean of the segment's counts.
         /// </summary>
@@ -53,6 +58,18 @@ namespace CanvasCommon
                 foreach (double x in this.Counts)
                     sum += x;
                 return sum / this.BinCount;
+            }
+        }
+
+        /// <summary>
+        /// Median of the segment's counts.
+        /// </summary>
+        public double MedianCount
+        {
+            get
+            {
+                SortedList<double> sorted = new SortedList<double>(this.Counts.Select(x=>Convert.ToDouble(x)));
+                return sorted.Median();              
             }
         }
 
