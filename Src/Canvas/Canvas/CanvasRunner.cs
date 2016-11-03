@@ -721,7 +721,7 @@ namespace Illumina.SecondaryAnalysis
 
             // Variant calling
             await canvasSnvTask;
-            RunGermlineCalling(partitionedPaths, callset, ploidyBedPaths);
+            RunSmallPedigreeCalling(partitionedPaths, callset, ploidyBedPaths);
         }
 
         private List<IFileLocation> WriteMergedCanvasPartition(List<IFileLocation> partitionedPaths, List<string> tempFolders, List<string> sampleNames)
@@ -977,7 +977,7 @@ namespace Illumina.SecondaryAnalysis
             _workManager.DoWorkSingleThread(callerJob);
         }
 
-        protected void RunGermlineCalling(List<IFileLocation> partitionedPaths, SmallPedigreeCallset callsets, List<string> ploidyBedPaths)
+        protected void RunSmallPedigreeCalling(List<IFileLocation> partitionedPaths, SmallPedigreeCallset callsets, List<string> ploidyBedPaths)
         {
             List<CanvasCleanOutput> cleanedPaths = new List<CanvasCleanOutput>();
             if (callsets.Callset.Count != partitionedPaths.Count)
@@ -987,6 +987,41 @@ namespace Illumina.SecondaryAnalysis
                 IFileLocation partitionedPath = partitionedPaths[i];
                 RunGermlineCalling(partitionedPath, callsets.Callset[i],  ploidyBedPaths[i]);
             }
+            StringBuilder commandLine = new StringBuilder();
+            ////////////////////////////////////////////////////////
+            // CanvasSmallPedigreeCaller:
+            commandLine.Length = 0;
+            string executablePath = Path.Combine(_canvasFolder, "CanvasSmallPedigree.exe");
+            if (CrossPlatform.IsThisMono())
+            {
+                commandLine.AppendFormat("{0} ", executablePath);
+                executablePath = Utilities.GetMonoPath();
+            }
+            foreach (IFileLocation partitionedPath in partitionedPaths)
+                commandLine.AppendFormat("-i \"{0}\" ", partitionedPath);
+            foreach (string ploidyBedPath in ploidyBedPaths)
+                commandLine.AppendFormat("-i \"{0}\" ", ploidyBedPath);
+
+            foreach (CanvasCallset callset in callsets.Callset)
+            {
+                commandLine.AppendFormat("-v \"{0}\" ", callset.VfSummaryPath);
+                commandLine.AppendFormat("-n \"{0}\" ", callset.SampleName);
+                commandLine.AppendFormat("-o \"{0}\" ", callset.OutputVcfPath);
+
+            }
+            commandLine.AppendFormat("-r \"{0}\" ", callsets.Callset.First().WholeGenomeFastaFolder);
+
+            UnitOfWork callJob = new UnitOfWork()
+            {
+                ExecutablePath = executablePath,
+                LoggingFolder = _workManager.LoggingFolder.FullName,
+                CommandLine = commandLine.ToString()
+            };
+            if (_customParameters.ContainsKey("CanvasSmallPedigree"))
+            {
+                callJob.CommandLine = Utilities.MergeCommandLineOptions(callJob.CommandLine, _customParameters["CanvasSmallPedigree"], true);
+            }
+            _workManager.DoWorkSingleThread(callJob);
         }
 
         protected void RunGermlineCalling(IFileLocation partitionedPath, CanvasCallset callset, string ploidyBedPath)
