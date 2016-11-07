@@ -526,7 +526,7 @@ namespace Illumina.SecondaryAnalysis
                     job.ExecutablePath = Utilities.GetMonoPath();
                 }
 
-                string outputPath = Path.Combine(callset.TempFolder, $"'{chromosome.Name}'-'{callset.Id}'.SNV.txt.gz");
+                string outputPath = Path.Combine(callset.TempFolder, $"{chromosome.Name}-{callset.Id}.SNV.txt.gz");
                 outputPaths.Add(outputPath);
                 job.CommandLine += $" {chromosome.Name} {normalVcfPath} {bamPath} {outputPath}";
                 if (!sampleName.IsNullOrEmpty())
@@ -994,7 +994,7 @@ namespace Illumina.SecondaryAnalysis
             ////////////////////////////////////////////////////////
             // CanvasSmallPedigreeCaller:
             commandLine.Length = 0;
-            string executablePath = Path.Combine(_canvasFolder, "CanvasSmallPedigree.exe");
+            string executablePath = Path.Combine(_canvasFolder, "CanvasPedigreeCaller.exe");
             if (CrossPlatform.IsThisMono())
             {
                 commandLine.AppendFormat("{0} ", executablePath);
