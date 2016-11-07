@@ -21,19 +21,17 @@ namespace Canvas.SmallPedigree
     }
     public class SmallPedigreeCallset
     {
-        public IDirectoryLocation OutputFolder { get { return Callset.Select(x => x.Callset.OutputFolder).First(); } }
+        public IDirectoryLocation OutputFolder => Callset.First().Callset.OutputFolder; 
         public IEnumerable<string> SampleNames { get { return Callset.Select(x => x.Callset.SampleName); } }
         public IEnumerable<Bam> BamPaths { get { return Callset.Select(x => x.Callset.Bam); } }
-        public IEnumerable<IFileLocation> NormalVcfPaths { get; } // set to the Starling VCF path (if tumor normal, the normal vcf path) 
-        public IDirectoryLocation WholeGenomeFastaFolder { get; set; }
+        public IFileLocation VcfPath => Callset.First().Callset.NormalVcfPath; 
+        public IDirectoryLocation WholeGenomeFastaFolder { get { return Callset.Select(x => x.Callset.WholeGenomeFastaFolder).First(); } }
         public IFileLocation KmerFasta { get { return Callset.Select(x => x.Callset.KmerFasta).First(); } }
-        public GenomeMetadata GenomeMetadata { get { return Callset.Select(x => x.Callset.GenomeMetadata).First(); } }
-        public IFileLocation FilterBed { get { return Callset.Select(x => x.Callset.FilterBed).First(); } }
+        public GenomeMetadata GenomeMetadata => Callset.First().Callset.GenomeMetadata; 
+        public IFileLocation FilterBed => Callset.First().Callset.FilterBed; 
         public IFileLocation CommonCnvsBed { get; set; }
-        public IFileLocation PloidyBed { get { return Callset.Select(x => x.Callset.PloidyBed).First(); } }
+        public IFileLocation PloidyBed => Callset.First().Callset.PloidyVcf;
         public bool IsDbSnpVcf { get; set; } // NormalVcfPath points to a dbSNP VCF file
-        public IFileLocation OutputVcfPath { get; }
-        public NexteraManifest Manifest { get; }
 
         public List<SingleSampleCallset> Callset;
         public SmallPedigreeCallset(List<SingleSampleCallset> callset, IFileLocation commonCnvsBed)

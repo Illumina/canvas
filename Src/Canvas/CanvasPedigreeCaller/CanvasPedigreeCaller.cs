@@ -34,9 +34,9 @@ namespace CanvasPedigreeCaller
                 PedigreeMember pedigreeMember = new PedigreeMember();
                 pedigreeMember.Name = sampleName;
                 pedigreeMember.Segments = CanvasSegment.ReadSegments(segmentFiles[fileCounter]);
-                pedigreeMember.MeanMafCoverage = CanvasIO.LoadVariantFrequencies(variantFrequencyFiles[fileCounter], pedigreeMember.Segments);
+                pedigreeMember.MeanMafCoverage = CanvasIO.LoadFrequencies(variantFrequencyFiles[fileCounter], pedigreeMember.Segments);
                 pedigreeMember.Variance = Math.Pow(Utilities.StandardDeviation(pedigreeMember.Segments.Select(x => x.MedianCount).ToArray()), 2);
-                pedigreeMember.MafVariance = Math.Pow(Utilities.StandardDeviation(pedigreeMember.Segments.Where(x => x.VariantTotalCoverage.Count > 0).Select(x => x.VariantTotalCoverage.Average()).ToArray()), 2);
+                pedigreeMember.MafVariance = Math.Pow(Utilities.StandardDeviation(pedigreeMember.Segments.Where(x => x.Alleles.TotalCoverage.Count > 0).Select(x => x.Alleles.TotalCoverage.Average()).ToArray()), 2);
                 pedigreeMember.MeanCoverage = pedigreeMember.Segments.Select(x => x.MedianCount).Average();
                 pedigreeMember.Ploidy = PloidyInfo.LoadPloidyFromBedFile(ploidyBedPaths[fileCounter]);
                 pedigreeMember.Kin = kinships[pedigreeMember.Name] == PedigreeMember.Kinship.Offspring ?
@@ -64,24 +64,24 @@ namespace CanvasPedigreeCaller
                 segmentIntervals,
                 new ParallelOptions
                 {
-                    MaxDegreeOfParallelism = 1,//Environment.ProcessorCount,
+                    MaxDegreeOfParallelism = Environment.ProcessorCount,
                     TaskScheduler = TaskScheduler.Default
                 },
                 interval =>
                 {
                     Console.WriteLine($"{DateTime.Now} Launching SPW task for segment {interval.Start} - {interval.End}");
-                    var segmentIndex = 41575;
+                    var segmentIndex = 0;
                     while (segmentIndex < numberOfSegments)
                     {
                         if (segmentIndex > interval.Start && segmentIndex < interval.End)
                         {
-                            var alleleCounts = pedigreeMembers.Select(x => x.Segments[segmentIndex].VariantAlleleCounts.Count);
+                            var alleleCounts = pedigreeMembers.Select(x => x.Segments[segmentIndex].Alleles.Counts.Count);
                             var alleleDensity = alleleCounts.Average()/pedigreeMembers.First().Segments[segmentIndex].Length;
 
                             if (alleleCounts.Select(x=>x>DefaultAlleleCountThreshold).Any(c => c == false) && alleleDensity < DefaultAlleleDensityThreshold)
-                                MaximalCnLikelyhood(parents, offsprings, segmentIndex, transitionMatrix, offspringsGenotypes);
+                                MaximalCnLikelihood(parents, offsprings, segmentIndex, transitionMatrix, offspringsGenotypes);
                             else
-                                MaximalGtLikelyhood(parents, offsprings, segmentIndex, parentalGenotypes, offspringsGenotypes);
+                                MaximalGtLikelihood(parents, offsprings, segmentIndex, parentalGenotypes, offspringsGenotypes);
                         }
                         segmentIndex++;
                     }
@@ -112,7 +112,7 @@ namespace CanvasPedigreeCaller
 
         public static int AggregateVariantCoverage(ref List<CanvasSegment> segments)
         {
-            var variantCoverage = segments.SelectMany(segment => segment.VariantTotalCoverage).ToList();
+            var variantCoverage = segments.SelectMany(segment => segment.Alleles.TotalCoverage).ToList();
             return variantCoverage.Any() ? Utilities.Median(variantCoverage) : 0;
         }
 
@@ -125,9 +125,9 @@ namespace CanvasPedigreeCaller
 
             for (int cn = 1; cn < numCnStates; cn++)
             {
-                var gtLikelyhood = new Poisson(Math.Max(cn / 2.0, 0.1));
+                var gtLikelihood = new Poisson(Math.Max(cn / 2.0, 0.1));
                 for (int gt = 0; gt < numCnStates; gt++)
-                    transitionMatrix[cn][gt] = gtLikelyhood.Probability(gt);
+                    transitionMatrix[cn][gt] = gtLikelihood.Probability(gt);
             }
             return transitionMatrix;
         }
@@ -139,12 +139,12 @@ namespace CanvasPedigreeCaller
         /// <param name="children"></param>
         /// <param name="segmentPosition"></param>
         /// <param name="transitionMatrix"></param>
-        public void MaximalCnLikelyhood(List<PedigreeMember> parents, List<PedigreeMember> children, int segmentPosition, double[][] transitionMatrix, List<List<Tuple<int, int>>> offspringsGenotypes)
+        public void MaximalCnLikelihood(List<PedigreeMember> parents, List<PedigreeMember> children, int segmentPosition, double[][] transitionMatrix, List<List<Tuple<int, int>>> offspringsGenotypes)
         {
-            double maximalLikelyhood = Double.MinValue;
+            double maximalLikelihood = Double.MinValue;
             double marginals = 0;
-            var parent1Likelihood = parents[0].CnModel.GetCnLikelihood(Math.Min(parents[0].GetCoverage(segmentPosition), parents[0].MeanCoverage*3.0));
-            var parent2Likelihood = parents[1].CnModel.GetCnLikelihood(Math.Min(parents[1].GetCoverage(segmentPosition), parents[1].MeanCoverage*3.0));
+            var parent1Likelihood = parents.First().CnModel.GetCnLikelihood(Math.Min(parents.First().GetCoverage(segmentPosition), parents.First().MeanCoverage*3.0));
+            var parent2Likelihood = parents.Last().CnModel.GetCnLikelihood(Math.Min(parents.Last().GetCoverage(segmentPosition), parents.Last().MeanCoverage*3.0));
             for (int cn1 = 0; cn1 < parent1Likelihood.Count; cn1++)
             {
                 for (int cn2 = 0; cn2 < parent2Likelihood.Count; cn2++)
@@ -160,12 +160,11 @@ namespace CanvasPedigreeCaller
                                                      [Math.Min(offspringGtStates[counter].Item1 + offspringGtStates[counter].Item2, MaximumCopyNumber - 1)];
                             counter++;
                         }
-                        if (currentLikelihood > maximalLikelyhood)
+                        if (currentLikelihood > maximalLikelihood)
                         {
-                            maximalLikelyhood = currentLikelihood;
+                            maximalLikelihood = currentLikelihood;
                             parents.First().Segments[segmentPosition].CopyNumber = cn1;
                             parents.Last().Segments[segmentPosition].CopyNumber  = cn2;
-
                             counter = 0;
                             foreach (PedigreeMember child in children)
                             {
@@ -173,16 +172,16 @@ namespace CanvasPedigreeCaller
                                 counter++;
                             }
                         }
-                        marginals += maximalLikelyhood;
+                        marginals += maximalLikelihood;
                     }
                 }
             }
 
             foreach (PedigreeMember parent in parents)
-                parent.Segments[segmentPosition].QScore = marginals == 0 ? 0 : maximalLikelyhood / marginals;
+                parent.Segments[segmentPosition].QScore = marginals == 0 ? 0 : maximalLikelihood / marginals;
 
             foreach (PedigreeMember offring in children)
-                offring.Segments[segmentPosition].QScore = marginals == 0 ? 0 : maximalLikelyhood / marginals;
+                offring.Segments[segmentPosition].QScore = marginals == 0 ? 0 : maximalLikelihood / marginals;
         }
 
         /// <summary>
@@ -191,12 +190,12 @@ namespace CanvasPedigreeCaller
         /// <param name="parents"></param>
         /// <param name="children"></param>
         /// <param name="segmentPosition"></param>
-        public void MaximalGtLikelyhood(List<PedigreeMember> parents, List<PedigreeMember> children, int segmentPosition, List<Tuple<int, int>> parentalGenotypes, List<List<Tuple<int, int>>> offspringsGenotypes)
+        public void MaximalGtLikelihood(List<PedigreeMember> parents, List<PedigreeMember> children, int segmentPosition, List<Tuple<int, int>> parentalGenotypes, List<List<Tuple<int, int>>> offspringsGenotypes)
         {
-            double maximalLikelyhood = Double.MinValue;
+            double maximalLikelihood = Double.MinValue;
             double marginals = 0;
-            var parent1Likelihood = parents[0].CnModel.GetGtLikelihood(parents[0].GetAlleleCounts(segmentPosition));
-            var parent2Likelihood = parents[1].CnModel.GetGtLikelihood(parents[1].GetAlleleCounts(segmentPosition));
+            var parent1Likelihood = parents.First().CnModel.GetGtLikelihood(parents.First().GetAlleleCounts(segmentPosition));
+            var parent2Likelihood = parents.Last().CnModel.GetGtLikelihood(parents.Last().GetAlleleCounts(segmentPosition));
             foreach (Tuple<int, int> parent1GtStates in parentalGenotypes)
             {
                 foreach (Tuple<int, int> parent2GtStates in parentalGenotypes)
@@ -213,9 +212,9 @@ namespace CanvasPedigreeCaller
                                                  child.CnModel.GetGtLikelihood(child.GetAlleleCounts(segmentPosition))[offspringGtStates[counter].Item1][offspringGtStates[counter].Item2];
                             counter++;
                         }
-                        if (currentLikelihood > maximalLikelyhood)
+                        if (currentLikelihood > maximalLikelihood)
                         {
-                            maximalLikelyhood = currentLikelihood;
+                            maximalLikelihood = currentLikelihood;
 
                             parents.First().Segments[segmentPosition].CopyNumber = parent1GtStates.Item1 + parent1GtStates.Item2;
                             parents.First().Segments[segmentPosition].MajorChromosomeCount = Math.Max(parent1GtStates.Item1, parent1GtStates.Item2);
@@ -233,16 +232,16 @@ namespace CanvasPedigreeCaller
                                 counter++;
                             }
                         }
-                        marginals += maximalLikelyhood;
+                        marginals += maximalLikelihood;
                     }
                 }
             }
 
             foreach (PedigreeMember parent in parents)
-                parent.Segments[segmentPosition].QScore = marginals == 0 ? 0 : maximalLikelyhood / marginals;
+                parent.Segments[segmentPosition].QScore = marginals == 0 ? 0 : maximalLikelihood / marginals;
 
             foreach (PedigreeMember offring in children)
-                offring.Segments[segmentPosition].QScore = marginals == 0 ? 0 : maximalLikelyhood / marginals;
+                offring.Segments[segmentPosition].QScore = marginals == 0 ? 0 : maximalLikelihood / marginals;
         }
 
 

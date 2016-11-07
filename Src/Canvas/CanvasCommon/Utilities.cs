@@ -1025,7 +1025,7 @@ namespace CanvasCommon
             return 0.5 - 1 / (3.352 * Math.Pow(expectedCoverage, 0.4747));
         }
 
-        static public void PruneVariantFrequencies(List<CanvasSegment> segments, string tempFolder, ref int MinimumVariantFrequenciesForInformativeSegment)
+        static public void PruneFrequencies(List<CanvasSegment> segments, string tempFolder, ref int MinimumFrequenciesForInformativeSegment)
         {
             string debugPath = Path.Combine(tempFolder, "BAFDistributionPerSegment.txt");
             using (StreamWriter writer = new StreamWriter(debugPath))
@@ -1033,13 +1033,13 @@ namespace CanvasCommon
                 foreach (CanvasSegment segment in segments)
                 {
                     writer.Write(String.Format("{0}\t{1}\t{2}", segment.Chr, segment.Begin, segment.End));
-                    float[] mafs = new float[segment.VariantFrequencies.Count];
+                    float[] mafs = new float[segment.Alleles.Frequencies.Count];
                     List<int> zeroIndices = new List<int>();
                     List<int> nonZeroIndices = new List<int>();
                     bool isGreaterThan20 = false;
                     for (int i = 0; i < mafs.Length; i++)
                     {
-                        float f = segment.VariantFrequencies[i];
+                        float f = segment.Alleles.Frequencies[i];
                         mafs[i] = f > 0.5 ? 1 - f : f;
                         if (mafs[i] == 0)
                         {
@@ -1056,12 +1056,12 @@ namespace CanvasCommon
                     //  (2) At least one of the alleles have a MAF >= 0.2
                     if ((float)nonZeroIndices.Count / (float)mafs.Length > 0.1 || isGreaterThan20)
                     {
-                        segment.VariantFrequencies = nonZeroIndices.Select(i => segment.VariantFrequencies[i]).ToList();
-                        var tmpVFs = segment.VariantFrequencies.Where(v => v > 0.1).ToList(); // heuristic to use only the right mode
-                        if (tmpVFs.Count > 0) { segment.VariantFrequencies = tmpVFs; }
-                        if (mafs.Length >= MinimumVariantFrequenciesForInformativeSegment) // adjust MinimumVariantFrequenciesForInformativeSegment
+                        segment.Alleles.Frequencies = nonZeroIndices.Select(i => segment.Alleles.Frequencies[i]).ToList();
+                        var tmpVFs = segment.Alleles.Frequencies.Where(v => v > 0.1).ToList(); // heuristic to use only the right mode
+                        if (tmpVFs.Count > 0) { segment.Alleles.Frequencies = tmpVFs; }
+                        if (mafs.Length >= MinimumFrequenciesForInformativeSegment) // adjust MinimumFrequenciesForInformativeSegment
                         {
-                            MinimumVariantFrequenciesForInformativeSegment = Math.Min(MinimumVariantFrequenciesForInformativeSegment, segment.VariantFrequencies.Count);
+                            MinimumFrequenciesForInformativeSegment = Math.Min(MinimumFrequenciesForInformativeSegment, segment.Alleles.Frequencies.Count);
                         }
                         writer.Write("\tTrue");
                     }

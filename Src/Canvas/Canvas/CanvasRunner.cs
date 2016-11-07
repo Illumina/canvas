@@ -496,20 +496,20 @@ namespace Illumina.SecondaryAnalysis
         /// </summary>
         protected void InvokeCanvasSnv(SmallPedigreeCallset callsets)
         {
-            foreach (var callset in callsets.Callset)
-                InvokeCanvasSnv(callset.Callset);
+            foreach (SingleSampleCallset callset in callsets.Callset)
+                InvokeCanvasSnv(callset.Callset, callset.Callset.SampleName);
         }
 
         /// <summary>
         /// Invoke CanvasSNV.  Return null if this fails and we need to abort CNV calling for this sample.
         /// </summary>
-        protected void InvokeCanvasSnv(CanvasCallset callset)
+        protected void InvokeCanvasSnv(CanvasCallset callset, string sampleName = null)
         {
             List<UnitOfWork> jobList = new List<UnitOfWork>();
             List<string> outputPaths = new List<string>();
             GenomeMetadata genomeMetadata = callset.GenomeMetadata;
 
-            string tumorBamPath = callset.Bam.BamFile.FullName;
+            string bamPath = callset.Bam.BamFile.FullName;
             string normalVcfPath = callset.NormalVcfPath.FullName;
             foreach (GenomeMetadata.SequenceMetadata chromosome in genomeMetadata.Sequences)
             {
@@ -526,23 +526,25 @@ namespace Illumina.SecondaryAnalysis
                     job.ExecutablePath = Utilities.GetMonoPath();
                 }
 
-                string outputPath = Path.Combine(callset.TempFolder, string.Format("{0}-{1}.SNV.txt.gz", chromosome.Name, callset.Id));
+                string outputPath = Path.Combine(callset.TempFolder, $"'{chromosome.Name}'-'{callset.Id}'.SNV.txt.gz");
                 outputPaths.Add(outputPath);
-                job.CommandLine += $" {chromosome.Name} {normalVcfPath} {tumorBamPath} {outputPath}";
+                job.CommandLine += $" {chromosome.Name} {normalVcfPath} {bamPath} {outputPath}";
+                if (!sampleName.IsNullOrEmpty())
+                    job.CommandLine += $" {sampleName}";
                 if (_customParameters.ContainsKey("CanvasSNV"))
                 {
                     job.CommandLine = Utilities.MergeCommandLineOptions(job.CommandLine, _customParameters["CanvasSNV"], true);
                 }
                 job.LoggingFolder = _workManager.LoggingFolder.FullName;
-                job.LoggingStub = string.Format("CanvasSNV-{0}-{1}", callset.Id, chromosome.Name);
+                job.LoggingStub = $"CanvasSNV-'{callset.Id}'-'{chromosome.Name}'";
                 jobList.Add(job);
             }
-            Console.WriteLine("Invoking {0} processor jobs...", jobList.Count);
+            Console.WriteLine($"Invoking {jobList.Count} processor jobs...for sample {callset.SampleName}");
 
             // Invoke CanvasSNV jobs:
-            Console.WriteLine(">>>CanvasSNV start...");
+            Console.WriteLine($"CanvasSNV start for sample {callset.SampleName}");
             _workManager.DoWorkParallelThreads(jobList);
-            Console.WriteLine(">>>CanvasSNV complete!");
+            Console.WriteLine($"CanvasSNV complete for sample {callset.SampleName}");
 
             // Concatenate CanvasSNV results:
             ConcatenateCanvasSNVResults(callset.VfSummaryPath, outputPaths);
@@ -648,7 +650,7 @@ namespace Illumina.SecondaryAnalysis
             var canvasSnvTask = _checkpointRunner.RunCheckpointAsync("CanvasSNV", () => InvokeCanvasSnv(callset));
 
             // Prepare ploidy file:
-            string ploidyBedPath = callset.PloidyBed?.FullName;
+            string ploidyBedPath = callset.PloidyVcf?.FullName;
 
             // CanvasBin:
             var binnedPath = _checkpointRunner.RunCheckpoint("CanvasBin", () => InvokeCanvasBin(callset, canvasReferencePath, canvasBedPath, ploidyBedPath));
@@ -705,7 +707,7 @@ namespace Illumina.SecondaryAnalysis
             }
 
             // Prepare ploidy file:
-            List<string> ploidyBedPaths = callset.Callset.Select(x=>x.Callset.PloidyBed?.FullName).ToList();
+            List<string> ploidyBedPaths = callset.Callset.Select(x=>x.Callset.PloidyVcf?.FullName).ToList();
 
             // CanvasBin:
             var binnedPaths = _checkpointRunner.RunCheckpoint("CanvasBin", () => InvokeCanvasBin(callset, canvasReferencePath, canvasBedPath));

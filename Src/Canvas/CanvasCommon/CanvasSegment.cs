@@ -7,6 +7,14 @@ using Isas.SequencingFiles;
 
 namespace CanvasCommon
 {
+    public class Alleles
+    {
+        public List<float> Frequencies = new List<float>();
+        public List<int> TotalCoverage = new List<int>();
+        public List<Tuple<int, int>> Counts = new List<Tuple<int, int>>();
+
+
+    }
     /// <summary>
     /// Contains information about a genomic interval. Has functions for computing copy numbers and their likelihoods.
     /// </summary>
@@ -16,9 +24,6 @@ namespace CanvasCommon
         public List<float> Counts;
         public int CopyNumber { get; set; }
         public int SecondBestCopyNumber { get; set; }
-        public List<float> VariantFrequencies = new List<float>();
-        public List<int> VariantTotalCoverage = new List<int>();
-        public List<Tuple<int, int>> VariantAlleleCounts = new List<Tuple<int, int>>();
         public int? MajorChromosomeCount;
         public double QScore;
         public double ModelDistance;
@@ -29,6 +34,7 @@ namespace CanvasCommon
         public string Filter = "PASS";
         public Tuple<int, int> StartConfidenceInterval; // if not null, this is a confidence interval around Start, reported in the CIPOS tag
         public Tuple<int, int> EndConfidenceInterval; // if not null, this is a confidence interval around End, reported in the CIEND tag
+        public Alleles Alleles;
         public string Chr { get; private set; }
         /// <summary>
         /// bed format start position
@@ -103,8 +109,8 @@ namespace CanvasCommon
                 this.End = s.End;
             }
             this.Counts.AddRange(s.Counts);
-            this.VariantFrequencies.AddRange(s.VariantFrequencies);
-            this.VariantTotalCoverage.AddRange(s.VariantTotalCoverage);
+            Alleles.Frequencies.AddRange(s.Alleles.Frequencies);
+            Alleles.TotalCoverage.AddRange(s.Alleles.TotalCoverage);
 
         }
 
@@ -116,6 +122,7 @@ namespace CanvasCommon
             this.Counts = new List<float>(counts);
             this.CopyNumber = -1;
             this.SecondBestCopyNumber = -1;
+            this.Alleles = new Alleles();
         }
 
         public int BinCount
@@ -125,6 +132,7 @@ namespace CanvasCommon
                 return Counts.Count;
             }
         }
+
 
         /// <summary>
         /// Compute the median count from a list of segments.
@@ -521,16 +529,16 @@ namespace CanvasCommon
                             firstIndex = 0;
                             if (pointStartPos > segment.Begin)
                             {
-                                firstIndex = (int)((float)segment.VariantFrequencies.Count * (pointStartPos - segment.Begin) / segLength);
+                                firstIndex = (int)((float)segment.Alleles.Frequencies.Count * (pointStartPos - segment.Begin) / segLength);
                             }
-                            lastIndex = segment.VariantFrequencies.Count;
+                            lastIndex = segment.Alleles.Frequencies.Count;
                             if (pointEndPos < segment.End)
                             {
-                                lastIndex = (int)((float)segment.VariantFrequencies.Count * (pointEndPos - segment.Begin) / segLength);
+                                lastIndex = (int)((float)segment.Alleles.Frequencies.Count * (pointEndPos - segment.Begin) / segLength);
                             }
                             for (int index = firstIndex; index < lastIndex; index++)
                             {
-                                float tempMAF = segment.VariantFrequencies[index];
+                                float tempMAF = segment.Alleles.Frequencies[index];
                                 VF.Add(tempMAF);
                                 if (tempMAF > 0.5) tempMAF = 1 - tempMAF;
                                 MAF.Add(tempMAF);
@@ -896,16 +904,16 @@ namespace CanvasCommon
                     return Utilities.CoefficientOfVariation(this.Counts);
 
                 case QScorePredictor.MafCount:
-                    return this.VariantFrequencies.Count;
+                    return Alleles.Frequencies.Count;
 
                 case QScorePredictor.MafMean:
-                    if (this.VariantFrequencies.Count == 0) return 0;
-                    return this.VariantFrequencies.Average();
+                    if (Alleles.Frequencies.Count == 0) return 0;
+                    return Alleles.Frequencies.Average();
 
                 case QScorePredictor.MafCv:
-                    if (this.VariantFrequencies.Count == 0) return 0;
-                    if (this.VariantFrequencies.Average() == 0) return 0;
-                    return Utilities.CoefficientOfVariation(this.VariantFrequencies);
+                    if (Alleles.Frequencies.Count == 0) return 0;
+                    if (Alleles.Frequencies.Average() == 0) return 0;
+                    return Utilities.CoefficientOfVariation(Alleles.Frequencies);
 
                 case QScorePredictor.LogMafCv:
                     return Math.Log10(1 + GetQScorePredictor(QScorePredictor.MafCv));

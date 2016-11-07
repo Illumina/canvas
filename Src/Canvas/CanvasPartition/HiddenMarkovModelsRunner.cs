@@ -48,7 +48,7 @@ namespace CanvasPartition
                         List<MultivariatePoissonDistribution> gaussianDistribution = InitializePoissonEmission(segmentation.ScoresByChr, chr, _nHiddenStates);
                         HiddenMarkovModel hmm = new HiddenMarkovModel(segmentation.ScoresByChr[chr], gaussianDistribution);
                         Console.WriteLine($"{DateTime.Now} Launching HMM task for chromosome {chr}");
-                        hmm.FindMaximalLikelyhood(segmentation.ScoresByChr[chr], chr);
+                        hmm.FindMaximalLikelihood(segmentation.ScoresByChr[chr], chr);
                         List<int> hiddenStates = hmm.BestPathViterbi(segmentation.ScoresByChr[chr]);
                         Console.WriteLine($"{DateTime.Now} Completed HMM task for chromosome {chr}");
 

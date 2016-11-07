@@ -31,8 +31,8 @@ namespace CanvasPedigreeCaller
         }
         public Tuple<int,int> GetAlleleCounts(int segmentIndex)
         {
-            double allele1 = Segments[segmentIndex].VariantAlleleCounts.Select(x=>x.Item1).Average();
-            double allele2 = Segments[segmentIndex].VariantAlleleCounts.Select(x => x.Item2).Average();
+            double allele1 = Segments[segmentIndex].Alleles.Counts.Select(x=>x.Item1).Average();
+            double allele2 = Segments[segmentIndex].Alleles.Counts.Select(x => x.Item2).Average();
             return new Tuple<int, int>(Convert.ToInt32(allele1), Convert.ToInt32(allele2));
         }
     }
