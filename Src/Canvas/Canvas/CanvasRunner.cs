@@ -707,9 +707,6 @@ namespace Illumina.SecondaryAnalysis
                 throw new ApplicationException(string.Format("Error: Missing filter bed file required for CNV calling at '{0}'", canvasBedPath));
             }
 
-            // Prepare ploidy file:
-            List<string> ploidyBedPaths = callset.Callset.Select(x=>x.Callset.PloidyVcf?.FullName).ToList();
-
             // CanvasBin:
             var binnedPaths = _checkpointRunner.RunCheckpoint("CanvasBin", () => InvokeCanvasBin(callset, canvasReferencePath, canvasBedPath));
             if (binnedPaths == null) return;
@@ -725,7 +722,7 @@ namespace Illumina.SecondaryAnalysis
 
             // Variant calling
             await canvasSnvTask;
-            RunSmallPedigreeCalling(partitionedPaths, callset, ploidyBedPaths);
+            RunSmallPedigreeCalling(partitionedPaths, callset);
         }
 
         private List<IFileLocation> WriteMergedCanvasPartition(List<IFileLocation> partitionedPaths, List<string> tempFolders, List<string> sampleNames)
@@ -981,7 +978,7 @@ namespace Illumina.SecondaryAnalysis
             _workManager.DoWorkSingleThread(callerJob);
         }
 
-        protected void RunSmallPedigreeCalling(List<IFileLocation> partitionedPaths, SmallPedigreeCallset callsets, List<string> ploidyBedPaths)
+        protected void RunSmallPedigreeCalling(List<IFileLocation> partitionedPaths, SmallPedigreeCallset callsets)
         {
 
             if (callsets.Callset.Count != partitionedPaths.Count)
@@ -1000,9 +997,7 @@ namespace Illumina.SecondaryAnalysis
                 executablePath = Utilities.GetMonoPath();
             }
             foreach (IFileLocation partitionedPath in partitionedPaths)
-                commandLine.AppendFormat("-i \"{0}\" ", partitionedPath);
-            foreach (string ploidyBedPath in ploidyBedPaths)
-                commandLine.AppendFormat("-p \"{0}\" ", ploidyBedPath);
+                commandLine.AppendFormat("-i \"{0}\" ", partitionedPath);              
 
             foreach (var callset in callsets.Callset)
             {
@@ -1012,6 +1007,7 @@ namespace Illumina.SecondaryAnalysis
             }
             commandLine.AppendFormat("-r \"{0}\" ", callsets.WholeGenomeFastaFolder);
             commandLine.AppendFormat("-f \"{0}\" ", pedigreeFile);
+            commandLine.AppendFormat("-p \"{0}\" ", callsets.PloidyVcf);
 
             UnitOfWork callJob = new UnitOfWork()
             {
@@ -1019,10 +1015,12 @@ namespace Illumina.SecondaryAnalysis
                 LoggingFolder = _workManager.LoggingFolder.FullName,
                 CommandLine = commandLine.ToString()
             };
+
             if (_customParameters.ContainsKey("CanvasPedigreeCaller"))
             {
                 callJob.CommandLine = Utilities.MergeCommandLineOptions(callJob.CommandLine, _customParameters["CanvasPedigreeCaller"], true);
             }
+
             _workManager.DoWorkSingleThread(callJob);
         }
 

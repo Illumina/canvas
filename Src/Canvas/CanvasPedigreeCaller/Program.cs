@@ -30,7 +30,7 @@ namespace CanvasPedigreeCaller
             List<string> outFiles = new List<string>();
             List<string> segmentFiles = new List<string>();
             List<string> variantFrequencyFiles = new List<string>();
-            List<string> ploidyBedPaths = new List<string>();
+            string ploidyBedPath = null;
             string pedigreeFile = null;
             string referenceFolder = null;
             List<string> sampleNames = new List<string>();
@@ -47,7 +47,7 @@ namespace CanvasPedigreeCaller
                 { "r|reference=",     "reference genome folder that contains GenomeSize.xml",                                           v => referenceFolder = v },
                 { "n|sampleName=",    "sample name for output VCF header (optional)",                                                   v => sampleNames.Add(v)},
                 { "f|pedigree=",      "relationship withoin pedigree (parents/proband)",                                                v => pedigreeFile = v },
-                { "p|ploidyBed=",     "bed file specifying reference ploidy (e.g. for sex chromosomes) (optional)",                     v => ploidyBedPaths.Add(v) },
+                { "p|ploidyBed=",     "bed file specifying reference ploidy (e.g. for sex chromosomes) (optional)",                     v => ploidyBedPath = v },
                 { "h|help",           "show this message and exit",                                                                     v => needHelp = v != null },
                 { "s|qscoreconfig=", $"parameter configuration path (default {qualityScoreConfigPath})",                                v => qualityScoreConfigPath = v },
                 { "t|truth=", "path to vcf/bed with CNV truth data (optional)",                                                         v => truthDataPath = v },
@@ -109,7 +109,7 @@ namespace CanvasPedigreeCaller
             // Set parameters:
             CanvasPedigreeCaller caller = new CanvasPedigreeCaller();
             // caller.germlineScoreParameters = qscoreParametersJSON;
-            return caller.CallVariants(variantFrequencyFiles, segmentFiles, outFiles, ploidyBedPaths, referenceFolder, sampleNames, pedigreeFile);
+            return caller.CallVariants(variantFrequencyFiles, segmentFiles, outFiles, ploidyBedPath, referenceFolder, sampleNames, pedigreeFile);
         }
         private static T Deserialize<T>(IFileLocation path)
         {

@@ -30,7 +30,7 @@ namespace Canvas.SmallPedigree
         public GenomeMetadata GenomeMetadata => Callset.First().Callset.GenomeMetadata; 
         public IFileLocation FilterBed => Callset.First().Callset.FilterBed; 
         public IFileLocation CommonCnvsBed { get; set; }
-        public IFileLocation PloidyBed => Callset.First().Callset.PloidyVcf;
+        public IFileLocation PloidyVcf => Callset.First().Callset.PloidyVcf;
         public bool IsDbSnpVcf { get; set; } // NormalVcfPath points to a dbSNP VCF file
 
         public List<SingleSampleCallset> Callset;
