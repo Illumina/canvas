@@ -30,6 +30,9 @@ namespace Canvas
         {
             IFileLocation outputVcfPath = CommonOptions.OutputDirectory.GetFileLocation("CNV.vcf.gz");
             var manifest = new NexteraManifest(_somaticEnrichmentOptions.Manifest.FullName, null, logger.Error);
+            // TODO: refactor and remove the following two lines
+            manifest.CanvasControlBinnedPath = _somaticEnrichmentOptions.ControlBinned?.FullName;
+            manifest.CanvasBinSize = _somaticEnrichmentOptions.ControlBinSize;
             CanvasCallset callSet = new CanvasCallset(
                     _somaticEnrichmentOptions.Bam,
                     CommonOptions.SampleName,

@@ -548,6 +548,15 @@ namespace CanvasCommon
         }
 
         /// <summary>
+        /// Returns t-test statistics from two-sample t-test presuming equal variance
+        /// </summary>
+        public static double tTest(double[] vector , double mean)
+        {
+            return (Mean(vector) - mean)/ (StandardDeviation(vector)/Math.Sqrt(vector.Length));
+        }
+
+        
+        /// <summary>
         /// Returns the 2-norm of vector
         /// </summary>
         /// <param name="v"></param>

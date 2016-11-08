@@ -356,5 +356,35 @@ namespace CanvasTest.Canvas.CommandLineParsing
             Assert.Contains("Error", result.ErrorMessage);
             Assert.Contains("format", result.ErrorMessage);
         }
+
+        [Fact]
+        public void ParseValueOption_ReturnsSuccessfulResult()
+        {
+            // arrange
+            uint inputArgument = 100;
+            ValueOption<uint> valueOption = ValueOption<uint>.Create("value option", "value");
+            string[] stringInputArgument =
+            {
+                "--value", inputArgument.ToString()
+            };
+            // act
+            uint parsedResult = valueOption.Parse(stringInputArgument).Result;
+
+            // assert
+            Assert.Equal(inputArgument, parsedResult);
+        }
+
+        [Fact]
+        public void ParseNullableValueOption_ReturnsSuccessfulResult()
+        {
+            // arrange
+            ValueOption<uint?> valueOption = ValueOption<uint?>.Create("value option", "value");
+
+            // act
+            uint? parsedResult = valueOption.Parse("").Result;
+
+            // assert
+            Assert.False(parsedResult.HasValue);
+        }
     }
 }

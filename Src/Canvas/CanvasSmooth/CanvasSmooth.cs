@@ -30,13 +30,11 @@ namespace CanvasSmooth
             var chromosomes = binsByChrom.Keys;
             ConcurrentDictionary<string, List<GenomicBin>> smoothedBinsByChrom = new ConcurrentDictionary<string, List<GenomicBin>>();
             Console.WriteLine("Launch smoothing jobs...");
-            Console.Out.WriteLine();
             Parallel.ForEach(chromosomes, chrom =>
             {
                 smoothedBinsByChrom[chrom] = smoother.Smooth(binsByChrom[chrom]);
             });
             Console.WriteLine("Completed smoothing jobs.");
-            Console.Out.WriteLine();
 
             // write smoothed bins
             CanvasIO.WriteToTextFile(outputFile.FullName, chromosomes.SelectMany(chrom => smoothedBinsByChrom[chrom]));

@@ -116,7 +116,7 @@ namespace CanvasPartition
                 {
                     // threshold 2x*sigma for TN and ranges from 0.5x to 1.5x *sigma for Germline
                     // parameters trained on CanvasRegression datasets 
-                    if (Math.Abs(tree[nodeIndex][k * subtreeSize + 2 - 1]) <= sigma * (thresholds[indices[nodeIndex]]) * Math.Sqrt(2 * Math.Log(n)))
+                    if (Math.Abs(tree[nodeIndex][k * subtreeSize + 2 - 1]) <= 2 * sigma * (thresholds[indices[nodeIndex]]) * Math.Sqrt(2 * Math.Log(n)))
                     {
                         tree[nodeIndex][k * subtreeSize + 2 - 1] = 0;
                     }
@@ -344,7 +344,7 @@ namespace CanvasPartition
         /// for change point (breakpoint) detection
         /// </summary>
         public static void HaarWavelets(double[] ratio, double thresholdlower, double thresholdupper, List<int> breakpoints,
-            bool isGermline, double madFactor = 2.0)
+            bool isGermline, double madFactor)
         {
             // tree = A list of J matrices (list of lists in C#), where J represents the number of UH “scales”. 
             // Each matrix is of size 5 x (the number of UH coefficients at a given scale). 
