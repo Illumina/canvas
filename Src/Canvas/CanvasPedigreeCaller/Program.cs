@@ -27,7 +27,7 @@ namespace CanvasPedigreeCaller
         static int Main(string[] args)
         {
             CanvasCommon.Utilities.LogCommandLine(args);
-            List<string> outDirs = new List<string>();
+            List<string> outFiles = new List<string>();
             List<string> segmentFiles = new List<string>();
             List<string> variantFrequencyFiles = new List<string>();
             List<string> ploidyBedPaths = new List<string>();
@@ -43,14 +43,14 @@ namespace CanvasPedigreeCaller
             {
                 { "i|infile=",        "file containing bins, their counts, and assigned segments (obtained from CanvasPartition.exe)",  v => segmentFiles.Add(v) },
                 { "v|varfile=",       "file containing variant frequencies (obtained from CanvasSNV.exe)",                              v => variantFrequencyFiles.Add(v) },
-                { "o|outfile=",       "name of output directory",                                                                       v => outDirs.Add(v) },
+                { "o|outfile=",       "name of output directory",                                                                       v => outFiles.Add(v) },
                 { "r|reference=",     "reference genome folder that contains GenomeSize.xml",                                           v => referenceFolder = v },
                 { "n|sampleName=",    "sample name for output VCF header (optional)",                                                   v => sampleNames.Add(v)},
                 { "f|pedigree=",      "relationship withoin pedigree (parents/proband)",                                                v => pedigreeFile = v },
                 { "p|ploidyBed=",     "bed file specifying reference ploidy (e.g. for sex chromosomes) (optional)",                     v => ploidyBedPaths.Add(v) },
                 { "h|help",           "show this message and exit",                                                                     v => needHelp = v != null },
-                { "s|qscoreconfig=", $"parameter configuration path (default {qualityScoreConfigPath})", v => qualityScoreConfigPath = v },
-                { "t|truth=", "path to vcf/bed with CNV truth data (optional)", v => truthDataPath = v },
+                { "s|qscoreconfig=", $"parameter configuration path (default {qualityScoreConfigPath})",                                v => qualityScoreConfigPath = v },
+                { "t|truth=", "path to vcf/bed with CNV truth data (optional)",                                                         v => truthDataPath = v },
             };
 
             List<string> extraArgs = p.Parse(args);
@@ -66,7 +66,7 @@ namespace CanvasPedigreeCaller
                 return 0;
             }
 
-            if (!segmentFiles.Any() || !outDirs.Any() || !variantFrequencyFiles.Any() || string.IsNullOrEmpty(referenceFolder))
+            if (!segmentFiles.Any() || !outFiles.Any() || !variantFrequencyFiles.Any() || string.IsNullOrEmpty(referenceFolder))
             {
                 ShowHelp(p);
                 return 0;
@@ -109,7 +109,7 @@ namespace CanvasPedigreeCaller
             // Set parameters:
             CanvasPedigreeCaller caller = new CanvasPedigreeCaller();
             // caller.germlineScoreParameters = qscoreParametersJSON;
-            return caller.CallVariants(variantFrequencyFiles, segmentFiles, outDirs, ploidyBedPaths, referenceFolder, sampleNames, pedigreeFile);
+            return caller.CallVariants(variantFrequencyFiles, segmentFiles, outFiles, ploidyBedPaths, referenceFolder, sampleNames, pedigreeFile);
         }
         private static T Deserialize<T>(IFileLocation path)
         {

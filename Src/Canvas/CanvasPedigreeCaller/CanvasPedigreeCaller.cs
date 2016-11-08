@@ -22,7 +22,7 @@ namespace CanvasPedigreeCaller
         public int QualityFilterThreshold { get; set; } = 10;
         #endregion
 
-        internal int CallVariants(List<string> variantFrequencyFiles, List<string> segmentFiles, List<string> outDirs, List<string> ploidyBedPaths, string referenceFolder, List<string> sampleNames, string pedigreeFile)
+        internal int CallVariants(List<string> variantFrequencyFiles, List<string> segmentFiles, List<string> outVcfFiles, List<string> ploidyBedPaths, string referenceFolder, List<string> sampleNames, string pedigreeFile)
         {
             // load files
             // initialize data structures and classes
@@ -88,14 +88,13 @@ namespace CanvasPedigreeCaller
                     Console.WriteLine($"{DateTime.Now} Finished SPW task for segment {interval.Start} - {interval.End}");
                 });
 
-
-            for (int pedigreeMemberIndex = 0; pedigreeMemberIndex < pedigreeMembers.Count; pedigreeMemberIndex++)
+            int pedigreeMemberIndex = 0;
+            foreach (var pedigreeMember in pedigreeMembers)
             {
-                var outFile = Path.Combine(outDirs[pedigreeMemberIndex], pedigreeMembers[pedigreeMemberIndex].Name + "CNV.vcf");
-                CanvasSegment.MergeSegments(ref pedigreeMembers[pedigreeMemberIndex].Segments);
-                CanvasSegment.WriteSegments(outFile, pedigreeMembers[pedigreeMemberIndex].Segments,
-                    pedigreeMembers[pedigreeMemberIndex].MeanCoverage, referenceFolder,
-                    pedigreeMembers[pedigreeMemberIndex].Name, null, null, QualityFilterThreshold);
+                CanvasSegment.MergeSegments(ref pedigreeMember.Segments);
+                CanvasSegment.WriteSegments(outVcfFiles[pedigreeMemberIndex], pedigreeMember.Segments,
+                    pedigreeMember.MeanCoverage, referenceFolder, pedigreeMember.Name, null, null, QualityFilterThreshold);
+                pedigreeMemberIndex++;
             }
             return 0;
         }
@@ -225,8 +224,7 @@ namespace CanvasPedigreeCaller
                             counter = 0;
                             foreach (PedigreeMember child in children)
                             {
-                                child.Segments[segmentPosition].CopyNumber = parent2GtStates.Item1 +
-                                                                              offspringGtStates[counter].Item2;
+                                child.Segments[segmentPosition].CopyNumber = parent2GtStates.Item1 + offspringGtStates[counter].Item2;
                                 child.Segments[segmentPosition].MajorChromosomeCount =
                                     Math.Max(offspringGtStates[counter].Item1, offspringGtStates[counter].Item2);
                                 counter++;
