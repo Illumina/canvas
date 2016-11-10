@@ -6,7 +6,9 @@ using CanvasCommon;
 using MathNet.Numerics.Distributions;
 using System.Threading;
 using System.Threading.Tasks;
+using Combinatorics.Collections;
 using MathNet.Numerics.LinearAlgebra;
+using MathNet.Numerics;
 
 namespace CanvasPartition
 {
@@ -20,6 +22,59 @@ namespace CanvasPartition
         public abstract double EstimateLikelihood(List<double> x);
     }
 
+    public class MultivariateNegativeBinomial : MultivariateDistribution
+    {
+        private readonly List<NegativeBinomial> _negativeBinomials;
+        private readonly List<double> _means;
+        public List<double> Variances { get; }
+
+
+        public MultivariateNegativeBinomial(List<double> means, List<double> variances)
+        {
+            _negativeBinomials = new List<NegativeBinomial>();
+            for (int i = 0; i < means.Count; i++)
+                _negativeBinomials.Add(Utilities.NegativeBinomialWrapper(means[i], variances[i]));
+            _means = means;
+            Variances = variances;
+        }
+
+        public List<NegativeBinomial> NegativeBinomials
+        {
+            get { return _negativeBinomials; }
+        }
+
+        public override int GetDimensions()
+        {
+            return NegativeBinomials.Count;
+        }
+
+        public override List<double> Mean()
+        {
+            return _means;
+        }
+
+        public void UpdateNegativeBinomial(double[] gamma, List<List<double>> data, List<double> variance)
+        {
+            var m = this.GetDimensions();
+            for (int dimension = 0; dimension < m; dimension++)
+            {
+                variance[dimension] = CanvasCommon.Utilities.WeightedVariance(data.Select(x => x[dimension]).ToList(), gamma);
+                NegativeBinomials[dimension] = Utilities.NegativeBinomialWrapper(CanvasCommon.Utilities.WeightedMean(data.Select(x => x[dimension]).ToList(), gamma.ToList()), variance[dimension]);
+            }
+        }
+                
+        public override double EstimateLikelihood(List<double> x)
+        {
+            var m = this.GetDimensions();
+            double likelihood = NegativeBinomials[0].Probability(Convert.ToInt32(x[0]));
+            for (int i = 1; i < m; i++)
+                likelihood *= NegativeBinomials[i].Probability(Convert.ToInt32(x[i]));
+            if (Double.IsNaN(likelihood) || Double.IsInfinity(likelihood))
+                likelihood = 0;
+            return likelihood;
+        }
+    }
+
     public class MultivariatePoissonDistribution : MultivariateDistribution
     {
         private readonly List<Poisson> _poisson;
@@ -28,32 +83,37 @@ namespace CanvasPartition
         {
             _poisson = new List<Poisson>();
             foreach (double mean in means)
-                _poisson.Add(new Poisson(mean));
+                Poisson.Add(new Poisson(mean));
+        }
+
+        public List<Poisson> Poisson
+        {
+            get { return _poisson; }
         }
 
         public override int GetDimensions()
         {
-            return _poisson.Count;
+            return Poisson.Count;
         }
 
         public override List<double> Mean()
         {
-            return _poisson.Select(x => x.Lambda).ToList();
+            return Poisson.Select(x => x.Lambda).ToList();
         }
 
         public void UpdatePoisson(double[] gamma, List<List<double>> data)
         {
             var m = this.GetDimensions();
             for (int dimension = 0; dimension < m; dimension++)
-                _poisson[dimension] = new Poisson(CanvasCommon.Utilities.WeightedMean(data.Select(x => x[dimension]).ToList(), gamma.ToList()));
+                Poisson[dimension] = new Poisson(CanvasCommon.Utilities.WeightedMean(data.Select(x => x[dimension]).ToList(), gamma.ToList()));
         }
 
         public override double EstimateLikelihood(List<double> x)
         {
             var m = this.GetDimensions();
-            double likelihood = _poisson[0].Probability(Convert.ToInt32(x[0]));
+            double likelihood = Poisson[0].Probability(Convert.ToInt32(x[0]));
             for (int i = 1; i < m; i++)
-                likelihood *= _poisson[i].Probability(Convert.ToInt32(x[i]));
+                likelihood *= Poisson[i].Probability(Convert.ToInt32(x[i]));
             if (Double.IsNaN(likelihood) || Double.IsInfinity(likelihood))
                 likelihood = 0;
             return likelihood;
@@ -129,23 +189,147 @@ namespace CanvasPartition
     {
         public abstract double EstimateLikelihood(List<double> x, int state);
         public abstract void WriteMeans();
-        public abstract void UpdateMeans(double[][] gamma, List<List<double>> x);
+        public abstract void UpdateMeans(double[][] gamma, List<List<double>> x, List<List<double>> variance = null);
         public abstract void UpdateCovariances(double[][] gamma, List<List<double>> x);
+        public abstract double EstimateViterbiLikelihood(List<double> x, int currentState, List<double> haploidMeans, double[] transition);
+
+    }
+
+    public static class Utilities
+    {
+
+        public static List<List<int>> Combinations(int numberOfStates, int currentState)
+        {
+            const int diploidState = 2;
+            var upperSetBound = SpecialFunctions.Factorial(numberOfStates) * SpecialFunctions.Factorial(numberOfStates / 2);
+            var allCombinations = new List<List<int>>(Convert.ToInt32(upperSetBound));
+            for (int numberOfDiploidStates = 1; numberOfDiploidStates < numberOfStates; numberOfDiploidStates++)
+            {
+                var states = Enumerable.Repeat(currentState, numberOfStates - numberOfDiploidStates)
+                    .Concat(Enumerable.Repeat(diploidState, numberOfDiploidStates));
+                var permutations = new Permutations<int>(states.ToList(), GenerateOption.WithoutRepetition);
+                var list = permutations.Select(x => x.ToList()).ToList();
+                allCombinations.AddRange(list);
+            }
+            return allCombinations;
+        }
+        public static NegativeBinomial NegativeBinomialWrapper(double mean, double variance)
+        {
+            double r = Math.Pow(Math.Max(mean, 0.1), 2) / Math.Max(variance - mean, 1.0);
+            double p = r / (r + mean);
+            return new NegativeBinomial(r, p);
+        }
+    }
+
+    public class NegativeBinomialMixture : MixtureDistibution
+    {
+
+        private readonly List<MultivariateNegativeBinomial> _negativeBinomialDistributions;
+        public List<List<List<int>>> StatePermutations { get; }
+        public override void UpdateCovariances(double[][] gamma, List<List<double>> x) { }
+
+
+        public NegativeBinomialMixture(List<MultivariateNegativeBinomial> negativeBinomialDistributions, List<double> haploidMeans)
+        {
+            _negativeBinomialDistributions = negativeBinomialDistributions;
+            StatePermutations = new List<List<List<int>>>();
+
+            for (int currentState = 0; currentState < negativeBinomialDistributions.Count; currentState++)
+            {
+                List<List<int>> allCombinations = null;
+                int nDimensions = _negativeBinomialDistributions[currentState].GetDimensions();
+                if (_negativeBinomialDistributions[currentState].Mean().Average() < haploidMeans.Average() * 1.5 ||
+                    _negativeBinomialDistributions[currentState].Mean().Average() > haploidMeans.Average() * 1.5)
+                {
+                    allCombinations = Utilities.Combinations(nDimensions, currentState);
+                }
+                StatePermutations.Add(allCombinations);
+            }
+        }
+
+        public override void UpdateMeans(double[][] gamma, List<List<double>> x, List<List<double>> variance)
+        {
+            int stateCounter = 0;
+            foreach (MultivariateNegativeBinomial poissonDistribution in _negativeBinomialDistributions)
+            {
+                poissonDistribution.UpdateNegativeBinomial(gamma[stateCounter], x, variance[stateCounter]);
+                stateCounter++;
+            }
+        }
+
+        public override double EstimateLikelihood(List<double> x, int state)
+        {
+            return _negativeBinomialDistributions[state].EstimateLikelihood(x);
+        }
+
+        public override double EstimateViterbiLikelihood(List<double> x, int currentState, List<double> haploidMeans, double[] transition)
+        {
+            if (StatePermutations[currentState] != null)
+            {
+                double maxLikelyhood = Double.MinValue;
+                var bestState = new List<int>();
+
+                foreach (List<int> states in StatePermutations[currentState])
+                {
+                    double emissionLikelihood = 1.0;
+                    int stateCounter = 0;
+                    foreach (int state in states)
+                    {
+                        emissionLikelihood *= _negativeBinomialDistributions[state].NegativeBinomials[stateCounter].Probability(Convert.ToInt32(x[stateCounter]));
+                        stateCounter++;
+                    }
+                    if (Double.IsNaN(emissionLikelihood) || Double.IsInfinity(emissionLikelihood))
+                        emissionLikelihood = 0;
+                    if (maxLikelyhood < emissionLikelihood)
+                    {
+                        bestState = states;
+                        maxLikelyhood = emissionLikelihood;
+
+                    }
+                }
+                return Math.Log(maxLikelyhood) + Math.Log(bestState.Select(state => transition[state]).Average());
+            }
+
+            return Math.Log(_negativeBinomialDistributions[currentState].EstimateLikelihood(x)) + Math.Log(transition[currentState]);
+        }
+
+
+        public override void WriteMeans()
+        {
+            foreach (MultivariateNegativeBinomial negativeBinomial in _negativeBinomialDistributions)
+                for (int i = 0; i < negativeBinomial.Mean().Count; i++)
+                    Console.WriteLine($"Negative Binomial mean for state {i} = {negativeBinomial.Mean()[i]}");
+        }
     }
 
     public class PoissonMixture : MixtureDistibution
     {
 
         private readonly List<MultivariatePoissonDistribution> _poissonDistributions;
+        public List<List<List<int>>> StatePermutations { get; }
 
-        public override void UpdateCovariances(double[][] gamma, List<List<double>> x) {}
 
-        public PoissonMixture(List<MultivariatePoissonDistribution> poissonDistributions)
+        public override void UpdateCovariances(double[][] gamma, List<List<double>> x) { }
+
+        public PoissonMixture(List<MultivariatePoissonDistribution> poissonDistributions, List<double> haploidMeans)
         {
             _poissonDistributions = poissonDistributions;
+            StatePermutations = new List<List<List<int>>>();
+
+            for (int currentState = 0; currentState < poissonDistributions.Count; currentState++)
+            {
+                List<List<int>> allCombinations = null;
+                int nDimensions = _poissonDistributions[currentState].GetDimensions();
+                if (_poissonDistributions[currentState].Mean().Average() < haploidMeans.Average() * 1.5 ||
+                    _poissonDistributions[currentState].Mean().Average() > haploidMeans.Average() * 1.5)
+                {
+                    allCombinations = Utilities.Combinations(nDimensions, currentState);
+                }
+                StatePermutations.Add(allCombinations);
+            }
         }
 
-        public override void UpdateMeans(double[][] gamma, List<List<double>> x)
+        public override void UpdateMeans(double[][] gamma, List<List<double>> x, List<List<double>> variance = null)
         {
             int stateCounter = 0;
             foreach (MultivariatePoissonDistribution poissonDistribution in _poissonDistributions)
@@ -160,6 +344,37 @@ namespace CanvasPartition
             return _poissonDistributions[state].EstimateLikelihood(x);
         }
 
+        public override double EstimateViterbiLikelihood(List<double> x, int currentState, List<double> haploidMeans, double[] transition)
+        {
+            if (StatePermutations[currentState] != null)
+            {
+                double maxLikelyhood = Double.MinValue;
+                var bestState = new List<int>();
+
+                foreach (List<int> states in StatePermutations[currentState])
+                {
+                    double emissionLikelihood = 1.0;
+                    int stateCounter = 0;
+                    foreach (int state in states)
+                    {
+                        emissionLikelihood *= _poissonDistributions[state].Poisson[stateCounter].Probability(Convert.ToInt32(x[stateCounter]));
+                        stateCounter++;
+                    }
+                    if (Double.IsNaN(emissionLikelihood) || Double.IsInfinity(emissionLikelihood))
+                        emissionLikelihood = 0;
+                    if (maxLikelyhood < emissionLikelihood)
+                    {
+                        bestState = states;
+                        maxLikelyhood = emissionLikelihood;
+
+                    }
+                }
+                return Math.Log(maxLikelyhood) + Math.Log(bestState.Select(state => transition[state]).Average());
+            }
+
+            return Math.Log(_poissonDistributions[currentState].EstimateLikelihood(x)) + Math.Log(transition[currentState]);
+        }
+
 
         public override void WriteMeans()
         {
@@ -169,7 +384,7 @@ namespace CanvasPartition
         }
     }
 
-    
+
 
     public class GaussianMixture : MixtureDistibution
     {
@@ -179,7 +394,7 @@ namespace CanvasPartition
         {
             _gaussianDistributions = gaussianDistributions;
         }
-        public override void UpdateMeans(double[][] gamma, List<List<double>> x)
+        public override void UpdateMeans(double[][] gamma, List<List<double>> x, List<List<double>> variance = null)
         {
             int stateCounter = -1;
             foreach (MultivariateGaussianDistribution gaussianDistribution in _gaussianDistributions)
@@ -214,6 +429,11 @@ namespace CanvasPartition
         public int GetNumberOfStates()
         {
             return _gaussianDistributions.Count;
+        }
+
+        public override double EstimateViterbiLikelihood(List<double> x, int currentState, List<double> haploidMeans, double[] transition)
+        {
+            throw new NotImplementedException();
         }
     }
 }

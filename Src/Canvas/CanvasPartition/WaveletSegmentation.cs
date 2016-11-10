@@ -73,7 +73,7 @@ namespace CanvasPartition
                     indexVector.Add(i + 1);
                 }
             }
-            return indexVector.Any() ? Utilities.Median(indexVector) : 0;
+            return indexVector.Any() ? CanvasCommon.Utilities.Median(indexVector) : 0;
         }
 
         /// <summary>

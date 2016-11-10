@@ -344,7 +344,6 @@ namespace CanvasPartition
                         uint end = EndByChr[chr][pos];
                         string key = chr + ":" + start;
                         bool newSegment = IsNewSegment(starts, key, excludeIntervals, previousBinEnd, end, start, ref excludeIndex);
-
                         if (newSegment) segmentNum++;
                         writer.WriteLine(string.Format($"{chr}\t{start}\t{end}\t{ScoreByChr[chr][pos]}\t{segmentNum}"));
                         previousBinEnd = end;
@@ -353,8 +352,10 @@ namespace CanvasPartition
             }
         }
 
-        public void WriteCanvasPartitionMultisampleResults(List<string> outPaths, GenomeSegmentationResults regmentationResults)
+        public void WriteCanvasPartitionMultisampleResults(List<string> outPaths, GenomeSegmentationResults segmentationResults)
         {
+
+
             for (int fileIndex = 0; fileIndex < outPaths.Count; fileIndex++)
             {
                 Dictionary<string, List<double>> scoreByChr = new Dictionary<string, List<double>>();
@@ -368,7 +369,7 @@ namespace CanvasPartition
                 }
                 foreach (string chr in scoreByChr.Keys)
                     this.ScoreByChr[chr] = scoreByChr[chr].ToArray();
-                this.WriteCanvasPartitionResults(outPaths[fileIndex], regmentationResults);
+                this.WriteCanvasPartitionResults(outPaths[fileIndex], segmentationResults);
             }
         }
 

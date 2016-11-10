@@ -297,6 +297,36 @@ namespace CanvasCommon
             return Math.Sqrt(sum / (x.Count - 1));
         }
 
+        // estimate variance of double list
+        static public double Variance(List<double> x)
+        {
+
+            double mu = x.Average();
+            double sum = 0;
+
+            for (int i = 0; i < x.Count; i++)
+            {
+                double diff = x[i] - mu;
+                sum += diff * diff;
+            }
+            return sum / (x.Count - 1);
+        }
+
+        public static double WeightedVariance(List<double> x, double[] weights)
+        {
+
+            double mu = x.Average();
+            double sum = 0;
+            double denominator = 0;
+            for (int i = 0; i < x.Count; i++)
+            {
+                double diff = x[i] - mu;
+                sum += diff * diff * weights[i];
+                denominator += weights[i];
+            }
+            return sum / denominator;
+        }
+
         // estimate Standard Deviation of double list
         public static double WeightedStandardDeviation(List<double> x, double[] weights)
         {

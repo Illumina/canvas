@@ -1013,6 +1013,7 @@ namespace Illumina.SecondaryAnalysis
             {
                 ExecutablePath = executablePath,
                 LoggingFolder = _workManager.LoggingFolder.FullName,
+                LoggingStub = "CanvasPedigreeCaller",
                 CommandLine = commandLine.ToString()
             };
 

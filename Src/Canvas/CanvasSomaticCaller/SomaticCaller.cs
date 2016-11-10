@@ -382,9 +382,9 @@ namespace CanvasSomaticCaller
             this.MeanCoverage = CanvasIO.LoadFrequencies(variantFrequencyFile, this.Segments);
             if (this.IsDbsnpVcf)
             {
-                int tmpMinimumVariantFreq = somaticCallerParameters.MinimumFrequenciesForInformativeSegment;
+                int tmpMinimumVariantFreq = somaticCallerParameters.MinimumVariantFrequenciesForInformativeSegment;
                 CanvasCommon.Utilities.PruneFrequencies(this.Segments, this.TempFolder, ref tmpMinimumVariantFreq);
-                somaticCallerParameters.MinimumFrequenciesForInformativeSegment = tmpMinimumVariantFreq;
+                somaticCallerParameters.MinimumVariantFrequenciesForInformativeSegment = tmpMinimumVariantFreq;
             }
 
             this.InitializePloidies();
@@ -483,7 +483,7 @@ namespace CanvasSomaticCaller
                 int CN = this.GetKnownCNForSegment(segment);
                 // Require the segment have a known CN and reasonably large number of variants:
                 if (CN < 0) continue;
-                if (segment.Alleles.Frequencies.Count < somaticCallerParameters.MinimumFrequenciesForInformativeSegment) continue;
+                if (segment.Alleles.Frequencies.Count < somaticCallerParameters.MinimumVariantFrequenciesForInformativeSegment) continue;
 
                 List<float> MAF = new List<float>();
                 foreach (float VF in segment.Alleles.Frequencies)
@@ -1523,12 +1523,12 @@ namespace CanvasSomaticCaller
             int validMAFCount = 0;
             while (true)
             {
-                usableSegments = GetUsableSegmentsForModeling(this.Segments, IsEnrichment, somaticCallerParameters.MinimumFrequenciesForInformativeSegment);
+                usableSegments = GetUsableSegmentsForModeling(this.Segments, IsEnrichment, somaticCallerParameters.MinimumVariantFrequenciesForInformativeSegment);
                 validMAFCount = usableSegments.Count(x => x.MAF >= 0);
                 if (validMAFCount > Math.Min(20, this.Segments.Count)) break; // We have enough usable segments with nonnull MAF
-                if (somaticCallerParameters.MinimumFrequenciesForInformativeSegment <= 5) break; // Give up on modeling
-                somaticCallerParameters.MinimumFrequenciesForInformativeSegment -= 15;
-                somaticCallerParameters.MinimumFrequenciesForInformativeSegment = Math.Max(5, somaticCallerParameters.MinimumFrequenciesForInformativeSegment);
+                if (somaticCallerParameters.MinimumVariantFrequenciesForInformativeSegment <= 5) break; // Give up on modeling
+                somaticCallerParameters.MinimumVariantFrequenciesForInformativeSegment -= 15;
+                somaticCallerParameters.MinimumVariantFrequenciesForInformativeSegment = Math.Max(5, somaticCallerParameters.MinimumVariantFrequenciesForInformativeSegment);
             }
             Console.WriteLine("Modeling overall coverage/purity across {0} segments", usableSegments.Count);
             if (usableSegments.Count < 10)
