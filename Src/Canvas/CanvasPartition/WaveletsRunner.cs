@@ -12,7 +12,6 @@ namespace CanvasPartition
 
         public class WaveletsRunnerParams
         {
-            private Segmentation segmentation;
             private bool _isGermline;
             private string _commonCnVs;
             private double _thresholdLower;

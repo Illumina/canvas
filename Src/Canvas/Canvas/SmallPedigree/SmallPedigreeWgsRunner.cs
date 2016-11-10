@@ -2,6 +2,7 @@
 using System.IO;
 using System.Linq;
 using Canvas.CommandLineParsing;
+using Canvas.SmallPedigree;
 using CanvasCommon;
 using Illumina.SecondaryAnalysis;
 using Isas.Shared.Checkpointing;
@@ -33,28 +34,28 @@ namespace Canvas
 
         private SmallPedigreeCallset GetCallset()
         {
-            List<CanvasCallset> callSets = new List<CanvasCallset>();
-            for (int i = 0; i < SmallPedigreeOptions.Samples.Count(); i++)
+            var callSets = new List<SingleSampleCallset>();
+            foreach (var sample in SmallPedigreeOptions.Samples)
             {
-                string sampleName = SmallPedigreeOptions.Samples[i].SampleName;
+                string sampleName = sample.SampleName;
                 IDirectoryLocation outputDirectory = new DirectoryLocation(Path.Combine(CommonOptions.OutputDirectory.FullName, sampleName));
                 Directory.CreateDirectory(outputDirectory.FullName);
                 IFileLocation outputVcfPath = outputDirectory.GetFileLocation("CNV.vcf.gz");
                 CanvasCallset callSet = new CanvasCallset(
-                    SmallPedigreeOptions.Samples[i].Bam,
+                    sample.Bam,
                     sampleName,
                     CommonOptions.WholeGenomeFasta,
                     CommonOptions.OutputDirectory,
                     CommonOptions.KmerFasta,
                     CommonOptions.FilterBed,
-                    SmallPedigreeOptions.Samples[i].PloidyVcf,
-                    SmallPedigreeOptions.Samples[i].BAlleleSites,
-                    CommonOptions.IsDbSnpVcf,
+                    SmallPedigreeOptions.MultiSamplePloidyVcf,
+                    SmallPedigreeOptions.BAlleleSites,
+                    SmallPedigreeOptions.IsPopulationBAlleleSites,
                     Enumerable.Empty<IFileLocation>(),
                     null,
                     null,
                     outputVcfPath);
-                callSets.Add(callSet);
+                callSets.Add(new SingleSampleCallset(callSet, sample.SampleType));
             }
             return new SmallPedigreeCallset(callSets, SmallPedigreeOptions.CommonCnvsBed);
         }

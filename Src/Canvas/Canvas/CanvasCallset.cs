@@ -16,16 +16,16 @@ namespace Canvas
         public IFileLocation KmerFasta { get; set; }
         public GenomeMetadata GenomeMetadata { get; set; }
         public IFileLocation FilterBed { get; set; }
-        public IFileLocation PloidyBed { get; set; }
+        public IFileLocation PloidyVcf { get; set; }
 
         public BaseCallset(IDirectoryLocation outputFolder, IDirectoryLocation wholeGenomeFastaFolder,
-           IFileLocation kmerFasta, IFileLocation filterBed, IFileLocation ploidyBed)        
+           IFileLocation kmerFasta, IFileLocation filterBed, IFileLocation ploidyVcf)        
         {
             WholeGenomeFastaFolder = wholeGenomeFastaFolder;
             OutputFolder = outputFolder;
             KmerFasta = kmerFasta;
             FilterBed = filterBed;
-            PloidyBed = ploidyBed;
+            PloidyVcf = ploidyVcf;
         }
     }
 
@@ -49,7 +49,7 @@ namespace Canvas
             IDirectoryLocation outputFolder,
             IFileLocation kmerFasta,
             IFileLocation filterBed,
-            IFileLocation ploidyBed,
+            IFileLocation ploidyVcf,
             IFileLocation normalVcfPath,
             bool isDbSnpVcf,
             IEnumerable<IFileLocation> normalBamPaths,
@@ -60,7 +60,7 @@ namespace Canvas
                 wholeGenomeFastaFolder,
                 kmerFasta,
                 filterBed,
-                ploidyBed)
+                ploidyVcf)
         {
             Bam = new Bam(bam);
             SampleName = sampleName;
@@ -68,7 +68,7 @@ namespace Canvas
             OutputFolder = outputFolder;
             KmerFasta = kmerFasta;
             FilterBed = filterBed;
-            PloidyBed = ploidyBed;
+            PloidyVcf = ploidyVcf;
             NormalVcfPath = normalVcfPath;
             IsDbSnpVcf = isDbSnpVcf;
             Manifest = manifest;

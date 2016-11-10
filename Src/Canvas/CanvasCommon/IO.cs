@@ -125,7 +125,7 @@ namespace CanvasCommon
         /// <summary>
         /// Parse the outputs of CanvasSNV, and note these variant frequencies in the appropriate segment.
         /// </summary>
-        public static float LoadVariantFrequencies(string variantFrequencyFile, List<CanvasSegment> segments)
+        public static float LoadFrequencies(string variantFrequencyFile, List<CanvasSegment> segments)
         {
             
             Console.WriteLine("{0} Load variant frequencies from {1}", DateTime.Now, variantFrequencyFile);
@@ -181,10 +181,11 @@ namespace CanvasCommon
                             mid = (start + end) / 2;
                             continue;
                         }
-                        chrSegments[mid].VariantFrequencies.Add(VF);
-                        chrSegments[mid].VariantTotalCoverage.Add(countRef + countAlt);
+                        chrSegments[mid].Alleles.Frequencies.Add(VF);
+                        chrSegments[mid].Alleles.TotalCoverage.Add(countRef + countAlt);
+                        chrSegments[mid].Alleles.Counts.Add(new Tuple<int, int>(countRef, countAlt));
                         count++;
-                        totalCoverage += (countRef + countAlt); // use only coverage information in segments
+                        totalCoverage += countRef + countAlt; // use only coverage information in segments
                         totalRecords++;
                         break;
                     }

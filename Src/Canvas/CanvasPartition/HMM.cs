@@ -190,7 +190,7 @@ namespace CanvasPartition
             return likelihood;
         }
 
-        public void FindMaximalLikelyhood(List<List<double>> x, string chr)
+        public void FindMaximalLikelihood(List<List<double>> x, string chr)
         {
             double likelihoodDifferenceThreshold = 0.01;
             const int maxIterations = 4;

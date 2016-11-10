@@ -12,11 +12,13 @@ namespace Canvas
     {
         private readonly IFileLocation _bam;
         public CommonOptions CommonOptions { get; }
+        public SingleSampleCommonOptions SingleSampleCommonOptions { get; }
 
-        public GermlineWgsRunner(CommonOptions commonOptions, IFileLocation bam)
+        public GermlineWgsRunner(CommonOptions commonOptions, SingleSampleCommonOptions singleSampleCommonOptions, IFileLocation bam)
         {
             _bam = bam;
             CommonOptions = commonOptions;
+            SingleSampleCommonOptions = singleSampleCommonOptions;
         }
 
         public void Run(ILogger logger, ICheckpointRunnerAsync checkpointRunner, IWorkManager workManager)
@@ -32,14 +34,14 @@ namespace Canvas
             IFileLocation outputVcfPath = CommonOptions.OutputDirectory.GetFileLocation("CNV.vcf.gz");
             CanvasCallset callSet = new CanvasCallset(
                     _bam,
-                    CommonOptions.SampleName,
+                    SingleSampleCommonOptions.SampleName,
                     CommonOptions.WholeGenomeFasta,
                     CommonOptions.OutputDirectory,
                     CommonOptions.KmerFasta,
                     CommonOptions.FilterBed,
-                    CommonOptions.PloidyBed,
-                    CommonOptions.BAlleleSites,
-                    CommonOptions.IsDbSnpVcf,
+                    SingleSampleCommonOptions.PloidyBed,
+                    SingleSampleCommonOptions.BAlleleSites,
+                    SingleSampleCommonOptions.IsDbSnpVcf,
                     Enumerable.Empty<IFileLocation>(),
                     null,
                     null,

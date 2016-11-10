@@ -23,7 +23,7 @@ namespace CanvasDiploidCaller
         public static double CoverageWeighting = 0.6;
         private double CoverageWeightingFactor; // Computed from CoverageWeighting
         public bool IsDbsnpVcf = false;
-        static protected int MinimumVariantFrequenciesForInformativeSegment = 50;
+        static protected int MinimumFrequenciesForInformativeSegment = 50;
         protected int MedianHetSnpsDistance = 463; // based on NA12878 VFResults.txt.gz file
         CopyNumberOracle CNOracle = null;
         public QualityScoreParameters germlineScoreParameters;
@@ -170,11 +170,11 @@ namespace CanvasDiploidCaller
             {
                 // Compute (MAF, Coverage) for this segment:
                 List<double> MAF = new List<double>();
-                foreach (float VF in segment.VariantFrequencies) MAF.Add(VF > 0.5 ? 1 - VF : VF);
+                foreach (float VF in segment.Alleles.Frequencies) MAF.Add(VF > 0.5 ? 1 - VF : VF);
                 int expectedSnpDensityCutoff = (segment.End - segment.Begin) / MedianHetSnpsDistance / 2;
 
 
-                List<Tuple<float, float>> weightedVariantFrequencies = new List<Tuple<float, float>>();
+                List<Tuple<float, float>> weightedFrequencies = new List<Tuple<float, float>>();
                 double medianCoverage = CanvasCommon.Utilities.Median(segment.Counts);
 
                 double medianMAF = -1;
@@ -232,7 +232,7 @@ namespace CanvasDiploidCaller
             {
                 // Compute (MAF, Coverage) for this segment:
                 List<double> MAF = new List<double>();
-                foreach (float VF in segment.VariantFrequencies) MAF.Add(VF > 0.5 ? 1 - VF : VF);
+                foreach (float VF in segment.Alleles.Frequencies) MAF.Add(VF > 0.5 ? 1 - VF : VF);
                 double medianCoverage = CanvasCommon.Utilities.Median(segment.Counts);
                 double medianMAF = dummyMAF;
 
@@ -285,7 +285,7 @@ namespace CanvasDiploidCaller
 
         public static int AggregateVariantCoverage(ref List<CanvasSegment> segments)
         {
-            var variantCoverage = segments.SelectMany(segment => segment.VariantTotalCoverage).ToList();
+            var variantCoverage = segments.SelectMany(segment => segment.Alleles.TotalCoverage).ToList();
             return variantCoverage.Any() ? Utilities.Median(variantCoverage) : 0;
         }
 
@@ -323,7 +323,7 @@ namespace CanvasDiploidCaller
                     if (CN < 0) continue;
                     if (segment.End - segment.Begin < 5000) continue;
                     List<float> MAF = new List<float>();
-                    foreach (float VF in segment.VariantFrequencies)
+                    foreach (float VF in segment.Alleles.Frequencies)
                     {
                         MAF.Add(VF > 0.5 ? 1 - VF : VF);
                     }
@@ -393,7 +393,7 @@ namespace CanvasDiploidCaller
             if (!string.IsNullOrEmpty(ploidyBedPath)) ploidy = PloidyInfo.LoadPloidyFromBedFile(ploidyBedPath);
 
             // load MAF
-            this.MeanCoverage = CanvasIO.LoadVariantFrequencies(variantFrequencyFile, this.Segments);
+            this.MeanCoverage = CanvasIO.LoadFrequencies(variantFrequencyFile, this.Segments);
             int medianVariantCoverage = AggregateVariantCoverage(ref this.Segments);
 
 
@@ -413,7 +413,7 @@ namespace CanvasDiploidCaller
                 SegmentInfo info = new SegmentInfo();
                 info.Segment = segment;
                 List<double> MAF = new List<double>();
-                foreach (float value in segment.VariantFrequencies) MAF.Add(value > 0.5 ? 1 - value : value);
+                foreach (float value in segment.Alleles.Frequencies) MAF.Add(value > 0.5 ? 1 - value : value);
 
                 if (MAF.Count > 0)
                 {

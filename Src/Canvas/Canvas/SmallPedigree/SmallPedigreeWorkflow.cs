@@ -1,4 +1,5 @@
-﻿using Illumina.SecondaryAnalysis;
+﻿using Canvas.SmallPedigree;
+using Illumina.SecondaryAnalysis;
 
 namespace Canvas
 {

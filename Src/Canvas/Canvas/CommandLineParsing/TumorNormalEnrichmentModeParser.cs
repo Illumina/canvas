@@ -6,6 +6,7 @@ namespace Canvas.CommandLineParsing
     public class TumorNormalEnrichmentModeParser : ModeParser
     {
         private static readonly CommonOptionsParser CommonOptionsParser = new CommonOptionsParser();
+        private static readonly SingleSampleCommonOptionsParser SingleSampleCommonOptionsParser = new SingleSampleCommonOptionsParser();
         private static readonly TumorNormalOptionsParser TumorNormalOptionsParser = new TumorNormalOptionsParser();
         private static readonly FileOption NormalBam = FileOption.CreateRequired("normal sample .bam file", "normal-bam");
         private static readonly FileOption Manifest = FileOption.CreateRequired("Nextera manifest file", "manifest");
@@ -17,10 +18,11 @@ namespace Canvas.CommandLineParsing
         public override ParsingResult<IModeRunner> Parse(SuccessfulResultCollection parseInput)
         {
             CommonOptions commonOptions = parseInput.Get(CommonOptionsParser);
+            SingleSampleCommonOptions singleSampleCommonOptions = parseInput.Get(SingleSampleCommonOptionsParser);
             TumorNormalOptions tumorNormalOptions = parseInput.Get(TumorNormalOptionsParser);
             var normalBam = parseInput.Get(NormalBam);
             var manifest = parseInput.Get(Manifest);
-            return ParsingResult<IModeRunner>.SuccessfulResult(new TumorNormalEnrichmentRunner(commonOptions, tumorNormalOptions, normalBam, manifest));
+            return ParsingResult<IModeRunner>.SuccessfulResult(new TumorNormalEnrichmentRunner(commonOptions, singleSampleCommonOptions, tumorNormalOptions, normalBam, manifest));
         }
 
         public override OptionCollection<IModeRunner> GetOptions()
