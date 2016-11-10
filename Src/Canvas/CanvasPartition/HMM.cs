@@ -105,6 +105,7 @@ namespace CanvasPartition
         {
             _emission.UpdateCovariances(_gamma, x);
             _emission.UpdateMeans(_gamma, x, _variances);
+            WriteEmission();
         }
 
         public double Forward(List<List<double>> x)

@@ -54,7 +54,7 @@ namespace CanvasPartition
                         // forward sequence
                         hmm.FindMaximalLikelihood(segmentation.ScoresByChr[chr], chr);
                         List<int> hiddenStatesOriginal = hmm.BestPathViterbi(segmentation.ScoresByChr[chr], segmentation.StartByChr[chr], haploidMeans);
-                        // reverse sequence
+                        //reverse sequence
                         // segmentation.ScoresByChr[chr].Reverse();
                         // hmm.FindMaximalLikelihood(segmentation.ScoresByChr[chr], chr);
                         // List<int> hiddenStatesReverse = hmm.BestPathViterbi(segmentation.ScoresByChr[chr], segmentation.StartByChr[chr], haploidMeans);
@@ -213,14 +213,13 @@ namespace CanvasPartition
 
             // remove outliers 
             double maxThreshold = tmpDistributions.Last().Mean().Max() * 1.2;
-            RemoveOutliers(data, maxThreshold, nDimensions);
+            RemoveOutliers(data, chromosome, maxThreshold, nDimensions);
 
             return tmpDistributions;
         }
 
-        private static void RemoveOutliers(Dictionary<string, List<List<double>>> data, double maxThreshold, int nDimensions)
+        private static void RemoveOutliers(Dictionary<string, List<List<double>>> data, string chr, double maxThreshold, int nDimensions)
         {           
-            foreach (string chr in data.Keys)
                 for (int length = 0; length < data[chr].Count; length++)
                     for (int dimension = 0; dimension < nDimensions; dimension++)
                         data[chr][length][dimension] = data[chr][length][dimension] > maxThreshold
