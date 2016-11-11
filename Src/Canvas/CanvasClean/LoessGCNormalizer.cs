@@ -11,14 +11,14 @@ namespace CanvasClean
         private double[] gcs;
         private double[] counts;
         private List<int> withoutChrY;
-        private IEnumerable<GenomicBin> bins;
+        private IEnumerable<SampleGenomicBin> bins;
         private NexteraManifest manifest;
         private Func<float, double> countTransformer = x => (double)x;
         private Func<double, float> invCountTransformer = x => (float)x;
         private int robustnessIter = 0;
 
 
-        public LoessGCNormalizer(IEnumerable<GenomicBin> bins, NexteraManifest manifest, int robustnessIter = 2,
+        public LoessGCNormalizer(IEnumerable<SampleGenomicBin> bins, NexteraManifest manifest, int robustnessIter = 2,
             Func<float, double> countTransformer = null, Func<double, float> invCountTransformer = null)
         {
             this.bins = bins;
@@ -34,7 +34,7 @@ namespace CanvasClean
 
         private void initialize()
         {
-            IEnumerable<GenomicBin> onTargetBins = manifest == null ? bins : EnrichmentUtilities.GetOnTargetBins(bins, manifest);
+            IEnumerable<SampleGenomicBin> onTargetBins = manifest == null ? bins : EnrichmentUtilities.GetOnTargetBins(bins, manifest);
 
             List<double> x = new List<double>();
             List<double> y = new List<double>();
@@ -42,12 +42,12 @@ namespace CanvasClean
             int i = 0; // index into x and y
             foreach (var bin in onTargetBins)
             {
-                double count = countTransformer(bin.CountBin.Count); // Variance stablization
+                double count = countTransformer(bin.Count); // Variance stablization
                 if (!double.IsInfinity(count))
                 {
-                    x.Add(bin.GC);
+                    x.Add(bin.GenomicBin.GC);
                     y.Add(count);
-                    string chrom = bin.Chromosome.ToLower();
+                    string chrom = bin.GenomicBin.Chromosome.ToLower();
                     bool isChrY = chrom == "chry" || chrom == "y";
                     if (!isChrY) { withoutChrY.Add(i); }
                     i++;
@@ -73,11 +73,11 @@ namespace CanvasClean
             var model = loess.Train(gcs, counts, 1, computeFitted: false);
             double[] fittedByGC = model.Predict(Enumerable.Range(minGC, maxGC).Select(i => (double)i));
             // Smooth
-            foreach (GenomicBin bin in bins)
+            foreach (SampleGenomicBin bin in bins)
             {
-                int i = Math.Min(fittedByGC.Length - 1, Math.Max(0, bin.GC - minGC));
-                double smoothed = countTransformer(bin.CountBin.Count) - fittedByGC[i] + medianY;
-                bin.CountBin.Count = invCountTransformer(smoothed);
+                int i = Math.Min(fittedByGC.Length - 1, Math.Max(0, bin.GenomicBin.GC - minGC));
+                double smoothed = countTransformer(bin.Count) - fittedByGC[i] + medianY;
+                bin.Count = invCountTransformer(smoothed);
             }
         }
 

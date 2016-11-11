@@ -9,18 +9,18 @@ namespace CanvasCommon
 {
     public class CanvasIO
     {
-        public static void WriteToTextFile(string outfile, IEnumerable<GenomicBin> bins)
+        public static void WriteToTextFile(string outfile, IEnumerable<SampleGenomicBin> bins)
         {
             using (GzipWriter writer = new GzipWriter(outfile))
             {
-                foreach (GenomicBin bin in bins)
+                foreach (SampleGenomicBin bin in bins)
                 {
-                    writer.WriteLine(string.Format("{0}\t{1}\t{2}\t{3:F2}\t{4}", bin.Chromosome, bin.Start, bin.Stop, bin.CountBin.Count, bin.GC));
+                    writer.WriteLine(string.Format("{0}\t{1}\t{2}\t{3:F2}\t{4}", bin.GenomicBin.Chromosome, bin.Start, bin.Stop, bin.Count, bin.GenomicBin.GC));
                 }
             }
         }
 
-        public static IEnumerable<GenomicBin> IterateThroughTextFile(string infile)
+        public static IEnumerable<SampleGenomicBin> IterateThroughTextFile(string infile)
         {
             using (GzipReader reader = new GzipReader(infile))
             {
@@ -37,13 +37,13 @@ namespace CanvasCommon
                     float count = float.Parse(fields[3]);
                     int gc = Convert.ToInt32(fields[4]);
 
-                    GenomicBin bin = new GenomicBin(chr, start, stop, gc, count);
+                    SampleGenomicBin bin = new SampleGenomicBin(chr, start, stop, gc, count);
                     yield return bin;
                 }
             }
         }
 
-        public static List<GenomicBin> ReadFromTextFile(string infile)
+        public static List<SampleGenomicBin> ReadFromTextFile(string infile)
         {
             return IterateThroughTextFile(infile).ToList();
         }
@@ -53,17 +53,17 @@ namespace CanvasCommon
         /// </summary>
         /// <param name="path"></param>
         /// <returns>OrderedDictionary with string key and List<GenomicBin> value</returns>
-        public static OrderedDictionary<string, List<GenomicBin>> GetGenomicBinsByChrom(string path)
+        public static OrderedDictionary<string, List<SampleGenomicBin>> GetGenomicBinsByChrom(string path)
         {
-            OrderedDictionary<string, List<GenomicBin>> binsByChrom = new OrderedDictionary<string, List<GenomicBin>>();
+            OrderedDictionary<string, List<SampleGenomicBin>> binsByChrom = new OrderedDictionary<string, List<SampleGenomicBin>>();
 
             foreach (var bin in IterateThroughTextFile(path))
             {
-                if (!binsByChrom.ContainsKey(bin.Chromosome))
+                if (!binsByChrom.ContainsKey(bin.GenomicBin.Chromosome))
                 {
-                    binsByChrom[bin.Chromosome] = new List<GenomicBin>();
+                    binsByChrom[bin.GenomicBin.Chromosome] = new List<SampleGenomicBin>();
                 }
-                binsByChrom[bin.Chromosome].Add(bin);
+                binsByChrom[bin.GenomicBin.Chromosome].Add(bin);
             }
 
             return binsByChrom;

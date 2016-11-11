@@ -20,18 +20,18 @@ namespace CanvasNormalize
             return referencePloidy.GetReferenceCopyNumber(segment);
         }
 
-        private static IEnumerable<GenomicBin> RatiosToCounts(IEnumerable<GenomicBin> ratios, PloidyInfo referencePloidy)
+        private static IEnumerable<SampleGenomicBin> RatiosToCounts(IEnumerable<SampleGenomicBin> ratios, PloidyInfo referencePloidy)
         {
-            foreach (GenomicBin ratio in ratios)
+            foreach (SampleGenomicBin ratio in ratios)
             {
                 // get the normal ploidy
-                double factor = CanvasDiploidBinRatioFactor * GetPloidy(referencePloidy, ratio.Chromosome, ratio.Start, ratio.Stop) / 2.0;
-                double count = ratio.CountBin.Count * factor;
-                yield return new GenomicBin(ratio.Chromosome, ratio.Start, ratio.Stop, ratio.GC, (float)count);
+                double factor = CanvasDiploidBinRatioFactor * GetPloidy(referencePloidy, ratio.GenomicBin.Chromosome, ratio.Start, ratio.Stop) / 2.0;
+                double count = ratio.Count * factor;
+                yield return new SampleGenomicBin(ratio.GenomicBin.Chromosome, ratio.Start, ratio.Stop, ratio.GenomicBin.GC, (float)count);
             }
         }
 
-        public static void RatiosToCounts(IEnumerable<GenomicBin> ratios, IFileLocation referencePloidyBedFile,
+        public static void RatiosToCounts(IEnumerable<SampleGenomicBin> ratios, IFileLocation referencePloidyBedFile,
             IFileLocation outputPath)
         {
             PloidyInfo referencePloidy = null;
@@ -49,10 +49,10 @@ namespace CanvasNormalize
         /// <param name="ratios"></param>
         /// <param name="outputFile"></param>
         public static void WriteCndFile(IFileLocation fragmentCountFile, IFileLocation referenceCountFile,
-            IEnumerable<GenomicBin> ratios, IFileLocation outputFile)
+            IEnumerable<SampleGenomicBin> ratios, IFileLocation outputFile)
         {
-            IEnumerable<GenomicBin> fragmentCounts = CanvasIO.IterateThroughTextFile(fragmentCountFile.FullName);
-            IEnumerable<GenomicBin> referenceCounts = CanvasIO.IterateThroughTextFile(referenceCountFile.FullName);
+            IEnumerable<SampleGenomicBin> fragmentCounts = CanvasIO.IterateThroughTextFile(fragmentCountFile.FullName);
+            IEnumerable<SampleGenomicBin> referenceCounts = CanvasIO.IterateThroughTextFile(referenceCountFile.FullName);
 
             using (var eFragment = fragmentCounts.GetEnumerator())
             using (var eReference = referenceCounts.GetEnumerator())
@@ -79,10 +79,10 @@ namespace CanvasNormalize
                     {
                         throw new ApplicationException("Bins are not in the same order.");
                     }
-                    writer.WriteLine(CSVWriter.GetLine(eFragment.Current.CountBin.Count.ToString(),
-                        eReference.Current.CountBin.Count.ToString(), eFragment.Current.Chromosome,
+                    writer.WriteLine(CSVWriter.GetLine(eFragment.Current.Count.ToString(),
+                        eReference.Current.Count.ToString(), eFragment.Current.GenomicBin.Chromosome,
                         eFragment.Current.Start.ToString(), eFragment.Current.Stop.ToString(),
-                        eRatio.Current.CountBin.Count.ToString()));
+                        eRatio.Current.Count.ToString()));
                 }
             }
         }

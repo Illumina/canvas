@@ -90,7 +90,7 @@ namespace CanvasPartition
                     Console.WriteLine("{0} Running Wavelet Partitioning", DateTime.Now);
                     WaveletsRunner waveletsRunner = new WaveletsRunner(new WaveletsRunner.WaveletsRunnerParams(isGermline, commonCNVsbedPath, madFactor: madFactor, verbose: 2));
                     segmentationResults = new Segmentation.GenomeSegmentationResults(waveletsRunner.Run(segmentationEngine));
-                    segmentationEngine.WriteCanvasPartitionResults(outFiles.First(), segmentationResults);
+                    segmentationEngine.WriteCanvasPartitionResults(outFiles.Single(), segmentationResults);
                     break;
                 case Segmentation.SegmentationMethod.CBS:
                     Console.WriteLine("{0} Running CBS Partitioning", DateTime.Now);

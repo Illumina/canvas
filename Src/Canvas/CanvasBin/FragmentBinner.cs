@@ -35,7 +35,7 @@ namespace CanvasBin
                 throw new ApplicationException("Paired-end reads are required for fragment binning.");
             }
 
-            Dictionary<string, List<GenomicBin>> predefinedBins = Utilities.LoadBedFile(parameters.predefinedBinsFile, gcIndex: 3);
+            Dictionary<string, List<SampleGenomicBin>> predefinedBins = Utilities.LoadBedFile(parameters.predefinedBinsFile, gcIndex: 3);
             List<string> chromosomes = GetChromosomesInBam(); // used to order chromosomes
 
             if (!Utilities.IsSubset(predefinedBins.Keys, chromosomes))
@@ -68,7 +68,7 @@ namespace CanvasBin
             }
 
             // Aggregate bins
-            List<GenomicBin> finalBins = new List<GenomicBin>();
+            List<SampleGenomicBin> finalBins = new List<SampleGenomicBin>();
             foreach (string chrom in chromosomes)
             {
                 if (!predefinedBins.ContainsKey(chrom)) { continue; }
@@ -98,7 +98,7 @@ namespace CanvasBin
             public string FastaFile { get; private set; }
             public string Chromosome { get; private set; }
             public Bam Bam { get; private set; }
-            public List<GenomicBin> Bins { get; private set; }
+            public List<SampleGenomicBin> Bins { get; private set; }
             public long UsableFragmentCount { get { return usableFragmentCount; } } // Passing-filter fragments overlapping bins
             private long usableFragmentCount;
 
@@ -109,7 +109,7 @@ namespace CanvasBin
             /// <param name="chrom">chromosome</param>
             /// <param name="bamFile">path to BAM</param>
             /// <param name="bins">predefined bins</param>
-            public BinTask(string fastaFile, string chrom, string bamFile, List<GenomicBin> bins)
+            public BinTask(string fastaFile, string chrom, string bamFile, List<SampleGenomicBin> bins)
             {
                 FastaFile = fastaFile;
                 Chromosome = chrom;
@@ -138,7 +138,7 @@ namespace CanvasBin
             private void InitializeBins()
             {
                 Console.WriteLine("Initializing bin counts to 0 for {0}...", Chromosome);
-                foreach (GenomicBin bin in Bins) { bin.CountBin.Count = 0; }
+                foreach (SampleGenomicBin bin in Bins) { bin.Count = 0; }
             }
 
             /// <summary>
@@ -147,9 +147,9 @@ namespace CanvasBin
             /// <returns></returns>
             private bool IsBinGCAvailable()
             {
-                foreach (GenomicBin bin in Bins)
+                foreach (SampleGenomicBin bin in Bins)
                 {
-                    if (bin.GC < 0)
+                    if (bin.GenomicBin.GC < 0)
                     {
                         return false;
                     }
@@ -165,7 +165,7 @@ namespace CanvasBin
             {
                 Console.WriteLine("Calculating %GC for each bin on {0}...", Chromosome);
                 string referenceBases = FastaLoader.LoadFastaSequence(FastaFile, Chromosome);
-                foreach (GenomicBin bin in Bins)
+                foreach (SampleGenomicBin bin in Bins)
                 {
                     double ntCount = 0;
                     double gcCount = 0;
@@ -176,7 +176,7 @@ namespace CanvasBin
                         if (Utilities.IsGC(referenceBases[pos])) { gcCount++; }
                     }
                     int gc = ntCount > 0 ? (int)(100 * gcCount / ntCount) : 0;
-                    bin.GC = gc;
+                    bin.GenomicBin.GC = gc;
                 }
             }
 
@@ -256,7 +256,7 @@ namespace CanvasBin
             /// <param name="bins">predefined bins</param>
             /// <param name="binIndexStart">bin index from which to start searching for the best bin</param>
             public static void BinOneAlignment(BamAlignment alignment, uint qualityThreshold, Dictionary<string, int> readNameToBinIndex,
-                HashSet<string> samePositionReadNames, ref long usableFragmentCount, List<GenomicBin> bins, ref int binIndexStart)
+                HashSet<string> samePositionReadNames, ref long usableFragmentCount, List<SampleGenomicBin> bins, ref int binIndexStart)
             {
                 if (!alignment.IsMapped()) { return; }
                 if (!alignment.IsMateMapped()) { return; }
@@ -272,7 +272,7 @@ namespace CanvasBin
                     if (duplicateFailedQCLowQuality)
                     {
                         usableFragmentCount--;
-                        bins[readNameToBinIndex[alignment.Name]].CountBin.Count--;
+                        bins[readNameToBinIndex[alignment.Name]].Count--;
                     }
                     readNameToBinIndex.Remove(alignment.Name); // clean up
                     return;
@@ -308,7 +308,7 @@ namespace CanvasBin
                 if (bestBinIndex >= 0) // Bin the fragment
                 {
                     usableFragmentCount++;
-                    bins[bestBinIndex].CountBin.Count++;
+                    bins[bestBinIndex].Count++;
                     readNameToBinIndex[alignment.Name] = bestBinIndex;
                 }
             }
@@ -352,7 +352,7 @@ namespace CanvasBin
             /// <param name="fragmentStart"></param>
             /// <param name="fragmentStop"></param>
             /// <returns></returns>
-            public static int FindBestBin(List<GenomicBin> bins, int binIndexStart, int fragmentStart, int fragmentStop)
+            public static int FindBestBin(List<SampleGenomicBin> bins, int binIndexStart, int fragmentStart, int fragmentStop)
             {
                 int bestBinIndex = -1;
                 int bestOverlap = 0;

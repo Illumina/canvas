@@ -244,13 +244,13 @@ namespace CanvasPartition
         /// <summary>
         /// Remap GenomicBin from genome coordiantes into CanvasBin coordiantes
         /// </summary>
-        public static List<GenomicBin> RemapCommonRegions(List<GenomicBin> commonRegions, uint[] startByChr, uint[] endByChr)
+        public static List<SampleGenomicBin> RemapCommonRegions(List<SampleGenomicBin> commonRegions, uint[] startByChr, uint[] endByChr)
         {
             var length = startByChr.Length;
             var index = 0;
-            List<GenomicBin> commonRegionsRemapped = new List<GenomicBin>();
+            List<SampleGenomicBin> commonRegionsRemapped = new List<SampleGenomicBin>();
 
-            foreach (GenomicBin commonRegion in commonRegions)
+            foreach (SampleGenomicBin commonRegion in commonRegions)
             {
                 if (index > length)
                     break;
@@ -259,7 +259,7 @@ namespace CanvasPartition
 
                 if (startSegment.HasValue && endSegment.HasValue)
                 {
-                    GenomicBin interval = new GenomicBin();
+                    SampleGenomicBin interval = new SampleGenomicBin();
                     interval.Start = startSegment.Value;
                     interval.Stop = endSegment.Value;
                     commonRegionsRemapped.Add(interval);
@@ -271,7 +271,7 @@ namespace CanvasPartition
         /// <summary>
         /// Merge segmentation breakpoints with common CNV intervals
         /// </summary>
-        public static List<int> OverlapCommonRegions(List<int> breakpoints, List<GenomicBin> commonCNVintervals)
+        public static List<int> OverlapCommonRegions(List<int> breakpoints, List<SampleGenomicBin> commonCNVintervals)
         {
             List<int> newBreakpoints = new List<int>();
             int index = 0;
@@ -322,7 +322,7 @@ namespace CanvasPartition
                 }
             }
 
-            Dictionary<string, List<GenomicBin>> excludedIntervals = new Dictionary<string, List<GenomicBin>>();
+            Dictionary<string, List<SampleGenomicBin>> excludedIntervals = new Dictionary<string, List<SampleGenomicBin>>();
             if (!string.IsNullOrEmpty(ForbiddenIntervalBedPath))
             {
                 excludedIntervals = CanvasCommon.Utilities.LoadBedFile(ForbiddenIntervalBedPath);
@@ -334,7 +334,7 @@ namespace CanvasPartition
 
                 foreach (string chr in StartByChr.Keys)
                 {
-                    List<GenomicBin> excludeIntervals = null;
+                    List<SampleGenomicBin> excludeIntervals = null;
                     if (excludedIntervals.ContainsKey(chr)) excludeIntervals = excludedIntervals[chr];
                     int excludeIndex = 0; // Points to the first interval which *doesn't* end before our current position
                     uint previousBinEnd = 0;
@@ -372,7 +372,7 @@ namespace CanvasPartition
             }
         }
 
-        private bool IsNewSegment(Dictionary<string, bool> starts, string key, List<GenomicBin> excludeIntervals, uint previousBinEnd,
+        private bool IsNewSegment(Dictionary<string, bool> starts, string key, List<SampleGenomicBin> excludeIntervals, uint previousBinEnd,
             uint end, uint start, ref int excludeIndex)
         {
             bool newSegment = starts.ContainsKey(key) ? true : false;

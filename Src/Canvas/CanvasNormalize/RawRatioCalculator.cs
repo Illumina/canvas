@@ -20,7 +20,7 @@ namespace CanvasNormalize
             _maxReferenceCount = maxReferecneCount;
         }
 
-        public IEnumerable<GenomicBin> Run(IFileLocation sampleBedFile, IFileLocation referenceBedFile)
+        public IEnumerable<SampleGenomicBin> Run(IFileLocation sampleBedFile, IFileLocation referenceBedFile)
         {
             if (!sampleBedFile.Exists)
                 throw new FileNotFoundException(sampleBedFile.FullName + " does not exist.");
@@ -38,11 +38,11 @@ namespace CanvasNormalize
                     var referenceBin = eReferenceBins.Current;
                     // Bins with extreme reference counts introduce large variance into the ratios.
                     // It would be better to just drop these bins so we don't introduce too much noise into segmentation and CNV calling.
-                    if (referenceBin.CountBin.Count < _minReferenceCount) { continue; } // skip the bin
-                    if (referenceBin.CountBin.Count > _maxReferenceCount) { continue; } // skip the bin
-                    double sampleCount = eSampleBins.Current.CountBin.Count;
-                    double ratio = sampleBin.CountBin.Count / referenceBin.CountBin.Count;
-                    yield return new GenomicBin(sampleBin.Chromosome, sampleBin.Start, sampleBin.Stop, sampleBin.GC, (float)ratio);
+                    if (referenceBin.Count < _minReferenceCount) { continue; } // skip the bin
+                    if (referenceBin.Count > _maxReferenceCount) { continue; } // skip the bin
+                    double sampleCount = eSampleBins.Current.Count;
+                    double ratio = sampleBin.Count / referenceBin.Count;
+                    yield return new SampleGenomicBin(sampleBin.GenomicBin.Chromosome, sampleBin.Start, sampleBin.Stop, sampleBin.GenomicBin.GC, (float)ratio);
                 }
             }
         }

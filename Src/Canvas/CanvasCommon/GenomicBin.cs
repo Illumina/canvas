@@ -3,121 +3,116 @@ using Isas.SequencingFiles;
 
 namespace CanvasCommon
 {
-
-    public class SingleSampleCount
+    public class MultiSampleGenomicBin
     {
-        public float Count { get; set; }
-        public int? SegmentId { get; set; }
+        private readonly GenomicBin _genomicBin;
+        public List<float> Counts { get; }
 
-
-        public SingleSampleCount(float count)
+        public MultiSampleGenomicBin(GenomicBin genomicBin, List<float> counts)
         {
-            this.Count = count;
-        }
-        public SingleSampleCount(float count, int segmentId)
-        {
-            this.Count = count;
-            this.SegmentId = segmentId;
+            _genomicBin = genomicBin;
+            Counts = counts;
         }
     }
 
-    public class MultiSampleCount
+    public class GenomicBin
     {
-        public List<float> Count { get; set; }
-        public List<int?> SegmentId { get; set; }
+        public GenomicBin()
+        {
+        }
 
-        public MultiSampleCount(List<float> count)
+        public GenomicBin(string chromosome, GenomicInterval interval, int gc)
         {
-            this.Count = count;
+            Chromosome = chromosome;
+            Interval = interval;
+            GC = gc;
         }
-        public MultiSampleCount(List<float> count, List<int?> segmentId)
-        {
-            this.Count = count;
-            this.SegmentId = segmentId;
-        }
+
+        public string Chromosome { get; set; }
+        public int GC { get; set; }
+        public GenomicInterval Interval { get; set; }
     }
 
     /// <summary>
     /// Container that holds information about a genomic interval and how many reads were observed therein.
     /// </summary>
-    public class GenomicBin
+    public class SampleGenomicBin
     {
+        private readonly GenomicBin _genomicBin;
 
-        public string Chromosome { get; set; }
-        public int GC { get; set; }
-        public GenomicInterval Interval { get; set; }
-        public SingleSampleCount CountBin { get; set; }
-        public MultiSampleCount CountBins { get; set; }
+        public float Count { get; set; }
+        public double CountDeviation { get; set; }
 
-        public double MadOfDiffs { get; set; }
-
-
-        public GenomicBin()
+        public SampleGenomicBin()
         {
-            this.Chromosome = null;
-            this.Interval = new GenomicInterval();
-            this.CountBin = null;
-            this.GC = -1;
-            this.MadOfDiffs = -1;
+            _genomicBin = new GenomicBin();
+            GenomicBin.Chromosome = null;
+            GenomicBin.Interval = new GenomicInterval();
+            GenomicBin.GC = -1;
+            this.CountDeviation = -1;
         }
 
-        public GenomicBin(string chr, int start, int stop, int gc, float count, double MadOfDIffs)
+        public SampleGenomicBin(string chr, int start, int stop, int gc, float count, double MadOfDIffs)
         {
-            this.Chromosome = chr;
-            this.Interval = new GenomicInterval() { Start = start, End = stop };
-            this.GC = gc;
-            this.CountBin = new SingleSampleCount(count);
-            this.MadOfDiffs = MadOfDIffs;
+            _genomicBin = new GenomicBin();
+            GenomicBin.Chromosome = chr;
+            GenomicBin.Interval = new GenomicInterval() { Start = start, End = stop };
+            GenomicBin.GC = gc;
+            this.Count = count;
+            this.CountDeviation = MadOfDIffs;
         }
 
-        public GenomicBin(string chr, int start, int stop, int gc, List<float> count)
+        public SampleGenomicBin(string chr, int start, int stop, int gc, List<float> count)
         {
-            this.Chromosome = chr;
-            this.Interval = new GenomicInterval() { Start = start, End = stop };
-            this.GC = gc;
-            this.CountBins = new MultiSampleCount(count);
-            this.MadOfDiffs = -1;
+            _genomicBin = new GenomicBin();
+            GenomicBin.Chromosome = chr;
+            GenomicBin.Interval = new GenomicInterval() { Start = start, End = stop };
+            GenomicBin.GC = gc;
+            this.CountDeviation = -1;
         }
 
-        public GenomicBin(string chr, int start, int stop, int gc, List<float> count, List<int?> segmentIds)
+        public SampleGenomicBin(string chr, int start, int stop, int gc, List<float> count, List<int?> segmentIds)
         {
-            this.Chromosome = chr;
-            this.Interval = new GenomicInterval() { Start = start, End = stop };
-            this.GC = gc;
-            this.CountBins = new MultiSampleCount(count, segmentIds);
-            this.MadOfDiffs = -1;
+            _genomicBin = new GenomicBin();
+            GenomicBin.Chromosome = chr;
+            GenomicBin.Interval = new GenomicInterval() { Start = start, End = stop };
+            GenomicBin.GC = gc;
+            this.CountDeviation = -1;
         }
 
 
 
-        public GenomicBin(string chr, int start, int stop, int gc, float count)
+        public SampleGenomicBin(string chr, int start, int stop, int gc, float count)
         {
-            this.Chromosome = chr;
-            this.Interval = new GenomicInterval() { Start = start, End = stop };
-            this.GC = gc;
-            this.CountBin = new SingleSampleCount(count);
-            this.MadOfDiffs = -1;
+            _genomicBin = new GenomicBin(chr, new GenomicInterval() { Start = start, End = stop }, gc);
+            this.Count = count;
+            this.CountDeviation = -1;
         }
 
         public int Size
         {
-            get { return Interval.End - Interval.Start; }
+            get { return GenomicBin.Interval.End - GenomicBin.Interval.Start; }
         }
         public int Start
         {
-            get { return Interval.Start; }
-            set { Interval.Start = value; }
+            get { return GenomicBin.Interval.Start; }
+            set { GenomicBin.Interval.Start = value; }
         }
         public int Stop
         {
-            get { return Interval.End; }
-            set { Interval.End = value; }
+            get { return GenomicBin.Interval.End; }
+            set { GenomicBin.Interval.End = value; }
+        }
+
+        public GenomicBin GenomicBin
+        {
+            get { return _genomicBin; }
         }
 
 
-        public bool IsSameBin(GenomicBin bin)
+        public bool IsSameBin(SampleGenomicBin bin)
         {
-            return Chromosome == bin.Chromosome && Interval.Start == bin.Interval.Start && Interval.End == bin.Interval.End;
+            return GenomicBin.Chromosome == bin.GenomicBin.Chromosome && GenomicBin.Interval.Start == bin.GenomicBin.Interval.Start && GenomicBin.Interval.End == bin.GenomicBin.Interval.End;
         }
     }
 }

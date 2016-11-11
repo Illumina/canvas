@@ -725,62 +725,20 @@ namespace Illumina.SecondaryAnalysis
             RunSmallPedigreeCalling(partitionedPaths, callset);
         }
 
-        private List<IFileLocation> WriteMergedCanvasPartition(List<IFileLocation> partitionedPaths, List<string> tempFolders, List<string> sampleNames)
-        {
-            Dictionary<string, List<GenomicBin>> multisamplePartitions = CanvasCommon.Utilities.LoadMultiSamplePartiotionedBedFile(partitionedPaths);
-            List <IFileLocation> outPaths = new List<IFileLocation>();
-            int count = 0;
-            string mergedOutPath = Path.Combine(Directory.GetParent(tempFolders[0]).ToString(), "merged.partitioned");
-
-            using (StreamWriter writer = new StreamWriter(mergedOutPath))
-            {
-                foreach (string chr in multisamplePartitions.Keys)
-                {
-                    foreach (GenomicBin genomicBin in multisamplePartitions[chr])
-                    {
-                        writer.Write(string.Format($"{genomicBin.Chromosome}\t{genomicBin.Start}\t{genomicBin.Stop}"));
-                        for (int i = 0; i < sampleNames.Count; i++)
-                            writer.Write(string.Format($"\t{genomicBin.CountBins.Count[i]}\t{genomicBin.CountBins.SegmentId[i]}"));
-                        writer.Write("\n");
-                    }
-                }
-            }
-
-            foreach (string sampleName in sampleNames)
-            {
-                string outPath = Path.Combine(tempFolders[count], string.Format("{0}_merged.partitioned", sampleName));
-                using (GzipWriter writer = new GzipWriter(outPath))
-                {
-                    foreach (string chr in multisamplePartitions.Keys)
-                    {
-                        foreach (GenomicBin genomicBin in multisamplePartitions[chr])
-                        {
-                            int segmentNum = genomicBin.CountBins.SegmentId.Max().Value;
-                            writer.WriteLine(string.Format("{0}\t{1}\t{2}\t{3}\t{4}", genomicBin.Chromosome,
-                                genomicBin.Start, genomicBin.Stop, genomicBin.CountBins.Count[count], segmentNum));
-                        }
-                    }
-                }
-                count++;
-                outPaths.Add(new FileLocation(outPath));
-            }
-            return outPaths;
-        }
-
         private IFileLocation WriteMergedCanvasClean(List<IFileLocation> partitionedPaths, string tempFolder)
         {
-            Dictionary<string, List<GenomicBin>> multisampleCanvasClean = CanvasCommon.Utilities.LoadMultiSampleCleanedBedFile(partitionedPaths);
+            Dictionary<string, List<SampleGenomicBin>> multisampleCanvasClean = CanvasCommon.Utilities.LoadMultiSampleCleanedBedFile(partitionedPaths);
             string mergedOutPath = Path.Combine(tempFolder, "merged.partitioned");
             using (GzipWriter writer = new GzipWriter(mergedOutPath))
             {
                 foreach (string chr in multisampleCanvasClean.Keys)
                 {
-                    foreach (GenomicBin genomicBin in multisampleCanvasClean[chr])
+                    foreach (SampleGenomicBin genomicBin in multisampleCanvasClean[chr])
                     {
-                        string outLine = string.Format($"{genomicBin.Chromosome}\t{genomicBin.Start}\t{genomicBin.Stop}");
+                        string outLine = string.Format($"{genomicBin.GenomicBin.Chromosome}\t{genomicBin.Start}\t{genomicBin.Stop}");
 
                         for (int i = 0; i < partitionedPaths.Count; i++)
-                            outLine += string.Format($"\t{genomicBin.CountBins.Count[i]}");
+                            outLine += string.Format($"\t{genomicBin.Counts[i]}");
                         writer.WriteLine(outLine);
                     }
                 }

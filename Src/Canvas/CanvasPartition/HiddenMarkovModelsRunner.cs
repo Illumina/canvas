@@ -22,7 +22,7 @@ namespace CanvasPartition
         }
 
         public Dictionary<string, Segmentation.Segment[]> Run(Segmentation segmentation) {
-            Dictionary<string, List<GenomicBin>> commonCNVintervals = null;
+            Dictionary<string, List<SampleGenomicBin>> commonCNVintervals = null;
             if (_commonCnVs != null)
             {
                 commonCNVintervals = Utilities.LoadBedFile(_commonCnVs);
@@ -64,7 +64,7 @@ namespace CanvasPartition
                         {
                             if (commonCNVintervals.ContainsKey(chr))
                             {
-                                List<GenomicBin> remappedCommonCNVintervals = Segmentation.RemapCommonRegions(commonCNVintervals[chr], segmentation.StartByChr[chr], segmentation.EndByChr[chr]);
+                                List<SampleGenomicBin> remappedCommonCNVintervals = Segmentation.RemapCommonRegions(commonCNVintervals[chr], segmentation.StartByChr[chr], segmentation.EndByChr[chr]);
                                 List<int> oldbreakpoints = breakpoints;
                                 breakpoints = Segmentation.OverlapCommonRegions(oldbreakpoints, remappedCommonCNVintervals);
                             }

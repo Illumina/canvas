@@ -428,11 +428,11 @@ namespace CanvasBin
         /// <param name="observedAlignments">BitArrays of observed alignments.</param>
         /// <param name="predefinedBins">Pre-defined bins. null if not available.</param>
         /// <returns>A list of bins.</returns>
-        static List<GenomicBin> BinCounts(string referenceFile, int binSize, CanvasCoverageMode coverageMode, NexteraManifest manifest,
+        static List<SampleGenomicBin> BinCounts(string referenceFile, int binSize, CanvasCoverageMode coverageMode, NexteraManifest manifest,
             Dictionary<string, BitArray> possibleAlignments,
             Dictionary<string, HitArray> observedAlignments,
             Dictionary<string, Int16[]> fragmentLengths,
-            Dictionary<string, List<GenomicBin>> predefinedBins,
+            Dictionary<string, List<SampleGenomicBin>> predefinedBins,
             string outFile)
         {
             bool debugGCCorrection = false; // write value of GC bins and correction factor
@@ -525,7 +525,7 @@ namespace CanvasBin
             if (coverageMode == CanvasCoverageMode.GCContentWeighted)
                 observedVsExpectedGC = ComputeObservedVsExpectedGC(observedAlignments, readGCContent, manifest, debugGCCorrection, outFile);
 
-            Dictionary<string, List<GenomicBin>> perChromosomeBins = new Dictionary<string, List<GenomicBin>>();
+            Dictionary<string, List<SampleGenomicBin>> perChromosomeBins = new Dictionary<string, List<SampleGenomicBin>>();
             List<ThreadStart> binningTasks = new List<ThreadStart>();
             foreach (KeyValuePair<string, GenericRead> fastaEntryKVP in fastaEntries)
             {
@@ -539,7 +539,7 @@ namespace CanvasBin
                 args.PossibleAlignments = possibleAlignments[chr];
                 args.ObservedAlignments = observedAlignments[chr];
                 args.CoverageMode = coverageMode;
-                perChromosomeBins[chr] = predefinedBins == null ? new List<GenomicBin>() : predefinedBins[chr];
+                perChromosomeBins[chr] = predefinedBins == null ? new List<SampleGenomicBin>() : predefinedBins[chr];
                 args.Bins = perChromosomeBins[chr];
                 args.BinSize = binSize;
                 if (coverageMode == CanvasCoverageMode.GCContentWeighted)
@@ -556,7 +556,7 @@ namespace CanvasBin
             Console.WriteLine("{0} Completed BinCountsForChromosome jobs.", DateTime.Now);
             Console.Out.WriteLine();
 
-            List<GenomicBin> finalBins = new List<GenomicBin>();
+            List<SampleGenomicBin> finalBins = new List<SampleGenomicBin>();
             foreach (string chr in chromosomes)
             {
                 if (!perChromosomeBins.ContainsKey(chr)) continue;
@@ -572,7 +572,7 @@ namespace CanvasBin
             public BitArray PossibleAlignments;
             public HitArray ObservedAlignments;
             public CanvasCommon.CanvasCoverageMode CoverageMode;
-            public List<GenomicBin> Bins;
+            public List<SampleGenomicBin> Bins;
             public int BinSize;
             public byte[] ReadGCContent;
             public float[] ObservedVsExpectedGC;
@@ -583,7 +583,7 @@ namespace CanvasBin
         /// </summary>
         static void BinCountsForChromosome(BinTaskArguments arguments)
         {
-            List<GenomicBin> bins = arguments.Bins;
+            List<SampleGenomicBin> bins = arguments.Bins;
             bool usePredefinedBins = bins.Any();
             int predefinedBinIndex = 0;
             GenericRead fastaEntry = arguments.FastaEntry; //fastaEntryKVP.Value;
@@ -655,8 +655,8 @@ namespace CanvasBin
 
                     if (usePredefinedBins)
                     {
-                        bins[predefinedBinIndex].GC = gc;
-                        bins[predefinedBinIndex].CountBin.Count = currentBin.ObservedCount;
+                        bins[predefinedBinIndex].GenomicBin.GC = gc;
+                        bins[predefinedBinIndex].Count = currentBin.ObservedCount;
                         predefinedBinIndex++;
                         if (predefinedBinIndex >= bins.Count) { break; } // we have processed all the bins
                         pos = bins[predefinedBinIndex].Start - 1; // jump to right before the next predefined bin
@@ -664,7 +664,7 @@ namespace CanvasBin
                     else
                     {
                         // Note the pos + 1 to make the first three conform to bed specification
-                        GenomicBin bin = new GenomicBin(chr, currentBin.StartPosition, pos + 1, gc, currentBin.ObservedCount);
+                        SampleGenomicBin bin = new SampleGenomicBin(chr, currentBin.StartPosition, pos + 1, gc, currentBin.ObservedCount);
                         bins.Add(bin);
                     }
 
@@ -884,13 +884,13 @@ namespace CanvasBin
             Dictionary<string, HitArray> observedAlignments,
             Dictionary<string, Int16[]> fragmentLengths, NexteraManifest manifest)
         {
-            Dictionary<string, List<GenomicBin>> predefinedBins = null;
+            Dictionary<string, List<SampleGenomicBin>> predefinedBins = null;
             if (parameters.predefinedBinsFile != null)
             {
                 // Read predefined bins
                 predefinedBins = Utilities.LoadBedFile(parameters.predefinedBinsFile);
             }
-            List<GenomicBin> bins = BinCounts(parameters.referenceFile, parameters.binSize, parameters.coverageMode, manifest,
+            List<SampleGenomicBin> bins = BinCounts(parameters.referenceFile, parameters.binSize, parameters.coverageMode, manifest,
             possibleAlignments, observedAlignments, fragmentLengths, predefinedBins, parameters.outFile);
             // Output!
             Console.WriteLine("{0} Output binned counts:", DateTime.Now);
@@ -902,7 +902,7 @@ namespace CanvasBin
         public static void CalculateMultiSampleBins(CanvasBinParameters parameters,
             List<IntermidiateDataHolder> intermidiateData, NexteraManifest manifest)
         {
-            Dictionary<string, List<GenomicBin>> predefinedBins = null;
+            Dictionary<string, List<SampleGenomicBin>> predefinedBins = null;
             if (parameters.predefinedBinsFile != null)
             {
                 // Read predefined bins
@@ -910,7 +910,7 @@ namespace CanvasBin
             }
             foreach (IntermidiateDataHolder singleSample in intermidiateData)
             {
-                List<GenomicBin> bins = BinCounts(parameters.referenceFile, parameters.binSize,
+                List<SampleGenomicBin> bins = BinCounts(parameters.referenceFile, parameters.binSize,
                     parameters.coverageMode, manifest,
                     singleSample.possibleAlignments, singleSample.observedAlignments, singleSample.fragmentLengths,
                     predefinedBins, parameters.outFile);

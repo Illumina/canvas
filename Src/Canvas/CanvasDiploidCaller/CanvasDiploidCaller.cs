@@ -23,7 +23,7 @@ namespace CanvasDiploidCaller
         public static double CoverageWeighting = 0.6;
         private double CoverageWeightingFactor; // Computed from CoverageWeighting
         public bool IsDbsnpVcf = false;
-        static protected int MinimumFrequenciesForInformativeSegment = 50;
+        static protected int MinimumVariantFrequenciesForInformativeSegment = 50;
         protected int MedianHetSnpsDistance = 463; // based on NA12878 VFResults.txt.gz file
         CopyNumberOracle CNOracle = null;
         public QualityScoreParameters germlineScoreParameters;
