@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Security.Principal;
 using CanvasCommon;
 using MathNet.Numerics.Distributions;
@@ -24,21 +25,21 @@ namespace CanvasPartition
 
     public class MultivariateNegativeBinomial : MultivariateDistribution
     {
-        private readonly List<NegativeBinomial> _negativeBinomials;
-        private readonly List<double> _means;
-        public List<double> Variances { get; }
+        private readonly List<List<double>> _negativeBinomials;
+        public List<double> Means { get; set; }
+        public List<double> Variances { get; set; }
 
 
-        public MultivariateNegativeBinomial(List<double> means, List<double> variances)
+        public MultivariateNegativeBinomial(List<double> means, List<double> variances, int maxValue)
         {
-            _negativeBinomials = new List<NegativeBinomial>();
+            _negativeBinomials = new List<List<double>>();
             for (int i = 0; i < means.Count; i++)
-                _negativeBinomials.Add(Utilities.NegativeBinomialWrapper(means[i], variances[i]));
-            _means = means;
+                _negativeBinomials.Add(Utilities.NegativeBinomialWrapper(means[i], variances[i], maxValue));
+            Means = means;
             Variances = variances;
         }
 
-        public List<NegativeBinomial> NegativeBinomials
+        public List<List<double>> NegativeBinomials
         {
             get { return _negativeBinomials; }
         }
@@ -50,25 +51,29 @@ namespace CanvasPartition
 
         public override List<double> Mean()
         {
-            return _means;
+            return Means;
         }
 
-        public void UpdateNegativeBinomial(double[] gamma, List<List<double>> data, List<double> variance)
+        public void UpdateNegativeBinomial(double[] gamma, List<List<double>> data, List<double> variance, int maxValue)
         {
             var m = this.GetDimensions();
             for (int dimension = 0; dimension < m; dimension++)
             {
-                variance[dimension] = CanvasCommon.Utilities.WeightedVariance(data.Select(x => x[dimension]).ToList(), gamma);
-                NegativeBinomials[dimension] = Utilities.NegativeBinomialWrapper(CanvasCommon.Utilities.WeightedMean(data.Select(x => x[dimension]).ToList(), gamma.ToList()), variance[dimension]);
+                // var newVariance = CanvasCommon.Utilities.WeightedVariance(data.Select(x => x[dimension]).ToList(), gamma);
+                var newMeans = CanvasCommon.Utilities.WeightedMean(data.Select(x => x[dimension]).ToList(),
+                    gamma.ToList());
+                Means[dimension] = newMeans;
+                // Variances[dimension] = newVariance;
+                NegativeBinomials[dimension] = Utilities.NegativeBinomialWrapper(newMeans, variance[dimension], maxValue);
             }
         }
                 
         public override double EstimateLikelihood(List<double> x)
         {
             var m = this.GetDimensions();
-            double likelihood = NegativeBinomials[0].Probability(Convert.ToInt32(x[0]));
+            double likelihood = NegativeBinomials[0][Convert.ToInt32(x[0])];
             for (int i = 1; i < m; i++)
-                likelihood *= NegativeBinomials[i].Probability(Convert.ToInt32(x[i]));
+                likelihood *= NegativeBinomials[i][Convert.ToInt32(x[i])];
             if (Double.IsNaN(likelihood) || Double.IsInfinity(likelihood))
                 likelihood = 0;
             return likelihood;
@@ -213,11 +218,17 @@ namespace CanvasPartition
             }
             return allCombinations;
         }
-        public static NegativeBinomial NegativeBinomialWrapper(double mean, double variance)
+        public static List<double> NegativeBinomialWrapper(double mean, double variance, int maxValue)
         {
-            double r = Math.Pow(Math.Max(mean, 0.1), 2) / Math.Max(variance - mean, 1.0);
-            double p = r / (r + mean);
-            return new NegativeBinomial(r, p);
+            var density = Enumerable.Repeat(0.0, maxValue).ToList();
+            double r = Math.Pow(Math.Max(mean, 0.1), 2) / (Math.Max(variance, mean*1.2) - mean);
+            for (int x = 0; x < maxValue; x++)
+            {
+                var tmpDensity = Math.Exp(Math.Log(Math.Pow(1 + mean / r, -r)) + Math.Log(Math.Pow(mean / (mean + r), x)) +  SpecialFunctions.GammaLn(r + x) - 
+                             SpecialFunctions.FactorialLn(x) - SpecialFunctions.GammaLn(r));
+                density[x] = Double.IsNaN(tmpDensity) || Double.IsInfinity(tmpDensity) ? 0 : tmpDensity;
+            }              
+            return density;
         }
     }
 
@@ -250,9 +261,10 @@ namespace CanvasPartition
         public override void UpdateMeans(double[][] gamma, List<List<double>> x, List<List<double>> variance)
         {
             int stateCounter = 0;
+            var maxValue = x.Select(y => Convert.ToInt32(y.Max())).Max() + 10;
             foreach (MultivariateNegativeBinomial poissonDistribution in _negativeBinomialDistributions)
             {
-                poissonDistribution.UpdateNegativeBinomial(gamma[stateCounter], x, variance[stateCounter]);
+                poissonDistribution.UpdateNegativeBinomial(gamma[stateCounter], x, variance[stateCounter], maxValue);
                 stateCounter++;
             }
         }
@@ -275,7 +287,7 @@ namespace CanvasPartition
                     int stateCounter = 0;
                     foreach (int state in states)
                     {
-                        emissionLikelihood *= _negativeBinomialDistributions[state].NegativeBinomials[stateCounter].Probability(Convert.ToInt32(x[stateCounter]));
+                        emissionLikelihood *= _negativeBinomialDistributions[state].NegativeBinomials[stateCounter][Convert.ToInt32(x[stateCounter])];
                         stateCounter++;
                     }
                     if (Double.IsNaN(emissionLikelihood) || Double.IsInfinity(emissionLikelihood))
@@ -297,8 +309,8 @@ namespace CanvasPartition
         public override void WriteMeans()
         {
             foreach (MultivariateNegativeBinomial negativeBinomial in _negativeBinomialDistributions)
-                for (int i = 0; i < negativeBinomial.Mean().Count; i++)
-                    Console.WriteLine($"Negative Binomial mean for state {i} = {negativeBinomial.Mean()[i]}");
+                for (int i = 0; i < negativeBinomial.Mean().Count; i++) 
+                    Console.WriteLine($"Negative Binomial mean/variance for state {i} = {negativeBinomial.Means[i]} : {negativeBinomial.Variances[i]}");
         }
     }
 

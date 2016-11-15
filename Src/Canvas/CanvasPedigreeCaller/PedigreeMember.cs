@@ -14,6 +14,7 @@ namespace CanvasPedigreeCaller
         }
         public List<CanvasSegment> Segments = new List<CanvasSegment>();
         public double MeanCoverage { get; set; }
+        public int MaxCoverage { get; set; }
         public double MeanMafCoverage { get; set; }
         public string Name { get; set; }
         public List<string> Parents { get; set; }
@@ -21,7 +22,6 @@ namespace CanvasPedigreeCaller
         public PloidyInfo Ploidy { get; set; }
         public double Variance { get; internal set; }
         public double MafVariance { get; internal set; }
-
         public CopyNumberModel CnModel { get; set; }
         public Kinship Kin { get; set; }
 
@@ -31,9 +31,9 @@ namespace CanvasPedigreeCaller
         }
         public Tuple<int,int> GetAlleleCounts(int segmentIndex)
         {
-            double allele1 = Segments[segmentIndex].Alleles.Counts.Select(x=>x.Item1).Average();
-            double allele2 = Segments[segmentIndex].Alleles.Counts.Select(x => x.Item2).Average();
-            return new Tuple<int, int>(Convert.ToInt32(allele1), Convert.ToInt32(allele2));
+            int allele1 = Math.Min(Segments[segmentIndex].Alleles.MedianCounts.Item1, MaxCoverage - 1);
+            int allele2 = Math.Min(Segments[segmentIndex].Alleles.MedianCounts.Item2, MaxCoverage - 1);
+            return new Tuple<int, int>(allele1, allele2);
         }
     }
 }

@@ -149,7 +149,7 @@ namespace CanvasPartition
 
             // remove outliers 
             double maxThreshold = tmpDistributions.Last().Mean().Max() * 1.2;
-            RemoveOutliers(data, maxThreshold, nDimensions);
+            RemoveOutliers(data, chromosome, maxThreshold, nDimensions);
 
             return tmpDistributions;
         }
@@ -180,7 +180,7 @@ namespace CanvasPartition
 
             // remove outliers 
             double maxThreshold = tmpDistributions.Last().Mean().Max() * 1.2;
-            RemoveOutliers(data, maxThreshold, nDimensions);
+            RemoveOutliers(data, chromosome, maxThreshold, nDimensions);
 
             return tmpDistributions;
         }
@@ -201,19 +201,20 @@ namespace CanvasPartition
                 variance.Add(CanvasCommon.Utilities.Variance(data[chromosome].Select(x => x[dimension]).ToList()));
             }
 
+            // remove outliers 
+            double maxThreshold = haploidMean.Max() * nHiddenStates;
+            RemoveOutliers(data, chromosome, maxThreshold, nDimensions);
+            var maxValues = data[chromosome].Select(x => Convert.ToInt32(x.Max())).ToList().Max();
+
             for (int CN = 0; CN < nHiddenStates; CN++)
             {
                 Vector<double> tmpMean = Vector<double>.Build.Dense(haploidMean.Select(x => Math.Max(CN, 0.1) * x).ToArray());
                 // if few hidden states, increase the last CN state by diploid rather than haploid increment
                 if (nHiddenStates < 5 && CN - 1 == nHiddenStates)
                     tmpMean = Vector<double>.Build.Dense(haploidMean.Select(x => Math.Max(CN, 0.5) * x + x).ToArray());
-                MultivariateNegativeBinomial tmpDistribution = new MultivariateNegativeBinomial(tmpMean.ToList(), variance);
+                MultivariateNegativeBinomial tmpDistribution = new MultivariateNegativeBinomial(tmpMean.ToList(), variance, maxValues + 10);
                 tmpDistributions.Add(tmpDistribution);
             }
-
-            // remove outliers 
-            double maxThreshold = tmpDistributions.Last().Mean().Max() * 1.2;
-            RemoveOutliers(data, chromosome, maxThreshold, nDimensions);
 
             return tmpDistributions;
         }

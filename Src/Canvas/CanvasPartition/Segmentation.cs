@@ -59,11 +59,12 @@ namespace CanvasPartition
             this.ReadBEDInput();
         }
 
-        public Segmentation(string inputBinPath, string forbiddenBedPath, int nSamples)
+        public Segmentation(string inputBinPath, string forbiddenBedPath, int maxInterBinDistInSegment, int nSamples)
         {
             
             this.InputBinPath = inputBinPath;
             this.ForbiddenIntervalBedPath = forbiddenBedPath;
+            this.MaxInterBinDistInSegment = maxInterBinDistInSegment;
             // Read the input file:
             idxScores = Enumerable.Range(3, nSamples).ToList();
             this.ReadMultiBEDInput();
@@ -87,11 +88,10 @@ namespace CanvasPartition
                 startBreakpointsPos.Add(breakpoints[0]);
                 endBreakpointPos.Add(breakpoints[1] - 1);
                 lengthSeg.Add(breakpoints[1] - 1);
-
                 for (int i = 1; i < breakpoints.Count - 1; i++)
                 {
-                    startBreakpointsPos.Add(breakpoints[i]);
-                    endBreakpointPos.Add(breakpoints[i + 1] - 1);
+                    startBreakpointsPos.Add(breakpoints[i]-1);
+                    endBreakpointPos.Add(breakpoints[i + 1]);
                     lengthSeg.Add(breakpoints[i + 1] - 1 - breakpoints[i]);
                 }
                 startBreakpointsPos.Add(breakpoints[breakpoints.Count - 1]);

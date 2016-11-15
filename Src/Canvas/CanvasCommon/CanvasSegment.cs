@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.IO;
+using System.Net.Mime;
 using Illumina.Common;
 using Isas.SequencingFiles;
 
@@ -12,8 +13,13 @@ namespace CanvasCommon
         public List<float> Frequencies = new List<float>();
         public List<int> TotalCoverage = new List<int>();
         public List<Tuple<int, int>> Counts = new List<Tuple<int, int>>();
-
-
+        public Tuple<int, int> MedianCounts;
+        public void SetMedianCounts()
+        {
+            var item1 = Utilities.Median(Counts.Select(x => x.Item1).ToList());
+            var item2 = Utilities.Median(Counts.Select(x => x.Item2).ToList());
+            MedianCounts = new Tuple<int, int>(item1, item2);
+        }
     }
     /// <summary>
     /// Contains information about a genomic interval. Has functions for computing copy numbers and their likelihoods.

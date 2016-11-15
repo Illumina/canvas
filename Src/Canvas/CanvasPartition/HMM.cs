@@ -196,7 +196,7 @@ namespace CanvasPartition
         public void FindMaximalLikelihood(List<List<double>> x, string chr)
         {
             double likelihoodDifferenceThreshold = 0.01;
-            const int maxIterations = 4;
+            const int maxIterations = 1;
             List<double> likelihoods = new List<double>();
             double oldLikelihood = EstimationStep(x);
             likelihoods.Add(oldLikelihood);
@@ -398,7 +398,7 @@ namespace CanvasPartition
             }
 
             // Induction 
-            for (int t = 1; t < length - 1; t++)
+            for (int t = 1;t < length - 1; t++)
             {
 
                 for (int j = 0; j < nStates; j++)
@@ -441,6 +441,12 @@ namespace CanvasPartition
                 backtrack--;
             }
             bestStates.Reverse();
+            for (int k = 3; k < bestStates.Count - 3; k++)
+            {
+                if (bestStates[k - 2] == 2 && bestStates[k - 2] == 2 && bestStates[k + 2] == 2 && bestStates[k + 2] == 2 && bestStates[k] != 2)
+                    bestStates[k] = 2;
+            }
+
             return bestStates;
         }
     }

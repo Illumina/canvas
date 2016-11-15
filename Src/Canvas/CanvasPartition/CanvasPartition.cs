@@ -80,7 +80,7 @@ namespace CanvasPartition
             }
 
             Segmentation segmentationEngine = partitionMethod == Segmentation.SegmentationMethod.HMM ?
-                 new Segmentation(inFile, bedPath, outFiles.Count): 
+                 new Segmentation(inFile, bedPath, maxInterBinDistInSegment, outFiles.Count): 
                  new Segmentation(inFile, bedPath, maxInterBinDistInSegment: maxInterBinDistInSegment);
 
             Segmentation.GenomeSegmentationResults segmentationResults;

@@ -315,7 +315,7 @@ namespace CanvasCommon
         public static double WeightedVariance(List<double> x, double[] weights)
         {
 
-            double mu = x.Average();
+            double mu = WeightedMean(x, weights.ToList());
             double sum = 0;
             double denominator = 0;
             for (int i = 0; i < x.Count; i++)

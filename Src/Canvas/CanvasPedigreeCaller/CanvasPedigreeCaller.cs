@@ -35,9 +35,13 @@ namespace CanvasPedigreeCaller
                 pedigreeMember.Name = sampleName;
                 pedigreeMember.Segments = CanvasSegment.ReadSegments(segmentFiles[fileCounter]);
                 pedigreeMember.MeanMafCoverage = CanvasIO.LoadFrequencies(variantFrequencyFiles[fileCounter], pedigreeMember.Segments);
+                foreach (CanvasSegment segment in pedigreeMember.Segments)
+                    if (segment.Alleles.Counts.Count > DefaultAlleleCountThreshold)
+                        segment.Alleles.SetMedianCounts();
                 pedigreeMember.Variance = Math.Pow(Utilities.StandardDeviation(pedigreeMember.Segments.Select(x => x.MedianCount).ToArray()), 2);
                 pedigreeMember.MafVariance = Math.Pow(Utilities.StandardDeviation(pedigreeMember.Segments.Where(x => x.Alleles.TotalCoverage.Count > 0).Select(x => x.Alleles.TotalCoverage.Average()).ToArray()), 2);
                 pedigreeMember.MeanCoverage = pedigreeMember.Segments.Select(x => x.MedianCount).Average();
+                pedigreeMember.MaxCoverage = Convert.ToInt32(pedigreeMember.Segments.Select(x => x.MedianCount).Max() + 10);
                 pedigreeMember.Ploidy = PloidyInfo.LoadPloidyFromVcfFile(ploidyBedPath, pedigreeMember.Name);
                 pedigreeMember.Kin = kinships[pedigreeMember.Name] == PedigreeMember.Kinship.Offspring ?
                     PedigreeMember.Kinship.Offspring : PedigreeMember.Kinship.Parent;
@@ -56,9 +60,9 @@ namespace CanvasPedigreeCaller
             GenerateOffspringGenotypes(offspringsGenotypes, parentalGenotypes, offsprings.Count, new List<Tuple<int, int>>());
             
             foreach (PedigreeMember parent in parents)
-                parent.CnModel = new CopyNumberModel(MaximumCopyNumber, parent.MeanCoverage/2.0, parent.MeanMafCoverage/2.0, parent.Variance, parent.MafVariance);
+                parent.CnModel = new CopyNumberModel(MaximumCopyNumber, parent.MeanCoverage/2.0, parent.MeanMafCoverage/2.0, parent.Variance, parent.MafVariance, parent.MaxCoverage);
             foreach (PedigreeMember offspring in offsprings)
-                offspring.CnModel = new CopyNumberModel(MaximumCopyNumber, offspring.MeanCoverage/2.0, offspring.MeanMafCoverage/2.0, offspring.Variance, offspring.MafVariance);
+                offspring.CnModel = new CopyNumberModel(MaximumCopyNumber, offspring.MeanCoverage/2.0, offspring.MeanMafCoverage/2.0, offspring.Variance, offspring.MafVariance, offspring.MaxCoverage);
 
             Parallel.ForEach(
                 segmentIntervals,
