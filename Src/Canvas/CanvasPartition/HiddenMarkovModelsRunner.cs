@@ -49,32 +49,19 @@ namespace CanvasPartition
                     if (length > _minSize)
                     {
                         List<double> haploidMeans = new List<double>(_nHiddenStates);
-                        List<MultivariateNegativeBinomial> negativeBinomialDistributions = InitializeNegativeBinomialEmission(segmentation.ScoresByChr, chr, _nHiddenStates, haploidMeans);
-                        HiddenMarkovModel hmm = new HiddenMarkovModel(segmentation.ScoresByChr[chr], negativeBinomialDistributions, haploidMeans);
+                        List<MultivariateNegativeBinomial> negativeBinomialDistributions = InitializeNegativeBinomialEmission(multiSampleCoverage, _nHiddenStates, haploidMeans);
+                        HiddenMarkovModel hmm = new HiddenMarkovModel(multiSampleCoverage, negativeBinomialDistributions, haploidMeans);
                         Console.WriteLine($"{DateTime.Now} Launching HMM task for chromosome {chr}");
-                        // forward sequence
-                        hmm.FindMaximalLikelihood(segmentation.ScoresByChr[chr], chr);
-                        List<int> hiddenStatesOriginal = hmm.BestPathViterbi(segmentation.ScoresByChr[chr], segmentation.StartByChr[chr], haploidMeans);
-                        //reverse sequence
-                        // segmentation.ScoresByChr[chr].Reverse();
-                        // hmm.FindMaximalLikelihood(segmentation.ScoresByChr[chr], chr);
-                        // List<int> hiddenStatesReverse = hmm.BestPathViterbi(segmentation.ScoresByChr[chr], segmentation.StartByChr[chr], haploidMeans);
-                        // segmentation.ScoresByChr[chr].Reverse();
-
-                        // hiddenStatesReverse.Reverse();
+                        hmm.FindMaximalLikelihood(multiSampleCoverage);
+                        List<int> bestPathViterbi = hmm.BestPathViterbi(multiSampleCoverage, startByChr, haploidMeans);
                         Console.WriteLine($"{DateTime.Now} Completed HMM task for chromosome {chr}");
 
-                        breakpointsForward.Add(0);
-                        // breakpointsReverse.Add(0);
+                        breakpoints.Add(0);
                         for (int i = 1; i < length; i++)
-                        {
-                            if (hiddenStatesOriginal[i] - hiddenStatesOriginal[i - 1] != 0)
-                                breakpointsForward.Add(i);
-                            // if (hiddenStatesReverse[i] - hiddenStatesReverse[i - 1] != 0)
-                            //  breakpointsReverse.Add(i);
-                        }
-
-                        var breakpoints = breakpointsForward; //MergeBreakpoint(breakpointsForward, breakpointsReverse);
+                            if (bestPathViterbi[i] - bestPathViterbi[i - 1] != 0)
+                            {
+                                breakpoints.Add(i);
+                            }
 
                         if (_commonCnVs != null)
                         {
@@ -116,7 +103,7 @@ namespace CanvasPartition
             return breakpointsMergeFiltered;
         }
 
-        public List<MultivariateGaussianDistribution> InitializeEmission(Dictionary<string, List<List<double>>> data ,string chromosome, int nHiddenStates)
+        public List<MultivariateGaussianDistribution> InitializeEmission(List<List<double>> data ,string chromosome, int nHiddenStates)
         {
             int nDimensions = data.First().Count;
             List<double> haploidMean = new List<double>(nDimensions);
@@ -150,7 +137,7 @@ namespace CanvasPartition
 
             // remove outliers 
             double maxThreshold = tmpDistributions.Last().Mean().Max() * 1.2;
-            RemoveOutliers(data, chromosome, maxThreshold, nDimensions);
+            RemoveOutliers(data, maxThreshold, nDimensions);
 
             return tmpDistributions;
         }
@@ -182,31 +169,31 @@ namespace CanvasPartition
 
             // remove outliers 
             double maxThreshold = tmpDistributions.Last().Mean().Max() * 1.2;
-            RemoveOutliers(data, chromosome, maxThreshold, nDimensions);
+            RemoveOutliers(data, maxThreshold, nDimensions);
 
             return tmpDistributions;
         }
 
 
-        public List<MultivariateNegativeBinomial> InitializeNegativeBinomialEmission(Dictionary<string, List<List<double>>> data, string chromosome, int nHiddenStates, List<double> haploidMean)
+        public List<MultivariateNegativeBinomial> InitializeNegativeBinomialEmission(List<List<double>> data, int nHiddenStates, List<double> haploidMean)
         {
-            int nDimensions = data[chromosome].First().Count;         
+            int nDimensions = data.First().Count;         
             var variance = new List<double>(nDimensions);
             List<MultivariateNegativeBinomial> tmpDistributions = new List<MultivariateNegativeBinomial>();
 
             for (int dimension = 0; dimension < nDimensions; dimension++)
             {
                 double meanHolder = 0;
-                foreach (List<double> datapoint in data[chromosome])
+                foreach (List<double> datapoint in data)
                     meanHolder += datapoint[dimension];
-                haploidMean.Add(meanHolder / data[chromosome].Count / 2.0);
-                variance.Add(CanvasCommon.Utilities.Variance(data[chromosome].Select(x => x[dimension]).ToList()));
+                haploidMean.Add(meanHolder / data.Count / 2.0);
+                variance.Add(CanvasCommon.Utilities.Variance(data.Select(x => x[dimension]).ToList()));
             }
 
             // remove outliers 
             double maxThreshold = haploidMean.Max() * nHiddenStates;
-            RemoveOutliers(data, chromosome, maxThreshold, nDimensions);
-            var maxValues = data[chromosome].Select(x => Convert.ToInt32(x.Max())).ToList().Max();
+            RemoveOutliers(data, maxThreshold, nDimensions);
+            var maxValues = data.Select(x => Convert.ToInt32(x.Max())).ToList().Max();
 
             for (int CN = 0; CN < nHiddenStates; CN++)
             {
