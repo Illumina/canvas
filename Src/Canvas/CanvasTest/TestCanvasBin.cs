@@ -18,9 +18,9 @@ namespace CanvasTest
             Dictionary<string, int> readNameToBinIndex = new Dictionary<string, int>();
             HashSet<string> samePositionReadNames = new HashSet<string>();
             long usableFragmentCount = 0;
-            List<GenomicBin> bins = new List<GenomicBin>()
+            List<SampleGenomicBin> bins = new List<SampleGenomicBin>()
             {
-                new GenomicBin("chr1", 100, 200, 50, 0)
+                new SampleGenomicBin("chr1", 100, 200, 50, 0)
             };
             int binIndexStart = 0;
 
@@ -43,36 +43,36 @@ namespace CanvasTest
                 ref usableFragmentCount, bins, ref binIndexStart);
             FragmentBinner.BinTask.BinOneAlignment(alignment2, qualityThreshold, readNameToBinIndex, samePositionReadNames,
                 ref usableFragmentCount, bins, ref binIndexStart);
-            Assert.AreEqual(bins[0].CountBin.Count, 1);
+            Assert.AreEqual(bins[0].Count, 1);
 
             // First read passes filters
-            bins[0].CountBin.Count = 0; // reset bin count
+            bins[0].Count = 0; // reset bin count
             alignment2.MapQuality = 2; // below quality threshold of 3
             FragmentBinner.BinTask.BinOneAlignment(alignment1, qualityThreshold, readNameToBinIndex, samePositionReadNames,
                 ref usableFragmentCount, bins, ref binIndexStart);
             FragmentBinner.BinTask.BinOneAlignment(alignment2, qualityThreshold, readNameToBinIndex, samePositionReadNames,
                 ref usableFragmentCount, bins, ref binIndexStart);
-            Assert.AreEqual(bins[0].CountBin.Count, 0);
+            Assert.AreEqual(bins[0].Count, 0);
 
             // Second read passes filters
-            bins[0].CountBin.Count = 0; // reset bin count
+            bins[0].Count = 0; // reset bin count
             alignment1.MapQuality = 2; // below quality threshold of 3
             alignment2.MapQuality = 10;
             FragmentBinner.BinTask.BinOneAlignment(alignment1, qualityThreshold, readNameToBinIndex, samePositionReadNames,
                 ref usableFragmentCount, bins, ref binIndexStart);
             FragmentBinner.BinTask.BinOneAlignment(alignment2, qualityThreshold, readNameToBinIndex, samePositionReadNames,
                 ref usableFragmentCount, bins, ref binIndexStart);
-            Assert.AreEqual(bins[0].CountBin.Count, 0);
+            Assert.AreEqual(bins[0].Count, 0);
 
             // Both fail filters
-            bins[0].CountBin.Count = 0; // reset bin count
+            bins[0].Count = 0; // reset bin count
             alignment1.MapQuality = 2; // below quality threshold of 3
             alignment2.MapQuality = 2; // below quality threshold of 3
             FragmentBinner.BinTask.BinOneAlignment(alignment1, qualityThreshold, readNameToBinIndex, samePositionReadNames,
                 ref usableFragmentCount, bins, ref binIndexStart);
             FragmentBinner.BinTask.BinOneAlignment(alignment2, qualityThreshold, readNameToBinIndex, samePositionReadNames,
                 ref usableFragmentCount, bins, ref binIndexStart);
-            Assert.AreEqual(bins[0].CountBin.Count, 0);
+            Assert.AreEqual(bins[0].Count, 0);
         }
 
         [TestMethod]
@@ -94,7 +94,7 @@ namespace CanvasTest
             string dataFolder = Path.Combine(assemblyFolder, "Data");
             string bedPath = Path.Combine(dataFolder, "bins_chrM.bed");
             string bamPath = Path.Combine(dataFolder, "single-end.bam");
-            Dictionary<string, List<GenomicBin>> bins = CanvasCommon.Utilities.LoadBedFile(bedPath, gcIndex: 3);
+            Dictionary<string, List<SampleGenomicBin>> bins = CanvasCommon.Utilities.LoadBedFile(bedPath, gcIndex: 3);
             string chrom = "chrM";
             FragmentBinner.BinTask binTask = new FragmentBinner.BinTask(null, chrom, bamPath, bins[chrom]);
             bool exceptionCaught = false;

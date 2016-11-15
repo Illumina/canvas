@@ -786,9 +786,9 @@ namespace CanvasCommon
         }
 
 
-        public static Dictionary<string, List<GenomicBin>> LoadBedFile(string bedPath, int? gcIndex = null, int? segmentIndex = null)
+        public static Dictionary<string, List<SampleGenomicBin>> LoadBedFile(string bedPath, int? gcIndex = null)
         {
-            Dictionary<string, List<GenomicBin>> excludedIntervals = new Dictionary<string, List<GenomicBin>>();
+            Dictionary<string, List<SampleGenomicBin>> excludedIntervals = new Dictionary<string, List<SampleGenomicBin>>();
             int count = 0;
             using (StreamReader reader = new StreamReader(bedPath))
             {
@@ -798,9 +798,9 @@ namespace CanvasCommon
                     if (fileLine == null) break;
                     string[] bits = fileLine.Split('\t');
                     string chr = bits[0];
-                    if (!excludedIntervals.ContainsKey(chr)) excludedIntervals[chr] = new List<GenomicBin>();
-                    GenomicBin interval = new GenomicBin();
-                    interval.Chromosome = chr;
+                    if (!excludedIntervals.ContainsKey(chr)) excludedIntervals[chr] = new List<SampleGenomicBin>();
+                    SampleGenomicBin interval = new SampleGenomicBin();
+                    interval.GenomicBin.Chromosome = chr;
                     interval.Start = int.Parse(bits[1]);
                     interval.Stop = int.Parse(bits[2]);
                     if (interval.Start < 0)
@@ -813,11 +813,7 @@ namespace CanvasCommon
                     }
                     if (gcIndex.HasValue && gcIndex.Value < bits.Length)
                     {
-                        interval.GC = int.Parse(bits[gcIndex.Value]);
-                    }
-                    if (segmentIndex.HasValue && segmentIndex.Value < bits.Length)
-                    {
-                        interval.CountBin.SegmentId = int.Parse(bits[segmentIndex.Value]);
+                        interval.GenomicBin.GC = int.Parse(bits[gcIndex.Value]);
                     }
                     excludedIntervals[chr].Add(interval);
                     count++;
@@ -829,109 +825,12 @@ namespace CanvasCommon
 
 
         /// <summary>
-        /// Loads .partioned bed files, merges bins from multiple samples and returns MultiSampleCount GenomicBin objects 
+        /// Loads .cleaned bed files, merges bins from multiple samples and returns GenomicBin objects with MultiSampleCount 
         /// </summary>
-        public static Dictionary<string, List<GenomicBin>> LoadMultiSamplePartiotionedBedFile(List<IFileLocation> bedPaths)
+        public static Dictionary<string, List<MultiSampleGenomicBin>> MergeMultiSampleCleanedBedFile(List<IFileLocation> bedPaths)
         {
             // initialize variables to hold multi-sample bed files 
-            Dictionary<string, List<GenomicBin>> intervals = new Dictionary<string, List<GenomicBin>>();
-            Dictionary<string, Dictionary<int, int>> start = new Dictionary<string, Dictionary<int, int>>();
-            Dictionary<string, Dictionary<int, int>> stop = new Dictionary<string, Dictionary<int, int>>();
-            Dictionary<string, Dictionary<int, List<float>>> binCounts = new Dictionary<string, Dictionary<int, List<float>>>();
-            Dictionary<string, Dictionary<int, List<int?>>> segmentIDs = new Dictionary<string, Dictionary<int, List<int?>>>();
-            List<int> counts = new List<int>();
-            HashSet<string> chromosomes = new HashSet<string>();
-            Console.WriteLine("LoadMultiBedFile");
-
-            foreach (IFileLocation bedPath in bedPaths)
-            {
-                int count = 0;
-                using (GzipReader reader = new GzipReader(bedPath.FullName))               
-                {
-                    while (true)
-                    {
-                        string fileLine = reader.ReadLine();
-                        if (fileLine == null) break;
-                        string[] bits = fileLine.Split('\t');
-                        string chr = bits[0];
-                        if (!chromosomes.Contains(chr)) chromosomes.Add(chr);
-                        count++;
-                    }
-                }
-                counts.Add(count);
-                Console.WriteLine($"count {count}");
-            }
-            foreach (string chr in chromosomes)
-            {
-                start[chr]  = new Dictionary<int, int>();
-                stop[chr]   = new Dictionary<int, int>();
-                binCounts[chr]  = new Dictionary<int, List<float>>();
-                segmentIDs[chr] = new Dictionary <int, List<int?>>();
-            }
-
-            // read counts and segmentIDs
-            foreach (IFileLocation bedPath in bedPaths)
-            {
-                using (GzipReader reader = new GzipReader(bedPath.FullName))
-                {
-                    while (true)
-                    {
-                        string fileLine = reader.ReadLine();
-                        if (fileLine == null) break;
-                        string[] bits = fileLine.Split('\t');
-                        string chr = bits[0];
-                        int pos = int.Parse(bits[1]);
-                        start[chr][pos] = pos;
-                        stop[chr][pos] = int.Parse(bits[2]);
-                        if (binCounts[chr].ContainsKey(pos))
-                        {
-                            binCounts[chr][pos].Add(float.Parse(bits[3]));
-                            segmentIDs[chr][pos].Add(int.Parse(bits[4]));
-                        }
-                        else
-                        {
-                            binCounts[chr][pos] = new List<float>();
-                            segmentIDs[chr][pos] = new List<int?>();
-                            binCounts[chr][pos].Add(float.Parse(bits[3]));
-                            segmentIDs[chr][pos].Add(int.Parse(bits[4]));
-                        }
-                    }
-                }
-            }
-            Console.WriteLine("create GenomeBin intervals");
-
-            // create GenomeBin intervals
-            foreach (string chr in chromosomes)
-            {
-                if (!intervals.ContainsKey(chr)) intervals[chr] = new List<GenomicBin>();
-                var pos = start[chr].Keys.ToList();
-                for (int i = 0; i < pos.Count; i++)
-                {
-                    // bins have been removed at Canvas clean
-                    if (binCounts[chr][pos[i]].Count != bedPaths.Count)
-                        continue;
-                    if (pos[i] < 0)
-                    {
-                        throw new ApplicationException($"Start must be non-negative");
-                    }
-                    if (pos[i] >= stop[chr][pos[i]]) // Do not allow empty intervals
-                    {
-                        throw new ApplicationException($"Start must be less than Stop");
-                    }
-                    GenomicBin interval = new GenomicBin(chr, pos[i], stop[chr][pos[i]], 0, binCounts[chr][pos[i]], segmentIDs[chr][pos[i]]);
-                    intervals[chr].Add(interval);
-                }
-            }
-            return intervals;
-        }
-
-        /// <summary>
-        /// Loads .partioned bed files, merges bins from multiple samples and returns MultiSampleCount GenomicBin objects 
-        /// </summary>
-        public static Dictionary<string, List<GenomicBin>> LoadMultiSampleCleanedBedFile(List<IFileLocation> bedPaths)
-        {
-            // initialize variables to hold multi-sample bed files 
-            Dictionary<string, List<GenomicBin>> intervals = new Dictionary<string, List<GenomicBin>>();
+            Dictionary<string, List<MultiSampleGenomicBin>> multiSampleGenomicBins = new Dictionary<string, List<MultiSampleGenomicBin>>();
             Dictionary<string, Dictionary<int, int>> start = new Dictionary<string, Dictionary<int, int>>();
             Dictionary<string, Dictionary<int, int>> stop = new Dictionary<string, Dictionary<int, int>>();
             Dictionary<string, Dictionary<int, int>> gc = new Dictionary<string, Dictionary<int, int>>();
@@ -949,8 +848,8 @@ namespace CanvasCommon
                     {
                         string fileLine = reader.ReadLine();
                         if (fileLine == null) break;
-                        string[] bits = fileLine.Split('\t');
-                        string chr = bits[0];
+                        string[] lineBedFile = fileLine.Split('\t');
+                        string chr = lineBedFile[0];
                         if (!chromosomes.Contains(chr)) chromosomes.Add(chr);
                         count++;
                     }
@@ -975,21 +874,21 @@ namespace CanvasCommon
                     {
                         string fileLine = reader.ReadLine();
                         if (fileLine == null) break;
-                        string[] bits = fileLine.Split('\t');
-                        string chr = bits[0];
-                        int pos = int.Parse(bits[1]);
+                        string[] lineBedFile = fileLine.Split('\t');
+                        string chr = lineBedFile[0];
+                        int pos = int.Parse(lineBedFile[1]);
                         start[chr][pos] = pos;
-                        stop[chr][pos] = int.Parse(bits[2]);
-                        gc[chr][pos] = int.Parse(bits[4]);
+                        stop[chr][pos] = int.Parse(lineBedFile[2]);
+                        gc[chr][pos] = int.Parse(lineBedFile[4]);
 
                         if (binCounts[chr].ContainsKey(pos))
                         {
-                            binCounts[chr][pos].Add(float.Parse(bits[3]));
+                            binCounts[chr][pos].Add(float.Parse(lineBedFile[3]));
                         }
                         else
                         {
                             binCounts[chr][pos] = new List<float>();
-                            binCounts[chr][pos].Add(float.Parse(bits[3]));
+                            binCounts[chr][pos].Add(float.Parse(lineBedFile[3]));
                         }
                     }
                 }
@@ -997,31 +896,32 @@ namespace CanvasCommon
             Console.WriteLine("create GenomeBin intervals");
 
             // create GenomeBin intervals
+
             foreach (string chr in chromosomes)
             {
-                if (!intervals.ContainsKey(chr)) intervals[chr] = new List<GenomicBin>();
-                var pos = start[chr].Keys.ToList();
-                for (int i = 0; i < pos.Count; i++)
+                if (!multiSampleGenomicBins.ContainsKey(chr)) multiSampleGenomicBins[chr] = new List<MultiSampleGenomicBin>();
+                var binStartPositions = start[chr].Keys.ToList();
+                foreach (var binStartPosition in binStartPositions)
                 {
-                    // bins have been removed at Canvas clean
-                    if (binCounts[chr][pos[i]].Count != bedPaths.Count)
+                    // if outlier is removed in one sample, remove it in all samples
+                    if (binCounts[chr][binStartPosition].Count < bedPaths.Count)
                         continue;
-                    if (pos[i] < 0)
+                    if (binStartPosition < 0)
                     {
                         throw new ApplicationException($"Start must be non-negative");
                     }
-                    if (pos[i] >= stop[chr][pos[i]]) // Do not allow empty intervals
+                    if (binStartPosition >= stop[chr][binStartPosition]) // Do not allow empty intervals
                     {
                         throw new ApplicationException($"Start must be less than Stop");
                     }
-                    GenomicBin interval = new GenomicBin(chr, pos[i], stop[chr][pos[i]], gc[chr][pos[i]], binCounts[chr][pos[i]]);
-                    intervals[chr].Add(interval);
+                    GenomicBin interval = new GenomicBin(chr, new GenomicInterval(binStartPosition, stop[chr][binStartPosition]), gc[chr][binStartPosition]);                  
+                    multiSampleGenomicBins[chr].Add(new MultiSampleGenomicBin(interval, binCounts[chr][binStartPosition]));
                 }
             }
-            return intervals;
+            return multiSampleGenomicBins;
         }
 
-        static public void SortAndOverlapCheck(Dictionary<string, List<GenomicBin>> intervals, string bedPath)
+        static public void SortAndOverlapCheck(Dictionary<string, List<SampleGenomicBin>> intervals, string bedPath)
         {
             List<string> chrs = new List<string>(intervals.Keys);
             for (int chrIndex = 0; chrIndex < chrs.Count; chrIndex++)
@@ -1029,7 +929,7 @@ namespace CanvasCommon
                 string chr = chrs[chrIndex];
                 if (intervals[chr].Count < 2)
                     continue;
-                List<GenomicBin> intervalByChrSorted = intervals[chr].OrderBy(o => o.Start).ToList();
+                List<SampleGenomicBin> intervalByChrSorted = intervals[chr].OrderBy(o => o.Start).ToList();
                 for (int index = 0; index < intervalByChrSorted.Count - 1; index++)
                 {
                     if (intervalByChrSorted[index + 1].Start < intervalByChrSorted[index].Stop)
@@ -1055,7 +955,7 @@ namespace CanvasCommon
             return 0.5 - 1 / (3.352 * Math.Pow(expectedCoverage, 0.4747));
         }
 
-        static public void PruneFrequencies(List<CanvasSegment> segments, string tempFolder, ref int MinimumFrequenciesForInformativeSegment)
+        static public void PruneFrequencies(List<CanvasSegment> segments, string tempFolder, ref int MinimumVariantFrequenciesForInformativeSegment)
         {
             string debugPath = Path.Combine(tempFolder, "BAFDistributionPerSegment.txt");
             using (StreamWriter writer = new StreamWriter(debugPath))
@@ -1089,9 +989,9 @@ namespace CanvasCommon
                         segment.Alleles.Frequencies = nonZeroIndices.Select(i => segment.Alleles.Frequencies[i]).ToList();
                         var tmpVFs = segment.Alleles.Frequencies.Where(v => v > 0.1).ToList(); // heuristic to use only the right mode
                         if (tmpVFs.Count > 0) { segment.Alleles.Frequencies = tmpVFs; }
-                        if (mafs.Length >= MinimumFrequenciesForInformativeSegment) // adjust MinimumFrequenciesForInformativeSegment
+                        if (mafs.Length >= MinimumVariantFrequenciesForInformativeSegment) // adjust MinimumVariantFrequenciesForInformativeSegment
                         {
-                            MinimumFrequenciesForInformativeSegment = Math.Min(MinimumFrequenciesForInformativeSegment, segment.Alleles.Frequencies.Count);
+                            MinimumVariantFrequenciesForInformativeSegment = Math.Min(MinimumVariantFrequenciesForInformativeSegment, segment.Alleles.Frequencies.Count);
                         }
                         writer.Write("\tTrue");
                     }

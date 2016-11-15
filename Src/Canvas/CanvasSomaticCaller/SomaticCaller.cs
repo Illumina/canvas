@@ -21,7 +21,7 @@ namespace CanvasSomaticCaller
         List<SegmentPloidy> AllPloidies;
         CopyNumberOracle CNOracle = null;
         CoveragePurityModel Model;
-        Dictionary<string, List<GenomicBin>> ExcludedIntervals = new Dictionary<string, List<GenomicBin>>();
+        Dictionary<string, List<SampleGenomicBin>> ExcludedIntervals = new Dictionary<string, List<SampleGenomicBin>>();
         Dictionary<long, double> HeterogeneousSegmentsSignature = new Dictionary<long, double>();
 
 
@@ -1327,7 +1327,7 @@ namespace CanvasSomaticCaller
 
         }
 
-        static public List<SegmentInfo> GetUsableSegmentsForModeling(List<CanvasSegment> segments, bool IsEnrichment, int minimumFrequenciesForInformativeSegment)
+        static public List<SegmentInfo> GetUsableSegmentsForModeling(List<CanvasSegment> segments, bool IsEnrichment, int MinimumVariantFrequenciesForInformativeSegment)
         {
             // Get the average count everwhere.  Exclude segments whose coverage is >2x this average.
             List<float> tempCountsList = new List<float>();
@@ -1358,7 +1358,7 @@ namespace CanvasSomaticCaller
                 // If the segment has few or no variants, then don't use the MAF for this segment - set to -1 (no frequency)
                 // Typically a segment will have no variants if it's on chrX or chrY and starling knows not to call a
                 // heterozygous variant there (other than in the PAR regions).
-                if (segment.Alleles.Frequencies.Count < minimumFrequenciesForInformativeSegment)
+                if (segment.Alleles.Frequencies.Count < MinimumVariantFrequenciesForInformativeSegment)
                 {
                     info.MAF = -1;
                 }
@@ -1518,7 +1518,7 @@ namespace CanvasSomaticCaller
         {
             List<SegmentInfo> usableSegments;
 
-            // Identify usable segments using our MinimumFrequenciesForInformativeSegment cutoff, 
+            // Identify usable segments using our MinimumVariantFrequenciesForInformativeSegment cutoff, 
             // then (if we don't find enough) we can try again with progressively more permissive cutoffs.
             int validMAFCount = 0;
             while (true)

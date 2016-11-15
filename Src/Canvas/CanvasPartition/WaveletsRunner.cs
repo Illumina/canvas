@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using CanvasCommon;
 
@@ -12,66 +13,25 @@ namespace CanvasPartition
 
         public class WaveletsRunnerParams
         {
-            private bool _isGermline;
-            private string _commonCnVs;
-            private double _thresholdLower;
-            private double _thresholdUpper;
-            private double _madFactor;
-            private int _minSize;
-            private int _verbose;
-            private bool _isSmallPedegree;
+            public bool IsGermline { get; }
+            public string CommonCnVs { get; }
+            public double ThresholdLower { get; }
+            public double ThresholdUpper { get; }
+            public double MadFactor { get; }
+            public int MinSize { get; }
+            public int Verbose { get; }
+            public bool IsSmallPedegree { get; }
 
             public WaveletsRunnerParams(bool isGermline, string commonCNVs, double thresholdLower = 5, double thresholdUpper = 80, double madFactor = 2, int minSize = 10, int verbose = 1, bool isSmallPedegree = false)
             {
-                _isGermline = isGermline;
-                _commonCnVs = commonCNVs;
-                _thresholdLower = thresholdLower;
-                _thresholdUpper = thresholdUpper;
-                _madFactor = madFactor;
-                _minSize = minSize;
-                _verbose = verbose;
-                _isSmallPedegree = isSmallPedegree;
-            }
-
-
-            public bool IsGermline
-            {
-                get { return _isGermline; }
-            }
-
-            public string CommonCnVs
-            {
-                get { return _commonCnVs; }
-            }
-
-            public double ThresholdLower
-            {
-                get { return _thresholdLower; }
-            }
-
-            public double ThresholdUpper
-            {
-                get { return _thresholdUpper; }
-            }
-
-            public double MadFactor
-            {
-                get { return _madFactor; }
-            }
-
-            public int MinSize
-            {
-                get { return _minSize; }
-            }
-
-            public int Verbose
-            {
-                get { return _verbose; }
-            }
-
-            public bool IsSmallPedegree
-            {
-                get { return _isSmallPedegree; }
+                IsGermline = isGermline;
+                CommonCnVs = commonCNVs;
+                ThresholdLower = thresholdLower;
+                ThresholdUpper = thresholdUpper;
+                MadFactor = madFactor;
+                MinSize = minSize;
+                Verbose = verbose;
+                IsSmallPedegree = isSmallPedegree;
             }
         }
 
@@ -118,21 +78,15 @@ namespace CanvasPartition
             }
             Isas.Shared.Utilities.Utilities.DoWorkParallelThreads(tasks);
             // Quick sanity-check: If we don't have any segments, then return a dummy result.
-            int n = 0;
-            foreach (var list in finiteScoresByChr.Values)
-            {
-                n += list.Length;
-            }
+            int n = finiteScoresByChr.Values.Sum(list => list.Length);
+
             if (n == 0)
-            {
-                return new Dictionary<string, Segmentation.Segment[]>();
-            }
+                return new Dictionary<string, Segmentation.Segment[]>();           
 
             Dictionary<string, Segmentation.Segment[]> segmentByChr = new Dictionary<string, Segmentation.Segment[]>();
 
-
             // load common CNV segments
-            Dictionary<string, List<GenomicBin>> commonCNVintervals = null;
+            Dictionary<string, List<SampleGenomicBin>> commonCNVintervals = null;
             if (_parameters.CommonCnVs != null)
             {
                 commonCNVintervals = CanvasCommon.Utilities.LoadBedFile(_parameters.CommonCnVs);
@@ -144,7 +98,6 @@ namespace CanvasPartition
             {
                 tasks.Add(new ThreadStart(() =>
                 {
-                    int[] ina = inaByChr[chr];
                     List<int> breakpoints = new List<int>();
                     int sizeScoreByChr = segmentation.ScoreByChr[chr].Length;
                     if (sizeScoreByChr > _parameters.MinSize)
@@ -157,13 +110,13 @@ namespace CanvasPartition
                     {
                         if (commonCNVintervals.ContainsKey(chr))
                         {
-                            List <GenomicBin> remappedCommonCNVintervals = Segmentation.RemapCommonRegions(commonCNVintervals[chr], segmentation.StartByChr[chr], segmentation.EndByChr[chr]);
+                            List <SampleGenomicBin> remappedCommonCNVintervals = Segmentation.RemapCommonRegions(commonCNVintervals[chr], segmentation.StartByChr[chr], segmentation.EndByChr[chr]);
                             List <int> oldbreakpoints = breakpoints;
                             breakpoints = Segmentation.OverlapCommonRegions(oldbreakpoints, remappedCommonCNVintervals);
                         }
                     }
 
-                    var segments = segmentation.DeriveSegments(breakpoints, sizeScoreByChr, chr);
+                    var segments = Segmentation.DeriveSegments(breakpoints, sizeScoreByChr, segmentation.StartByChr[chr], segmentation.EndByChr[chr]);
 
                     lock (segmentByChr)
                     {

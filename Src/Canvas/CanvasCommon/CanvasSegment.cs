@@ -617,11 +617,11 @@ namespace CanvasCommon
         /// Return true if we are not allowed to merge two segments separated by the interval (start, end).
         /// </summary>
         static private bool IsForbiddenInterval(string chr, int start, int end,
-            Dictionary<string, List<GenomicBin>> excludedIntervals)
+            Dictionary<string, List<SampleGenomicBin>> excludedIntervals)
         {
             if (excludedIntervals == null) return false;
             if (!excludedIntervals.ContainsKey(chr)) return false;
-            foreach (GenomicBin bin in excludedIntervals[chr])
+            foreach (SampleGenomicBin bin in excludedIntervals[chr])
             {
                 if (bin.Start >= start && bin.Start <= end) return true;
                 if (bin.Stop >= start && bin.Stop <= end) return true;
@@ -637,7 +637,7 @@ namespace CanvasCommon
         /// and the space between them doesn't overlap with any excluded intervals.
         /// </summary>
         static public void MergeSegmentsUsingExcludedIntervals(ref List<CanvasSegment> segments, int MinimumCallSize,
-            Dictionary<string, List<GenomicBin>> excludedIntervals)
+            Dictionary<string, List<SampleGenomicBin>> excludedIntervals)
         {
             if (!segments.Any()) return;
 

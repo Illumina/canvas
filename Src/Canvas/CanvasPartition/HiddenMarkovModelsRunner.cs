@@ -21,8 +21,8 @@ namespace CanvasPartition
             _minSize = minSize;
         }
 
-        public Dictionary<string, Segmentation.Segment[]> Run(Segmentation segmentation) {
-            Dictionary<string, List<GenomicBin>> commonCNVintervals = null;
+        public Dictionary<string, Segmentation.Segment[]> Run(List<Segmentation> segmentation) {
+            Dictionary<string, List<SampleGenomicBin>> commonCNVintervals = null;
             if (_commonCnVs != null)
             {
                 commonCNVintervals = CanvasCommon.Utilities.LoadBedFile(_commonCnVs);
@@ -32,7 +32,7 @@ namespace CanvasPartition
 
             var cts = new CancellationTokenSource();
             Parallel.ForEach(
-                segmentation.ScoresByChr.Keys,
+                segmentation.First().ScoreByChr.Keys,
                 new ParallelOptions
                 {
                     CancellationToken = cts.Token,
@@ -41,10 +41,11 @@ namespace CanvasPartition
                 },
                 chr =>
                 {
-                    List<int> breakpointsForward = new List<int>();
-                    List<int> breakpointsReverse = new List<int>();
-
-                    int length = segmentation.ScoresByChr[chr].Count;
+                    List<int> breakpoints = new List<int>();
+                    int length = segmentation.First().ScoreByChr[chr].Length;
+                    var startByChr = segmentation.First().StartByChr[chr];
+                    var endByChr = segmentation.First().EndByChr[chr];
+                    List<List<double>> multiSampleCoverage = segmentation.Select(x => x.ScoreByChr[chr].ToList()).ToList();
                     if (length > _minSize)
                     {
                         List<double> haploidMeans = new List<double>(_nHiddenStates);
@@ -79,15 +80,15 @@ namespace CanvasPartition
                         {
                             if (commonCNVintervals.ContainsKey(chr))
                             {
-                                List<GenomicBin> remappedCommonCNVintervals = Segmentation.RemapCommonRegions(commonCNVintervals[chr], segmentation.StartByChr[chr], segmentation.EndByChr[chr]);
+                                List<SampleGenomicBin> remappedCommonCNVintervals = Segmentation.RemapCommonRegions(commonCNVintervals[chr], startByChr, endByChr);
                                 List<int> oldbreakpoints = breakpoints;
                                 breakpoints = Segmentation.OverlapCommonRegions(oldbreakpoints, remappedCommonCNVintervals);
                             }
                         }
 
-                        var segments = segmentation.DeriveSegments(breakpoints, length, chr);
+                        var segments = Segmentation.DeriveSegments(breakpoints, length, startByChr, endByChr);
 
-                       lock (segmentByChr)
+                        lock (segmentByChr)
                         {
                             segmentByChr[chr] = segments;
                         }
@@ -117,7 +118,7 @@ namespace CanvasPartition
 
         public List<MultivariateGaussianDistribution> InitializeEmission(Dictionary<string, List<List<double>>> data ,string chromosome, int nHiddenStates)
         {
-            int nDimensions = data[chromosome].First().Count;
+            int nDimensions = data.First().Count;
             List<double> haploidMean = new List<double>(nDimensions);
             List<double> standardDeviation = new List<double>(nDimensions);
             List<MultivariateGaussianDistribution> tmpDistributions = new List<MultivariateGaussianDistribution>();
@@ -125,10 +126,10 @@ namespace CanvasPartition
             for (int dimension = 0; dimension < nDimensions; dimension++)
             {
                 double meanHolder = 0;
-                foreach (List<double> datapoint in data[chromosome])
+                foreach (List<double> datapoint in data)
                     meanHolder += datapoint[dimension];
-                haploidMean.Add(meanHolder / data[chromosome].Count /2.0);
-                standardDeviation.Add(CanvasCommon.Utilities.StandardDeviation(data[chromosome].Select(x => x[dimension]).ToList()));
+                haploidMean.Add(meanHolder / data.Count /2.0);
+                standardDeviation.Add(CanvasCommon.Utilities.StandardDeviation(data.Select(x => x[dimension]).ToList()));
             }
 
             for (int CN = 0; CN < nHiddenStates; CN++)
@@ -154,17 +155,18 @@ namespace CanvasPartition
             return tmpDistributions;
         }
 
-        public List<MultivariatePoissonDistribution> InitializePoissonEmission(Dictionary<string, List<List<double>>> data, string chromosome, int nHiddenStates, List<double> haploidMean)
+        public List<MultivariatePoissonDistribution> InitializePoissonEmission(List<List<double>> data,  int nHiddenStates)
         {
-            int nDimensions = data[chromosome].First().Count;
+            int nDimensions = data.First().Count;
+            List<double> haploidMean = new List<double>(nDimensions);
             List<MultivariatePoissonDistribution> tmpDistributions = new List<MultivariatePoissonDistribution>();
 
             for (int dimension = 0; dimension < nDimensions; dimension++)
             {
                 double meanHolder = 0;
-                foreach (List<double> datapoint in data[chromosome])
+                foreach (List<double> datapoint in data)
                     meanHolder += datapoint[dimension];
-                haploidMean.Add(meanHolder / data[chromosome].Count / 2.0);
+                haploidMean.Add(meanHolder / data.Count / 2.0);
             }
 
             for (int CN = 0; CN < nHiddenStates; CN++)
@@ -219,13 +221,13 @@ namespace CanvasPartition
             return tmpDistributions;
         }
 
-        private static void RemoveOutliers(Dictionary<string, List<List<double>>> data, string chr, double maxThreshold, int nDimensions)
+        private static void RemoveOutliers(List<List<double>> data, double maxThreshold, int nDimensions)
         {           
-                for (int length = 0; length < data[chr].Count; length++)
+                for (int length = 0; length < data.Count; length++)
                     for (int dimension = 0; dimension < nDimensions; dimension++)
-                        data[chr][length][dimension] = data[chr][length][dimension] > maxThreshold
+                        data[length][dimension] = data[length][dimension] > maxThreshold
                             ? maxThreshold
-                            : data[chr][length][dimension];
+                            : data[length][dimension];
         }
     }
 }
