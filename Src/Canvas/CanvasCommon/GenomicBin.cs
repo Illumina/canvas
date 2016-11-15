@@ -5,12 +5,12 @@ namespace CanvasCommon
 {
     public class MultiSampleGenomicBin
     {
-        private readonly GenomicBin _genomicBin;
+        public GenomicBin Bin { get; }
         public List<float> Counts { get; }
 
         public MultiSampleGenomicBin(GenomicBin genomicBin, List<float> counts)
         {
-            _genomicBin = genomicBin;
+            Bin = genomicBin;
             Counts = counts;
         }
     }
@@ -62,7 +62,7 @@ namespace CanvasCommon
             this.CountDeviation = MadOfDIffs;
         }
 
-        public SampleGenomicBin(string chr, int start, int stop, int gc, List<float> count)
+        public SampleGenomicBin(string chr, int start, int stop, int gc)
         {
             _genomicBin = new GenomicBin();
             GenomicBin.Chromosome = chr;
@@ -70,16 +70,6 @@ namespace CanvasCommon
             GenomicBin.GC = gc;
             this.CountDeviation = -1;
         }
-
-        public SampleGenomicBin(string chr, int start, int stop, int gc, List<float> count, List<int?> segmentIds)
-        {
-            _genomicBin = new GenomicBin();
-            GenomicBin.Chromosome = chr;
-            GenomicBin.Interval = new GenomicInterval() { Start = start, End = stop };
-            GenomicBin.GC = gc;
-            this.CountDeviation = -1;
-        }
-
 
 
         public SampleGenomicBin(string chr, int start, int stop, int gc, float count)

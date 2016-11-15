@@ -18,11 +18,9 @@ namespace CanvasPartition
         private string InputBinPath;
         private const int idxChr = 0, idxStart = 1, idxEnd = 2;
         private int idxScore = 3;
-        public List<int> idxScores = new List<int>(); // index of sample coverage
         public Dictionary<string, uint[]> StartByChr = new Dictionary<string, uint[]>();
         public Dictionary<string, uint[]> EndByChr = new Dictionary<string, uint[]>();
         public Dictionary<string, double[]> ScoreByChr = new Dictionary<string, double[]>();
-        public Dictionary<string, List<List<double>>> ScoresByChr = new Dictionary<string, List<List<double>>>();
         public string ForbiddenIntervalBedPath = null;
         public int MaxInterBinDistInSegment;
         #endregion
@@ -59,17 +57,6 @@ namespace CanvasPartition
             this.ReadBEDInput();
         }
 
-        public Segmentation(string inputBinPath, string forbiddenBedPath, int nSamples)
-        {
-            
-            this.InputBinPath = inputBinPath;
-            this.ForbiddenIntervalBedPath = forbiddenBedPath;
-            // Read the input file:
-            idxScores = Enumerable.Range(3, nSamples).ToList();
-            this.ReadMultiBEDInput();
-        }
-
-
         private Segmentation.GenomeSegmentationResults GetDummySegmentationResults()
         {
             Segmentation.GenomeSegmentationResults results = new Segmentation.GenomeSegmentationResults(new Dictionary<string, Segmentation.Segment[]>());
@@ -77,7 +64,7 @@ namespace CanvasPartition
         }
 
 
-        public Segmentation.Segment[] DeriveSegments(List<int> breakpoints, int sizeScoreByChr, string chr)
+        public static Segmentation.Segment[] DeriveSegments(List<int> breakpoints, int sizeScoreByChr, uint[] startByChr,  uint[] endByChr)
         {
             List<int> startBreakpointsPos = new List<int>();
             List<int> endBreakpointPos = new List<int>();
@@ -111,9 +98,13 @@ namespace CanvasPartition
             {
                 int start = startBreakpointsPos[i];
                 int end = endBreakpointPos[i];
-                segments[i] = new Segmentation.Segment();
-                segments[i].start = this.StartByChr[chr][start]; // Genomic start
-                segments[i].end = this.EndByChr[chr][end]; // Genomic end
+                segments[i] = new Segmentation.Segment
+                {
+                    start = startByChr[start],
+                    end = endByChr[end]
+                };
+                // Genomic start
+                // Genomic end
             }
             return segments;
         }
@@ -166,51 +157,6 @@ namespace CanvasPartition
             }
         }
 
-        /// <summary>
-        /// Assume that the rows are sorted by the start position and ascending order
-        /// </summary>
-        private void ReadMultiBEDInput()
-        {
-            try
-            {
-                Dictionary<string, List<uint>> startByChr = new Dictionary<string, List<uint>>(),
-                    endByChr = new Dictionary<string, List<uint>>();
-                Dictionary<string, List<List<double>>> scoreByChr = new Dictionary<string, List<List<double>>>();
-                // Create an instance of StreamReader to read from a file. 
-                // The using statement also closes the StreamReader. 
-                using (GzipReader reader = new GzipReader(this.InputBinPath))
-                {
-                    string line;
-                    string[] tokens;
-                    while ((line = reader.ReadLine()) != null)
-                    {
-                        tokens = line.Split('\t');
-                        string chr = tokens[Segmentation.idxChr].Trim();
-                        if (!startByChr.ContainsKey(chr))
-                        {
-                            startByChr.Add(chr, new List<uint>());
-                            endByChr.Add(chr, new List<uint>());
-                            scoreByChr.Add(chr, new List<List<double>>());
-                        }
-                        startByChr[chr].Add(Convert.ToUInt32(tokens[Segmentation.idxStart].Trim()));
-                        endByChr[chr].Add(Convert.ToUInt32(tokens[Segmentation.idxEnd].Trim()));                      
-                        scoreByChr[chr].Add(this.idxScores.Select(ind => Convert.ToDouble(tokens[ind].Trim())).ToList());
-                    }
-                    foreach (string chr in startByChr.Keys)
-                    {
-                        this.StartByChr[chr] = startByChr[chr].ToArray();
-                        this.EndByChr[chr] = endByChr[chr].ToArray();
-                        this.ScoresByChr[chr] = scoreByChr[chr];
-                    }
-                }
-            }
-            catch (Exception e)
-            {
-                Console.Error.WriteLine("File {0} could not be read:", this.InputBinPath);
-                Console.Error.WriteLine(e.Message);
-                Environment.Exit(1);
-            }
-        }
 
         /// <summary>
         /// Remap index from genomic coordinates into CanvasBin coordinates
@@ -350,25 +296,6 @@ namespace CanvasPartition
                         previousBinEnd = end;
                     }
                 }
-            }
-        }
-
-        public void WriteCanvasPartitionMultisampleResults(List<string> outPaths, GenomeSegmentationResults regmentationResults)
-        {
-            for (int fileIndex = 0; fileIndex < outPaths.Count; fileIndex++)
-            {
-                Dictionary<string, List<double>> scoreByChr = new Dictionary<string, List<double>>();
-                foreach (string chr in StartByChr.Keys)
-                {
-                    scoreByChr.Add(chr, new List<double>());
-                    for (int pos = 0; pos < StartByChr[chr].Length; pos++)
-                    {
-                        scoreByChr[chr].Add(ScoresByChr[chr][pos][fileIndex]);
-                    }
-                }
-                foreach (string chr in scoreByChr.Keys)
-                    this.ScoreByChr[chr] = scoreByChr[chr].ToArray();
-                this.WriteCanvasPartitionResults(outPaths[fileIndex], regmentationResults);
             }
         }
 
