@@ -827,19 +827,18 @@ namespace CanvasCommon
         /// <summary>
         /// Loads .cleaned bed files, merges bins from multiple samples and returns GenomicBin objects with MultiSampleCount 
         /// </summary>
-        public static Dictionary<string, List<MultiSampleGenomicBin>> MergeMultiSampleCleanedBedFile(List<IFileLocation> bedPaths)
+        public static Dictionary<string, List<MultiSampleGenomicBin>> MergeMultiSampleCleanedBedFile(List<IFileLocation> canvasCleanBedPaths)
         {
             // initialize variables to hold multi-sample bed files 
             Dictionary<string, List<MultiSampleGenomicBin>> multiSampleGenomicBins = new Dictionary<string, List<MultiSampleGenomicBin>>();
             Dictionary<string, Dictionary<int, int>> start = new Dictionary<string, Dictionary<int, int>>();
             Dictionary<string, Dictionary<int, int>> stop = new Dictionary<string, Dictionary<int, int>>();
-            Dictionary<string, Dictionary<int, int>> gc = new Dictionary<string, Dictionary<int, int>>();
             Dictionary<string, Dictionary<int, List<float>>> binCounts = new Dictionary<string, Dictionary<int, List<float>>>();
             List<int> counts = new List<int>();
             HashSet<string> chromosomes = new HashSet<string>();
-            Console.WriteLine("LoadMultiBedFile");
+            Console.WriteLine("Merge and normalize CanvasClean bed files");
 
-            foreach (IFileLocation bedPath in bedPaths)
+            foreach (IFileLocation bedPath in canvasCleanBedPaths)
             {
                 int count = 0;
                 using (GzipReader reader = new GzipReader(bedPath.FullName))
@@ -862,12 +861,13 @@ namespace CanvasCommon
                 start[chr] = new Dictionary<int, int>();
                 stop[chr] = new Dictionary<int, int>();
                 binCounts[chr] = new Dictionary<int, List<float>>();
-                gc[chr] = new Dictionary<int, int>();
             }
 
             // read counts and segmentIDs
-            foreach (IFileLocation bedPath in bedPaths)
+            foreach (IFileLocation bedPath in canvasCleanBedPaths)
             {
+                Console.WriteLine(bedPath);
+
                 using (GzipReader reader = new GzipReader(bedPath.FullName))
                 {
                     while (true)
@@ -879,17 +879,11 @@ namespace CanvasCommon
                         int pos = int.Parse(lineBedFile[1]);
                         start[chr][pos] = pos;
                         stop[chr][pos] = int.Parse(lineBedFile[2]);
-                        gc[chr][pos] = int.Parse(lineBedFile[4]);
-
-                        if (binCounts[chr].ContainsKey(pos))
-                        {
-                            binCounts[chr][pos].Add(float.Parse(lineBedFile[3]));
-                        }
+  
+                        if (binCounts[chr].ContainsKey(pos))                      
+                            binCounts[chr][pos].Add(float.Parse(lineBedFile[3]));                       
                         else
-                        {
-                            binCounts[chr][pos] = new List<float>();
-                            binCounts[chr][pos].Add(float.Parse(lineBedFile[3]));
-                        }
+                            binCounts[chr][pos] = new List<float> {float.Parse(lineBedFile[3])};
                     }
                 }
             }
@@ -904,7 +898,7 @@ namespace CanvasCommon
                 foreach (var binStartPosition in binStartPositions)
                 {
                     // if outlier is removed in one sample, remove it in all samples
-                    if (binCounts[chr][binStartPosition].Count < bedPaths.Count)
+                    if (binCounts[chr][binStartPosition].Count < canvasCleanBedPaths.Count)
                         continue;
                     if (binStartPosition < 0)
                     {
@@ -914,7 +908,7 @@ namespace CanvasCommon
                     {
                         throw new ApplicationException($"Start must be less than Stop");
                     }
-                    GenomicBin interval = new GenomicBin(chr, new GenomicInterval(binStartPosition, stop[chr][binStartPosition]), gc[chr][binStartPosition]);                  
+                    GenomicBin interval = new GenomicBin(chr, new GenomicInterval(binStartPosition, stop[chr][binStartPosition]));                  
                     multiSampleGenomicBins[chr].Add(new MultiSampleGenomicBin(interval, binCounts[chr][binStartPosition]));
                 }
             }

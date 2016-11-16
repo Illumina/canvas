@@ -45,7 +45,11 @@ namespace CanvasPartition
                     int length = segmentation.First().ScoreByChr[chr].Length;
                     var startByChr = segmentation.First().StartByChr[chr];
                     var endByChr = segmentation.First().EndByChr[chr];
-                    List<List<double>> multiSampleCoverage = segmentation.Select(x => x.ScoreByChr[chr].ToList()).ToList();
+                    List<List<double>> multiSampleCoverage = new List<List<double>>(length);
+                    for (int i = 0; i < length; i++)
+                        multiSampleCoverage.Add(segmentation.Select(x=>x.ScoreByChr[chr][i]).ToList());
+
+
                     if (length > _minSize)
                     {
                         List<double> haploidMeans = new List<double>(_nHiddenStates);
@@ -108,13 +112,11 @@ namespace CanvasPartition
             int nDimensions = data.First().Count;
             List<double> haploidMean = new List<double>(nDimensions);
             List<double> standardDeviation = new List<double>(nDimensions);
-            List<MultivariateGaussianDistribution> tmpDistributions = new List<MultivariateGaussianDistribution>();
+            var tmpDistributions = new List<MultivariateGaussianDistribution>();
 
             for (int dimension = 0; dimension < nDimensions; dimension++)
             {
-                double meanHolder = 0;
-                foreach (List<double> datapoint in data)
-                    meanHolder += datapoint[dimension];
+                double meanHolder = data.Sum(datapoint => datapoint[dimension]);
                 haploidMean.Add(meanHolder / data.Count /2.0);
                 standardDeviation.Add(CanvasCommon.Utilities.StandardDeviation(data.Select(x => x[dimension]).ToList()));
             }
@@ -131,7 +133,7 @@ namespace CanvasPartition
                 // if few hidden states, increase the last CN state by diploid rather than haploid increment
                 if (nHiddenStates < 5 && CN-1 == nHiddenStates)
                     tmpMean = Vector<double>.Build.Dense(haploidMean.Select(x => Math.Max(CN, 0.5) * x + x).ToArray());
-                MultivariateGaussianDistribution tmpDistribution = new MultivariateGaussianDistribution(tmpMean, tmpSds);
+                var tmpDistribution = new MultivariateGaussianDistribution(tmpMean, tmpSds);
                 tmpDistributions.Add(tmpDistribution);
             }
 
@@ -146,13 +148,11 @@ namespace CanvasPartition
         {
             int nDimensions = data.First().Count;
             List<double> haploidMean = new List<double>(nDimensions);
-            List<MultivariatePoissonDistribution> tmpDistributions = new List<MultivariatePoissonDistribution>();
+            var tmpDistributions = new List<MultivariatePoissonDistribution>();
 
             for (int dimension = 0; dimension < nDimensions; dimension++)
             {
-                double meanHolder = 0;
-                foreach (List<double> datapoint in data)
-                    meanHolder += datapoint[dimension];
+                double meanHolder = data.Sum(datapoint => datapoint[dimension]);
                 haploidMean.Add(meanHolder / data.Count / 2.0);
             }
 
@@ -163,7 +163,7 @@ namespace CanvasPartition
                 // if few hidden states, increase the last CN state by diploid rather than haploid increment
                 if (nHiddenStates < 5 && CN - 1 == nHiddenStates)
                     tmpMean = Vector<double>.Build.Dense(haploidMean.Select(x => Math.Max(CN, 0.5) * x + x).ToArray());
-                MultivariatePoissonDistribution tmpDistribution = new MultivariatePoissonDistribution(tmpMean.ToList());
+                var tmpDistribution = new MultivariatePoissonDistribution(tmpMean.ToList());
                 tmpDistributions.Add(tmpDistribution);
             }
 
@@ -183,9 +183,7 @@ namespace CanvasPartition
 
             for (int dimension = 0; dimension < nDimensions; dimension++)
             {
-                double meanHolder = 0;
-                foreach (List<double> datapoint in data)
-                    meanHolder += datapoint[dimension];
+                double meanHolder = data.Sum(datapoint => datapoint[dimension]);
                 haploidMean.Add(meanHolder / data.Count / 2.0);
                 variance.Add(CanvasCommon.Utilities.Variance(data.Select(x => x[dimension]).ToList()));
             }
@@ -209,12 +207,12 @@ namespace CanvasPartition
         }
 
         private static void RemoveOutliers(List<List<double>> data, double maxThreshold, int nDimensions)
-        {           
-                for (int length = 0; length < data.Count; length++)
-                    for (int dimension = 0; dimension < nDimensions; dimension++)
-                        data[length][dimension] = data[length][dimension] > maxThreshold
-                            ? maxThreshold
-                            : data[length][dimension];
+        {
+            foreach (List<double> sample in data)
+                for (int dimension = 0; dimension < nDimensions; dimension++)
+                    sample[dimension] = sample[dimension] > maxThreshold
+                        ? maxThreshold
+                        : sample[dimension];
         }
     }
 }

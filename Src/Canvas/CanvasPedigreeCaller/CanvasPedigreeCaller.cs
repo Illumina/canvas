@@ -1,14 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
-using Illumina.Common;
 using System.IO;
 using System.Linq;
 using CanvasCommon;
 using MathNet.Numerics.Distributions;
 using System.Threading.Tasks;
 using Isas.SequencingFiles;
-using Isas.SequencingFiles.Vcf;
 
 namespace CanvasPedigreeCaller
 {
@@ -50,7 +47,7 @@ namespace CanvasPedigreeCaller
             }
 
             var numberOfSegments = pedigreeMembers.First().Segments.Count;
-            List<GenomicInterval> segmentIntervals = getParallelIntevals(numberOfSegments, Environment.ProcessorCount);
+            List<GenomicInterval> segmentIntervals = GetParallelIntevals(numberOfSegments, Environment.ProcessorCount);
             
             List<PedigreeMember> parents = GetParents(pedigreeMembers);
             List<PedigreeMember> offsprings = GetChildren(pedigreeMembers);
@@ -81,8 +78,8 @@ namespace CanvasPedigreeCaller
                         {
                             var alleleCounts = pedigreeMembers.Select(x => x.Segments[segmentIndex].Alleles.Counts.Count);
                             var alleleDensity = alleleCounts.Average()/pedigreeMembers.First().Segments[segmentIndex].Length;
-
-                            if (alleleCounts.Select(x=>x>DefaultAlleleCountThreshold).Any(c => c == false) && alleleDensity < DefaultAlleleDensityThreshold)
+                            var useCnLikelihood = alleleCounts.Select(x => x > DefaultAlleleCountThreshold).Any(c => c == false) && alleleDensity < DefaultAlleleDensityThreshold;
+                            if (useCnLikelihood)
                                 MaximalCnLikelihood(parents, offsprings, segmentIndex, transitionMatrix, offspringsGenotypes);
                             else
                                 MaximalGtLikelihood(parents, offsprings, segmentIndex, parentalGenotypes, offspringsGenotypes);
@@ -119,7 +116,7 @@ namespace CanvasPedigreeCaller
             return variantCoverage.Any() ? Utilities.Median(variantCoverage) : 0;
         }
 
-        double[][] GetTransitionMatrix(int numCnStates)
+        public double[][] GetTransitionMatrix(int numCnStates)
         {
             double[][] transitionMatrix = CanvasCommon.Utilities.MatrixCreate(numCnStates, numCnStates);
             transitionMatrix[0][0] = 1.0;
@@ -152,15 +149,16 @@ namespace CanvasPedigreeCaller
             {
                 for (int cn2 = 0; cn2 < parent2Likelihood.Count; cn2++)
                 {
-                    foreach (List<Tuple<int, int>> offspringGtStates in offspringsGenotypes)
+                    foreach (var offspringGtStates in offspringsGenotypes)
                     {
                         double currentLikelihood = parent1Likelihood[cn1] * parent2Likelihood[cn2];
                         int counter = 0;
                         foreach (PedigreeMember child in children)
                         {
-                            currentLikelihood *= transitionMatrix[cn1][offspringGtStates[counter].Item1] * transitionMatrix[cn2][offspringGtStates[counter].Item2] *
-                                                 child.CnModel.GetCnLikelihood(Math.Min(child.GetCoverage(segmentPosition), child.MeanCoverage * 3.0))
-                                                     [Math.Min(offspringGtStates[counter].Item1 + offspringGtStates[counter].Item2, MaximumCopyNumber - 1)];
+                            var modelIndex = Math.Min(offspringGtStates[counter].Item1 + offspringGtStates[counter].Item2, MaximumCopyNumber - 1);
+                            currentLikelihood *= transitionMatrix[cn1][offspringGtStates[counter].Item1] * 
+                                transitionMatrix[cn2][offspringGtStates[counter].Item2] *
+                                child.CnModel.GetCnLikelihood(child.GetCoverage(segmentPosition))[modelIndex];
                             counter++;
                         }
                         if (currentLikelihood > maximalLikelihood)
@@ -199,19 +197,19 @@ namespace CanvasPedigreeCaller
             double marginals = 0;
             var parent1Likelihood = parents.First().CnModel.GetGtLikelihood(parents.First().GetAlleleCounts(segmentPosition));
             var parent2Likelihood = parents.Last().CnModel.GetGtLikelihood(parents.Last().GetAlleleCounts(segmentPosition));
-            foreach (Tuple<int, int> parent1GtStates in parentalGenotypes)
+            foreach (var parent1GtStates in parentalGenotypes)
             {
-                foreach (Tuple<int, int> parent2GtStates in parentalGenotypes)
+                foreach (var parent2GtStates in parentalGenotypes)
                 {
-                    foreach (List<Tuple<int, int>> offspringGtStates in offspringsGenotypes)
+                    foreach (var offspringGtStates in offspringsGenotypes)
                     {
                         var currentLikelihood = parent1Likelihood[parent1GtStates.Item1][parent1GtStates.Item2] *
                         parent2Likelihood[parent2GtStates.Item1][parent2GtStates.Item2];
                         int counter = 0;
                         foreach (PedigreeMember child in children)
                         {
-                            currentLikelihood *= getTransition(parent1GtStates.Item1, parent1GtStates.Item2, offspringGtStates[counter].Item1, offspringGtStates[counter].Item2) *
-                                                 getTransition(parent2GtStates.Item1, parent2GtStates.Item2, offspringGtStates[counter].Item1, offspringGtStates[counter].Item2) *
+                            currentLikelihood *= GetTransition(parent1GtStates.Item1, parent1GtStates.Item2, offspringGtStates[counter].Item1, offspringGtStates[counter].Item2) *
+                                                 GetTransition(parent2GtStates.Item1, parent2GtStates.Item2, offspringGtStates[counter].Item1, offspringGtStates[counter].Item2) *
                                                  child.CnModel.GetGtLikelihood(child.GetAlleleCounts(segmentPosition))[offspringGtStates[counter].Item1][offspringGtStates[counter].Item2];
                             counter++;
                         }
@@ -276,7 +274,7 @@ namespace CanvasPedigreeCaller
             }                  
         }
 
-        List<GenomicInterval> getParallelIntevals(int nSegments, int nCores)
+        private List<GenomicInterval> GetParallelIntevals(int nSegments, int nCores)
         {
             List<GenomicInterval> intevals = new List<GenomicInterval>();
             int step = nSegments/nCores;
@@ -291,7 +289,7 @@ namespace CanvasPedigreeCaller
             return intevals;
         }
 
-        public double getTransition(int gt1Parent, int gt2Parent, int gt1Offspring, int gt2Offspring)
+        public double GetTransition(int gt1Parent, int gt2Parent, int gt1Offspring, int gt2Offspring)
         {
             if (gt1Parent == gt1Offspring || gt1Parent == gt2Offspring ||
                 gt2Parent == gt1Offspring || gt2Parent == gt2Offspring)
