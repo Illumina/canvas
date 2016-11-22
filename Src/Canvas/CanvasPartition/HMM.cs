@@ -441,13 +441,20 @@ namespace CanvasPartition
                 backtrack--;
             }
             bestStates.Reverse();
-            for (int k = 3; k < bestStates.Count - 3; k++)
+            RemoveSegmentationOutliers(bestStates);
+            return bestStates;
+        }
+
+        private static void RemoveSegmentationOutliers(List<int> bestStates)
+        {
+            int halfWindow = 3;
+            int diploidState = 2;
+            for (int k = halfWindow; k < bestStates.Count - halfWindow; k++)
             {
-                if (bestStates[k - 2] == 2 && bestStates[k - 2] == 2 && bestStates[k + 2] == 2 && bestStates[k + 2] == 2 && bestStates[k] != 2)
+                if (bestStates[k - 2] == diploidState && bestStates[k - 1] == diploidState && bestStates[k + 2] == 2 && 
+                    bestStates[k + 1] == diploidState && bestStates[k] != diploidState)
                     bestStates[k] = 2;
             }
-
-            return bestStates;
         }
     }
 }

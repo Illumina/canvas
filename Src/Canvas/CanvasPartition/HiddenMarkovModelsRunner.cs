@@ -139,7 +139,7 @@ namespace CanvasPartition
 
             // remove outliers 
             double maxThreshold = tmpDistributions.Last().Mean().Max() * 1.2;
-            RemoveOutliers(data, maxThreshold, nDimensions);
+            RemoveOutliers(data, maxThreshold);
 
             return tmpDistributions;
         }
@@ -169,7 +169,7 @@ namespace CanvasPartition
 
             // remove outliers 
             double maxThreshold = tmpDistributions.Last().Mean().Max() * 1.2;
-            RemoveOutliers(data, maxThreshold, nDimensions);
+            RemoveOutliers(data, maxThreshold);
 
             return tmpDistributions;
         }
@@ -190,7 +190,7 @@ namespace CanvasPartition
 
             // remove outliers 
             double maxThreshold = haploidMean.Max() * nHiddenStates;
-            RemoveOutliers(data, maxThreshold, nDimensions);
+            RemoveOutliers(data, maxThreshold);
             var maxValues = data.Select(x => Convert.ToInt32(x.Max())).ToList().Max();
 
             for (int CN = 0; CN < nHiddenStates; CN++)
@@ -206,8 +206,9 @@ namespace CanvasPartition
             return tmpDistributions;
         }
 
-        private static void RemoveOutliers(List<List<double>> data, double maxThreshold, int nDimensions)
+        private static void RemoveOutliers(List<List<double>> data, double maxThreshold)
         {
+            int nDimensions = data.First().Count;
             foreach (List<double> sample in data)
                 for (int dimension = 0; dimension < nDimensions; dimension++)
                     sample[dimension] = sample[dimension] > maxThreshold
