@@ -82,6 +82,10 @@
     <ApplicationManifest>Properties\app.manifest</ApplicationManifest>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="Combinatorics, Version=1.0.3.0, Culture=neutral, PublicKeyToken=d5738f21cd5d2f66, processorArchitecture=MSIL">
+      <HintPath>..\Canvas\packages\Combinatorics.1.0.3.2\lib\net40\Combinatorics.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
     <Reference Include="Illumina.Common, Version=1.19.6.0, Culture=neutral, processorArchitecture=AMD64">
       <HintPath>..\Canvas\packages\Illumina.Common.1.19.6\lib\net451\Illumina.Common.dll</HintPath>
       <Private>True</Private>
