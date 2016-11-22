@@ -1,4 +1,5 @@
 ﻿using System;
+using System.CodeDom;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -14,8 +15,10 @@ namespace CanvasPedigreeCaller
         #region Members
         // Static:
         static int MaximumCopyNumber = 5;
-        private static int DefaultAlleleDensityThreshold = 1000;
-        private static int DefaultAlleleCountThreshold = 4;
+        private const int DefaultAlleleDensityThreshold = 1000;
+        private const int DefaultAlleleCountThreshold = 4;
+        private const double DeNovoRate = 0.00001;
+
         public int QualityFilterThreshold { get; set; } = 10;
         #endregion
 
@@ -143,6 +146,8 @@ namespace CanvasPedigreeCaller
         {
             double maximalLikelihood = Double.MinValue;
             double marginals = 0;
+            names = parents.Select(x => x.Name).Union(children.Select(x => x.Name));
+            CnvDistribution density = new CnvDistribution(int nCopies, List < string > names);
             var parent1Likelihood = parents.First().CnModel.GetCnLikelihood(Math.Min(parents.First().GetCoverage(segmentPosition), parents.First().MeanCoverage*3.0));
             var parent2Likelihood = parents.Last().CnModel.GetCnLikelihood(Math.Min(parents.Last().GetCoverage(segmentPosition), parents.Last().MeanCoverage*3.0));
             for (int cn1 = 0; cn1 < parent1Likelihood.Count; cn1++)
@@ -160,7 +165,9 @@ namespace CanvasPedigreeCaller
                                 transitionMatrix[cn2][offspringGtStates[counter].Item2] *
                                 child.CnModel.GetCnLikelihood(child.GetCoverage(segmentPosition))[modelIndex];
                             counter++;
+                            
                         }
+                        Array.SetValue(currentLikelihood,new[] {cn1, cn2, offspringGtStates.Select(x => x.Item1 + x.Item2});
                         if (currentLikelihood > maximalLikelihood)
                         {
                             maximalLikelihood = currentLikelihood;
@@ -179,7 +186,7 @@ namespace CanvasPedigreeCaller
             }
 
             foreach (PedigreeMember parent in parents)
-                parent.Segments[segmentPosition].QScore = marginals == 0 ? 0 : maximalLikelihood / marginals;
+                parent.Segments[segmentPosition].QScore =  marginals == 0 ? 0 : maximalLikelihood / marginals;
 
             foreach (PedigreeMember offring in children)
                 offring.Segments[segmentPosition].QScore = marginals == 0 ? 0 : maximalLikelihood / marginals;
@@ -294,7 +301,7 @@ namespace CanvasPedigreeCaller
             if (gt1Parent == gt1Offspring || gt1Parent == gt2Offspring ||
                 gt2Parent == gt1Offspring || gt2Parent == gt2Offspring)
                 return 0.5;
-            return 0.00001;
+            return DeNovoRate;
         }
 
 

@@ -141,6 +141,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="CanvasPedigreeCaller.cs" />
+    <Compile Include="CnvDistribution.cs" />
     <Compile Include="PedigreeMember.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
