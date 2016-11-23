@@ -16,6 +16,7 @@ namespace CanvasPartition
     {
         // hidden variable parameters
         private readonly MixtureDistibution _emission;
+        private readonly List<List<double>> _variances ;
         private readonly double[][] _transition;
         private readonly double[] _stateProbabilities;
         // alpha-beta algorithm
@@ -31,13 +32,14 @@ namespace CanvasPartition
         public const double selfTransition = 0.99;
 
 
-        public HiddenMarkovModel(List<List<double>> data, List<MultivariatePoissonDistribution> gaussianMixtures)
+        public HiddenMarkovModel(List<List<double>> data, List<MultivariateNegativeBinomial> gaussianMixtures, List<double> haploidMeans)
         {
             // HMM set-up
             nStates = gaussianMixtures.Count;
             length = data.Count;
             _stateProbabilities = new double[nStates];
-            _emission = new PoissonMixture(gaussianMixtures);
+            _emission = new NegativeBinomialMixture(gaussianMixtures, haploidMeans);
+            _variances = gaussianMixtures.Select(x => x.Variances).ToList();
             _transition = CanvasCommon.Utilities.MatrixCreate(nStates, nStates);
             for (int i = 0; i < nStates; i++)
             {
@@ -67,9 +69,9 @@ namespace CanvasPartition
 
         public void WriteEmission()
         {
-            //Console.WriteLine("Emissions");
-            //_emission.WriteMeans();
-            //Console.WriteLine("Transitions");
+            Console.WriteLine("Emissions");
+            _emission.WriteMeans();
+            Console.WriteLine("Transitions");
             for (int state = 0; state < nStates; state++)
                 Console.WriteLine($"Transitin for state {state} = {_transition[state][state]}");
         }
@@ -102,7 +104,8 @@ namespace CanvasPartition
         public void UpdateEmission(List<List<double>> x)
         {
             _emission.UpdateCovariances(_gamma, x);
-            _emission.UpdateMeans(_gamma, x);
+            _emission.UpdateMeans(_gamma, x, _variances);
+            WriteEmission();
         }
 
         public double Forward(List<List<double>> x)
@@ -193,7 +196,7 @@ namespace CanvasPartition
         public void FindMaximalLikelihood(List<List<double>> x)
         {
             double likelihoodDifferenceThreshold = 0.01;
-            const int maxIterations = 4;
+            const int maxIterations = 1;
             List<double> likelihoods = new List<double>();
             double oldLikelihood = EstimationStep(x);
             likelihoods.Add(oldLikelihood);
@@ -208,7 +211,6 @@ namespace CanvasPartition
                 likelihoods.Add(newLikelihood);
                 oldLikelihood = newLikelihood;
                 iteration++;
-                WriteEmission();
             }
         }
 
@@ -380,7 +382,7 @@ namespace CanvasPartition
         }
 
 
-        public List<int> BestPathViterbi(List<List<double>> x)
+        public List<int> BestPathViterbi(List<List<double>> x, uint[] start, List<double> haploidMeans)
         {
             // Initialization 
             var length = x.Count;
@@ -396,15 +398,16 @@ namespace CanvasPartition
             }
 
             // Induction 
-            for (int t = 1; t < length - 1; t++)
+            for (int t = 1;t < length - 1; t++)
             {
+
                 for (int j = 0; j < nStates; j++)
                 {
                     int state = 0;
                     double max = Double.MinValue;
                     for (int i = 0; i < nStates; i++)
                     {
-                        var tmpMax = bestScore[t - 1][i] + Math.Log(_transition[i][j]) + Math.Log(_emission.EstimateLikelihood(x[t], j));
+                        var tmpMax = bestScore[t - 1][i] + _emission.EstimateViterbiLikelihood(x[t], j, haploidMeans, _transition[i]);
                         if (tmpMax > max)
                         {
                             state = i;
@@ -438,7 +441,20 @@ namespace CanvasPartition
                 backtrack--;
             }
             bestStates.Reverse();
+            RemoveSegmentationOutliers(bestStates);
             return bestStates;
+        }
+
+        private static void RemoveSegmentationOutliers(List<int> bestStates)
+        {
+            int halfWindow = 3;
+            int diploidState = 2;
+            for (int k = halfWindow; k < bestStates.Count - halfWindow; k++)
+            {
+                if (bestStates[k - 2] == diploidState && bestStates[k - 1] == diploidState && bestStates[k + 2] == 2 && 
+                    bestStates[k + 1] == diploidState && bestStates[k] != diploidState)
+                    bestStates[k] = 2;
+            }
         }
     }
 }

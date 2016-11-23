@@ -89,8 +89,8 @@ namespace CanvasPartition
             Dictionary<string, List<SampleGenomicBin>> commonCNVintervals = null;
             if (_parameters.CommonCnVs != null)
             {
-                commonCNVintervals = Utilities.LoadBedFile(_parameters.CommonCnVs);
-                Utilities.SortAndOverlapCheck(commonCNVintervals, _parameters.CommonCnVs);
+                commonCNVintervals = CanvasCommon.Utilities.LoadBedFile(_parameters.CommonCnVs);
+                CanvasCommon.Utilities.SortAndOverlapCheck(commonCNVintervals, _parameters.CommonCnVs);
             }
 
             tasks = new List<ThreadStart>();

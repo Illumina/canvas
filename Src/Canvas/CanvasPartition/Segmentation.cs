@@ -74,11 +74,10 @@ namespace CanvasPartition
                 startBreakpointsPos.Add(breakpoints[0]);
                 endBreakpointPos.Add(breakpoints[1] - 1);
                 lengthSeg.Add(breakpoints[1] - 1);
-
                 for (int i = 1; i < breakpoints.Count - 1; i++)
                 {
-                    startBreakpointsPos.Add(breakpoints[i]);
-                    endBreakpointPos.Add(breakpoints[i + 1] - 1);
+                    startBreakpointsPos.Add(breakpoints[i]-1);
+                    endBreakpointPos.Add(breakpoints[i + 1]);
                     lengthSeg.Add(breakpoints[i + 1] - 1 - breakpoints[i]);
                 }
                 startBreakpointsPos.Add(breakpoints[breakpoints.Count - 1]);
@@ -290,7 +289,6 @@ namespace CanvasPartition
                         uint end = EndByChr[chr][pos];
                         string key = chr + ":" + start;
                         bool newSegment = IsNewSegment(starts, key, excludeIntervals, previousBinEnd, end, start, ref excludeIndex);
-
                         if (newSegment) segmentNum++;
                         writer.WriteLine(string.Format($"{chr}\t{start}\t{end}\t{ScoreByChr[chr][pos]}\t{segmentNum}"));
                         previousBinEnd = end;

@@ -75,6 +75,10 @@
     <Prefer32Bit>true</Prefer32Bit>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="Combinatorics, Version=1.0.3.0, Culture=neutral, PublicKeyToken=d5738f21cd5d2f66, processorArchitecture=MSIL">
+      <HintPath>..\Canvas\packages\Combinatorics.1.0.3.2\lib\net40\Combinatorics.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
     <Reference Include="Illumina.Common, Version=1.11.0.0, Culture=neutral, processorArchitecture=AMD64">
       <HintPath>..\Canvas\packages\Illumina.Common.1.11.0\lib\net40\Illumina.Common.dll</HintPath>
       <Private>True</Private>

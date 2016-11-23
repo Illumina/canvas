@@ -21,6 +21,12 @@ namespace CanvasCommon
         {
         }
 
+        public GenomicBin(string chromosome, GenomicInterval interval)
+        {
+            Chromosome = chromosome;
+            Interval = interval;
+        }
+
         public GenomicBin(string chromosome, GenomicInterval interval, int gc)
         {
             Chromosome = chromosome;

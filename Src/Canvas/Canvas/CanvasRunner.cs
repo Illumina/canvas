@@ -761,8 +761,6 @@ namespace Illumina.SecondaryAnalysis
                 commandLine.AppendFormat("-i \"{0}\" ", cleanedPath);
 
             commandLine.AppendFormat("-b \"{0}\" ", canvasBedPath);
-            commandLine.AppendFormat("-m HMM");
-
 
             if (!commonCnvsBed.IsNullOrEmpty())
                 commandLine.AppendFormat("-c \"{0}\" ", commonCnvsBed);
@@ -774,6 +772,8 @@ namespace Illumina.SecondaryAnalysis
                 partitionedPaths.Add(partitionedPath);
                 commandLine.AppendFormat("-o \"{0}\" ", partitionedPath);
             }
+
+            commandLine.AppendFormat("-m HMM");
 
             UnitOfWork partitionJob = new UnitOfWork()
             {
@@ -977,6 +977,7 @@ namespace Illumina.SecondaryAnalysis
             {
                 ExecutablePath = executablePath,
                 LoggingFolder = _workManager.LoggingFolder.FullName,
+                LoggingStub = "CanvasPedigreeCaller",
                 CommandLine = commandLine.ToString()
             };
 

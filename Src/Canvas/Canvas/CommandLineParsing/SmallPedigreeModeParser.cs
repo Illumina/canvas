@@ -106,9 +106,9 @@ namespace Canvas.CommandLineParsing
                 using (var bamReader = new BamReader(bam.FullName))
                 {
                     var sampleNames = bamReader.GetReadGroupSamples();
-                    if (sampleNames.Count !=1)
+                    if (sampleNames.Count <1)
                         throw new ArgumentException($"Bam file '{bam}' must contain reads from one sample only");
-                    map.Add(sampleNames.Single(), bam);
+                    map.Add(sampleNames.First(), bam);
                 }
             }
             return map;
