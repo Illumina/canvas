@@ -31,22 +31,20 @@ namespace Canvas
 
         private CanvasCallset GetCallset(ILogger logger)
         {
+            AnalysisDetails analysisDetails = new AnalysisDetails(CommonOptions.OutputDirectory,CommonOptions.WholeGenomeFasta, 
+                CommonOptions.KmerFasta,CommonOptions.FilterBed, SingleSampleCommonOptions.PloidyBed, null);
             IFileLocation outputVcfPath = CommonOptions.OutputDirectory.GetFileLocation("CNV.vcf.gz");
             var manifest = new NexteraManifest(_somaticEnrichmentOptions.Manifest.FullName, null, logger.Error);
             CanvasCallset callSet = new CanvasCallset(
                     _somaticEnrichmentOptions.Bam,
                     SingleSampleCommonOptions.SampleName,
-                    CommonOptions.WholeGenomeFasta,
-                    CommonOptions.OutputDirectory,
-                    CommonOptions.KmerFasta,
-                    CommonOptions.FilterBed,
-                    SingleSampleCommonOptions.PloidyBed,
                     SingleSampleCommonOptions.BAlleleSites,
                     SingleSampleCommonOptions.IsDbSnpVcf,
                     _somaticEnrichmentOptions.ControlBams,
                     manifest,
                     null,
-                    outputVcfPath);
+                    outputVcfPath,
+                    analysisDetails);
             return callSet;
         }
     }
