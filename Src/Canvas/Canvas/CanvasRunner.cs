@@ -1001,7 +1001,10 @@ namespace Illumina.SecondaryAnalysis
                     if (callset.SampleType == SampleType.Mother || callset.SampleType == SampleType.Father)
                         writer.WriteLine($"1\t{callset.Callset.SampleName}\t0\t0\t0\t0");
                     else
-                        writer.WriteLine($"1\t{callset.Callset.SampleName}\t{fatherSampleName}\t{motherSampleName}\t0\t0");
+                    {
+                        string phenotype = callset.SampleType == SampleType.Proband ? "affected" : "0";
+                        writer.WriteLine($"1\t{callset.Callset.SampleName}\t{fatherSampleName}\t{motherSampleName}\t0\t{phenotype}");
+                    }
             }
             return outFile;
         }
