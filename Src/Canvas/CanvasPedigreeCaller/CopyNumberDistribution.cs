@@ -14,6 +14,7 @@ namespace CanvasPedigreeCaller
         private readonly Array _probability;
         public List<string> SampleNames { get; }
         public int Count { get; }
+        public List<int[]> Indices { get; }
 
 
         public CopyNumberDistribution(int nCopyNumbers, List<string> names)
@@ -25,6 +26,7 @@ namespace CanvasPedigreeCaller
             _probability = Array.CreateInstance(typeof(double), dimensionSizes);
             SampleNames = names;
             Count = nSamples;
+            Indices = new List<int[]>();
         }
 
         private int GetSampleIndex(string sampleName)
@@ -37,9 +39,11 @@ namespace CanvasPedigreeCaller
             return Convert.ToDouble(_probability.GetValue(indices));
         }
 
-        public void SetJointProbability(double probability, int[] indices)
+        public void SetJointProbability(double probability, int[] indices, bool skipIndex = false)
         {
             _probability.SetValue(probability, indices);
+            if (!skipIndex && !Indices.Exists(x=>x[0]==indices[0] && x[1] == indices[1] && x[2] == indices[2]) && probability > 0)
+                Indices.Add(indices);
         }
 
         public List<double> GetMarginalProbability(int nSamples, int nCopies, string sampleName)
@@ -48,19 +52,9 @@ namespace CanvasPedigreeCaller
             var marginalProbability = Enumerable.Repeat(0.0, nCopies).ToList();
 
             double normalizationFactor = 0.0;
-            var copies = Enumerable.Range(0, nCopies).ToList();
-            var combinations = new Combinations<int>(copies, nSamples, GenerateOption.WithRepetition);
-            var allSampleIndeces = new List<List<int>>();
-
-            foreach (var combination in combinations)
-            {
-                var permutation = new Permutations<int>(combination, GenerateOption.WithoutRepetition);
-                allSampleIndeces.AddRange(permutation.Select(permutationElement => permutationElement.ToList()));
-            }
-
             foreach (int copyNumberState in Enumerable.Range(0, nCopies))
             {
-                foreach (var copyNumberIndex in allSampleIndeces.Where(x => x[sampleIndex] == copyNumberState).ToArray())
+                foreach (var copyNumberIndex in Indices.Where(x => x[sampleIndex] == copyNumberState).ToArray())
                 {
                     if (GetJointProbability(copyNumberIndex.ToArray()) > 0.0)
                     {
@@ -78,18 +72,10 @@ namespace CanvasPedigreeCaller
         public void SetConditionalProbability(int nSamples, int nCopies, string sampleName, int sampleCnValue, double sampleMarginalProbability)
         {
             int sampleIndex = GetSampleIndex(sampleName);
-            var copies = Enumerable.Range(0, nCopies).ToList();
-            var combinations = new Combinations<int>(copies, nSamples, GenerateOption.WithRepetition);
-            var allSampleIndeces = new List<List<int>>();
 
-            foreach (var combination in combinations)
+            foreach (var index in Indices.Where(x => x[sampleIndex] == sampleCnValue))
             {
-                var permutation = new Permutations<int>(combination, GenerateOption.WithoutRepetition);
-                allSampleIndeces.AddRange(permutation.Select(permutationElement => permutationElement.ToList()));
-            }
-            foreach (var index in allSampleIndeces.Where(x => x[sampleIndex] == sampleCnValue))
-            {
-                SetJointProbability(GetJointProbability(index.ToArray()) / sampleMarginalProbability, index.ToArray());
+                SetJointProbability(GetJointProbability(index.ToArray()) / sampleMarginalProbability, index.ToArray(), true);
             }
         }
     }

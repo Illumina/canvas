@@ -16,8 +16,8 @@ namespace CanvasCommon
         public Tuple<int, int> MedianCounts;
         public void SetMedianCounts()
         {
-            var item1 = Utilities.Median(Counts.Select(x => Math.Min(x.Item1, x.Item1)).ToList());
-            var item2 = Utilities.Median(Counts.Select(x => Math.Max(x.Item1, x.Item1)).ToList());
+            var item1 = Utilities.Median(Counts.Select(x => x.Item1).ToList());
+            var item2 = Utilities.Median(Counts.Select(x => x.Item2).ToList());
             MedianCounts = new Tuple<int, int>(item1, item2);
         }
     }
@@ -339,14 +339,14 @@ namespace CanvasCommon
                         int position = (alternateAllele.StartsWith("<") && alternateAllele.EndsWith(">")) ? segment.Begin : segment.Begin + 1;
                         writer.Write($"{segment.Chr}\t{position}\tCanvas:{cnvType.ToVcfId()}:{segment.Chr}:{segment.Begin + 1}-{segment.End}\t");
 
-                        writer.Write($"N\t{alternateAllele}\t{segment.QScore}\t{segment.Filter}\t", alternateAllele, segment.QScore, segment.Filter);
+                        writer.Write($"N\t{alternateAllele}\t{segment.QScore:F2}\t{segment.Filter}\t", alternateAllele, segment.QScore, segment.Filter);
 
                         if (cnvType != CnvType.Reference)
                             writer.Write($"SVTYPE={cnvType.ToSvType()};");
                         if (segment.IsHeterogeneous)
                             writer.Write("SUBCLONAL;");
                         if (segment.DQScore.HasValue)
-                            writer.Write($"DQscore={segment.DQScore.Value};");
+                            writer.Write($"DQscore={segment.DQScore.Value:F2};");
                         writer.Write($"END={segment.End}");
                         if (cnvType != CnvType.Reference)
                             writer.Write($";CNVLEN={segment.End - segment.Begin}");

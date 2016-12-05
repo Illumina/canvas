@@ -343,6 +343,7 @@ namespace Illumina.SecondaryAnalysis
                     binJobs.Add(binJob);
                 }
             }
+
             _workManager.DoWorkParallelThreads(binJobs);
             return intermediateDataPathsByBamPath;
         }
@@ -951,9 +952,8 @@ namespace Illumina.SecondaryAnalysis
             string pedigreeFile = WritePedigreeFile(callsets);
 
             // CanvasSmallPedigreeCaller:
-            StringBuilder commandLine = new StringBuilder();
+            StringBuilder commandLine = new StringBuilder {Length = 0};
 
-            commandLine.Length = 0;
             string executablePath = Path.Combine(_canvasFolder, "CanvasPedigreeCaller.exe");
             if (CrossPlatform.IsThisMono())
             {

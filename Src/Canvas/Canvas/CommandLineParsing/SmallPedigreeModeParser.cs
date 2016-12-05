@@ -90,7 +90,6 @@ namespace Canvas.CommandLineParsing
             var isProband = probands.Any(proband => sampleName == proband);
             if (new[] { isMother, isFather, isProband }.Where(item => item).Count() > 1)
                 throw new ArgumentException($"Sample {sampleName} can only have one sample type (mother | father | proband)");
-
             if (isMother) return SampleType.Mother;
             if (isFather) return SampleType.Father;
             if (isProband) return SampleType.Proband;
