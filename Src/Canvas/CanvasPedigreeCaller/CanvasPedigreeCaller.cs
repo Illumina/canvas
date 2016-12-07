@@ -86,9 +86,6 @@ namespace CanvasPedigreeCaller
                             var alleleDensity   = enumerable.Average()/pedigreeMembers.First().Segments[segmentIndex].Length;
                             var useCnLikelihood = enumerable.Select(x => x > DefaultAlleleCountThreshold).Any(c => c == false) && 
                                 alleleDensity < DefaultAlleleDensityThreshold;
-                            if (parents[0].Segments[segmentIndex].Chr == "chr1" && (parents[0].Segments[segmentIndex].Begin == 51532590 
-                            || parents[0].Segments[segmentIndex].Begin == 51532589))
-                                Console.WriteLine("blah");
                             CopyNumberDistribution copyNumberLikelihoods = useCnLikelihood ? 
                             MaximalCnLikelihood(parents, offsprings, segmentIndex, transitionMatrix, offspringsGenotypes) : 
                             MaximalGtLikelihood(parents, offsprings, segmentIndex, parentalGenotypes, offspringsGenotypes);
@@ -134,7 +131,7 @@ namespace CanvasPedigreeCaller
             foreach (PedigreeMember sample in parents.Concat(offsprings))
             {
                 sample.Segments[segmentIndex].QScore = singleSampleQualityScores[counter];
-                if (sample.Segments[segmentIndex].QScore > QualityFilterThreshold)
+                if (sample.Segments[segmentIndex].QScore < QualityFilterThreshold)
                     sample.Segments[segmentIndex].Filter = $"q{QualityFilterThreshold}";
                 counter++;
             }
@@ -422,7 +419,7 @@ namespace CanvasPedigreeCaller
                 firstParentMarginalProbabilities.Sum());
             var qscoresecondParent = -10.0 * Math.Log10((secondParentMarginalProbabilities.Sum() - secondParentMarginalProbabilities[parentCopyNumber]) /
     secondParentMarginalProbabilities.Sum());
-            return (qscorefirstParent + qscoresecondParent) / 2.0;
+            return (qscorefirstParent + qscoresecondParent + sampleProbability) / 3.0;
         }
 }
 }

@@ -32,9 +32,17 @@ namespace CanvasPedigreeCaller
         {
             for (int cn = 0; cn < numCnStates; cn++)
             {
-                CnDistribution.Add(NegativeBinomialWrapper(haploidMean*cn, variance, maxValue));
+                var multiplier = 1.0;
+                if (cn == 1)
+                    multiplier = 0.9;
+                if (cn == 3)
+                    multiplier = 1.1;
+
+                CnDistribution.Add(NegativeBinomialWrapper(haploidMean*cn*multiplier, variance, maxValue));
             }
+
             _alleleDistribution = new Tuple<List<double>, List<double>>[numCnStates][];
+
             for (int i = 0; i < numCnStates; i++)
                 _alleleDistribution[i] = new Tuple<List<double>, List<double>>[numCnStates];
 

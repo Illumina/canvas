@@ -185,14 +185,17 @@ namespace CanvasPartition
 
     public static class Utilities
     {
-        public static List<List<int>> GetGenotypeCombinations(int numberOfStates, int currentState)
+        public static List<List<int>> GetGenotypeCombinations(int numberOfDimensions, int currentState)
         {
+            if (numberOfDimensions <= 0)
+                throw new ArgumentOutOfRangeException(nameof(numberOfDimensions));
             const int diploidState = 2;
-            var upperSetBound = SpecialFunctions.Factorial(numberOfStates) * SpecialFunctions.Factorial(numberOfStates / 2);
+            const int numbnerOfStates = 2;
+            var upperSetBound = Math.Pow(numbnerOfStates, numberOfDimensions);
             var allCombinations = new List<List<int>>(Convert.ToInt32(upperSetBound));
-            for (int numberOfDiploidStates = 1; numberOfDiploidStates < numberOfStates; numberOfDiploidStates++)
+            for (int numberOfDiploidStates = 1; numberOfDiploidStates < numberOfDimensions; numberOfDiploidStates++)
             {
-                var states = Enumerable.Repeat(currentState, numberOfStates - numberOfDiploidStates)
+                var states = Enumerable.Repeat(currentState, numberOfDimensions - numberOfDiploidStates)
                     .Concat(Enumerable.Repeat(diploidState, numberOfDiploidStates));
                 var permutations = new Permutations<int>(states.ToList(), GenerateOption.WithoutRepetition);
                 var list = permutations.Select(x => x.ToList()).ToList();

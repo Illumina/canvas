@@ -189,7 +189,7 @@ namespace CanvasPartition
             }
 
             // remove outliers 
-            double maxThreshold = haploidMean.Max() * nHiddenStates;
+            double maxThreshold = haploidMean.Average() * nHiddenStates;
             RemoveOutliers(data, maxThreshold, nDimensions);
             var maxValues = data.Select(x => Convert.ToInt32(x.Max())).ToList().Max();
 

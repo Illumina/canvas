@@ -717,8 +717,7 @@ namespace CanvasCommon
         /// quality score.  Two consecutive segments are considered neighbors if they're on the same chromosome
         /// and the space between them is not too large.
         /// </summary>
-        static public void MergeSegments(ref List<CanvasSegment> segments, int MinimumCallSize = 0,
-            int maximumMergeSpan = 10000)
+        static public void MergeSegments(ref List<CanvasSegment> segments, int MinimumCallSize = 0, int maximumMergeSpan = 10000)
         {
             if (!segments.Any()) return;
 
