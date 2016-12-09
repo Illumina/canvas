@@ -105,7 +105,7 @@ namespace CanvasPartition
                     break;
                 case Segmentation.SegmentationMethod.HMM:
                     Console.WriteLine("{0} Running HMM Partitioning", DateTime.Now);
-                    HiddenMarkovModelsRunner hiddenMarkovModelsRunner = new HiddenMarkovModelsRunner(commonCNVsbedPath);
+                    HiddenMarkovModelsRunner hiddenMarkovModelsRunner = new HiddenMarkovModelsRunner(commonCNVsbedPath, inFiles.Count);
                     segmentationResults = new Segmentation.GenomeSegmentationResults(hiddenMarkovModelsRunner.Run(segmentationEngine));
                     for (int i = 0; i < segmentationEngine.Count; i++)
                         segmentationEngine[i].WriteCanvasPartitionResults(outFiles[i], segmentationResults);

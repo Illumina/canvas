@@ -232,6 +232,7 @@ namespace CanvasPartition
             var nonDiploidBases = 2000*10000;
             var diploidTransitionProb = (genomeSize - nonDiploidBases)/genomeSize;
             adjustTransition(diploidTransitionProb);
+            WriteEmission();
         }
 
         /// <summary>
