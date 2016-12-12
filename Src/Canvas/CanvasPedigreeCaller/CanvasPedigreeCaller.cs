@@ -130,8 +130,8 @@ namespace CanvasPedigreeCaller
             if (cnStates[probandIndex] != 2 && cnStates[parent1Index] == 2 && cnStates[parent2Index] == 2 &&
                 singleSampleQualityScores[probandIndex] > QualityFilterThreshold)
             {
-                var deNovoQualityScore = GetDeNovoQualityScore(parents, copyNumberLikelihoods, probands.First().Name,
-                    cnStates[probandIndex], singleSampleQualityScores[probandIndex]);
+                var deNovoQualityScore = GetConditionalDeNovoQualityScore(copyNumberLikelihoods, probandIndex,
+                    cnStates[probandIndex], parent1Index, parent2Index);
                 probands.First().Segments[segmentIndex].DQScore = deNovoQualityScore;
             }
             var counter = 0;
@@ -435,6 +435,30 @@ namespace CanvasPedigreeCaller
             var diploidProbability = (1 - firstParentMarginalAlt) * (1 - secondParentMarginalAlt) / normalization;
             var denovoProbability = diploidProbability * probandMarginalAlt;
             var qscore = -10.0 * Math.Log10(1-denovoProbability);
+            return qscore;
+        }
+
+        public double GetConditionalDeNovoQualityScore(CopyNumberDistribution density, int probandIndex,
+                    int probandCopyNumber, int parent1Index, int parent2Index)
+        {
+
+            double numerator = 0.0;
+            double denominator = 0.0;
+            const int parentsCopyNumber = 2;
+
+            foreach (var copyNumberIndex in density.Indices.Where(x => x[probandIndex] == probandCopyNumber).ToArray())
+            {
+                if (density.GetJointProbability(copyNumberIndex.ToArray()) > 0.0)
+                {
+                    var holder = density.GetJointProbability(copyNumberIndex.ToArray());
+                    denominator += holder;
+                    if (copyNumberIndex[parent1Index] == parentsCopyNumber && copyNumberIndex[parent2Index] == parentsCopyNumber)
+                        numerator += holder;
+                }
+            }
+
+            var denovoProbability = numerator / denominator;
+            var qscore = -10.0 * Math.Log10(1 - denovoProbability);
             return qscore;
         }
     }
