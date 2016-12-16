@@ -316,16 +316,27 @@ namespace EvaluateCNV
             }
         }
 
-        protected IEnumerable<CNVCall> GetCnvCallsFromVcf(string vcfPath, bool includePassingOnly)
+        protected IEnumerable<CNVCall> GetCnvCallsFromVcf(string vcfPath, bool includePassingOnly, double dqscoreThreshold)
         {
             using (VcfReader reader = new VcfReader(vcfPath, false))
             {
+                if (dqscoreThreshold > -1)
+                {
+                    var match = reader.HeaderLines.FirstOrDefault(stringToCheck => stringToCheck.Contains("DQscore"));
+                    if (match == null)
+                        throw new ArgumentException($"File {vcfPath} does not contain DQscore INFO field.");
+                }
+
                 foreach (VcfVariant variant in reader.GetVariants())
                 {
 
                     int end;
                     int CN = GetCopyNumber(variant, out end);
                     if (includePassingOnly && variant.Filters != "PASS") continue;
+                    if (dqscoreThreshold > -1)
+                    {
+                        if (int.Parse(variant.InfoFields["DQscore"]) < dqscoreThreshold) continue;
+                    }                
                     yield return new CNVCall(variant.ReferenceName, variant.ReferencePosition, end, CN);
                 }
             }
@@ -369,7 +380,7 @@ namespace EvaluateCNV
             }
         }
 
-        protected void ComputeAccuracy(string truthSetPath, string cnvCallsPath, StreamWriter outputWriter, PloidyInfo ploidyInfo, bool includePassingOnly)
+        protected void ComputeAccuracy(string truthSetPath, string cnvCallsPath, StreamWriter outputWriter, PloidyInfo ploidyInfo, double dqscoreThreshold, bool includePassingOnly)
         {
             int totalVariants = 0;
             long totalVariantBases = 0;
@@ -381,9 +392,10 @@ namespace EvaluateCNV
             // Make a note of how many bases in the truth set are not *actually* considered to be known bases, using
             // the "cnaqc" exclusion set:
             this.CountExcludedBasesInTruthSetIntervals();
-
+            if (dqscoreThreshold > -1 && Path.GetFileName(cnvCallsPath).ToLower().Contains("vcf"))
+                throw new ArgumentException("CNV.vcf must be in a vcf format");
             IEnumerable<CNVCall> calls = Path.GetFileName(cnvCallsPath).ToLower().Contains("vcf")
-                ? GetCnvCallsFromVcf(cnvCallsPath, includePassingOnly)
+                ? GetCnvCallsFromVcf(cnvCallsPath, includePassingOnly, dqscoreThreshold)
                 : GetCnvCallsFromBed(cnvCallsPath);
 
             ploidyInfo.MakeChromsomeNameAgnosticWithAllChromosomes(calls.Select(call => call.Chr));
@@ -597,7 +609,13 @@ namespace EvaluateCNV
         {
             double heterogeneityFraction = options.HeterogeneityFraction;
             var ploidyInfo = PloidyInfo.LoadPloidyFromBedFile(options.PloidyBed?.FullName);
-
+            double dqscoreThreshold = -1;
+            if (options.DQscoreThreshold.HasValue) {
+                dqscoreThreshold = options.DQscoreThreshold.Value;
+                var fileName = Path.GetFileName(cnvCallsPath);
+                if (fileName != null && fileName.ToLower().Contains("vcf"))
+                    throw new ArgumentException("CNV.vcf must be in a vcf format");
+            }
             LoadKnownCN(truthSetPath, heterogeneityFraction);
             ploidyInfo.MakeChromsomeNameAgnosticWithAllChromosomes(KnownCN.Keys);
             SetTruthsetReferencePloidy(ploidyInfo);
@@ -619,9 +637,9 @@ namespace EvaluateCNV
             {
                 if (Path.GetFileName(cnvCallsPath).ToLower().Contains("vcf"))
                 {
-                    ComputeAccuracy(truthSetPath, cnvCallsPath, outputWriter, ploidyInfo, true);
+                    ComputeAccuracy(truthSetPath, cnvCallsPath, outputWriter, ploidyInfo, dqscoreThreshold, true);
                 }
-                ComputeAccuracy(truthSetPath, cnvCallsPath, outputWriter, ploidyInfo, false);
+                ComputeAccuracy(truthSetPath, cnvCallsPath, outputWriter, ploidyInfo, dqscoreThreshold, false);
             }
             Console.WriteLine(">>>Done - results written to {0}", outputPath);
         }
