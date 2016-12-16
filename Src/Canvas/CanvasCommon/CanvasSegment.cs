@@ -319,7 +319,7 @@ namespace CanvasCommon
                 writer.WriteLine("##INFO=<ID=CNVLEN,Number=1,Type=Integer,Description=\"Number of reference positions spanned by this CNV\">");
                 writer.WriteLine("##INFO=<ID=END,Number=1,Type=Integer,Description=\"End position of the variant described in this record\">");
                 writer.WriteLine("##INFO=<ID=SVTYPE,Number=1,Type=String,Description=\"Type of structural variant\">");
-                writer.WriteLine("##INFO=<ID=DQscore,Number=1,Type=String,Description=\"De novo Phred-scaled quality score\">");
+                writer.WriteLine("##INFO=<ID=DQSCORE,Number=1,Type=String,Description=\"De novo Phred-scaled quality score\">");
                 writer.WriteLine("##INFO=<ID=SUBCLONAL,Number=0,Type=Flag,Description=\"Subclonal variant\">");
                 writer.WriteLine("##FORMAT=<ID=RC,Number=1,Type=Float,Description=\"Mean counts per bin in the region\">");
                 writer.WriteLine("##FORMAT=<ID=BC,Number=1,Type=Float,Description=\"Number of bins in the region\">");
@@ -352,10 +352,8 @@ namespace CanvasCommon
                         if (segment.IsHeterogeneous)
                             writer.Write("SUBCLONAL;");
                         if (segment.DQScore.HasValue)
-                            writer.Write($"DQscore={segment.DQScore.Value:F2};");
-                        if (segment.DQScore.HasValue)
                         {
-                            writer.Write($"DQscore={segment.DQScore.Value:F2};");
+                            writer.Write($"DQSCORE={segment.DQScore.Value:F2};");
                             if (denovoQualityThreshold < segment.DQScore.Value)
                                 writer.Write($"{denovoQualityFilter};");
 
