@@ -284,7 +284,7 @@ namespace CanvasCommon
         /// Outputs the copy number calls to a text file.
         /// </summary>
         public static void WriteSegments(string outVcfPath, List<CanvasSegment> segments, double? diploidCoverage, string wholeGenomeFastaDirectory, string sampleName,
-            List<string> extraHeaders, PloidyInfo ploidy, int qualityThreshold)
+            List<string> extraHeaders, PloidyInfo ploidy, int qualityThreshold, int? denovoQualityThreshold = null)
         {
             using (BgzipOrStreamWriter writer = new BgzipOrStreamWriter(outVcfPath))
             {
@@ -308,6 +308,12 @@ namespace CanvasCommon
                 writer.WriteLine("##ALT=<ID=CNV,Description=\"Copy number variable region\">");
                 writer.WriteLine($"##FILTER=<ID={qualityFilter},Description=\"Quality below {qualityThreshold}\">");
                 writer.WriteLine("##FILTER=<ID=L10kb,Description=\"Length shorter than 10kb\">");
+                string denovoQualityFilter = "";
+                if (denovoQualityThreshold.HasValue)
+                {
+                    denovoQualityFilter = $"dq{denovoQualityThreshold}";
+                    writer.WriteLine($"##FILTER=<ID={denovoQualityFilter},Description=\"De novo quality score above {denovoQualityThreshold.Value}\">");
+                }
                 writer.WriteLine("##INFO=<ID=CIEND,Number=2,Type=Integer,Description=\"Confidence interval around END for imprecise variants\">");
                 writer.WriteLine("##INFO=<ID=CIPOS,Number=2,Type=Integer,Description=\"Confidence interval around POS for imprecise variants\">");
                 writer.WriteLine("##INFO=<ID=CNVLEN,Number=1,Type=Integer,Description=\"Number of reference positions spanned by this CNV\">");
@@ -347,6 +353,13 @@ namespace CanvasCommon
                             writer.Write("SUBCLONAL;");
                         if (segment.DQScore.HasValue)
                             writer.Write($"DQscore={segment.DQScore.Value:F2};");
+                        if (segment.DQScore.HasValue)
+                        {
+                            writer.Write($"DQscore={segment.DQScore.Value:F2};");
+                            if (denovoQualityThreshold < segment.DQScore.Value)
+                                writer.Write($"{denovoQualityFilter};");
+
+                        }
                         writer.Write($"END={segment.End}");
                         if (cnvType != CnvType.Reference)
                             writer.Write($";CNVLEN={segment.End - segment.Begin}");

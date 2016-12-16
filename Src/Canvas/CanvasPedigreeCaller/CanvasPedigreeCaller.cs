@@ -19,8 +19,11 @@ namespace CanvasPedigreeCaller
         private const int DefaultAlleleCountThreshold = 4;
         private const int MaxNumOffspringGenotypes = 500;
         private const double DeNovoRate = 0.00001;
+        private const int MinimumCallSize = 1000;
         // QualityFilterThreshold based on 
-        public int QualityFilterThreshold { get; set; } = 7;
+        public int QualityFilterThreshold { get; } = 7;
+        public int DeNovoQualityFilterThreshold { get; } = 20;
+
         #endregion
 
         internal int CallVariants(List<string> variantFrequencyFiles, List<string> segmentFiles, List<string> outVcfFiles, string ploidyBedPath, string referenceFolder, List<string> sampleNames, string pedigreeFile)
@@ -107,9 +110,10 @@ namespace CanvasPedigreeCaller
             int pedigreeMemberIndex = 0;
             foreach (var pedigreeMember in pedigreeMembers)
             {
-                CanvasSegment.MergeSegments(ref pedigreeMember.Segments);
+                CanvasSegment.MergeSegments(ref pedigreeMember.Segments, MinimumCallSize);
                 CanvasSegment.WriteSegments(outVcfFiles[pedigreeMemberIndex], pedigreeMember.Segments,
-                    pedigreeMember.MeanCoverage, referenceFolder, pedigreeMember.Name, null, null, QualityFilterThreshold);
+                    pedigreeMember.MeanCoverage, referenceFolder, pedigreeMember.Name, null, null, 
+                    QualityFilterThreshold, DeNovoQualityFilterThreshold);
                 pedigreeMemberIndex++;
             }
             return 0;
@@ -131,7 +135,7 @@ namespace CanvasPedigreeCaller
                 singleSampleQualityScores[probandIndex] > QualityFilterThreshold)
             {
                 var deNovoQualityScore = GetConditionalDeNovoQualityScore(copyNumberLikelihoods, probandIndex,
-                    cnStates[probandIndex], parent1Index, parent2Index);
+                    cnStates[probandIndex], names[probandIndex], parent1Index, parent2Index);
                 probands.First().Segments[segmentIndex].DQScore = deNovoQualityScore;
             }
             var counter = 0;
@@ -439,12 +443,16 @@ namespace CanvasPedigreeCaller
         }
 
         public double GetConditionalDeNovoQualityScore(CopyNumberDistribution density, int probandIndex,
-                    int probandCopyNumber, int parent1Index, int parent2Index)
+                    int probandCopyNumber, string probandName, int parent1Index, int parent2Index)
         {
 
             double numerator = 0.0;
             double denominator = 0.0;
-            const int parentsCopyNumber = 2;
+            const int diploidState = 2;
+            int nSamples = density.Count;
+            var probandMarginalProbabilities = density.GetMarginalProbability(nSamples, MaximumCopyNumber, probandName);
+            var normalization = probandMarginalProbabilities[probandCopyNumber] + probandMarginalProbabilities[diploidState];
+            var probandMarginalAlt = probandMarginalProbabilities[probandCopyNumber] / normalization;
 
             foreach (var copyNumberIndex in density.Indices.Where(x => x[probandIndex] == probandCopyNumber).ToArray())
             {
@@ -452,13 +460,14 @@ namespace CanvasPedigreeCaller
                 {
                     var holder = density.GetJointProbability(copyNumberIndex.ToArray());
                     denominator += holder;
-                    if (copyNumberIndex[parent1Index] == parentsCopyNumber && copyNumberIndex[parent2Index] == parentsCopyNumber)
+                    if (copyNumberIndex[parent1Index] == diploidState && copyNumberIndex[parent2Index] == diploidState)
                         numerator += holder;
                 }
             }
 
-            var denovoProbability = numerator / denominator;
-            var qscore = -10.0 * Math.Log10(1 - denovoProbability);
+            var q60 = 0.000001;
+            var denovoProbability = (1-numerator / denominator) * (1-probandMarginalAlt);
+            var qscore = -10.0 * Math.Log10(Math.Max(denovoProbability, q60));
             return qscore;
         }
     }
