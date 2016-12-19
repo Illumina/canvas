@@ -322,7 +322,7 @@ namespace EvaluateCNV
             {
                 if (dqscoreThreshold > -1)
                 {
-                    var match = reader.HeaderLines.FirstOrDefault(stringToCheck => stringToCheck.Contains("DQscore"));
+                    var match = reader.HeaderLines.FirstOrDefault(stringToCheck => stringToCheck.Contains("DQSCORE"));
                     if (match == null)
                         throw new ArgumentException($"File {vcfPath} does not contain DQscore INFO field.");
                 }
@@ -333,10 +333,8 @@ namespace EvaluateCNV
                     int end;
                     int CN = GetCopyNumber(variant, out end);
                     if (includePassingOnly && variant.Filters != "PASS") continue;
-                    if (dqscoreThreshold > -1)
-                    {
-                        if (int.Parse(variant.InfoFields["DQscore"]) < dqscoreThreshold) continue;
-                    }                
+                    if (dqscoreThreshold > -1 && variant.InfoFields.ContainsKey("DQSCORE"))
+                        if (double.Parse(variant.InfoFields["DQSCORE"]) < dqscoreThreshold) continue;
                     yield return new CNVCall(variant.ReferenceName, variant.ReferencePosition, end, CN);
                 }
             }
@@ -392,7 +390,7 @@ namespace EvaluateCNV
             // Make a note of how many bases in the truth set are not *actually* considered to be known bases, using
             // the "cnaqc" exclusion set:
             this.CountExcludedBasesInTruthSetIntervals();
-            if (dqscoreThreshold > -1 && Path.GetFileName(cnvCallsPath).ToLower().Contains("vcf"))
+            if (dqscoreThreshold > -1 && !Path.GetFileName(cnvCallsPath).ToLower().Contains("vcf"))
                 throw new ArgumentException("CNV.vcf must be in a vcf format");
             IEnumerable<CNVCall> calls = Path.GetFileName(cnvCallsPath).ToLower().Contains("vcf")
                 ? GetCnvCallsFromVcf(cnvCallsPath, includePassingOnly, dqscoreThreshold)
@@ -610,11 +608,12 @@ namespace EvaluateCNV
             double heterogeneityFraction = options.HeterogeneityFraction;
             var ploidyInfo = PloidyInfo.LoadPloidyFromBedFile(options.PloidyBed?.FullName);
             double dqscoreThreshold = -1;
-            if (options.DQscoreThreshold.HasValue) {
+            if (options.DQscoreThreshold.HasValue)
+            {
                 dqscoreThreshold = options.DQscoreThreshold.Value;
                 var fileName = Path.GetFileName(cnvCallsPath);
-                if (fileName != null && fileName.ToLower().Contains("vcf"))
-                    throw new ArgumentException("CNV.vcf must be in a vcf format");
+                if (fileName != null && !fileName.ToLower().Contains("vcf"))
+                    throw new ArgumentException("CNV.vcf must be in a vcf format when --dqscore option is used");
             }
             LoadKnownCN(truthSetPath, heterogeneityFraction);
             ploidyInfo.MakeChromsomeNameAgnosticWithAllChromosomes(KnownCN.Keys);
