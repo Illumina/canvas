@@ -1,4 +1,5 @@
 ﻿using System;
+using System.IO;
 using System.Linq;
 using CanvasCommon.CommandLineParsing.CoreOptionTypes;
 using CanvasCommon.CommandLineParsing.OptionProcessing;
@@ -16,8 +17,8 @@ namespace EvaluateCNV
                 ShowHelp(optionsParser);
                 return;
             }
-            CNVChecker checker = new CNVChecker();
             var parsingResult = optionsParser.Parse(args.Skip(4));
+
             if (!parsingResult.Success)
             {
                 Console.WriteLine(parsingResult.ErrorMessage);
@@ -30,6 +31,8 @@ namespace EvaluateCNV
                 ShowHelp(optionsParser);
                 return;
             }
+
+            CNVChecker checker = new CNVChecker(options.DQscoreThreshold);
             checker.Evaluate(args[0], args[1], args[2], args[3], options);
         }
 
