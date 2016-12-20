@@ -340,11 +340,8 @@ namespace EvaluateCNV
                     int end;
                     int CN = GetCopyNumber(variant, out end);
                     if (includePassingOnly && variant.Filters != "PASS") continue;
-                    if (DQscoreThreshold.HasValue && !variant.InfoFields.ContainsKey("DQSCORE") && CN == 2)
-                    {
-                        yield return new CNVCall(variant.ReferenceName, variant.ReferencePosition, end, CN);
+                    if (DQscoreThreshold.HasValue && !variant.InfoFields.ContainsKey("DQSCORE") && CN != 2)
                         continue;
-                    }
                     if (DQscoreThreshold.HasValue && variant.InfoFields.ContainsKey("DQSCORE") &&
                         double.Parse(variant.InfoFields["DQSCORE"]) < DQscoreThreshold.Value)
                         continue;
@@ -429,8 +426,11 @@ namespace EvaluateCNV
                 {
                     totalVariantBases += call.Length - basesOverlappingPloidyRegion;
                 }
-                if (variantBasesOverlappingPloidyRegion > 0 || (CN != 2 && variantBasesOverlappingPloidyRegion < call.Length))
+                if (variantBasesOverlappingPloidyRegion > 0 ||
+                    (CN != 2 && variantBasesOverlappingPloidyRegion < call.Length))
+                {
                     totalVariants++;
+                }
 
                 if (CN > maxCN) CN = maxCN;
                 string chr = call.Chr;
