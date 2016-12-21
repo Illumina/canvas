@@ -342,7 +342,7 @@ namespace EvaluateCNV
                     if (includePassingOnly && variant.Filters != "PASS") continue;
                     if (DQscoreThreshold.HasValue)
                     {
-                        if (!variant.InfoFields.ContainsKey("DQSCORE"))
+                        if (!variant.InfoFields.ContainsKey("DQSCORE") && CN != 2)
                             continue;
                         if (variant.InfoFields.ContainsKey("DQSCORE") && double.Parse(variant.InfoFields["DQSCORE"]) < DQscoreThreshold.Value)
                             continue;
