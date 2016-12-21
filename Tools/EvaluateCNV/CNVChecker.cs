@@ -340,11 +340,13 @@ namespace EvaluateCNV
                     int end;
                     int CN = GetCopyNumber(variant, out end);
                     if (includePassingOnly && variant.Filters != "PASS") continue;
-                    if (DQscoreThreshold.HasValue && !variant.InfoFields.ContainsKey("DQSCORE") && CN != 2)
-                        continue;
-                    if (DQscoreThreshold.HasValue && variant.InfoFields.ContainsKey("DQSCORE") &&
-                        double.Parse(variant.InfoFields["DQSCORE"]) < DQscoreThreshold.Value)
-                        continue;
+                    if (DQscoreThreshold.HasValue)
+                    {
+                        if (!variant.InfoFields.ContainsKey("DQSCORE"))
+                            continue;
+                        if (variant.InfoFields.ContainsKey("DQSCORE") && double.Parse(variant.InfoFields["DQSCORE"]) < DQscoreThreshold.Value)
+                            continue;
+                    } 
                     yield return new CNVCall(variant.ReferenceName, variant.ReferencePosition, end, CN);
                 }
             }
