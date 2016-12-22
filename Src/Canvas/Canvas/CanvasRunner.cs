@@ -351,6 +351,93 @@ namespace Illumina.SecondaryAnalysis
             return intermediateDataPathsByBamPath;
         }
 
+        /// <summary>
+        /// Invoke CanvasBin in the Fragment mode.  Return null if this fails and we need to abort CNV calling for this sample.
+        /// </summary>
+        protected IFileLocation InvokeCanvasBinFragment(CanvasCallset callset, string canvasReferencePath, string canvasBedPath, string ploidyBedPath)
+        {
+            StringBuilder commandLine = new StringBuilder();
+            string canvasBinPath = Path.Combine(_canvasFolder, "CanvasBin.exe");
+            string executablePath = canvasBinPath;
+            if (CrossPlatform.IsThisMono())
+                executablePath = Utilities.GetMonoPath();
+
+            // require predefined bins
+            string predefinedBinsPath = GetPredefinedBinsPath();
+            if (string.IsNullOrEmpty(predefinedBinsPath))
+            {
+                Console.WriteLine("Predefined bins are required to run CanvasBin in the Fragment mode");
+                return null;
+            }
+
+            List<string> bamPaths = new List<string>();
+            bool isPairedEnd = true;
+            bamPaths.Add(callset.Bam.BamFile.FullName);
+            isPairedEnd = isPairedEnd && callset.Bam.IsPairedEnd;
+            if (!(callset.IsEnrichment && callset.Manifest.CanvasControlAvailable)) // do not add normal BAMs if Canvas Control is available
+            {
+                bamPaths.AddRange(callset.NormalBamPaths.Select(bam => bam.BamFile.FullName));
+                isPairedEnd = isPairedEnd && callset.NormalBamPaths.All(bam => bam.IsPairedEnd);
+            }
+
+            // require paired-end reads
+            if (!isPairedEnd)
+            {
+                Console.WriteLine("Paired-end reads are required to run CanvasBin in the Fragment mode");
+                return null;
+            }
+
+            Dictionary<string, string> bamToBinned = new Dictionary<string, string>();
+            List<UnitOfWork> binJobs = new List<UnitOfWork>();
+            for (int bamIndex = 0; bamIndex < bamPaths.Count; bamIndex++)
+            {
+                string bamPath = bamPaths[bamIndex];
+                string binnedPath = Path.Combine(callset.TempFolder, string.Format("{0}_{1}.binned", callset.Id, bamIndex));
+                bamToBinned[bamPath] = binnedPath;
+
+                commandLine.Clear();
+                if (CrossPlatform.IsThisMono())
+                {
+                    commandLine.AppendFormat("{0} ", canvasBinPath);
+                }
+                commandLine.AppendFormat(" -p -b {0} ", bamPath.WrapWithShellQuote());
+                commandLine.AppendFormat("-r {0} ", canvasReferencePath.WrapWithShellQuote());
+                commandLine.AppendFormat("-m {0} ", _coverageMode);
+                commandLine.AppendFormat("-f {0} -o {1} ", canvasBedPath.WrapWithShellQuote(), binnedPath.WrapWithShellQuote());
+                commandLine.AppendFormat("-n {0} ", predefinedBinsPath); // assumes that predefinedBinsPath has been properly quoted
+
+                UnitOfWork binJob = new UnitOfWork()
+                {
+                    ExecutablePath = executablePath,
+                    LoggingFolder = _workManager.LoggingFolder.FullName,
+                    LoggingStub = Path.GetFileName(binnedPath),
+                    CommandLine = commandLine.ToString()
+                };
+                if (_customParameters.ContainsKey("CanvasBin"))
+                {
+                    binJob.CommandLine = Utilities.MergeCommandLineOptions(binJob.CommandLine, _customParameters["CanvasBin"], true);
+                }
+                binJobs.Add(binJob);
+            }
+            _workManager.DoWorkParallel(binJobs, new TaskResourceRequirements(8, 25)); // CanvasBin itself is multi-threaded
+
+            return NormalizeCoverage(callset, bamToBinned, ploidyBedPath);
+        }
+
+
+        protected IFileLocation NormalizeCoverage(CanvasCallset callset, Dictionary<string, string> bamToBinned, string ploidyBedPath)
+        {
+            string tumorBinnedPath = bamToBinned[callset.Bam.BamFile.FullName]; // binned tumor sample
+            string outputPath = tumorBinnedPath;
+            if (callset.NormalBamPaths.Any() ||
+                (callset.IsEnrichment && (callset.Manifest.CanvasControlAvailable)) ||
+                _normalizeMode == CanvasNormalizeMode.PCA)
+            {
+                outputPath = InvokeCanvasNormalize(callset, tumorBinnedPath, bamToBinned, ploidyBedPath);
+            }
+
+            return new FileLocation(outputPath);
+        }
 
         /// <summary>
         /// Invoke CanvasNormalize.
