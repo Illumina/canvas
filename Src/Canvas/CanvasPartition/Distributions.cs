@@ -183,6 +183,41 @@ namespace CanvasPartition
 
     }
 
+    public static class Utilities
+    {
+        public static List<List<int>> GetGenotypeCombinations(int numberOfDimensions, int currentState)
+        {
+            if (numberOfDimensions <= 0)
+                throw new ArgumentOutOfRangeException(nameof(numberOfDimensions));
+            const int diploidState = 2;
+            const int numbnerOfStates = 2;
+            var upperSetBound = Math.Pow(numbnerOfStates, numberOfDimensions);
+            var allCombinations = new List<List<int>>(Convert.ToInt32(upperSetBound));
+            for (int numberOfDiploidStates = 1; numberOfDiploidStates < numberOfDimensions; numberOfDiploidStates++)
+            {
+                var states = Enumerable.Repeat(currentState, numberOfDimensions - numberOfDiploidStates)
+                    .Concat(Enumerable.Repeat(diploidState, numberOfDiploidStates));
+                var permutations = new Permutations<int>(states.ToList(), GenerateOption.WithoutRepetition);
+                var list = permutations.Select(x => x.ToList()).ToList();
+                allCombinations.AddRange(list);
+            }
+            return allCombinations;
+        }
+
+        public static List<double> NegativeBinomialWrapper(double mean, double variance, int maxValue)
+        {
+            var density = Enumerable.Repeat(0.0, maxValue).ToList();
+            double r = Math.Pow(Math.Max(mean, 0.1), 2) / (Math.Max(variance, mean*1.2) - mean);
+            for (int x = 0; x < maxValue; x++)
+            {
+                var tmpDensity = Math.Exp(Math.Log(Math.Pow(1 + mean / r, -r)) + Math.Log(Math.Pow(mean / (mean + r), x)) +  SpecialFunctions.GammaLn(r + x) - 
+                             SpecialFunctions.FactorialLn(x) - SpecialFunctions.GammaLn(r));
+                density[x] = Double.IsNaN(tmpDensity) || Double.IsInfinity(tmpDensity) ? 0 : tmpDensity;
+            }              
+            return density;
+        }
+    }
+
     public class NegativeBinomialMixture : MixtureDistibution
     {
         private readonly List<MultivariateNegativeBinomial> _negativeBinomialDistributions;

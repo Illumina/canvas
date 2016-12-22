@@ -25,27 +25,30 @@ namespace Canvas
         {
             CanvasRunner runner = new CanvasRunner(logger, workManager, checkpointRunner, false, CanvasCoverageMode.TruncatedDynamicRange, 100, CommonOptions.CustomParams);
             var callset = GetCallset();
-            logger.Info($"Normal Vcf path: {callset.NormalVcfPath}");
+            logger.Info($"Normal Vcf path: {callset.SingleSampleCallset.NormalVcfPath}");
             runner.CallSample(callset);
         }
 
         private CanvasCallset GetCallset()
         {
             IFileLocation outputVcfPath = CommonOptions.OutputDirectory.GetFileLocation("CNV.vcf.gz");
+            AnalysisDetails analysisDetails = new AnalysisDetails(
+                CommonOptions.OutputDirectory,
+                CommonOptions.WholeGenomeFasta,
+                CommonOptions.KmerFasta,
+                CommonOptions.FilterBed,
+                SingleSampleCommonOptions.PloidyBed,
+                null);
             CanvasCallset callSet = new CanvasCallset(
-                    _bam,
-                    SingleSampleCommonOptions.SampleName,
-                    CommonOptions.WholeGenomeFasta,
-                    CommonOptions.OutputDirectory,
-                    CommonOptions.KmerFasta,
-                    CommonOptions.FilterBed,
-                    SingleSampleCommonOptions.PloidyBed,
-                    SingleSampleCommonOptions.BAlleleSites,
-                    SingleSampleCommonOptions.IsDbSnpVcf,
-                    Enumerable.Empty<IFileLocation>(),
-                    null,
-                    null,
-                    outputVcfPath);
+                _bam,
+                SingleSampleCommonOptions.SampleName,
+                SingleSampleCommonOptions.BAlleleSites,
+                SingleSampleCommonOptions.IsDbSnpVcf,
+                Enumerable.Empty<IFileLocation>(),
+                null,
+                null,
+                outputVcfPath,
+                analysisDetails);
             return callSet;
         }
     }

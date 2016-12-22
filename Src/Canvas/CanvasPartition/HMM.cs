@@ -32,14 +32,14 @@ namespace CanvasPartition
         public const double selfTransition = 0.99;
 
 
-        public HiddenMarkovModel(List<List<double>> data, List<MultivariateNegativeBinomial> gaussianMixtures, List<double> haploidMeans)
+        public HiddenMarkovModel(List<List<double>> data, List<MultivariateNegativeBinomial> mixturesDistribution, List<double> haploidMeans)
         {
             // HMM set-up
-            nStates = gaussianMixtures.Count;
+            nStates = mixturesDistribution.Count;
             length = data.Count;
             _stateProbabilities = new double[nStates];
-            _emission = new NegativeBinomialMixture(gaussianMixtures, haploidMeans);
-            _variances = gaussianMixtures.Select(x => x.Variances).ToList();
+            _emission = new NegativeBinomialMixture(mixturesDistribution, haploidMeans);
+            _variances = mixturesDistribution.Select(x => x.Variances).ToList();
             _transition = CanvasCommon.Utilities.MatrixCreate(nStates, nStates);
             for (int i = 0; i < nStates; i++)
             {
@@ -164,6 +164,21 @@ namespace CanvasPartition
             }
         }
 
+        private void adjustTransition(double diploidTransitionProb)
+        {
+            if (_transition[2][2] < diploidTransitionProb)
+            {
+                _transition[2][2] = diploidTransitionProb;
+                for (int state = 0; state < nStates; state++)
+                {
+                    if (state == 2)
+                        continue;
+                    _transition[2][state] = (1.0 - diploidTransitionProb)/(nStates - 1);
+                }
+
+        }
+
+        }
 
         public void MaximisationStep(List<List<double>> x)
         {
@@ -212,6 +227,12 @@ namespace CanvasPartition
                 oldLikelihood = newLikelihood;
                 iteration++;
             }
+
+            var genomeSize = Math.Pow(30, 9);
+            var nonDiploidBases = 2000*10000;
+            var diploidTransitionProb = (genomeSize - nonDiploidBases)/genomeSize;
+            adjustTransition(diploidTransitionProb);
+            WriteEmission();
         }
 
         /// <summary>
@@ -441,20 +462,58 @@ namespace CanvasPartition
                 backtrack--;
             }
             bestStates.Reverse();
-            RemoveSegmentationOutliers(bestStates);
+            OutlierMask(bestStates);
+            SmallSegmentsMask(bestStates);
+
             return bestStates;
         }
 
-        private static void RemoveSegmentationOutliers(List<int> bestStates)
+        public void OutlierMask(List<int> bestStates)
         {
-            int halfWindow = 3;
-            int diploidState = 2;
-            for (int k = halfWindow; k < bestStates.Count - halfWindow; k++)
+            for (int k = 3; k < bestStates.Count - 3; k++)
             {
-                if (bestStates[k - 2] == diploidState && bestStates[k - 1] == diploidState && bestStates[k + 2] == 2 && 
-                    bestStates[k + 1] == diploidState && bestStates[k] != diploidState)
-                    bestStates[k] = 2;
+                if (bestStates[k - 2] == bestStates[k - 1] && bestStates[k + 1] == bestStates[k + 2] &&
+                    bestStates[k - 1] == bestStates[k + 1] && bestStates[k] != bestStates[k - 1])
+                    bestStates[k] = bestStates[k - 1];
             }
+
+        }
+        public void SmallSegmentsMask(List<int> bestStates)
+        {
+            List<int> bestStateDuration = Enumerable.Repeat(1, bestStates.Count + 1).ToList();
+            var lastBestState = bestStates.Take(1).Single();
+            int currentStateDuration = 1;
+            int counter = 1;
+            foreach (int bestState in bestStates.Skip(1))
+            {
+                if (lastBestState == bestState)
+                {
+                    currentStateDuration++;
+                    counter++;
+                    bestStateDuration[counter] = currentStateDuration;
+                }
+                else
+                {
+                    currentStateDuration = 1;
+                    counter++;
+                    bestStateDuration[counter] = currentStateDuration;
+                }
+            }
+
+            for (var k = 3; k < bestStates.Count - 3; k++)
+            {
+                const int stateDurationCutoff = 5;
+                if (bestStates[k] != bestStates[k + 1] && bestStates[k + 1] == bestStates[k + 2] &&
+                                    bestStates[k] == bestStates[k + 2] && bestStateDuration[k] > stateDurationCutoff)
+                {
+                    bestStates[k + 1] = bestStates[k];
+                    bestStates[k + 2] = bestStates[k];
+                    bestStateDuration[k + 1] = bestStateDuration[k] + bestStateDuration[k + 1];
+                    bestStateDuration[k + 2] = bestStateDuration[k + 1] + bestStateDuration[k + 2];
+                }
+
+            }
+
         }
     }
 }

@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -8,56 +9,40 @@ using Isas.Shared.Utilities.FileSystem;
 
 namespace Canvas.SmallPedigree
 {
-    public class SingleSampleCallset
+    public class PedigreeSample
     {
-        public CanvasCallset Callset { get; }
+        public SingleSampleCallset Sample { get; }
         public SampleType SampleType { get; }
 
-        public SingleSampleCallset(CanvasCallset callset, SampleType sampleType)
+        public PedigreeSample(SingleSampleCallset sample, SampleType sampleType)
         {
-            Callset = callset;
+            Sample = sample;
             SampleType = sampleType;
         }
     }
     public class SmallPedigreeCallset
     {
-        public IDirectoryLocation OutputFolder => Callset.First().Callset.OutputFolder; 
-        public IEnumerable<string> SampleNames { get { return Callset.Select(x => x.Callset.SampleName); } }
-        public IEnumerable<Bam> BamPaths { get { return Callset.Select(x => x.Callset.Bam); } }
-        public IFileLocation VcfPath => Callset.First().Callset.NormalVcfPath; 
-        public IDirectoryLocation WholeGenomeFastaFolder { get { return Callset.Select(x => x.Callset.WholeGenomeFastaFolder).First(); } }
-        public IFileLocation KmerFasta { get { return Callset.Select(x => x.Callset.KmerFasta).First(); } }
-        public GenomeMetadata GenomeMetadata => Callset.First().Callset.GenomeMetadata; 
-        public IFileLocation FilterBed => Callset.First().Callset.FilterBed; 
-        public IFileLocation CommonCnvsBed { get; set; }
-        public IFileLocation PloidyVcf => Callset.First().Callset.PloidyVcf;
-        public bool IsDbSnpVcf { get; set; } // NormalVcfPath points to a dbSNP VCF file
-
-        public List<SingleSampleCallset> Callset;
-        public SmallPedigreeCallset(List<SingleSampleCallset> callset, IFileLocation commonCnvsBed)
+        public AnalysisDetails AnalysisDetails { get; }
+        public List<PedigreeSample> PedigreeSample;
+        public SmallPedigreeCallset(List<PedigreeSample> pedigreeSample, AnalysisDetails analysisDetails)
         {
-            Callset = callset;
-            CommonCnvsBed = commonCnvsBed;
-        }
-
-        internal string TempFolder
-        {
-            get { return Path.Combine(OutputFolder.FullName, "TempCNV"); }
+            PedigreeSample = pedigreeSample;
+            AnalysisDetails = analysisDetails;
         }
 
         internal IEnumerable<string> NormalBinnedPath
         {
-            get { return SampleNames.Select(sampleName => Path.Combine(TempFolder, $"{sampleName}.normal.binned")); }
+            get { return PedigreeSample.Select(sample => Path.Combine(sample.Sample.TempFolder, $"{sample.Sample.SampleName}.normal.binned"));  }
         }
 
         internal IEnumerable<string> BinSizePath
         {
-            get { return SampleNames.Select(sampleName => Path.Combine(TempFolder, $"{sampleName}.binsize")); }
+            get { return PedigreeSample.Select(sample => Path.Combine(sample.Sample.TempFolder, $"{sample.Sample.SampleName}.binsize")); }
         }
 
         internal IEnumerable<string> VfSummaryPath
         {
-            get { return SampleNames.Select(sampleName => Path.Combine(TempFolder, $"VFResults{sampleName}.txt.gz")); }
+            get { return PedigreeSample.Select(sample => Path.Combine(sample.Sample.TempFolder, $"VFResults{sample.Sample.SampleName}.txt.gz")); }
         }
     }
 }

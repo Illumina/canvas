@@ -6,6 +6,7 @@ using Canvas.SmallPedigree;
 using CanvasCommon;
 using Illumina.SecondaryAnalysis;
 using Isas.Shared.Checkpointing;
+using Isas.Shared.DataTypes;
 using Isas.Shared.Utilities;
 using Isas.Shared.Utilities.FileSystem;
 
@@ -14,7 +15,6 @@ namespace Canvas
     public class SmallPedigreeWgsRunner : IModeRunner
     {
         public CommonOptions CommonOptions { get; }
-
         public SmallPedigreeOptions SmallPedigreeOptions { get; }
 
         public SmallPedigreeWgsRunner(CommonOptions commonOptions, SmallPedigreeOptions smallPedigreeOptions)
@@ -34,30 +34,30 @@ namespace Canvas
 
         private SmallPedigreeCallset GetCallset()
         {
-            var callSets = new List<SingleSampleCallset>();
+            var callSets = new List<PedigreeSample>();
             foreach (var sample in SmallPedigreeOptions.Samples)
             {
                 string sampleName = sample.SampleName;
                 IDirectoryLocation outputDirectory = new DirectoryLocation(Path.Combine(CommonOptions.OutputDirectory.FullName, sampleName));
                 Directory.CreateDirectory(outputDirectory.FullName);
-                IFileLocation outputVcfPath = outputDirectory.GetFileLocation("CNV.vcf.gz");
-                CanvasCallset callSet = new CanvasCallset(
-                    sample.Bam,
+                IFileLocation outputVcfPath = CommonOptions.OutputDirectory.GetFileLocation("CNV.vcf.gz");
+                SingleSampleCallset callSet = new SingleSampleCallset(
+                    new Bam(sample.Bam),
                     sampleName,
-                    CommonOptions.WholeGenomeFasta,
-                    CommonOptions.OutputDirectory,
-                    CommonOptions.KmerFasta,
-                    CommonOptions.FilterBed,
-                    SmallPedigreeOptions.MultiSamplePloidyVcf,
                     SmallPedigreeOptions.BAlleleSites,
                     SmallPedigreeOptions.IsPopulationBAlleleSites,
-                    Enumerable.Empty<IFileLocation>(),
-                    null,
-                    null,
+                    outputDirectory,
                     outputVcfPath);
-                callSets.Add(new SingleSampleCallset(callSet, sample.SampleType));
+                callSets.Add(new PedigreeSample(callSet, sample.SampleType));
             }
-            return new SmallPedigreeCallset(callSets, SmallPedigreeOptions.CommonCnvsBed);
+            AnalysisDetails analysisDetails = new AnalysisDetails(
+                CommonOptions.OutputDirectory, 
+                CommonOptions.WholeGenomeFasta, 
+                CommonOptions.KmerFasta, 
+                CommonOptions.FilterBed,
+                SmallPedigreeOptions.MultiSamplePloidyVcf,
+                SmallPedigreeOptions.CommonCnvsBed);
+            return new SmallPedigreeCallset(callSets, analysisDetails);
         }
     }
 }

@@ -13,12 +13,15 @@ namespace CanvasPartition
         private int _minSize;
         private int _nHiddenStates;
         private string _commonCnVs;
+        private int _nSamples;
 
-        public HiddenMarkovModelsRunner(string commonCNVs, int minSize = 10, int nHiddenStates = 5)
+
+        public HiddenMarkovModelsRunner(string commonCNVs, int nSamples, int minSize = 10, int nHiddenStates = 5)
         {
             _commonCnVs = commonCNVs;
             _nHiddenStates = nHiddenStates;
             _minSize = minSize;
+            _nSamples = nSamples;
         }
 
         public Dictionary<string, Segmentation.Segment[]> Run(List<Segmentation> segmentation) {
@@ -49,13 +52,13 @@ namespace CanvasPartition
                     for (int i = 0; i < length; i++)
                         multiSampleCoverage.Add(segmentation.Select(x=>x.ScoreByChr[chr][i]).ToList());
 
-
                     if (length > _minSize)
                     {
                         List<double> haploidMeans = new List<double>(_nHiddenStates);
                         List<MultivariateNegativeBinomial> negativeBinomialDistributions = InitializeNegativeBinomialEmission(multiSampleCoverage, _nHiddenStates, haploidMeans);
                         HiddenMarkovModel hmm = new HiddenMarkovModel(multiSampleCoverage, negativeBinomialDistributions, haploidMeans);
                         Console.WriteLine($"{DateTime.Now} Launching HMM task for chromosome {chr}");
+                        if (_nSamples <= 3)
                         hmm.FindMaximalLikelihood(multiSampleCoverage);
                         List<int> bestPathViterbi = hmm.BestPathViterbi(multiSampleCoverage, startByChr, haploidMeans);
                         Console.WriteLine($"{DateTime.Now} Completed HMM task for chromosome {chr}");
@@ -109,7 +112,7 @@ namespace CanvasPartition
 
         public List<MultivariateGaussianDistribution> InitializeEmission(List<List<double>> data ,string chromosome, int nHiddenStates)
         {
-            int nDimensions = data.First().Count;
+            int nDimensions = _nSamples;
             List<double> haploidMean = new List<double>(nDimensions);
             List<double> standardDeviation = new List<double>(nDimensions);
             var tmpDistributions = new List<MultivariateGaussianDistribution>();
@@ -146,7 +149,7 @@ namespace CanvasPartition
 
         public List<MultivariatePoissonDistribution> InitializePoissonEmission(List<List<double>> data,  int nHiddenStates)
         {
-            int nDimensions = data.First().Count;
+            int nDimensions = _nSamples;
             List<double> haploidMean = new List<double>(nDimensions);
             var tmpDistributions = new List<MultivariatePoissonDistribution>();
 
@@ -177,7 +180,7 @@ namespace CanvasPartition
 
         public List<MultivariateNegativeBinomial> InitializeNegativeBinomialEmission(List<List<double>> data, int nHiddenStates, List<double> haploidMean)
         {
-            int nDimensions = data.First().Count;         
+            int nDimensions = _nSamples;         
             var variance = new List<double>(nDimensions);
             List<MultivariateNegativeBinomial> tmpDistributions = new List<MultivariateNegativeBinomial>();
 
