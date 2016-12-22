@@ -76,6 +76,12 @@ namespace EvaluateCNV
         Dictionary<string, List<CNInterval>> KnownCN = null;
         Dictionary<string, List<CNInterval>> RegionsOfInterest = null;
         Dictionary<string, List<CNInterval>> ExcludeIntervals = null;
+        public double? DQscoreThreshold { get; }
+
+        public CNVChecker(double? dQscoreThreshold)
+        {
+            DQscoreThreshold = dQscoreThreshold;
+        }
         #endregion
 
         /// <summary>
@@ -120,6 +126,7 @@ namespace EvaluateCNV
             Console.WriteLine(">>>Loaded {0} CN intervals ({1} bases)", count, totalBases);
             return bedIntervals;
         }
+
 
         protected void LoadKnownCNVCF(string oracleVCFPath)
         {
@@ -307,7 +314,7 @@ namespace EvaluateCNV
                         int overlapStart = Math.Max(interval.Start, excludeInterval.Start);
                         int overlapEnd = Math.Min(interval.End, excludeInterval.End);
                         if (overlapStart >= overlapEnd) continue;
-                        interval.BasesExcluded += (overlapEnd - overlapStart);
+                        interval.BasesExcluded += overlapEnd - overlapStart;
                         //Console.WriteLine("Interval {0}:{1}-{2} excludes {3} bases due to overlap with excluded interval {4}:{5}-{6}",
                         //    key, interval.Start, interval.End, overlapEnd - overlapStart,
                         //    key, excludeInterval.Start, excludeInterval.End);
@@ -320,12 +327,26 @@ namespace EvaluateCNV
         {
             using (VcfReader reader = new VcfReader(vcfPath, false))
             {
+                if (DQscoreThreshold.HasValue)
+                {
+                    var match = reader.HeaderLines.FirstOrDefault(stringToCheck => stringToCheck.Contains("DQSCORE"));
+                    if (match == null)
+                        throw new ArgumentException($"File {vcfPath} does not contain DQscore INFO field.");
+                }
+
                 foreach (VcfVariant variant in reader.GetVariants())
                 {
 
                     int end;
                     int CN = GetCopyNumber(variant, out end);
                     if (includePassingOnly && variant.Filters != "PASS") continue;
+                    if (DQscoreThreshold.HasValue)
+                    {
+                        if (!variant.InfoFields.ContainsKey("DQSCORE") && CN != 2)
+                            continue;
+                        if (variant.InfoFields.ContainsKey("DQSCORE") && double.Parse(variant.InfoFields["DQSCORE"]) < DQscoreThreshold.Value)
+                            continue;
+                    } 
                     yield return new CNVCall(variant.ReferenceName, variant.ReferencePosition, end, CN);
                 }
             }
@@ -381,7 +402,8 @@ namespace EvaluateCNV
             // Make a note of how many bases in the truth set are not *actually* considered to be known bases, using
             // the "cnaqc" exclusion set:
             this.CountExcludedBasesInTruthSetIntervals();
-
+            if (DQscoreThreshold.HasValue && !Path.GetFileName(cnvCallsPath).ToLower().Contains("vcf"))
+                throw new ArgumentException("CNV.vcf must be in a vcf format when --dqscore option is used");
             IEnumerable<CNVCall> calls = Path.GetFileName(cnvCallsPath).ToLower().Contains("vcf")
                 ? GetCnvCallsFromVcf(cnvCallsPath, includePassingOnly)
                 : GetCnvCallsFromBed(cnvCallsPath);
@@ -406,8 +428,11 @@ namespace EvaluateCNV
                 {
                     totalVariantBases += call.Length - basesOverlappingPloidyRegion;
                 }
-                if (variantBasesOverlappingPloidyRegion > 0 || (CN != 2 && variantBasesOverlappingPloidyRegion < call.Length))
+                if (variantBasesOverlappingPloidyRegion > 0 ||
+                    (CN != 2 && variantBasesOverlappingPloidyRegion < call.Length))
+                {
                     totalVariants++;
+                }
 
                 if (CN > maxCN) CN = maxCN;
                 string chr = call.Chr;
