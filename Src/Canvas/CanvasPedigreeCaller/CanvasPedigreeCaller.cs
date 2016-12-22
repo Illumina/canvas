@@ -278,8 +278,8 @@ namespace CanvasPedigreeCaller
                         int counter = 0;
                         foreach (PedigreeMember child in children)
                         {
-                            currentLikelihood *= GetTransition(parent1GtStates.Item1, parent1GtStates.Item2, offspringGtStates[counter].Item1, offspringGtStates[counter].Item2) *
-                                                 GetTransition(parent2GtStates.Item1, parent2GtStates.Item2, offspringGtStates[counter].Item1, offspringGtStates[counter].Item2) *
+                            currentLikelihood *= GetTransitionProbability(parent1GtStates.Item1, parent1GtStates.Item2, offspringGtStates[counter].Item1, offspringGtStates[counter].Item2) *
+                                                 GetTransitionProbability(parent2GtStates.Item1, parent2GtStates.Item2, offspringGtStates[counter].Item1, offspringGtStates[counter].Item2) *
                                                  child.CnModel.GetGtLikelihood(child.GetAlleleCounts(segmentPosition))[offspringGtStates[counter].Item1][offspringGtStates[counter].Item2];
                             counter++;
                         }
@@ -369,7 +369,7 @@ namespace CanvasPedigreeCaller
             return intevals;
         }
 
-        public double GetTransition(int gt1Parent, int gt2Parent, int gt1Offspring, int gt2Offspring)
+        public double GetTransitionProbability(int gt1Parent, int gt2Parent, int gt1Offspring, int gt2Offspring)
         {
             if (gt1Parent == gt1Offspring || gt1Parent == gt2Offspring ||
                 gt2Parent == gt1Offspring || gt2Parent == gt2Offspring)

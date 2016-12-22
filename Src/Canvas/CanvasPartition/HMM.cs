@@ -176,8 +176,8 @@ namespace CanvasPartition
                     _transition[2][state] = (1.0 - diploidTransitionProb)/(nStates - 1);
                 }
 
-            }
-                
+        }
+
         }
 
         public void MaximisationStep(List<List<double>> x)

@@ -1,12 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Security.Cryptography.X509Certificates;
 using CanvasCommon;
-using MathNet.Numerics;
-using MathNet.Numerics.Distributions;
-using MathNet.Numerics.LinearAlgebra;
-
 
 namespace CanvasPedigreeCaller
 {
@@ -16,21 +11,9 @@ namespace CanvasPedigreeCaller
         public List<List<double>> CnDistribution = new List<List<double>>();
         readonly Tuple<List<double>, List<double>> [][] _alleleDistribution;
 
-        public static List<double> NegativeBinomialWrapper(double mean, double variance, int maxValue)
-        {
-            var density = Enumerable.Repeat(0.0, maxValue).ToList();
-            double r = Math.Pow(Math.Max(mean, 0.1), 2) / (Math.Max(variance, mean * 1.2) - mean);
-            for (int x = 0; x < maxValue; x++)
-            {
-                var tmpDensity = Math.Exp(Math.Log(Math.Pow(1 + mean / r, -r)) + Math.Log(Math.Pow(mean / (mean + r), x)) + SpecialFunctions.GammaLn(r + x) -
-                             SpecialFunctions.FactorialLn(x) - SpecialFunctions.GammaLn(r));
-                density[x] = Double.IsNaN(tmpDensity) || Double.IsInfinity(tmpDensity) ? 0 : tmpDensity;
-            }
-            return density;
-        }
         public CopyNumberModel(int numCnStates, double haploidMean, double haploidMafMean, double variance, double mafVariance, int maxValue)
         {
-            for (int cn = 0; cn < numCnStates; cn++)
+            for (int copyNumber = 0; copyNumber  < numCnStates; copyNumber ++)
             {
                 var multiplier = 1.0;
                 if (cn == 1)
@@ -50,17 +33,17 @@ namespace CanvasPedigreeCaller
             {
                 for (int gt2 = 0; gt2 < numCnStates; gt2++)
                 {
-                    var gt1Probabilities = NegativeBinomialWrapper(haploidMafMean * gt1, mafVariance, maxValue);
-                    var gt2Probabilities = NegativeBinomialWrapper(haploidMafMean * gt2, mafVariance, maxValue);
+                    var gt1Probabilities = DistibutionUtilities.NegativeBinomialWrapper(haploidMafMean * gt1, mafVariance, maxValue);
+                    var gt2Probabilities = DistibutionUtilities.NegativeBinomialWrapper(haploidMafMean * gt2, mafVariance, maxValue);
                     _alleleDistribution[gt1][gt2] = new Tuple<List<double>, List<double>>(gt1Probabilities, gt2Probabilities);
                 }
             }
         }
 
 
-        public List<double> GetCnLikelihood(double y)
+        public List<double> GetCnLikelihood(double dimension)
         {
-            return CnDistribution.Select(x => x[Convert.ToInt32(y)]).ToList();
+            return CnDistribution.Select(x => x[Convert.ToInt32(dimension)]).ToList();
         }
 
         public double[][] GetGtLikelihood(Tuple<int,int> gt)

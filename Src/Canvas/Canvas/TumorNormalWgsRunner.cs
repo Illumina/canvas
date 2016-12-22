@@ -30,21 +30,18 @@ namespace Canvas
 
         private CanvasCallset GetCallset()
         {
+            AnalysisDetails analysisDetails = new AnalysisDetails(CommonOptions.OutputDirectory, CommonOptions.WholeGenomeFasta, CommonOptions.KmerFasta, CommonOptions.FilterBed, SingleSampleCommonOptions.PloidyBed, null);
             IFileLocation outputVcfPath = CommonOptions.OutputDirectory.GetFileLocation("CNV.vcf.gz");
             CanvasCallset callSet = new CanvasCallset(
                     _tumorNormalOptions.TumorBam,
                     SingleSampleCommonOptions.SampleName,
-                    CommonOptions.WholeGenomeFasta,
-                    CommonOptions.OutputDirectory,
-                    CommonOptions.KmerFasta,
-                    CommonOptions.FilterBed,
-                    SingleSampleCommonOptions.PloidyBed,
                     SingleSampleCommonOptions.BAlleleSites,
                     SingleSampleCommonOptions.IsDbSnpVcf,
                     Enumerable.Empty<IFileLocation>(),
                     null,
                     _tumorNormalOptions.SomaticVcf,
-                    outputVcfPath);
+                    outputVcfPath,
+                    analysisDetails);
             return callSet;
         }
     }
