@@ -16,6 +16,9 @@
     <SccAuxPath>SAK</SccAuxPath>
     <SccProvider>SAK</SccProvider>
     <IsWebBootstrapper>false</IsWebBootstrapper>
+    <TargetFrameworkProfile />
+    <NuGetPackageImportStamp>
+    </NuGetPackageImportStamp>
     <PublishUrl>publish\</PublishUrl>
     <Install>true</Install>
     <InstallFrom>Disk</InstallFrom>
@@ -30,9 +33,6 @@
     <ApplicationVersion>1.0.0.%2a</ApplicationVersion>
     <UseApplicationTrust>false</UseApplicationTrust>
     <BootstrapperEnabled>true</BootstrapperEnabled>
-    <TargetFrameworkProfile />
-    <NuGetPackageImportStamp>
-    </NuGetPackageImportStamp>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <PlatformTarget>AnyCPU</PlatformTarget>
@@ -75,6 +75,10 @@
     <Prefer32Bit>true</Prefer32Bit>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="Combinatorics, Version=1.0.3.0, Culture=neutral, PublicKeyToken=d5738f21cd5d2f66, processorArchitecture=MSIL">
+      <HintPath>..\Canvas\packages\Combinatorics.1.0.3.2\lib\net40\Combinatorics.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
     <Reference Include="Illumina.Common, Version=1.11.0.0, Culture=neutral, processorArchitecture=AMD64">
       <HintPath>..\Canvas\packages\Illumina.Common.1.11.0\lib\net40\Illumina.Common.dll</HintPath>
       <Private>True</Private>
@@ -118,8 +122,12 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="CanvasPartition.cs" />
+    <Compile Include="CBSRunner.cs" />
     <Compile Include="CBSTStatistic.cs" />
     <Compile Include="ChangePoint.cs" />
+    <Compile Include="Distributions.cs" />
+    <Compile Include="HiddenMarkovModelsRunner.cs" />
+    <Compile Include="HMM.cs" />
     <Compile Include="Properties\Settings.Designer.cs">
       <AutoGen>True</AutoGen>
       <DesignTimeSharedInput>True</DesignTimeSharedInput>
@@ -133,6 +141,7 @@
     <Compile Include="R.cs" />
     <Compile Include="TailProbability.cs" />
     <Compile Include="WaveletSegmentation.cs" />
+    <Compile Include="WaveletsRunner.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />

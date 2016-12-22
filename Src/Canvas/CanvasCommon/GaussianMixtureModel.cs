@@ -403,7 +403,7 @@ namespace CanvasCommon
                 double temp = 0;
                 foreach (var modelPoint in modelPoints)
                 {
-                    // do not consider segments with no MAFs during likelyhood calculation
+                    // do not consider segments with no MAFs during likelihood calculation
                     if (segment.MAF == -1)
                         temp += modelPoint.Ploidy.Omega;
                     else

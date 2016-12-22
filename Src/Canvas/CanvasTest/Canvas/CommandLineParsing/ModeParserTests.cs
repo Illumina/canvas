@@ -229,7 +229,7 @@ namespace CanvasTest.Canvas.CommandLineParsing
             var genome = tempDirectory.CreateSubdirectory("WholeGenomeFasta");
             string[] stringInputArgument =
             {
-                "-r", kmerFasta.ToString(), "-o", output.ToString(), "-g", genome.ToString(), "--b-allele-vcf", bAlleleVcf.ToString(), "--filter-bed", filterBed.ToString(), "--sample-name", "SampleName"
+                "-r", kmerFasta.ToString(), "-o", output.ToString(), "-g", genome.ToString(), "--population-b-allele-vcf", bAlleleVcf.ToString(), "--filter-bed", filterBed.ToString(), "--sample-name", "SampleName"
             };
 
             // act
@@ -256,7 +256,7 @@ namespace CanvasTest.Canvas.CommandLineParsing
             var genome = tempDirectory.CreateSubdirectory("WholeGenomeFasta");
             string[] stringInputArgument =
             {
-                "-r", kmerFasta.ToString(), "-o", output.ToString(), "-g", genome.ToString(), "--b-allele-vcf", bAlleleVcf.ToString(), "--filter-bed", filterBed.ToString(), "--sample-name", "SampleName"
+                "-r", kmerFasta.ToString(), "-o", output.ToString(), "-g", genome.ToString(), "--sample-b-allele-vcf", bAlleleVcf.ToString(), "--filter-bed", filterBed.ToString(), "--sample-name", "SampleName"
             };
 
             // act
@@ -309,6 +309,73 @@ namespace CanvasTest.Canvas.CommandLineParsing
             Assert.True(result.Success);
             Assert.Equal(file1, result.Result[0]);
             Assert.Equal(file2, result.Result[1]);
+        }
+
+        [Theory]
+        [AutoData]
+        public void ParseExclusiveOption_WithOnlyOneOption_ReturnsOneValue(TemporaryDirectoryFixture tempDirectory)
+        {
+            FileOption option1 = FileOption.CreateRequired("file1 option", "file1");
+            FileOption option2 = FileOption.CreateRequired("file2 option", "file2");
+            // arrange
+            ExclusiveFileOption multiFileOption = ExclusiveFileOption.CreateRequired(option1, option2);
+            var file1 = tempDirectory.CreateFile("file1");
+            string[] args =
+            {
+                "--file1", file1.ToString()
+            };
+
+            // act
+            var result = multiFileOption.Parse(args);
+
+            // assert
+            Assert.Equal("", result.ErrorMessage);
+            Assert.True(result.Success);
+            Assert.Equal(file1, result.Result.Result);
+            Assert.Equal(option1, result.Result.MatchedOption);
+        }
+
+        [Theory]
+        [AutoData]
+        public void ParseExclusiveOption_WithOnlyTwoOption_ReturnsFailedParseResult(TemporaryDirectoryFixture tempDirectory)
+        {
+            FileOption option1 = FileOption.CreateRequired("file1 option", "file1");
+            FileOption option2 = FileOption.CreateRequired("file2 option", "file2");
+            // arrange
+            ExclusiveFileOption multiFileOption = ExclusiveFileOption.CreateRequired(option1, option2);
+            var file1 = tempDirectory.CreateFile("file1");
+            string[] args =
+            {
+                "--file1", file1.ToString(), "--file2", file1.ToString()
+            };
+
+            // act
+            var result = multiFileOption.Parse(args);
+
+            // assert
+            Assert.Contains("not both", result.ErrorMessage);
+            Assert.False(result.Success);
+        }
+
+        [Theory]
+        [AutoData]
+        public void ParseRequiredExclusiveOption_WithNeitherOptionSpecified_ReturnsFailedParseResult(TemporaryDirectoryFixture tempDirectory)
+        {
+            FileOption option1 = FileOption.CreateRequired("file1 option", "file1");
+            FileOption option2 = FileOption.CreateRequired("file2 option", "file2");
+            // arrange
+            ExclusiveFileOption multiFileOption = ExclusiveFileOption.CreateRequired(option1, option2);
+            string[] args =
+            {
+
+            };
+
+            // act
+            var result = multiFileOption.Parse(args);
+
+            // assert
+            Assert.Contains("must be specified", result.ErrorMessage);
+            Assert.False(result.Success);
         }
 
         [Theory]

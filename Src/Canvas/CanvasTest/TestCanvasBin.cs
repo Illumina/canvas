@@ -18,9 +18,9 @@ namespace CanvasTest
             Dictionary<string, int> readNameToBinIndex = new Dictionary<string, int>();
             HashSet<string> samePositionReadNames = new HashSet<string>();
             long usableFragmentCount = 0;
-            List<GenomicBin> bins = new List<GenomicBin>()
+            List<SampleGenomicBin> bins = new List<SampleGenomicBin>()
             {
-                new GenomicBin("chr1", 100, 200, 50, 0)
+                new SampleGenomicBin("chr1", 100, 200, 50, 0)
             };
             int binIndexStart = 0;
 
@@ -94,7 +94,7 @@ namespace CanvasTest
             string dataFolder = Path.Combine(assemblyFolder, "Data");
             string bedPath = Path.Combine(dataFolder, "bins_chrM.bed");
             string bamPath = Path.Combine(dataFolder, "single-end.bam");
-            Dictionary<string, List<GenomicBin>> bins = CanvasCommon.Utilities.LoadBedFile(bedPath, gcIndex: 3);
+            Dictionary<string, List<SampleGenomicBin>> bins = CanvasCommon.Utilities.LoadBedFile(bedPath, gcIndex: 3);
             string chrom = "chrM";
             FragmentBinner.BinTask binTask = new FragmentBinner.BinTask(null, chrom, bamPath, bins[chrom]);
             bool exceptionCaught = false;

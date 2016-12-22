@@ -151,7 +151,7 @@ namespace CanvasSNV
                         {
                             if (interval.Start <= position && interval.End >= position)
                             {
-                                interval.VariantFrequencies.Add(VF);
+                                interval.Frequencies.Add(VF);
                                 break;
                             }
                         }
@@ -168,9 +168,9 @@ namespace CanvasSNV
                     {
                         // Write one histogram out for each region large enough to have a goodly number of variants:
                         int[] Histogram = new int[101];
-                        if (interval.VariantFrequencies.Count < 10000) continue;
+                        if (interval.Frequencies.Count < 10000) continue;
                         int total = 0;
-                        foreach (float VF in interval.VariantFrequencies)
+                        foreach (float VF in interval.Frequencies)
                         {
                             int bin = (int)Math.Round(VF * 100);
                             Histogram[bin]++;
@@ -183,11 +183,11 @@ namespace CanvasSNV
                             writer.WriteLine("{0}\t{1}\t{2}", bin, Histogram[bin], 100 * Histogram[bin] / (float)total);
                         }
 
-                        //float[] MinorAlleleFrequencies = new float[interval.VariantFrequencies.Count];
+                        //float[] MinorAlleleFrequencies = new float[interval.Frequencies.Count];
                         //float total = 0;
-                        //for (int index = 0; index < interval.VariantFrequencies.Count; index++)
+                        //for (int index = 0; index < interval.Frequencies.Count; index++)
                         //{
-                        //    MinorAlleleFrequencies[index] = interval.VariantFrequencies[index];
+                        //    MinorAlleleFrequencies[index] = interval.Frequencies[index];
                         //    if (MinorAlleleFrequencies[index] > 0.5) MinorAlleleFrequencies[index] = 1 - MinorAlleleFrequencies[index];
                         //    total += MinorAlleleFrequencies[index];
                         //}
@@ -242,7 +242,7 @@ namespace CanvasSNV
             public int Start;
             public int End;
             public int CN;
-            public List<float> VariantFrequencies = new List<float>();
+            public List<float> Frequencies = new List<float>();
         }
     }
 }

@@ -30,7 +30,7 @@ namespace CanvasTest
         [TestMethod]
         public void TestBins()
         {
-            GenomicBin bin = new GenomicBin("chr1", 12345, 678910, 20, 100);
+            SampleGenomicBin bin = new SampleGenomicBin("chr1", 12345, 678910, 20, 100);
             Assert.AreEqual(bin.Size, 666565);
         }
 

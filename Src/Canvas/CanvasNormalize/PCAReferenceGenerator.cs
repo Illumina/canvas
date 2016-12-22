@@ -30,7 +30,7 @@ namespace CanvasNormalize
 
         public void Run(IFileLocation outputFile)
         {
-            List<GenomicBin> sampleBins = CanvasIO.ReadFromTextFile(_sampleBinnedFile.FullName);
+            List<SampleGenomicBin> sampleBins = CanvasIO.ReadFromTextFile(_sampleBinnedFile.FullName);
             VerifyBinOrder(sampleBins);
 
             // set bin count to 1 if less than 1
@@ -49,7 +49,7 @@ namespace CanvasNormalize
             // write temporary reference count file
             var tempReferenceFile = new FileLocation(Path.GetTempFileName());
             var tempReferenceBins = Enumerable.Zip(sampleBins, referenceVector,
-                (bin, count) => new GenomicBin(bin.Chromosome, bin.Start, bin.Stop, bin.GC, (float)count));
+                (bin, count) => new SampleGenomicBin(bin.GenomicBin.Chromosome, bin.Start, bin.Stop, bin.GenomicBin.GC, (float)count));
             CanvasIO.WriteToTextFile(tempReferenceFile.FullName, tempReferenceBins);
 
             // calcualte median ratio
@@ -61,7 +61,7 @@ namespace CanvasNormalize
 
             // multiply reference counts by the median ratio
             var referenceBins = Enumerable.Zip(sampleBins, referenceVector,
-                (bin, count) => new GenomicBin(bin.Chromosome, bin.Start, bin.Stop, bin.GC, (float)(count * medianRatio)));
+                (bin, count) => new SampleGenomicBin(bin.GenomicBin.Chromosome, bin.Start, bin.Stop, bin.GenomicBin.GC, (float)(count * medianRatio)));
 
             // write reference count file
             CanvasIO.WriteToTextFile(outputFile.FullName, referenceBins);
@@ -70,7 +70,7 @@ namespace CanvasNormalize
         /// <summary>
         /// 
         /// </summary>
-        protected void VerifyBinOrder(IEnumerable<GenomicBin> bins)
+        protected void VerifyBinOrder(IEnumerable<SampleGenomicBin> bins)
         {
             bool mismatch = Enumerable.Zip(bins, _model.Mu, (bin1, bin2) => bin1.IsSameBin(bin2))
                 .SkipWhile(sameBin => sameBin).TakeWhile(sameBin => !sameBin).Any();
@@ -81,27 +81,27 @@ namespace CanvasNormalize
 
         class PCAModel
         {
-            public readonly GenomicBin[] Mu;
+            public readonly SampleGenomicBin[] Mu;
             public readonly double[][] Axes;
 
             public PCAModel(IFileLocation pcaModelFile)
             {
-                List<GenomicBin> mu;
+                List<SampleGenomicBin> mu;
                 List<double[]> axes;
                 LoadModel(pcaModelFile, out mu, out axes);
                 Mu = mu.ToArray();
                 Axes = axes.Select(a => a.ToArray()).ToArray();
             }
 
-            public PCAModel(GenomicBin[] mu, double[][] axes)
+            public PCAModel(SampleGenomicBin[] mu, double[][] axes)
             {
                 Mu = mu;
                 Axes = axes;
             }
 
-            private static void LoadModel(IFileLocation modelFile, out List<GenomicBin> mu, out List<double[]> axes)
+            private static void LoadModel(IFileLocation modelFile, out List<SampleGenomicBin> mu, out List<double[]> axes)
             {
-                mu = new List<GenomicBin>();
+                mu = new List<SampleGenomicBin>();
                 axes = new List<double[]>();
                 List<List<double>> tempAxes = new List<List<double>>();
 
@@ -118,7 +118,7 @@ namespace CanvasNormalize
                         int start = int.Parse(toks[1]);
                         int stop = int.Parse(toks[2]);
                         float mean = float.Parse(toks[3]);
-                        mu.Add(new GenomicBin(chrom, start, stop, -1, mean));
+                        mu.Add(new SampleGenomicBin(chrom, start, stop, -1, mean));
                         for (int i = 0; i < tempAxes.Count; i++)
                         {
                             tempAxes[i].Add(double.Parse(toks[i + 4]));

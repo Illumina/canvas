@@ -60,6 +60,10 @@
     <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="Combinatorics, Version=1.0.3.0, Culture=neutral, PublicKeyToken=d5738f21cd5d2f66, processorArchitecture=MSIL">
+      <HintPath>..\Canvas\packages\Combinatorics.1.0.3.2\lib\net40\Combinatorics.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
     <Reference Include="Illumina.Common, Version=1.11.0.0, Culture=neutral, processorArchitecture=AMD64">
       <HintPath>..\Canvas\packages\Illumina.Common.1.11.0\lib\net40\Illumina.Common.dll</HintPath>
       <Private>True</Private>
@@ -70,6 +74,10 @@
     </Reference>
     <Reference Include="Isas.Shared, Version=2.37.0.0, Culture=neutral, processorArchitecture=AMD64">
       <HintPath>..\Canvas\packages\Isas.Shared.2.37.0\lib\net451\Isas.Shared.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="MathNet.Numerics, Version=3.13.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\Canvas\packages\MathNet.Numerics.3.13.0\lib\net40\MathNet.Numerics.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="NDesk.Options, Version=0.2.1.0, Culture=neutral, processorArchitecture=MSIL">
@@ -86,6 +94,7 @@
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
+    <Reference Include="System.Numerics" />
     <Reference Include="System.Runtime.Serialization" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
@@ -98,6 +107,7 @@
     <Compile Include="ClusterInfo.cs" />
     <Compile Include="CommandLineParsing\CoreOptionTypes\DictionaryOption.cs" />
     <Compile Include="CommandLineParsing\CoreOptionTypes\DirectoryOption.cs" />
+    <Compile Include="CommandLineParsing\CoreOptionTypes\ExclusiveFileOption.cs" />
     <Compile Include="CommandLineParsing\CoreOptionTypes\FileOption.cs" />
     <Compile Include="CommandLineParsing\CoreOptionTypes\FlagOption.cs" />
     <Compile Include="CommandLineParsing\CoreOptionTypes\MultipleValueOptionInfo.cs" />
@@ -114,6 +124,7 @@
     <Compile Include="CommandLineParsing\OptionProcessing\ResultCollection.cs" />
     <Compile Include="CommandLineParsing\OptionProcessing\SuccessfulResultCollection.cs" />
     <Compile Include="GenomicBinFilter.cs" />
+    <Compile Include="DisttibutionUtilities.cs" />
     <Compile Include="QualityScoreParameters.cs" />
     <Compile Include="CanvasVersionInfo.cs" />
     <Compile Include="CnvType.cs" />

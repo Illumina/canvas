@@ -29,14 +29,14 @@ namespace CanvasClean
         /// <summary>
         /// Debugging option - save off a table of counts by GC bin.  
         /// </summary>
-        static void DebugPrintCountsByGC(List<GenomicBin> bins, string filePath)
+        static void DebugPrintCountsByGC(List<SampleGenomicBin> bins, string filePath)
         {
             int[][] HistogramByGC = new int[EnrichmentUtilities.numberOfGCbins][];
             for (int GC = 0; GC < HistogramByGC.Length; GC++) HistogramByGC[GC] = new int[1024];
-            foreach (GenomicBin bin in bins)
+            foreach (SampleGenomicBin bin in bins)
             {
                 if (bin.Count < 0 || bin.Count >= 1024) continue;
-                HistogramByGC[bin.GC][(int)bin.Count]++;
+                HistogramByGC[bin.GenomicBin.GC][(int)bin.Count]++;
             }
             using (StreamWriter writer = new StreamWriter(filePath))
             {
@@ -61,7 +61,7 @@ namespace CanvasClean
         /// Perform variance stabilization by GC bins.
         /// </summary>
         /// <param name="bins">Bins whose counts are to be normalized.</param>
-        static bool NormalizeVarianceByGC(List<GenomicBin> bins, NexteraManifest manifest = null)
+        static bool NormalizeVarianceByGC(List<SampleGenomicBin> bins, NexteraManifest manifest = null)
         {
             // DebugPrintCountsByGC(bins, "CountsByGCVariance-Before.txt");
             // An array of lists. Each array element (0-100) will hold a list of counts whose bins have the same GC content.
@@ -113,14 +113,14 @@ namespace CanvasClean
                 return false;
 
             // Divide each count by the median count of bins with the same GC content
-            foreach (GenomicBin bin in bins)
+            foreach (SampleGenomicBin bin in bins)
             {
-                var scaledLocalIqr = localIQR[bin.GC] * 0.8f;
+                var scaledLocalIqr = localIQR[bin.GenomicBin.GC] * 0.8f;
                 if (globalIQR >= scaledLocalIqr) continue;
 
                 // ratio of GC bins and global IQRs
                 float iqrRatio = scaledLocalIqr / globalIQR;
-                var medianGCCount = localQuartiles[bin.GC].Item2;
+                var medianGCCount = localQuartiles[bin.GenomicBin.GC].Item2;
                 bin.Count = medianGCCount + (bin.Count - medianGCCount) / iqrRatio;
             }
 
@@ -169,7 +169,7 @@ namespace CanvasClean
         /// <param name="bins">Bins whose counts are to be normalized</param>
         /// <param name="manifest"></param>
         /// <param name="mode">GC normalization mode</param>
-        static void NormalizeByGC(List<GenomicBin> bins, NexteraManifest manifest, CanvasGCNormalizationMode mode)
+        static void NormalizeByGC(List<SampleGenomicBin> bins, NexteraManifest manifest, CanvasGCNormalizationMode mode)
         {
             switch (mode)
             {
@@ -192,7 +192,7 @@ namespace CanvasClean
         /// </summary>
         /// <param name="bins">Bins whose counts are to be normalized.</param>
         /// <param name="manifest"></param>
-        static void NormalizeByGC(List<GenomicBin> bins, NexteraManifest manifest = null)
+        static void NormalizeByGC(List<SampleGenomicBin> bins, NexteraManifest manifest = null)
         {
             // DebugPrintCountsByGC(bins, "CountsByGC-Before.txt");
             // An array of lists. Each array element (0-100) will hold a list of counts whose bins have the same GC content.
@@ -222,7 +222,7 @@ namespace CanvasClean
             // Divide each count by the median count of bins with the same GC content
             for (int gcBinIndex = 0; gcBinIndex < bins.Count; gcBinIndex++)
             {
-                double? median = medians[bins[gcBinIndex].GC];
+                double? median = medians[bins[gcBinIndex].GenomicBin.GC];
                 if (median != null && median > 0)
                     bins[gcBinIndex].Count = (float)(globalMedian * (double)bins[gcBinIndex].Count / median);
             }
@@ -238,31 +238,31 @@ namespace CanvasClean
         /// The rationale of this function is that a GC normalization is performed by computing the median count
         /// for each possible GC value. If that count is small, then the corresponding normalization constant
         /// is unstable and we shouldn't use these data.
-        static List<GenomicBin> RemoveBinsWithExtremeGC(List<GenomicBin> bins, int threshold, NexteraManifest manifest = null)
+        static List<SampleGenomicBin> RemoveBinsWithExtremeGC(List<SampleGenomicBin> bins, int threshold, NexteraManifest manifest = null)
         {
             // Will hold outlier-removed bins.
-            List<GenomicBin> stripped = new List<GenomicBin>();
+            List<SampleGenomicBin> stripped = new List<SampleGenomicBin>();
 
             // used to count the number of bins with each possible GC content (0-100)
             int[] counts = new int[EnrichmentUtilities.numberOfGCbins];
             double totalCount = 0;
-            foreach (GenomicBin bin in manifest == null ? bins : EnrichmentUtilities.GetOnTargetBins(bins, manifest))
+            foreach (SampleGenomicBin bin in manifest == null ? bins : EnrichmentUtilities.GetOnTargetBins(bins, manifest))
             {
 
                 // We only count autosomal bins because these are the ones we computed normalization factor upon.
-                if (!GenomeMetadata.SequenceMetadata.IsAutosome(bin.Chromosome))
+                if (!GenomeMetadata.SequenceMetadata.IsAutosome(bin.GenomicBin.Chromosome))
                     continue;
 
-                counts[bin.GC]++;
+                counts[bin.GenomicBin.GC]++;
                 totalCount++;
             }
 
             int averageCountPerGC = Math.Max(minNumberOfBinsPerGCForWeightedMedian, (int)(totalCount / counts.Length));
             threshold = Math.Min(threshold, averageCountPerGC);
-            foreach (GenomicBin bin in bins)
+            foreach (SampleGenomicBin bin in bins)
             {
                 // Remove outlier (not a lot of bins with the same GC content)
-                if (counts[bin.GC] < threshold)
+                if (counts[bin.GenomicBin.GC] < threshold)
                     continue;
                 stripped.Add(bin);
             }
@@ -299,7 +299,7 @@ namespace CanvasClean
         /// The rationale of this function is that standard deviation of difference of consecutive bins values, when taken over a small range of bin (i.e. 20 bins),
         /// has a distinct distribution for FFPE compared to Fresh Frozen (FF) samples. This property is used to flag and remove such bins.
 
-        static double getLocalStandardDeviation(List<GenomicBin> bins)
+        static double getLocalStandardDeviation(List<SampleGenomicBin> bins)
         {
             // Will hold consecutive bin count difference (approximates Skellam Distribution: mean centred on zero so agnostic to CN changes)
             double[] countsDiffs = new double[bins.Count - 1];
@@ -319,10 +319,10 @@ namespace CanvasClean
             {
                 double localSD = Utilities.StandardDeviation(countsDiffs, windowStart, windowEnd);
                 localSDs.Add(localSD);
-                chromosomeBin.Add(bins[windowStart].Chromosome);
+                chromosomeBin.Add(bins[windowStart].GenomicBin.Chromosome);
                 for (int binIndex = windowStart; binIndex < windowEnd; binIndex += 1)
                 {
-                    bins[binIndex].MadOfDiffs = localSD;
+                    bins[binIndex].CountDeviation = localSD;
                 }
             }
 
@@ -339,16 +339,16 @@ namespace CanvasClean
         /// <param name="threshold">Median SD value which is used to determine whereas to run RemoveBinsWithExtremeLocalMad on a sample and which set of bins to remove (set as threshold*5).</param>
         /// The rationale of this function is that standard deviation of difference of consecutive bins values, when taken over a small range of bin (i.e. 20 bins),
         /// has a distinct distribution for FFPE compared to Fresh Frozen (FF) samples. This property is used to flag and remove such bins.
-        static List<GenomicBin> RemoveBinsWithExtremeLocalSD(List<GenomicBin> bins, double localSDaverage, double threshold, string outFile)
+        static List<SampleGenomicBin> RemoveBinsWithExtremeLocalSD(List<SampleGenomicBin> bins, double localSDaverage, double threshold, string outFile)
         {
             // Will hold FFPE outlier-removed bins 
-            List<GenomicBin> strippedBins = new List<GenomicBin>();
+            List<SampleGenomicBin> strippedBins = new List<SampleGenomicBin>();
 
             // remove bins with extreme local SD (populating new list is faster than removing from existing one)
-            foreach (GenomicBin bin in bins)
+            foreach (SampleGenomicBin bin in bins)
             {
                 // do not strip bins for samples with local SD metric average less then the threshold
-                if (bin.MadOfDiffs > threshold * 2.0 && localSDaverage > 5.0)
+                if (bin.CountDeviation > threshold * 2.0 && localSDaverage > 5.0)
                     continue;
                 strippedBins.Add(bin);
             }
@@ -359,11 +359,11 @@ namespace CanvasClean
         /// Removes bins that are genomically large. Typically centromeres and other nasty regions.
         /// </summary>
         /// <param name="bins">Genomic bins.</param>
-        static List<GenomicBin> RemoveBigBins(List<GenomicBin> bins)
+        static List<SampleGenomicBin> RemoveBigBins(List<SampleGenomicBin> bins)
         {
             List<int> sizes = new List<int>(bins.Count);
 
-            foreach (GenomicBin bin in bins)
+            foreach (SampleGenomicBin bin in bins)
                 sizes.Add(bin.Size);
 
             sizes.Sort();
@@ -377,10 +377,10 @@ namespace CanvasClean
             }
             int thresh = sizes[index];
 
-            List<GenomicBin> stripped = new List<GenomicBin>();
+            List<SampleGenomicBin> stripped = new List<SampleGenomicBin>();
 
             // Remove bins whose size is greater than the 98th percentile
-            foreach (GenomicBin bin in bins)
+            foreach (SampleGenomicBin bin in bins)
             {
                 if (bin.Size <= thresh)
                     stripped.Add(bin);
@@ -418,25 +418,25 @@ namespace CanvasClean
         /// Removes point outliers from the dataset.
         /// </summary>
         /// <param name="bins">Genomic bins.</param>
-        static List<GenomicBin> RemoveOutliers(List<GenomicBin> bins)
+        static List<SampleGenomicBin> RemoveOutliers(List<SampleGenomicBin> bins)
         {
-            List<GenomicBin> stripped = new List<GenomicBin>();
+            List<SampleGenomicBin> stripped = new List<SampleGenomicBin>();
 
             // Check each point to see if it is different than both the point to left and the point to the right
             for (int binIndex = 0; binIndex < bins.Count; binIndex++)
             {
                 bool hasPreviousBin = binIndex > 0;
                 bool hasNextBin = binIndex < bins.Count - 1;
-                string currentBinChromosome = bins[binIndex].Chromosome;
-                string previousBinChromosome = hasPreviousBin ? bins[binIndex - 1].Chromosome : null;
-                string nextBinChromosome = hasNextBin ? bins[binIndex + 1].Chromosome : null;
+                string currentBinChromosome = bins[binIndex].GenomicBin.Chromosome;
+                string previousBinChromosome = hasPreviousBin ? bins[binIndex - 1].GenomicBin.Chromosome : null;
+                string nextBinChromosome = hasNextBin ? bins[binIndex + 1].GenomicBin.Chromosome : null;
                 // Different chromosome on both sides
                 if ((hasPreviousBin && !currentBinChromosome.Equals(previousBinChromosome))
                     && (hasNextBin && !currentBinChromosome.Equals(nextBinChromosome)))
                     continue;
                 // Same chromosome on at least on side or it's the only bin
-                if ((hasPreviousBin && bins[binIndex].Chromosome.Equals(previousBinChromosome) && !SignificantlyDifferent(bins[binIndex].Count, bins[binIndex - 1].Count))
-                    || (hasNextBin && bins[binIndex].Chromosome.Equals(nextBinChromosome) && !SignificantlyDifferent(bins[binIndex].Count, bins[binIndex + 1].Count))
+                if ((hasPreviousBin && bins[binIndex].GenomicBin.Chromosome.Equals(previousBinChromosome) && !SignificantlyDifferent(bins[binIndex].Count, bins[binIndex - 1].Count))
+                    || (hasNextBin && bins[binIndex].GenomicBin.Chromosome.Equals(nextBinChromosome) && !SignificantlyDifferent(bins[binIndex].Count, bins[binIndex + 1].Count))
                     || (!hasPreviousBin && !hasNextBin))
                 {
                     stripped.Add(bins[binIndex]);
@@ -497,7 +497,7 @@ namespace CanvasClean
                 return 1;
             }
 
-            List<GenomicBin> bins = CanvasIO.ReadFromTextFile(inFile);
+            List<SampleGenomicBin> bins = CanvasIO.ReadFromTextFile(inFile);
 
             if (doOutlierRemoval)
                 bins = RemoveOutliers(bins);
@@ -522,7 +522,7 @@ namespace CanvasClean
             if (doGCnorm)
             {
                 NexteraManifest manifest = manifestFile == null ? null : new NexteraManifest(manifestFile, null, Console.WriteLine);
-                List<GenomicBin> strippedBins = gcNormalizationMode == CanvasGCNormalizationMode.MedianByGC
+                List<SampleGenomicBin> strippedBins = gcNormalizationMode == CanvasGCNormalizationMode.MedianByGC
                     ? RemoveBinsWithExtremeGC(bins, defaultMinNumberOfBinsPerGC, manifest: manifest)
                     : bins;
                 if (strippedBins.Count == 0)
@@ -549,7 +549,7 @@ namespace CanvasClean
             if (ffpeOutliersFile != null)
             {
                 // threshold 20 is derived to separate FF and noisy FFPE samples (derived from a training set of approx. 40 samples)
-                List<GenomicBin> LocalMadstrippedBins = RemoveBinsWithExtremeLocalSD(bins, LocalSD, 20, outFile);
+                List<SampleGenomicBin> LocalMadstrippedBins = RemoveBinsWithExtremeLocalSD(bins, LocalSD, 20, outFile);
                 bins = LocalMadstrippedBins;
             }
 

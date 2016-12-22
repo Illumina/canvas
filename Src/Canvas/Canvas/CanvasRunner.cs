@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.IO;
@@ -6,6 +7,10 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Canvas;
+using Canvas.CommandLineParsing;
+using Canvas.SmallPedigree;
+using CanvasBin;
+using CanvasPartition;
 using CanvasCommon;
 using Illumina.Common;
 using Isas.SequencingFiles;
@@ -133,14 +138,15 @@ namespace Illumina.SecondaryAnalysis
                 commandLine.AppendFormat("-t \"{0}\" ", callset.TempManifestPath);
             }
 
-            string outputStub = Path.Combine(Path.GetDirectoryName(callset.BinSizePath), Path.GetFileNameWithoutExtension(callset.BinSizePath));
+            string outputStub = Path.Combine(Path.GetDirectoryName(callset.SingleSampleCallset.BinSizePath), 
+                Path.GetFileNameWithoutExtension(callset.SingleSampleCallset.BinSizePath));
             commandLine.AppendFormat("-f \"{0}\" -d {1} -o \"{2}\"", canvasBedPath, _countsPerBin, outputStub);
 
             UnitOfWork binJob = new UnitOfWork()
             {
                 ExecutablePath = executablePath,
                 LoggingFolder = _workManager.LoggingFolder.FullName,
-                LoggingStub = Path.GetFileNameWithoutExtension(callset.BinSizePath),
+                LoggingStub = Path.GetFileNameWithoutExtension(callset.SingleSampleCallset.BinSizePath),
                 CommandLine = commandLine.ToString()
             };
             if (_customParameters.ContainsKey("CanvasBin"))
@@ -150,7 +156,7 @@ namespace Illumina.SecondaryAnalysis
             _workManager.DoWorkSingleThread(binJob);
 
             int binSize;
-            using (StreamReader reader = new StreamReader(callset.BinSizePath))
+            using (StreamReader reader = new StreamReader(callset.SingleSampleCallset.BinSizePath))
             {
                 binSize = int.Parse(reader.ReadLine());
             }
@@ -164,9 +170,9 @@ namespace Illumina.SecondaryAnalysis
         protected IFileLocation InvokeCanvasBin(CanvasCallset callset, string canvasReferencePath, string canvasBedPath, string ploidyBedPath)
         {
             // use bam as input
-            if (callset.Bam == null)
+            if (callset.SingleSampleCallset.Bam == null)
             {
-                Console.WriteLine("Input bam file not seen for sample {0}_{1} - no CNV calls", callset.SampleName, callset.Id);
+                Console.WriteLine($"Input bam file not seen for sample {callset.SingleSampleCallset.SampleName}- no CNV calls");
                 return null;
             }
 
@@ -191,86 +197,117 @@ namespace Illumina.SecondaryAnalysis
             if (CrossPlatform.IsThisMono())
                 executablePath = Utilities.GetMonoPath();
 
-            List<string> bamPaths = new List<string>();
-            bamPaths.Add(callset.Bam.BamFile.FullName);
+            //use bam as input
+            if (callset.SingleSampleCallset.Bam == null)
+            {
+                Console.WriteLine("Input bam file not seen for sample {0}_{1} - no CNV calls", callset.SingleSampleCallset.SampleName, callset.SingleSampleCallset.SampleName);
+                return null;
+            }
+            List<string> bamPaths = new List<string> {callset.SingleSampleCallset.Bam.BamFile.FullName};
             if (!(callset.IsEnrichment && callset.Manifest.CanvasControlAvailable)) // do not add normal BAMs if Canvas Control is available
             {
                 bamPaths.AddRange(callset.NormalBamPaths.Select(bam => bam.BamFile.FullName));
             }
 
-            // loop over the reference sequences in that genome
-            GenomeMetadata genomeMetadata = callset.GenomeMetadata;
-            List<UnitOfWork> binJobs = new List<UnitOfWork>();
-
-            Dictionary<string, List<string>> intermediateDataPathsByBamPath = new Dictionary<string, List<string>>();
-            foreach (string bamPath in bamPaths) { intermediateDataPathsByBamPath[bamPath] = new List<string>(); }
-            for (int bamIndex = 0; bamIndex < bamPaths.Count; bamIndex++)
+            // enrichment options
+            if (callset.IsEnrichment) // manifest
             {
-                foreach (GenomeMetadata.SequenceMetadata sequenceMetadata in genomeMetadata.Sequences.OrderByDescending(sequence => sequence.Length))
+                if (!File.Exists(callset.TempManifestPath))
                 {
-                    // Only invoke CanvasBin for autosomes + allosomes;
-                    // don't invoke it for mitochondrial chromosome or extra contigs or decoys
-                    if (sequenceMetadata.Type != GenomeMetadata.SequenceType.Allosome && !sequenceMetadata.IsAutosome())
-                        continue;
-
-                    string bamPath = bamPaths[bamIndex];
-                    commandLine.Clear();
-                    if (CrossPlatform.IsThisMono())
-                    {
-                        commandLine.AppendFormat("{0} ", canvasBinPath);
-                    }
-                    commandLine.AppendFormat("-b \"{0}\" ", bamPath);
-                    if (callset.Bam.IsPairedEnd) commandLine.AppendFormat("-p ");
-                    commandLine.AppendFormat("-r \"{0}\" ", canvasReferencePath);
-                    commandLine.AppendFormat("-c {0} ", sequenceMetadata.Name);
-                    commandLine.AppendFormat("-m {0} ", _coverageMode);
-                    if (callset.IsEnrichment) // manifest
-                    {
-                        if (!File.Exists(callset.TempManifestPath)) { NexteraManifestUtils.WriteNexteraManifests(callset.Manifest, callset.TempManifestPath); }
-                        commandLine.AppendFormat("-t \"{0}\" ", callset.TempManifestPath);
-                    }
-
-                    string intermediateDataPath = Path.Combine(callset.TempFolder, string.Format("{0}_{1}_{2}.dat",
-                        callset.Id, bamIndex, sequenceMetadata.Name));
-                    intermediateDataPathsByBamPath[bamPath].Add(intermediateDataPath);
-                    commandLine.AppendFormat("-f \"{0}\" -d {1} -o \"{2}\" ", canvasBedPath, _countsPerBin, intermediateDataPath);
-
-                    UnitOfWork binJob = new UnitOfWork()
-                    {
-                        ExecutablePath = executablePath,
-                        LoggingFolder = _workManager.LoggingFolder.FullName,
-                        LoggingStub = Path.GetFileName(intermediateDataPath),
-                        CommandLine = commandLine.ToString()
-                    };
-                    if (_customParameters.ContainsKey("CanvasBin"))
-                    {
-                        binJob.CommandLine = Utilities.MergeCommandLineOptions(binJob.CommandLine, _customParameters["CanvasBin"], true);
-                    }
-                    binJobs.Add(binJob);
+                    NexteraManifestUtils.WriteNexteraManifests(callset.Manifest, callset.TempManifestPath);
                 }
             }
-            _workManager.DoWorkParallelThreads(binJobs);
+          
+            // read bams 
+            var intermediateDataPathsByBamPath = ReadBams(callset.AnalysisDetails.GenomeMetadata, callset.SingleSampleCallset.Bam.IsPairedEnd, new List<string>(){callset.SingleSampleCallset.SampleName}, callset.SingleSampleCallset.SampleName,
+                canvasReferencePath, canvasBedPath, bamPaths, commandLine, canvasBinPath, executablePath, callset.TempManifestPath);
 
             // get bin size (of the smallest BAM) if normal BAMs are given
+            var intermediateDataPathsByBamPathCopy = (from x in intermediateDataPathsByBamPath
+                                                      select x).ToDictionary(x => x.Key, x => x.Value.Select(y => y).ToList()); // deep dictionary copy
             int binSize = -1;
             if (bamPaths.Count > 1)
             {
                 string smallestBamPath = SmallestFile(bamPaths);
-                binSize = GetBinSize(callset, smallestBamPath, intermediateDataPathsByBamPath[smallestBamPath],
+                binSize = GetBinSize(callset, smallestBamPath, intermediateDataPathsByBamPathCopy[smallestBamPath],
                     canvasReferencePath, canvasBedPath);
             }
             else if (callset.IsEnrichment && callset.Manifest.CanvasControlAvailable)
             {
-                binSize = callset.Manifest.CanvasBinSize.Value;
+                if (callset.Manifest.CanvasBinSize != null) binSize = callset.Manifest.CanvasBinSize.Value;
             }
 
+            // derive Canvas bins
+            var bamToBinned = BamToBinned(callset.SingleSampleCallset.TempFolder, callset.SingleSampleCallset.Bam.IsPairedEnd, new List<string>() {callset.SingleSampleCallset.SampleName}, canvasReferencePath, canvasBedPath, bamPaths, commandLine, canvasBinPath, binSize, intermediateDataPathsByBamPath, executablePath);
+
+            string tumorBinnedPath = bamToBinned[callset.SingleSampleCallset.Bam.BamFile.FullName]; // binned tumor sample
+            string outputPath = tumorBinnedPath;
+            if (callset.NormalBamPaths.Any() || (callset.IsEnrichment && callset.Manifest.CanvasControlAvailable))
+            {
+                outputPath = InvokeCanvasNormalize(callset, tumorBinnedPath, bamToBinned, ploidyBedPath);
+            }
+            return new FileLocation(outputPath);
+        }
+
+        /// <summary>
+        /// Invoke CanvasBin.  Return null if this fails and we need to abort CNV calling for this sample.
+        /// </summary>
+        protected List<string> InvokeCanvasBin(SmallPedigreeCallset callset, string canvasReferencePath, string canvasBedPath)
+        {
+            StringBuilder commandLine = new StringBuilder();
+            string canvasBinPath = Path.Combine(_canvasFolder, "CanvasBin.exe");
+            string executablePath = canvasBinPath;
+            if (CrossPlatform.IsThisMono())
+                executablePath = Utilities.GetMonoPath();
+
+            //use bam as input
+            List<string> bamPaths = new List<string>();
+            foreach (PedigreeSample sample in callset.PedigreeSample)
+            {
+                Bam bam = sample.Sample.Bam;
+                if (bam.BamFile.FullName == null || !File.Exists(bam.BamFile.FullName))
+                {
+                    Console.WriteLine("Input bam file not seen {0}", bam.BamFile.FullName);
+                    return null;
+                }
+                bamPaths.Add(bam.BamFile.FullName);
+            }
+
+            var sampleNames = callset.PedigreeSample.Select(x => x.Sample.SampleName).ToList();
+            // read bams 
+            var intermediateDataPathsByBamPath = ReadBams(callset.AnalysisDetails.GenomeMetadata, true, sampleNames, callset.AnalysisDetails.TempFolder,
+                canvasReferencePath, canvasBedPath, bamPaths, commandLine, canvasBinPath, executablePath, null);
+
+            // get bin size (of the smallest BAM) if normal BAMs are given
+            int binSize = -1;
+            var intermediateDataPathsByBamPathCopy = (from x in intermediateDataPathsByBamPath
+                                                      select x).ToDictionary(x => x.Key, x => x.Value.Select(y=>y).ToList()); // deep dictionary copy
+
+            if (bamPaths.Count > 1)
+            {
+                string smallestBamPath = SmallestFile(bamPaths);
+                CanvasBin.CanvasBin canvasBin = new CanvasBin.CanvasBin();
+                binSize = canvasBin.CalculateMultiSampleBinSize(intermediateDataPathsByBamPathCopy, 
+                    binSize, _countsPerBin, CanvasCommon.CanvasCoverageMode.TruncatedDynamicRange);
+            }
+
+            // derive Canvas bins
+            var bamToBinned = BamToBinned(callset.AnalysisDetails.TempFolder, true, sampleNames, canvasReferencePath, canvasBedPath, bamPaths, commandLine, canvasBinPath, binSize, intermediateDataPathsByBamPath, executablePath);
+            return bamToBinned.Values.ToList();
+        }
+
+        private Dictionary<string, string> BamToBinned(string tempFolder, bool isPairedEnd, IEnumerable<string> Id, string canvasReferencePath, string canvasBedPath, List<string> bamPaths,
+            StringBuilder commandLine, string canvasBinPath, int binSize, Dictionary<string, List<string>> intermediateDataPathsByBamPaths,
+            string executablePath)
+        {
             Dictionary<string, string> bamToBinned = new Dictionary<string, string>();
             List<UnitOfWork> finalBinJobs = new List<UnitOfWork>();
-            for (int bamIdx = 0; bamIdx < bamPaths.Count; bamIdx++)
-            {
+            int bamIdx = 0;
+            foreach (List<string> intermediateDataPathsByBamPath in intermediateDataPathsByBamPaths.Values)
+            { 
                 string bamPath = bamPaths[bamIdx];
                 // finish up CanvasBin step by merging intermediate data and finally binning                
-                string binnedPath = Path.Combine(callset.TempFolder, string.Format("{0}_{1}.binned", callset.Id, bamIdx));
+                string binnedPath = Path.Combine(tempFolder, string.Format("{0}_{1}.binned", Id.ToList()[bamIdx], bamIdx));
                 bamToBinned[bamPath] = binnedPath;
                 commandLine.Clear();
                 if (CrossPlatform.IsThisMono())
@@ -278,7 +315,7 @@ namespace Illumina.SecondaryAnalysis
                     commandLine.AppendFormat("{0} ", canvasBinPath);
                 }
                 commandLine.AppendFormat("-b \"{0}\" ", bamPath);
-                if (callset.Bam.IsPairedEnd) commandLine.AppendFormat("-p ");
+                if (isPairedEnd) commandLine.AppendFormat("-p ");
 
                 commandLine.AppendFormat("-r \"{0}\" ", canvasReferencePath);
                 commandLine.AppendFormat("-f \"{0}\" -d {1} -o \"{2}\" ", canvasBedPath, _countsPerBin, binnedPath);
@@ -287,9 +324,10 @@ namespace Illumina.SecondaryAnalysis
                     commandLine.AppendFormat("-z \"{0}\" ", binSize);
                 }
 
-                foreach (string path in intermediateDataPathsByBamPath[bamPath])
+                foreach (string path in intermediateDataPathsByBamPath)
                 {
                     commandLine.AppendFormat("-i \"{0}\" ", path);
+                    Console.WriteLine("path: {0}", path);
                 }
 
                 commandLine.AppendFormat("-m {0} ", _coverageMode);
@@ -303,39 +341,81 @@ namespace Illumina.SecondaryAnalysis
                 };
                 if (_customParameters.ContainsKey("CanvasBin"))
                 {
-                    finalBinJob.CommandLine = Utilities.MergeCommandLineOptions(finalBinJob.CommandLine, _customParameters["CanvasBin"], true);
+                    finalBinJob.CommandLine = Utilities.MergeCommandLineOptions(finalBinJob.CommandLine,
+                        _customParameters["CanvasBin"], true);
                 }
                 finalBinJobs.Add(finalBinJob);
+                bamIdx++;
             }
-            _workManager.DoWorkParallel(finalBinJobs, new TaskResourceRequirements(8, 25)); // CanvasBin itself is multi-threaded
-
-            return NormalizeCoverage(callset, bamToBinned, ploidyBedPath);
+            _workManager.DoWorkParallel(finalBinJobs, new TaskResourceRequirements(8, 25));
+                // CanvasBin itself is multi-threaded
+            return bamToBinned;
         }
 
-        private string GetPredefinedBinsPath()
+        private Dictionary<string, List<string>> ReadBams(GenomeMetadata genomeInfo, bool isPairedEnd, 
+            IEnumerable<string> Id, string tempFolder, string canvasReferencePath, string canvasBedPath, List<string> bamPaths,
+            StringBuilder commandLine, string canvasBinPath, string executablePath, string tempManifestPath = null)
         {
-            string path = null;
-            if (_customParameters.ContainsKey("CanvasBin"))
+            GenomeMetadata genomeMetadata = genomeInfo;
+            List<UnitOfWork> binJobs = new List<UnitOfWork>();
+
+            Dictionary<string, List<string>> intermediateDataPathsByBamPath = new Dictionary<string, List<string>>();
+            for (int bamIndex = 0; bamIndex < bamPaths.Count; bamIndex++)
             {
-                string beforeFirstOption;
-                var options = Utilities.GetCommandOptions(_customParameters["CanvasBin"], out beforeFirstOption);
-                foreach (var option in options)
+                intermediateDataPathsByBamPath[Id.ToList()[bamIndex]] = new List<string>();
+                foreach (
+                    GenomeMetadata.SequenceMetadata sequenceMetadata in
+                        genomeMetadata.Sequences.OrderByDescending(sequence => sequence.Length))
                 {
-                    if (option.Key != "-n" && option.Key != "--bins")
+                    // Only invoke CanvasBin for autosomes + allosomes;
+                    // don't invoke it for mitochondrial chromosome or extra contigs or decoys
+                    if (sequenceMetadata.Type != GenomeMetadata.SequenceType.Allosome && !sequenceMetadata.IsAutosome())
                         continue;
-                    path = option.Value.TrimStart('=').Trim();
+
+                    string bamPath = bamPaths[bamIndex];
+                    commandLine.Clear();
+                    if (CrossPlatform.IsThisMono())
+                    {
+                        commandLine.AppendFormat("{0} ", canvasBinPath);
+                    }
+                    commandLine.AppendFormat("-b \"{0}\" ", bamPath);
+                    if (isPairedEnd) commandLine.AppendFormat("-p ");
+                    commandLine.AppendFormat("-r \"{0}\" ", canvasReferencePath);
+                    commandLine.AppendFormat("-c {0} ", sequenceMetadata.Name);
+                    commandLine.AppendFormat("-m {0} ", _coverageMode);
+
+                    string intermediateDataPath = Path.Combine(tempFolder, string.Format("{0}_{1}_{2}.dat",
+                        Id.ToList()[bamIndex], bamIndex, sequenceMetadata.Name));
+                    intermediateDataPathsByBamPath[Id.ToList()[bamIndex]].Add(intermediateDataPath);
+                    commandLine.AppendFormat("-f \"{0}\" -d {1} -o \"{2}\" ", canvasBedPath, _countsPerBin, intermediateDataPath);
+                    if (tempManifestPath != null)
+                        commandLine.AppendFormat("-t \"{0}\" ", tempManifestPath);
+
+                    UnitOfWork binJob = new UnitOfWork()
+                    {
+                        ExecutablePath = executablePath,
+                        LoggingFolder = _workManager.LoggingFolder.FullName,
+                        LoggingStub = Path.GetFileName(intermediateDataPath),
+                        CommandLine = commandLine.ToString()
+                    };
+                    if (_customParameters.ContainsKey("CanvasBin"))
+                    {
+                        binJob.CommandLine = Utilities.MergeCommandLineOptions(binJob.CommandLine,
+                            _customParameters["CanvasBin"], true);
+                    }
+                    binJobs.Add(binJob);
                 }
-                // remove bins from custom parameters
-                _customParameters["CanvasBin"] = Utilities.MergeCommandLineOptions(_customParameters["CanvasBin"], "#n #bins");
             }
-            return path;
+
+            _workManager.DoWorkParallelThreads(binJobs);
+            return intermediateDataPathsByBamPath;
         }
 
         /// <summary>
         /// Invoke CanvasBin in the Fragment mode.  Return null if this fails and we need to abort CNV calling for this sample.
         /// </summary>
         protected IFileLocation InvokeCanvasBinFragment(CanvasCallset callset, string canvasReferencePath, string canvasBedPath, string ploidyBedPath)
-        {
+            {
             StringBuilder commandLine = new StringBuilder();
             string canvasBinPath = Path.Combine(_canvasFolder, "CanvasBin.exe");
             string executablePath = canvasBinPath;
@@ -352,8 +432,8 @@ namespace Illumina.SecondaryAnalysis
 
             List<string> bamPaths = new List<string>();
             bool isPairedEnd = true;
-            bamPaths.Add(callset.Bam.BamFile.FullName);
-            isPairedEnd = isPairedEnd && callset.Bam.IsPairedEnd;
+            bamPaths.Add(callset.SingleSampleCallset.Bam.BamFile.FullName);
+            isPairedEnd = isPairedEnd && callset.SingleSampleCallset.Bam.IsPairedEnd;
             if (!(callset.IsEnrichment && callset.Manifest.CanvasControlAvailable)) // do not add normal BAMs if Canvas Control is available
             {
                 bamPaths.AddRange(callset.NormalBamPaths.Select(bam => bam.BamFile.FullName));
@@ -372,7 +452,7 @@ namespace Illumina.SecondaryAnalysis
             for (int bamIndex = 0; bamIndex < bamPaths.Count; bamIndex++)
             {
                 string bamPath = bamPaths[bamIndex];
-                string binnedPath = Path.Combine(callset.TempFolder, string.Format("{0}_{1}.binned", callset.Id, bamIndex));
+                string binnedPath = Path.Combine(callset.SingleSampleCallset.TempFolder, string.Format("{0}_{1}.binned", callset.SingleSampleCallset.SampleName, bamIndex));
                 bamToBinned[bamPath] = binnedPath;
 
                 commandLine.Clear();
@@ -404,10 +484,28 @@ namespace Illumina.SecondaryAnalysis
             return NormalizeCoverage(callset, bamToBinned, ploidyBedPath);
         }
 
+        private string GetPredefinedBinsPath()
+        {
+            string path = null;
+            if (_customParameters.ContainsKey("CanvasBin"))
+            {
+                string beforeFirstOption;
+                var options = Utilities.GetCommandOptions(_customParameters["CanvasBin"], out beforeFirstOption);
+                foreach (var option in options)
+                {
+                    if (option.Key != "-n" && option.Key != "--bins")
+                        continue;
+                    path = option.Value.TrimStart('=').Trim();
+                }
+                // remove bins from custom parameters
+                _customParameters["CanvasBin"] = Utilities.MergeCommandLineOptions(_customParameters["CanvasBin"], "#n #bins");
+            }
+            return path;
+        }
 
         protected IFileLocation NormalizeCoverage(CanvasCallset callset, Dictionary<string, string> bamToBinned, string ploidyBedPath)
         {
-            string tumorBinnedPath = bamToBinned[callset.Bam.BamFile.FullName]; // binned tumor sample
+            string tumorBinnedPath = bamToBinned[callset.SingleSampleCallset.Bam.BamFile.FullName]; // binned tumor sample
             string outputPath = tumorBinnedPath;
             if (callset.NormalBamPaths.Any() ||
                 (callset.IsEnrichment && (callset.Manifest.CanvasControlAvailable)) ||
@@ -421,13 +519,13 @@ namespace Illumina.SecondaryAnalysis
 
         /// <summary>
         /// Invoke CanvasNormalize.
-        /// </summary>
+        /// </summary
         /// <param name="callset"></param>
         /// <returns>path to the bin ratio bed file</returns>
         protected string InvokeCanvasNormalize(CanvasCallset callset, string tumorBinnedPath, Dictionary<string, string> bamToBinned,
             string ploidyBedPath)
         {
-            string ratioBinnedPath = Path.Combine(callset.TempFolder, string.Format("{0}.ratio.binned", callset.Id));
+            string ratioBinnedPath = Path.Combine(callset.SingleSampleCallset.TempFolder, string.Format("{0}.ratio.binned", callset.SingleSampleCallset.SampleName));
 
             string canvasNormalizePath = Path.Combine(_canvasFolder, "CanvasNormalize.exe");
             string executablePath = canvasNormalizePath;
@@ -455,7 +553,7 @@ namespace Illumina.SecondaryAnalysis
                 }
             }
 
-            commandLine.AppendFormat("-w {0} ", callset.NormalBinnedPath.WrapWithShellQuote()); // weighted average normal bed
+            commandLine.AppendFormat("-w {0} ", callset.SingleSampleCallset.NormalBinnedPath.WrapWithShellQuote()); // weighted average normal bed
 
             commandLine.AppendFormat("-o {0} ", ratioBinnedPath.WrapWithShellQuote()); // ratio bed
 
@@ -565,16 +663,28 @@ namespace Illumina.SecondaryAnalysis
         }
 
         /// <summary>
+        /// Invoke CanvasSNV on SmallPedigreeCallset callsets.  Return null if this fails and we need to abort CNV calling for this sample.
+        /// </summary>
+        protected void InvokeCanvasSnv(SmallPedigreeCallset callsets)
+        {
+            foreach (PedigreeSample callset in callsets.PedigreeSample)
+            {
+                var canvasCallset = new CanvasCallset(callset.Sample, callsets.AnalysisDetails, null, null, null);
+                InvokeCanvasSnv(canvasCallset, callset.Sample.SampleName);
+        }
+        }
+
+        /// <summary>
         /// Invoke CanvasSNV.  Return null if this fails and we need to abort CNV calling for this sample.
         /// </summary>
-        protected void InvokeCanvasSnv(CanvasCallset callset)
+        protected void InvokeCanvasSnv(CanvasCallset callset, string sampleName = null)
         {
             List<UnitOfWork> jobList = new List<UnitOfWork>();
             List<string> outputPaths = new List<string>();
-            GenomeMetadata genomeMetadata = callset.GenomeMetadata;
+            GenomeMetadata genomeMetadata = callset.AnalysisDetails.GenomeMetadata;
 
-            string tumorBamPath = callset.Bam.BamFile.FullName;
-            string normalVcfPath = callset.NormalVcfPath.FullName;
+            string bamPath = callset.SingleSampleCallset.Bam.BamFile.FullName;
+            string normalVcfPath = callset.SingleSampleCallset.NormalVcfPath.FullName;
             foreach (GenomeMetadata.SequenceMetadata chromosome in genomeMetadata.Sequences)
             {
                 // Only invoke for autosomes + allosomes;
@@ -590,27 +700,29 @@ namespace Illumina.SecondaryAnalysis
                     job.ExecutablePath = Utilities.GetMonoPath();
                 }
 
-                string outputPath = Path.Combine(callset.TempFolder, string.Format("{0}-{1}.SNV.txt.gz", chromosome.Name, callset.Id));
+                string outputPath = Path.Combine(callset.SingleSampleCallset.TempFolder, $"{chromosome.Name}-{callset.SingleSampleCallset.SampleName}.SNV.txt.gz");
                 outputPaths.Add(outputPath);
-                job.CommandLine += $" {chromosome.Name} {normalVcfPath} {tumorBamPath} {outputPath}";
+                job.CommandLine += $" {chromosome.Name} {normalVcfPath} {bamPath} {outputPath}";
+                if (!sampleName.IsNullOrEmpty())
+                    job.CommandLine += $" {sampleName}";
                 if (_customParameters.ContainsKey("CanvasSNV"))
                 {
                     job.CommandLine = Utilities.MergeCommandLineOptions(job.CommandLine, _customParameters["CanvasSNV"], true);
                 }
                 job.LoggingFolder = _workManager.LoggingFolder.FullName;
-                job.LoggingStub = string.Format("CanvasSNV-{0}-{1}", callset.Id, chromosome.Name);
+                job.LoggingStub = $"CanvasSNV-'{callset.SingleSampleCallset.SampleName}'-'{chromosome.Name}'";
                 jobList.Add(job);
             }
-            Console.WriteLine("Invoking {0} processor jobs...", jobList.Count);
+            Console.WriteLine($"Invoking {jobList.Count} processor jobs...for sample {callset.SingleSampleCallset.SampleName}");
 
             // Invoke CanvasSNV jobs:
-            Console.WriteLine(">>>CanvasSNV start...");
+            Console.WriteLine($"CanvasSNV start for sample {callset.SingleSampleCallset.SampleName}");
             _workManager.DoWorkParallelThreads(jobList);
-            Console.WriteLine(">>>CanvasSNV complete!");
+            Console.WriteLine($"CanvasSNV complete for sample {callset.SingleSampleCallset.SampleName}");
 
             // Concatenate CanvasSNV results:
-            ConcatenateCanvasSNVResults(callset.VfSummaryPath, outputPaths);
-            ConcatenateCanvasSNVBafResults(callset.VfSummaryBafPath, outputPaths.Select(path => path + ".baf"));
+            ConcatenateCanvasSNVResults(callset.SingleSampleCallset.VfSummaryPath, outputPaths);
+            ConcatenateCanvasSNVBafResults(callset.SingleSampleCallset.VfSummaryBafPath, outputPaths.Select(path => path + ".baf"));
         }
 
         protected void ConcatenateCanvasSNVResults(string vfSummaryPath, IEnumerable<string> outputPaths)
@@ -681,6 +793,12 @@ namespace Illumina.SecondaryAnalysis
             Task.Run(() => CallSampleInternal(callset)).GetAwaiter().GetResult();
         }
 
+        public void CallPedigree(SmallPedigreeCallset callset)
+        {
+            Task.Run(() => CallSampleInternal(callset)).GetAwaiter().GetResult();
+        }
+
+
         /// <summary>
         /// Germline workflow:
         /// - Run CanvasBin, CanvasClean, CanvasPartition, CanvasDiploidCaller
@@ -690,9 +808,9 @@ namespace Illumina.SecondaryAnalysis
         /// </summary>
         private async Task CallSampleInternal(CanvasCallset callset)
         {
-            Directory.CreateDirectory(callset.TempFolder);
-            string canvasReferencePath = callset.KmerFasta.FullName;
-            string canvasBedPath = callset.FilterBed.FullName;
+            Directory.CreateDirectory(callset.SingleSampleCallset.TempFolder);
+            string canvasReferencePath = callset.AnalysisDetails.KmerFasta.FullName;
+            string canvasBedPath = callset.AnalysisDetails.FilterBed.FullName;
             if (!File.Exists(canvasReferencePath))
             {
                 throw new ApplicationException(string.Format("Error: Missing reference fasta file required for CNV calling at '{0}'", canvasReferencePath));
@@ -706,7 +824,7 @@ namespace Illumina.SecondaryAnalysis
             var canvasSnvTask = _checkpointRunner.RunCheckpointAsync("CanvasSNV", () => InvokeCanvasSnv(callset));
 
             // Prepare ploidy file:
-            string ploidyBedPath = callset.PloidyBed?.FullName;
+            string ploidyBedPath = callset.AnalysisDetails.PloidyVcf?.FullName;
 
             // CanvasBin:
             var binnedPath = _checkpointRunner.RunCheckpoint("CanvasBin", () => InvokeCanvasBin(callset, canvasReferencePath, canvasBedPath, ploidyBedPath));
@@ -741,6 +859,112 @@ namespace Illumina.SecondaryAnalysis
             });
         }
 
+
+        private async Task CallSampleInternal(SmallPedigreeCallset callset)
+        {
+            Directory.CreateDirectory(callset.AnalysisDetails.TempFolder);
+            foreach (var pedigreeSample in callset.PedigreeSample)
+                Directory.CreateDirectory(pedigreeSample.Sample.TempFolder);
+
+            string canvasReferencePath = callset.AnalysisDetails.KmerFasta.FullName;
+            string canvasBedPath = callset.AnalysisDetails.FilterBed.FullName;
+            string commonCnvsBed = null;
+            if (callset.AnalysisDetails.CommonCnvsBed != null)
+                commonCnvsBed = callset.AnalysisDetails.CommonCnvsBed.FullName;
+            if (!File.Exists(canvasReferencePath))
+            {
+                throw new ApplicationException(
+                    $"Error: Missing reference fasta file required for CNV calling at '{canvasReferencePath}'");
+            }
+            if (!File.Exists(canvasBedPath))
+            {
+                throw new ApplicationException(
+                    $"Error: Missing filter bed file required for CNV calling at '{canvasBedPath}'");
+            }
+
+            // CanvasBin:
+            var binnedPaths = _checkpointRunner.RunCheckpoint("CanvasBin", () => InvokeCanvasBin(callset, canvasReferencePath, canvasBedPath));
+            if (binnedPaths == null) return;
+
+            // CanvasClean:
+            var canvasCleanOutput = _checkpointRunner.RunCheckpoint("CanvasClean", () => InvokeCanvasClean(callset, binnedPaths));
+
+            // CanvasPartition:
+            var partitionedPaths = _checkpointRunner.RunCheckpoint("CanvasPartition", () => InvokeCanvasPartitionMultisample(callset, canvasCleanOutput, canvasBedPath, commonCnvsBed));
+
+            // CanvasSNV
+            var canvasSnvTask = _checkpointRunner.RunCheckpointAsync("CanvasSNV", () => InvokeCanvasSnv(callset));
+
+            // Variant calling
+            await canvasSnvTask;
+            RunSmallPedigreeCalling(partitionedPaths, callset);
+        }
+
+        private void NormalizeCanvasClean(List<IFileLocation> cleanedPaths, string tempFolder)
+        {
+            Dictionary<string, List<MultiSampleGenomicBin>> normalizedCanvasClean = CanvasCommon.Utilities.MergeMultiSampleCleanedBedFile(cleanedPaths);
+            int fileCounter = 0;
+            foreach (IFileLocation cleanedPath in cleanedPaths)
+            {
+                using (GzipWriter writer = new GzipWriter(cleanedPath.FullName))
+                {
+                    foreach (string chr in normalizedCanvasClean.Keys)
+                    {
+                        foreach (MultiSampleGenomicBin genomicBin in normalizedCanvasClean[chr])
+                        {
+                            string outLine = string.Format($"{genomicBin.Bin.Chromosome}\t{genomicBin.Bin.Interval.Start}\t{genomicBin.Bin.Interval.End}");
+                            outLine += string.Format($"\t{genomicBin.Counts[fileCounter]}");
+                            writer.WriteLine(outLine);
+                        }
+                    }
+                }
+                fileCounter ++;
+            }
+        }
+
+        private List<IFileLocation> InvokeCanvasPartitionMultisample(SmallPedigreeCallset callsets, List<IFileLocation> cleanedPaths, string canvasBedPath, string commonCnvsBed)
+        {
+            NormalizeCanvasClean(cleanedPaths, callsets.AnalysisDetails.TempFolder);
+            StringBuilder commandLine = new StringBuilder();
+            string executablePath = Path.Combine(_canvasFolder, "CanvasPartition.exe");
+            if (CrossPlatform.IsThisMono())
+            {
+                commandLine.AppendFormat("{0} ", executablePath);
+                executablePath = Utilities.GetMonoPath();
+            }
+            foreach (IFileLocation cleanedPath in cleanedPaths)
+                commandLine.AppendFormat("-i \"{0}\" ", cleanedPath);
+
+            commandLine.AppendFormat("-b \"{0}\" ", canvasBedPath);
+
+            if (!commonCnvsBed.IsNullOrEmpty())
+                commandLine.AppendFormat("-c \"{0}\" ", commonCnvsBed);
+
+            List<IFileLocation> partitionedPaths = new List<IFileLocation>();
+            foreach (var pedigreeSample in callsets.PedigreeSample)
+            {
+                IFileLocation partitionedPath = new FileLocation(Path.Combine(pedigreeSample.Sample.TempFolder, $"{pedigreeSample.Sample.SampleName}.partitioned"));
+                partitionedPaths.Add(partitionedPath);
+                commandLine.AppendFormat("-o \"{0}\" ", partitionedPath);
+            }
+
+            commandLine.AppendFormat("-m HMM");
+
+            UnitOfWork partitionJob = new UnitOfWork()
+            {
+                ExecutablePath = executablePath,
+                LoggingFolder = _workManager.LoggingFolder.FullName,
+                LoggingStub = Path.GetFileName(partitionedPaths.First().ToString()),
+                CommandLine = commandLine.ToString()
+            };
+            if (_customParameters.ContainsKey("CanvasPartition"))
+            {
+                partitionJob.CommandLine = Utilities.MergeCommandLineOptions(partitionJob.CommandLine, _customParameters["CanvasPartition"], true);
+            }
+            _workManager.DoWorkSingleThread(partitionJob);
+            return partitionedPaths;
+        }
+
         private IFileLocation InvokeCanvasPartition(CanvasCallset callset, IFileLocation cleanedPath, string canvasBedPath)
         {
             StringBuilder commandLine = new StringBuilder();
@@ -752,7 +976,7 @@ namespace Illumina.SecondaryAnalysis
             }
             commandLine.AppendFormat("-i \"{0}\" ", cleanedPath);
             commandLine.AppendFormat("-b \"{0}\" ", canvasBedPath);
-            string partitionedPath = Path.Combine(callset.TempFolder, string.Format("{0}.partitioned", callset.Id));
+            string partitionedPath = Path.Combine(callset.SingleSampleCallset.TempFolder, string.Format("{0}.partitioned", callset.SingleSampleCallset.SampleName));
             commandLine.AppendFormat("-o \"{0}\" ", partitionedPath);
             if (!_isSomatic)
                 commandLine.AppendFormat(" -g");
@@ -772,6 +996,28 @@ namespace Illumina.SecondaryAnalysis
             return new FileLocation(partitionedPath);
         }
 
+        /// <summary>
+        /// Invoke CanvasClean on SmallPedigreeCallset callsets. 
+        /// </summary>
+        protected List<IFileLocation> InvokeCanvasClean(SmallPedigreeCallset callsets, List<string> binnedPaths)
+        {
+            List<IFileLocation> cleanedPaths = new List<IFileLocation>();
+            if (callsets.PedigreeSample.Count != binnedPaths.Count)
+                throw new Exception($"Number of output CanvasBin files {binnedPaths.Count} is not equal to the number of Canvas callsets {callsets.PedigreeSample.Count}");
+            for (int i = 0; i < callsets.PedigreeSample.Count; i++)
+            {
+                IFileLocation binnedPath = new FileLocation(binnedPaths[i]);
+
+                var canvasCallset = new CanvasCallset(callsets.PedigreeSample[i].Sample, callsets.AnalysisDetails, null, null, null);
+                Console.WriteLine($"Created callset");
+
+                cleanedPaths.Add(InvokeCanvasClean(canvasCallset, binnedPath).CleanedPath);
+                Console.WriteLine($"Run InvokeCanvasClean");
+
+            }
+            return cleanedPaths;
+        }
+
         private CanvasCleanOutput InvokeCanvasClean(CanvasCallset callset, IFileLocation binnedPath)
         {
             StringBuilder commandLine = new StringBuilder();
@@ -783,8 +1029,8 @@ namespace Illumina.SecondaryAnalysis
                 executablePath = Utilities.GetMonoPath();
             }
             commandLine.AppendFormat("-i \"{0}\" ", binnedPath);
-            var tempFolder = new DirectoryLocation(callset.TempFolder);
-            var cleanedPath = tempFolder.GetFileLocation($"{callset.Id}.cleaned");
+            var tempFolder = new DirectoryLocation(callset.SingleSampleCallset.TempFolder);
+            var cleanedPath = tempFolder.GetFileLocation($"{callset.SingleSampleCallset.SampleName}.cleaned");
             commandLine.AppendFormat("-o \"{0}\" ", cleanedPath);
             commandLine.AppendFormat("-g");
 
@@ -832,23 +1078,23 @@ namespace Illumina.SecondaryAnalysis
 
             // Prepare and run CanvasSomaticCaller job:
             UnitOfWork callerJob = new UnitOfWork();
-            var cnvVcfPath = callset.OutputVcfPath;
+            var cnvVcfPath = callset.SingleSampleCallset.OutputVcfPath;
             callerJob.ExecutablePath = Path.Combine(this._canvasFolder, "CanvasSomaticCaller.exe");
             if (CrossPlatform.IsThisMono())
             {
                 callerJob.CommandLine = callerJob.ExecutablePath;
                 callerJob.ExecutablePath = Utilities.GetMonoPath();
             }
-            callerJob.CommandLine += string.Format(" -v {0}", callset.VfSummaryPath);
-            callerJob.CommandLine += string.Format(" -i {0}", partitionedPath);
-            callerJob.CommandLine += string.Format(" -o {0}", cnvVcfPath);
-            callerJob.CommandLine += string.Format(" -b {0}", canvasBedPath);
+            callerJob.CommandLine += $" -v {callset.SingleSampleCallset.VfSummaryPath}";
+            callerJob.CommandLine += $" -i {partitionedPath}";
+            callerJob.CommandLine += $" -o {cnvVcfPath}";
+            callerJob.CommandLine += $" -b {canvasBedPath}";
             if (!string.IsNullOrEmpty(ploidyBedPath))
-                callerJob.CommandLine += string.Format(" -p {0}", ploidyBedPath);
-            callerJob.CommandLine += string.Format(" -n {0}", callset.SampleName);
+                callerJob.CommandLine += $" -p {ploidyBedPath}";
+            callerJob.CommandLine += $" -n {callset.SingleSampleCallset.SampleName}";
             if (callset.IsEnrichment)
                 callerJob.CommandLine += " -e";
-            if (callset.IsDbSnpVcf) // a dbSNP VCF file is used in place of the normal VCF file
+            if (callset.SingleSampleCallset.IsDbSnpVcf) // a dbSNP VCF file is used in place of the normal VCF file
                 callerJob.CommandLine += " -d";
             // get localSD metric:
             if (ffpePath != null)
@@ -857,7 +1103,7 @@ namespace Illumina.SecondaryAnalysis
                 // If it's not present, just carry on:
                 if (ffpePath.Exists)
                 {
-                    callerJob.CommandLine += string.Format(" -f \"{0}\"", ffpePath);
+                    callerJob.CommandLine += $" -f \"{ffpePath}\"";
                 }
                 else
                 {
@@ -866,15 +1112,81 @@ namespace Illumina.SecondaryAnalysis
             }
 
             if (!string.IsNullOrEmpty(somaticSnvPath))
-                callerJob.CommandLine += string.Format(" -s {0}", somaticSnvPath);
-            callerJob.CommandLine += string.Format(" -r \"{0}\" ", callset.WholeGenomeFastaFolder);
+                callerJob.CommandLine += $" -s {somaticSnvPath}";
+            callerJob.CommandLine += $" -r \"{callset.AnalysisDetails.WholeGenomeFastaFolder}\" ";
             if (_customParameters.ContainsKey("CanvasSomaticCaller"))
             {
                 callerJob.CommandLine = Utilities.MergeCommandLineOptions(callerJob.CommandLine, _customParameters["CanvasSomaticCaller"], true);
             }
             callerJob.LoggingFolder = _workManager.LoggingFolder.FullName;
-            callerJob.LoggingStub = string.Format("SomaticCNV-{0}", callset.Id);
+            callerJob.LoggingStub = $"SomaticCNV-{callset.SingleSampleCallset.SampleName}";
             _workManager.DoWorkSingleThread(callerJob);
+        }
+
+        protected void RunSmallPedigreeCalling(List<IFileLocation> partitionedPaths, SmallPedigreeCallset callsets)
+        {
+
+            if (callsets.PedigreeSample.Count != partitionedPaths.Count)
+                throw new Exception($"Number of output CanvasPartition files {partitionedPaths.Count} is not equal to the number of Canvas callsets {callsets.PedigreeSample.Count}");
+
+            string pedigreeFile = WritePedigreeFile(callsets);
+
+            // CanvasSmallPedigreeCaller:
+            StringBuilder commandLine = new StringBuilder {Length = 0};
+
+            string executablePath = Path.Combine(_canvasFolder, "CanvasPedigreeCaller.exe");
+            if (CrossPlatform.IsThisMono())
+            {
+                commandLine.AppendFormat("{0} ", executablePath);
+                executablePath = Utilities.GetMonoPath();
+            }
+            foreach (IFileLocation partitionedPath in partitionedPaths)
+                commandLine.AppendFormat("-i \"{0}\" ", partitionedPath);              
+
+            foreach (var callset in callsets.PedigreeSample)
+            {
+                commandLine.AppendFormat("-v \"{0}\" ", callset.Sample.VfSummaryPath);
+                commandLine.AppendFormat("-n \"{0}\" ", callset.Sample.SampleName);
+                commandLine.AppendFormat("-o \"{0}\" ", callset.Sample.OutputVcfPath); 
+            }
+            commandLine.AppendFormat("-r \"{0}\" ", callsets.AnalysisDetails.WholeGenomeFastaFolder);
+            commandLine.AppendFormat("-f \"{0}\" ", pedigreeFile);
+            commandLine.AppendFormat("-p \"{0}\" ", callsets.AnalysisDetails.PloidyVcf);
+
+            UnitOfWork callJob = new UnitOfWork()
+            {
+                ExecutablePath = executablePath,
+                LoggingFolder = _workManager.LoggingFolder.FullName,
+                LoggingStub = "CanvasPedigreeCaller",
+                CommandLine = commandLine.ToString()
+            };
+
+            if (_customParameters.ContainsKey("CanvasPedigreeCaller"))
+            {
+                callJob.CommandLine = Utilities.MergeCommandLineOptions(callJob.CommandLine, _customParameters["CanvasPedigreeCaller"], true);
+            }
+
+            _workManager.DoWorkSingleThread(callJob);
+        }
+
+        private static string  WritePedigreeFile(SmallPedigreeCallset callsets)
+        {
+            string outFile = Path.Combine(callsets.AnalysisDetails.OutputFolder.FullName, "pedigree.ped");
+            string motherSampleName = callsets.PedigreeSample.Where(x => x.SampleType == SampleType.Mother).Select(x => x.Sample.SampleName).Single();
+            string fatherSampleName = callsets.PedigreeSample.Where(x => x.SampleType == SampleType.Father).Select(x => x.Sample.SampleName).Single();
+
+            using (StreamWriter writer = new StreamWriter(outFile))
+            {
+                foreach (PedigreeSample callset in callsets.PedigreeSample) 
+                    if (callset.SampleType == SampleType.Mother || callset.SampleType == SampleType.Father)
+                        writer.WriteLine($"1\t{callset.Sample.SampleName}\t0\t0\t0\t0");
+                    else
+                    {
+                        string phenotype = callset.SampleType == SampleType.Proband ? "affected" : "0";
+                        writer.WriteLine($"1\t{callset.Sample.SampleName}\t{fatherSampleName}\t{motherSampleName}\t0\t{phenotype}");
+                    }
+            }
+            return outFile;
         }
 
         protected void RunGermlineCalling(IFileLocation partitionedPath, CanvasCallset callset, string ploidyBedPath)
@@ -890,16 +1202,16 @@ namespace Illumina.SecondaryAnalysis
                 executablePath = Utilities.GetMonoPath();
             }
             commandLine.AppendFormat("-i \"{0}\" ", partitionedPath);
-            commandLine.AppendFormat("-v \"{0}\" ", callset.VfSummaryPath);
-            var cnvVcfPath = callset.OutputVcfPath;
+            commandLine.AppendFormat("-v \"{0}\" ", callset.SingleSampleCallset.VfSummaryPath);
+            var cnvVcfPath = callset.SingleSampleCallset.OutputVcfPath;
             commandLine.AppendFormat("-o \"{0}\" ", cnvVcfPath);
-            commandLine.AppendFormat("-n \"{0}\" ", callset.SampleName);
-            commandLine.AppendFormat("-r \"{0}\" ", callset.WholeGenomeFastaFolder);
+            commandLine.AppendFormat("-n \"{0}\" ", callset.SingleSampleCallset.SampleName);
+            commandLine.AppendFormat("-r \"{0}\" ", callset.AnalysisDetails.WholeGenomeFastaFolder);
             if (!string.IsNullOrEmpty(ploidyBedPath))
             {
                 commandLine.AppendFormat("-p \"{0}\" ", ploidyBedPath);
             }
-            if (callset.IsDbSnpVcf) // a dbSNP VCF file is used in place of the normal VCF file
+            if (callset.SingleSampleCallset.IsDbSnpVcf) // a dbSNP VCF file is used in place of the normal VCF file
                 commandLine.AppendFormat("-d ");
             UnitOfWork callJob = new UnitOfWork()
             {

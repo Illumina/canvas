@@ -2,10 +2,25 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.IO;
+using System.Net.Mime;
+using Illumina.Common;
 using Isas.SequencingFiles;
 
 namespace CanvasCommon
 {
+    public class Alleles
+    {
+        public List<float> Frequencies = new List<float>();
+        public List<int> TotalCoverage = new List<int>();
+        public List<Tuple<int, int>> Counts = new List<Tuple<int, int>>();
+        public Tuple<int, int> MedianCounts;
+        public void SetMedianCounts()
+        {
+            var item1 = Utilities.Median(Counts.Select(x => x.Item1).ToList());
+            var item2 = Utilities.Median(Counts.Select(x => x.Item2).ToList());
+            MedianCounts = new Tuple<int, int>(item1, item2);
+        }
+    }
     /// <summary>
     /// Contains information about a genomic interval. Has functions for computing copy numbers and their likelihoods.
     /// </summary>
@@ -15,10 +30,9 @@ namespace CanvasCommon
         public List<float> Counts;
         public int CopyNumber { get; set; }
         public int SecondBestCopyNumber { get; set; }
-        public List<float> VariantFrequencies = new List<float>();
-        public List<int> VariantTotalCoverage = new List<int>();
         public int? MajorChromosomeCount;
         public double QScore;
+        public double? DQScore;
         public double ModelDistance;
         public double RunnerUpModelDistance;
         public bool CopyNumberSwapped;
@@ -27,20 +41,20 @@ namespace CanvasCommon
         public string Filter = "PASS";
         public Tuple<int, int> StartConfidenceInterval; // if not null, this is a confidence interval around Start, reported in the CIPOS tag
         public Tuple<int, int> EndConfidenceInterval; // if not null, this is a confidence interval around End, reported in the CIEND tag
+        public Alleles Alleles;
         public string Chr { get; private set; }
         /// <summary>
         /// bed format start position
         /// zero-based inclusive start position
         /// </summary>
         public int Begin { get; private set; }
-
         /// <summary>
         /// bed format end position
         /// zero-based exclusive end position (i.e. the same as one-based inclusive end position)
         /// </summary>
         public int End { get; private set; }
         #endregion
-
+        public int Length => End - Begin;
         /// <summary>
         /// Mean of the segment's counts.
         /// </summary>
@@ -48,9 +62,7 @@ namespace CanvasCommon
         {
             get
             {
-                double sum = 0;
-                foreach (double x in this.Counts)
-                    sum += x;
+                double sum = this.Counts.Sum();
                 return sum / this.BinCount;
             }
         }
@@ -59,10 +71,22 @@ namespace CanvasCommon
         {
             get
             {
-                if (this.VariantFrequencies.Count <= 5)
+                if (this.Alleles.Frequencies.Count <= 5)
                     return null;
 
-                return this.VariantFrequencies.Average();
+                return this.Alleles.Frequencies.Average();
+            }
+        }
+
+        /// <summary>
+        /// Median of the segment's counts.
+        /// </summary>
+        public double MedianCount
+        {
+            get
+            {
+                var sorted = new SortedList<double>(this.Counts.Select(x=>Convert.ToDouble(x)));
+                return sorted.Median();              
             }
         }
 
@@ -96,8 +120,8 @@ namespace CanvasCommon
                 this.End = s.End;
             }
             this.Counts.AddRange(s.Counts);
-            this.VariantFrequencies.AddRange(s.VariantFrequencies);
-            this.VariantTotalCoverage.AddRange(s.VariantTotalCoverage);
+            Alleles.Frequencies.AddRange(s.Alleles.Frequencies);
+            Alleles.TotalCoverage.AddRange(s.Alleles.TotalCoverage);
 
         }
 
@@ -109,15 +133,11 @@ namespace CanvasCommon
             this.Counts = new List<float>(counts);
             this.CopyNumber = -1;
             this.SecondBestCopyNumber = -1;
+            this.Alleles = new Alleles();
         }
 
-        public int BinCount
-        {
-            get
-            {
-                return Counts.Count;
-            }
-        }
+        public int BinCount => Counts.Count;
+
 
         /// <summary>
         /// Compute the median count from a list of segments.
@@ -233,17 +253,14 @@ namespace CanvasCommon
         /// </summary>
         private static void SanityCheckChromosomeNames(GenomeMetadata genome, List<CanvasSegment> segments)
         {
-            HashSet<string> chromosomeNames = new HashSet<string>();
+            var chromosomeNames = new HashSet<string>();
             foreach (GenomeMetadata.SequenceMetadata chromosome in genome.Sequences)
             {
                 chromosomeNames.Add(chromosome.Name.ToLowerInvariant());
             }
-            foreach (CanvasSegment segment in segments)
+            foreach (CanvasSegment segment in segments.Where(segment => !chromosomeNames.Contains(segment.Chr.ToLowerInvariant())))
             {
-                if (!chromosomeNames.Contains(segment.Chr.ToLowerInvariant()))
-                {
-                    throw new Exception(string.Format("Integrity check error: Segment found at unknown chromosome '{0}'", segment.Chr));
-                }
+                throw new Exception($"Integrity check error: Segment found at unknown chromosome '{segment.Chr}'");
             }
         }
 
@@ -262,14 +279,11 @@ namespace CanvasCommon
         {
             double totalPloidy = 0;
             double totalWeight = 0;
-            foreach (CanvasSegment segment in segments)
-            {
-                if (segment.Filter == "PASS")
+            foreach (CanvasSegment segment in segments.Where(segment => segment.Filter == "PASS"))
                 {
                     totalWeight += segment.End - segment.Begin;
                     totalPloidy += segment.CopyNumber * (segment.End - segment.Begin);
                 }
-            }
             if (totalWeight > 0)
             {
                 writer.WriteLine($"##OverallPloidy={totalPloidy / totalWeight:F2}");
@@ -281,7 +295,7 @@ namespace CanvasCommon
         /// Outputs the copy number calls to a text file.
         /// </summary>
         public static void WriteSegments(string outVcfPath, List<CanvasSegment> segments, double? diploidCoverage, string wholeGenomeFastaDirectory, string sampleName,
-            List<string> extraHeaders, PloidyInfo ploidy, int qualityThreshold)
+            List<string> extraHeaders, PloidyInfo ploidy, int qualityThreshold, int? denovoQualityThreshold = null)
         {
             using (BgzipOrStreamWriter writer = new BgzipOrStreamWriter(outVcfPath))
             {
@@ -305,11 +319,18 @@ namespace CanvasCommon
                 writer.WriteLine("##ALT=<ID=CNV,Description=\"Copy number variable region\">");
                 writer.WriteLine($"##FILTER=<ID={qualityFilter},Description=\"Quality below {qualityThreshold}\">");
                 writer.WriteLine("##FILTER=<ID=L10kb,Description=\"Length shorter than 10kb\">");
+                string denovoQualityFilter = "";
+                if (denovoQualityThreshold.HasValue)
+                {
+                    denovoQualityFilter = $"dq{denovoQualityThreshold}";
+                    writer.WriteLine($"##FILTER=<ID={denovoQualityFilter},Description=\"De novo quality score above {denovoQualityThreshold.Value}\">");
+                }
                 writer.WriteLine("##INFO=<ID=CIEND,Number=2,Type=Integer,Description=\"Confidence interval around END for imprecise variants\">");
                 writer.WriteLine("##INFO=<ID=CIPOS,Number=2,Type=Integer,Description=\"Confidence interval around POS for imprecise variants\">");
                 writer.WriteLine("##INFO=<ID=CNVLEN,Number=1,Type=Integer,Description=\"Number of reference positions spanned by this CNV\">");
                 writer.WriteLine("##INFO=<ID=END,Number=1,Type=Integer,Description=\"End position of the variant described in this record\">");
                 writer.WriteLine("##INFO=<ID=SVTYPE,Number=1,Type=String,Description=\"Type of structural variant\">");
+                writer.WriteLine("##INFO=<ID=DQSCORE,Number=1,Type=String,Description=\"De novo Phred-scaled quality score\">");
                 writer.WriteLine("##INFO=<ID=SUBCLONAL,Number=0,Type=Flag,Description=\"Subclonal variant\">");
                 writer.WriteLine("##FORMAT=<ID=RC,Number=1,Type=Float,Description=\"Mean counts per bin in the region\">");
                 writer.WriteLine("##FORMAT=<ID=BC,Number=1,Type=Float,Description=\"Number of bins in the region\">");
@@ -335,12 +356,19 @@ namespace CanvasCommon
                         int position = (alternateAllele.StartsWith("<") && alternateAllele.EndsWith(">")) ? segment.Begin : segment.Begin + 1;
                         writer.Write($"{segment.Chr}\t{position}\tCanvas:{cnvType.ToVcfId()}:{segment.Chr}:{segment.Begin + 1}-{segment.End}\t");
 
-                        writer.Write($"N\t{alternateAllele}\t{segment.QScore}\t{segment.Filter}\t", alternateAllele, segment.QScore, segment.Filter);
+                        writer.Write($"N\t{alternateAllele}\t{segment.QScore:F2}\t{segment.Filter}\t", alternateAllele, segment.QScore, segment.Filter);
 
                         if (cnvType != CnvType.Reference)
                             writer.Write($"SVTYPE={cnvType.ToSvType()};");
                         if (segment.IsHeterogeneous)
                             writer.Write("SUBCLONAL;");
+                        if (segment.DQScore.HasValue)
+                        {
+                            writer.Write($"DQSCORE={segment.DQScore.Value:F2};");
+                            if (denovoQualityThreshold < segment.DQScore.Value)
+                                writer.Write($"{denovoQualityFilter};");
+
+                        }
                         writer.Write($"END={segment.End}");
                         if (cnvType != CnvType.Reference)
                             writer.Write($";CNVLEN={segment.End - segment.Begin}");
@@ -514,16 +542,16 @@ namespace CanvasCommon
                             firstIndex = 0;
                             if (pointStartPos > segment.Begin)
                             {
-                                firstIndex = (int)((float)segment.VariantFrequencies.Count * (pointStartPos - segment.Begin) / segLength);
+                                firstIndex = (int)((float)segment.Alleles.Frequencies.Count * (pointStartPos - segment.Begin) / segLength);
                             }
-                            lastIndex = segment.VariantFrequencies.Count;
+                            lastIndex = segment.Alleles.Frequencies.Count;
                             if (pointEndPos < segment.End)
                             {
-                                lastIndex = (int)((float)segment.VariantFrequencies.Count * (pointEndPos - segment.Begin) / segLength);
+                                lastIndex = (int)((float)segment.Alleles.Frequencies.Count * (pointEndPos - segment.Begin) / segLength);
                             }
                             for (int index = firstIndex; index < lastIndex; index++)
                             {
-                                float tempMAF = segment.VariantFrequencies[index];
+                                float tempMAF = segment.Alleles.Frequencies[index];
                                 VF.Add(tempMAF);
                                 if (tempMAF > 0.5) tempMAF = 1 - tempMAF;
                                 MAF.Add(tempMAF);
@@ -596,11 +624,11 @@ namespace CanvasCommon
         /// Return true if we are not allowed to merge two segments separated by the interval (start, end).
         /// </summary>
         static private bool IsForbiddenInterval(string chr, int start, int end,
-            Dictionary<string, List<GenomicBin>> excludedIntervals)
+            Dictionary<string, List<SampleGenomicBin>> excludedIntervals)
         {
             if (excludedIntervals == null) return false;
             if (!excludedIntervals.ContainsKey(chr)) return false;
-            foreach (GenomicBin bin in excludedIntervals[chr])
+            foreach (SampleGenomicBin bin in excludedIntervals[chr])
             {
                 if (bin.Start >= start && bin.Start <= end) return true;
                 if (bin.Stop >= start && bin.Stop <= end) return true;
@@ -616,7 +644,7 @@ namespace CanvasCommon
         /// and the space between them doesn't overlap with any excluded intervals.
         /// </summary>
         static public void MergeSegmentsUsingExcludedIntervals(ref List<CanvasSegment> segments, int MinimumCallSize,
-            Dictionary<string, List<GenomicBin>> excludedIntervals)
+            Dictionary<string, List<SampleGenomicBin>> excludedIntervals)
         {
             if (!segments.Any()) return;
 
@@ -711,8 +739,7 @@ namespace CanvasCommon
         /// quality score.  Two consecutive segments are considered neighbors if they're on the same chromosome
         /// and the space between them is not too large.
         /// </summary>
-        static public void MergeSegments(ref List<CanvasSegment> segments, int MinimumCallSize = 0,
-            int maximumMergeSpan = 10000)
+        static public void MergeSegments(ref List<CanvasSegment> segments, int MinimumCallSize = 0, int maximumMergeSpan = 10000)
         {
             if (!segments.Any()) return;
 
@@ -889,16 +916,16 @@ namespace CanvasCommon
                     return Utilities.CoefficientOfVariation(this.Counts);
 
                 case QScorePredictor.MafCount:
-                    return this.VariantFrequencies.Count;
+                    return Alleles.Frequencies.Count;
 
                 case QScorePredictor.MafMean:
-                    if (this.VariantFrequencies.Count == 0) return 0;
-                    return this.VariantFrequencies.Average();
+                    if (Alleles.Frequencies.Count == 0) return 0;
+                    return Alleles.Frequencies.Average();
 
                 case QScorePredictor.MafCv:
-                    if (this.VariantFrequencies.Count == 0) return 0;
-                    if (this.VariantFrequencies.Average() == 0) return 0;
-                    return Utilities.CoefficientOfVariation(this.VariantFrequencies);
+                    if (Alleles.Frequencies.Count == 0) return 0;
+                    if (Alleles.Frequencies.Average() == 0) return 0;
+                    return Utilities.CoefficientOfVariation(Alleles.Frequencies);
 
                 case QScorePredictor.LogMafCv:
                     return Math.Log10(1 + GetQScorePredictor(QScorePredictor.MafCv));

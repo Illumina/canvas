@@ -2,8 +2,9 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.IO;
-
 using Illumina.Common;
+using Isas.SequencingFiles;
+using Isas.Shared.Utilities.FileSystem;
 
 namespace CanvasCommon
 {
@@ -110,6 +111,7 @@ namespace CanvasCommon
                     throw new Exception(string.Format("Invalid CanvasClean mode '{0}'", mode));
             }
         }
+
 
         static public CanvasSomaticClusteringMode ParseCanvasSomaticClusteringMode(string mode)
         {
@@ -293,6 +295,52 @@ namespace CanvasCommon
                 sum += diff * diff;
             }
             return Math.Sqrt(sum / (x.Count - 1));
+        }
+
+        // estimate variance of double list
+        static public double Variance(List<double> x)
+        {
+
+            double mu = x.Average();
+            double sum = 0;
+
+            for (int i = 0; i < x.Count; i++)
+            {
+                double diff = x[i] - mu;
+                sum += diff * diff;
+            }
+            return sum / (x.Count - 1);
+        }
+
+        public static double WeightedVariance(List<double> x, double[] weights)
+        {
+
+            double mu = WeightedMean(x, weights.ToList());
+            double sum = 0;
+            double denominator = 0;
+            for (int i = 0; i < x.Count; i++)
+            {
+                double diff = x[i] - mu;
+                sum += diff * diff * weights[i];
+                denominator += weights[i];
+            }
+            return sum / denominator;
+        }
+
+        // estimate Standard Deviation of double list
+        public static double WeightedStandardDeviation(List<double> x, double[] weights)
+        {
+
+            double mu = x.Average();
+            double sum = 0;
+            double denominator = 0;
+            for (int i = 0; i < x.Count; i++)
+            {
+                double diff = x[i] - mu;
+                sum += diff * diff * weights[i];
+                denominator += weights[i];
+            }
+            return Math.Sqrt(sum / denominator);
         }
 
         /// <summary>
@@ -572,6 +620,32 @@ namespace CanvasCommon
             return Math.Sqrt(norm2);
         }
 
+
+        public static double[][] MatrixCreate(int rows, int cols)
+        {
+
+            double[][] result = new double[rows][];
+            for (int i = 0; i < rows; ++i)
+                result[i] = new double[cols];
+            return result;
+        }
+
+        /// <summary>
+        /// Allocates/creates a 3D matrix initialized to all 0.0, assume rows and cols > 0
+        /// </summary>
+        public static double[][][] MatrixCreate(int rows, int cols1, int cols2)
+        {
+
+            double[][][] result = new double[rows][][];
+            for (int i = 0; i < rows; ++i)
+            {
+                result[i] = new double[cols1][];
+                for (int j = 0; j < cols1; ++j)
+                    result[i][j] = new double[cols2];
+            }
+            return result;
+        }
+
         /// <summary>
         /// Returns the normalized vector by 2-norm
         /// </summary>
@@ -693,6 +767,7 @@ namespace CanvasCommon
             return projected;
         }
 
+
         public static IEnumerable<float> MedianFilter(IEnumerable<float> values, uint halfWindowSize)
         {
             uint boundaryWindowSize = halfWindowSize + 1;
@@ -719,9 +794,10 @@ namespace CanvasCommon
             }
         }
 
-        public static Dictionary<string, List<GenomicBin>> LoadBedFile(string bedPath, int? gcIndex = null)
+
+        public static Dictionary<string, List<SampleGenomicBin>> LoadBedFile(string bedPath, int? gcIndex = null)
         {
-            Dictionary<string, List<GenomicBin>> excludedIntervals = new Dictionary<string, List<GenomicBin>>();
+            Dictionary<string, List<SampleGenomicBin>> excludedIntervals = new Dictionary<string, List<SampleGenomicBin>>();
             int count = 0;
             using (StreamReader reader = new StreamReader(bedPath))
             {
@@ -731,9 +807,9 @@ namespace CanvasCommon
                     if (fileLine == null) break;
                     string[] bits = fileLine.Split('\t');
                     string chr = bits[0];
-                    if (!excludedIntervals.ContainsKey(chr)) excludedIntervals[chr] = new List<GenomicBin>();
-                    GenomicBin interval = new GenomicBin();
-                    interval.Chromosome = chr;
+                    if (!excludedIntervals.ContainsKey(chr)) excludedIntervals[chr] = new List<SampleGenomicBin>();
+                    SampleGenomicBin interval = new SampleGenomicBin();
+                    interval.GenomicBin.Chromosome = chr;
                     interval.Start = int.Parse(bits[1]);
                     interval.Stop = int.Parse(bits[2]);
                     if (interval.Start < 0)
@@ -746,7 +822,7 @@ namespace CanvasCommon
                     }
                     if (gcIndex.HasValue && gcIndex.Value < bits.Length)
                     {
-                        interval.GC = int.Parse(bits[gcIndex.Value]);
+                        interval.GenomicBin.GC = int.Parse(bits[gcIndex.Value]);
                     }
                     excludedIntervals[chr].Add(interval);
                     count++;
@@ -756,7 +832,99 @@ namespace CanvasCommon
             return excludedIntervals;
         }
 
-        static public void SortAndOverlapCheck(Dictionary<string, List<GenomicBin>> intervals, string bedPath)
+
+        /// <summary>
+        /// Loads .cleaned bed files, merges bins from multiple samples and returns GenomicBin objects with MultiSampleCount 
+        /// </summary>
+        public static Dictionary<string, List<MultiSampleGenomicBin>> MergeMultiSampleCleanedBedFile(List<IFileLocation> canvasCleanBedPaths)
+        {
+            // initialize variables to hold multi-sample bed files 
+            Dictionary<string, List<MultiSampleGenomicBin>> multiSampleGenomicBins = new Dictionary<string, List<MultiSampleGenomicBin>>();
+            Dictionary<string, Dictionary<int, int>> start = new Dictionary<string, Dictionary<int, int>>();
+            Dictionary<string, Dictionary<int, int>> stop = new Dictionary<string, Dictionary<int, int>>();
+            Dictionary<string, Dictionary<int, List<float>>> binCounts = new Dictionary<string, Dictionary<int, List<float>>>();
+            List<int> counts = new List<int>();
+            HashSet<string> chromosomes = new HashSet<string>();
+            Console.WriteLine("Merge and normalize CanvasClean bed files");
+
+            foreach (IFileLocation bedPath in canvasCleanBedPaths)
+            {
+                int count = 0;
+                using (GzipReader reader = new GzipReader(bedPath.FullName))
+                {
+                    while (true)
+                    {
+                        string fileLine = reader.ReadLine();
+                        if (fileLine == null) break;
+                        string[] lineBedFile = fileLine.Split('\t');
+                        string chr = lineBedFile[0];
+                        if (!chromosomes.Contains(chr)) chromosomes.Add(chr);
+                        count++;
+                    }
+                }
+                counts.Add(count);
+                Console.WriteLine($"count {count}");
+            }
+            foreach (string chr in chromosomes)
+            {
+                start[chr] = new Dictionary<int, int>();
+                stop[chr] = new Dictionary<int, int>();
+                binCounts[chr] = new Dictionary<int, List<float>>();
+            }
+
+            // read counts and segmentIDs
+            foreach (IFileLocation bedPath in canvasCleanBedPaths)
+            {
+                Console.WriteLine(bedPath);
+
+                using (GzipReader reader = new GzipReader(bedPath.FullName))
+                {
+                    while (true)
+                    {
+                        string fileLine = reader.ReadLine();
+                        if (fileLine == null) break;
+                        string[] lineBedFile = fileLine.Split('\t');
+                        string chr = lineBedFile[0];
+                        int pos = int.Parse(lineBedFile[1]);
+                        start[chr][pos] = pos;
+                        stop[chr][pos] = int.Parse(lineBedFile[2]);
+  
+                        if (binCounts[chr].ContainsKey(pos))                      
+                            binCounts[chr][pos].Add(float.Parse(lineBedFile[3]));                       
+                        else
+                            binCounts[chr][pos] = new List<float> {float.Parse(lineBedFile[3])};
+                    }
+                }
+            }
+            Console.WriteLine("create GenomeBin intervals");
+
+            // create GenomeBin intervals
+
+            foreach (string chr in chromosomes)
+            {
+                if (!multiSampleGenomicBins.ContainsKey(chr)) multiSampleGenomicBins[chr] = new List<MultiSampleGenomicBin>();
+                var binStartPositions = start[chr].Keys.ToList();
+                foreach (var binStartPosition in binStartPositions)
+                {
+                    // if outlier is removed in one sample, remove it in all samples
+                    if (binCounts[chr][binStartPosition].Count < canvasCleanBedPaths.Count)
+                        continue;
+                    if (binStartPosition < 0)
+                    {
+                        throw new ApplicationException($"Start must be non-negative");
+                    }
+                    if (binStartPosition >= stop[chr][binStartPosition]) // Do not allow empty intervals
+                    {
+                        throw new ApplicationException($"Start must be less than Stop");
+                    }
+                    GenomicBin interval = new GenomicBin(chr, new GenomicInterval(binStartPosition, stop[chr][binStartPosition]));                  
+                    multiSampleGenomicBins[chr].Add(new MultiSampleGenomicBin(interval, binCounts[chr][binStartPosition]));
+                }
+            }
+            return multiSampleGenomicBins;
+        }
+
+        static public void SortAndOverlapCheck(Dictionary<string, List<SampleGenomicBin>> intervals, string bedPath)
         {
             List<string> chrs = new List<string>(intervals.Keys);
             for (int chrIndex = 0; chrIndex < chrs.Count; chrIndex++)
@@ -764,7 +932,7 @@ namespace CanvasCommon
                 string chr = chrs[chrIndex];
                 if (intervals[chr].Count < 2)
                     continue;
-                List<GenomicBin> intervalByChrSorted = intervals[chr].OrderBy(o => o.Start).ToList();
+                List<SampleGenomicBin> intervalByChrSorted = intervals[chr].OrderBy(o => o.Start).ToList();
                 for (int index = 0; index < intervalByChrSorted.Count - 1; index++)
                 {
                     if (intervalByChrSorted[index + 1].Start < intervalByChrSorted[index].Stop)
@@ -790,7 +958,7 @@ namespace CanvasCommon
             return 0.5 - 1 / (3.352 * Math.Pow(expectedCoverage, 0.4747));
         }
 
-        static public void PruneVariantFrequencies(List<CanvasSegment> segments, string tempFolder, ref int MinimumVariantFrequenciesForInformativeSegment)
+        static public void PruneFrequencies(List<CanvasSegment> segments, string tempFolder, ref int MinimumVariantFrequenciesForInformativeSegment)
         {
             string debugPath = Path.Combine(tempFolder, "BAFDistributionPerSegment.txt");
             using (StreamWriter writer = new StreamWriter(debugPath))
@@ -798,13 +966,13 @@ namespace CanvasCommon
                 foreach (CanvasSegment segment in segments)
                 {
                     writer.Write(String.Format("{0}\t{1}\t{2}", segment.Chr, segment.Begin, segment.End));
-                    float[] mafs = new float[segment.VariantFrequencies.Count];
+                    float[] mafs = new float[segment.Alleles.Frequencies.Count];
                     List<int> zeroIndices = new List<int>();
                     List<int> nonZeroIndices = new List<int>();
                     bool isGreaterThan20 = false;
                     for (int i = 0; i < mafs.Length; i++)
                     {
-                        float f = segment.VariantFrequencies[i];
+                        float f = segment.Alleles.Frequencies[i];
                         mafs[i] = f > 0.5 ? 1 - f : f;
                         if (mafs[i] == 0)
                         {
@@ -821,12 +989,12 @@ namespace CanvasCommon
                     //  (2) At least one of the alleles have a MAF >= 0.2
                     if ((float)nonZeroIndices.Count / (float)mafs.Length > 0.1 || isGreaterThan20)
                     {
-                        segment.VariantFrequencies = nonZeroIndices.Select(i => segment.VariantFrequencies[i]).ToList();
-                        var tmpVFs = segment.VariantFrequencies.Where(v => v > 0.1).ToList(); // heuristic to use only the right mode
-                        if (tmpVFs.Count > 0) { segment.VariantFrequencies = tmpVFs; }
+                        segment.Alleles.Frequencies = nonZeroIndices.Select(i => segment.Alleles.Frequencies[i]).ToList();
+                        var tmpVFs = segment.Alleles.Frequencies.Where(v => v > 0.1).ToList(); // heuristic to use only the right mode
+                        if (tmpVFs.Count > 0) { segment.Alleles.Frequencies = tmpVFs; }
                         if (mafs.Length >= MinimumVariantFrequenciesForInformativeSegment) // adjust MinimumVariantFrequenciesForInformativeSegment
                         {
-                            MinimumVariantFrequenciesForInformativeSegment = Math.Min(MinimumVariantFrequenciesForInformativeSegment, segment.VariantFrequencies.Count);
+                            MinimumVariantFrequenciesForInformativeSegment = Math.Min(MinimumVariantFrequenciesForInformativeSegment, segment.Alleles.Frequencies.Count);
                         }
                         writer.Write("\tTrue");
                     }
@@ -906,6 +1074,20 @@ namespace CanvasCommon
         public static bool IsSubset<T>(IEnumerable<T> a, IEnumerable<T> b)
         {
             return !a.Except(b).Any();
+        }
+
+        public static void Shuffle<T>(this IList<T> list)
+        {
+            Random rng = new Random();
+            int n = list.Count;
+            while (n > 1)
+            {
+                n--;
+                int k = rng.Next(n + 1);
+                T value = list[k];
+                list[k] = list[n];
+                list[n] = value;
+            }
         }
     }
 
