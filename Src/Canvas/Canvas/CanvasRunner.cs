@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.IO;
@@ -840,8 +841,13 @@ namespace Illumina.SecondaryAnalysis
             for (int i = 0; i < callsets.PedigreeSample.Count; i++)
             {
                 IFileLocation binnedPath = new FileLocation(binnedPaths[i]);
+
                 var canvasCallset = new CanvasCallset(callsets.PedigreeSample[i].Sample, callsets.AnalysisDetails, null, null, null);
+                Console.WriteLine($"Created callset");
+
                 cleanedPaths.Add(InvokeCanvasClean(canvasCallset, binnedPath).CleanedPath);
+                Console.WriteLine($"Run InvokeCanvasClean");
+
             }
             return cleanedPaths;
         }
@@ -1011,7 +1017,7 @@ namespace Illumina.SecondaryAnalysis
                     else
                     {
                         string phenotype = callset.SampleType == SampleType.Proband ? "affected" : "0";
-                        writer.WriteLine($"1\t{callset.Callset.SampleName}\t{fatherSampleName}\t{motherSampleName}\t0\t{phenotype}");
+                        writer.WriteLine($"1\t{callset.Sample.SampleName}\t{fatherSampleName}\t{motherSampleName}\t0\t{phenotype}");
                     }
             }
             return outFile;

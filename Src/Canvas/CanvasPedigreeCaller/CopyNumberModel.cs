@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using CanvasCommon;
+using static CanvasCommon.DistibutionUtilities;
 
 namespace CanvasPedigreeCaller
 {
@@ -16,12 +17,12 @@ namespace CanvasPedigreeCaller
             for (int copyNumber = 0; copyNumber  < numCnStates; copyNumber ++)
             {
                 var multiplier = 1.0;
-                if (cn == 1)
+                if (copyNumber == 1)
                     multiplier = 0.9;
-                if (cn == 3)
+                if (copyNumber == 3)
                     multiplier = 1.1;
 
-                CnDistribution.Add(NegativeBinomialWrapper(haploidMean*cn*multiplier, variance, maxValue));
+                CnDistribution.Add(NegativeBinomialWrapper(haploidMean* copyNumber * multiplier, variance, maxValue));
             }
 
             _alleleDistribution = new Tuple<List<double>, List<double>>[numCnStates][];

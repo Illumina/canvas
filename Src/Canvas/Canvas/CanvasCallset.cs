@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using Illumina.Common;
 using Isas.SequencingFiles;
 using Isas.Shared.DataTypes;
 using Isas.Shared.Utilities.FileSystem;
@@ -99,9 +100,11 @@ namespace Canvas
         {
             SingleSampleCallset = singleSampleCallset;
             Manifest = manifest;
-            SomaticVcfPath = somaticVcfPath;
+            if (somaticVcfPath != null)
+                SomaticVcfPath = somaticVcfPath;
             AnalysisDetails = analysisDetails;
-            NormalBamPaths = normalBamPaths.Select(file => new Bam(file));
+            if (normalBamPaths != null)
+                NormalBamPaths = normalBamPaths.Select(file => new Bam(file));
         }
         public bool IsEnrichment => Manifest != null;
         internal string TempManifestPath => Path.Combine(SingleSampleCallset.TempFolder, "manifest.txt");

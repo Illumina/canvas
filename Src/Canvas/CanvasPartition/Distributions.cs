@@ -53,7 +53,7 @@ namespace CanvasPartition
             for (int dimension = 0; dimension < m; dimension++)
             {
                 // var newVariance = CanvasCommon.Utilities.WeightedVariance(data.Select(x => x[dimension]).ToList(), gamma);
-                var newMeans = Utilities.WeightedMean(data.Select(x => x[dimension]).ToList(),
+                var newMeans = CanvasCommon.Utilities.WeightedMean(data.Select(x => x[dimension]).ToList(),
                     gamma.ToList());
                 Means[dimension] = newMeans;
                 NegativeBinomials[dimension] = DistibutionUtilities.NegativeBinomialWrapper(newMeans, variance[dimension], maxValue);
