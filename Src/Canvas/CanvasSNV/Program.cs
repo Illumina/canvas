@@ -8,7 +8,7 @@ namespace CanvasSNV
         static int Main(string[] arguments)
         {
             CanvasCommon.Utilities.LogCommandLine(arguments);
-            if (arguments.Length < 5)
+            if (arguments.Length < 4)
             {
                 Console.WriteLine("Usage: Chromosome NormalVCFPath TumorBAMPath OutputPath [SampleName] [MinMapQ]");
                 return 1;
