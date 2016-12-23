@@ -256,16 +256,16 @@ namespace CanvasPartition
         }
 
 
-        public void WriteCanvasPartitionResults(string outPath, GenomeSegmentationResults regmentationResults)
+        public void WriteCanvasPartitionResults(string outPath, GenomeSegmentationResults segmentationResults)
         {
             Dictionary<string, bool> starts = new Dictionary<string, bool>();
             Dictionary<string, bool> stops = new Dictionary<string, bool>();
 
-            foreach (string chr in regmentationResults.SegmentByChr.Keys)
+            foreach (string chr in segmentationResults.SegmentByChr.Keys)
             {
-                for (int segmentIndex = 0; segmentIndex < regmentationResults.SegmentByChr[chr].Length; segmentIndex++)
+                for (int segmentIndex = 0; segmentIndex < segmentationResults.SegmentByChr[chr].Length; segmentIndex++)
                 {
-                    Segmentation.Segment segment = regmentationResults.SegmentByChr[chr][segmentIndex];
+                    Segmentation.Segment segment = segmentationResults.SegmentByChr[chr][segmentIndex];
                     starts[chr + ":" + segment.start] = true;
                     stops[chr + ":" + segment.end] = true;
                 }

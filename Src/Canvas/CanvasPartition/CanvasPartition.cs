@@ -30,7 +30,7 @@ namespace CanvasPartition
             double alpha = CBSRunner.DefaultAlpha;
             double madFactor = WaveletsRunner.DefaultMadFactor;
             SegmentSplitUndo undoMethod = SegmentSplitUndo.None;
-            Segmentation.SegmentationMethod partitionMethod = Segmentation.SegmentationMethod.CBS;
+            Segmentation.SegmentationMethod partitionMethod = Segmentation.SegmentationMethod.Wavelets;
             int maxInterBinDistInSegment = 1000000;
             OptionSet p = new OptionSet()
             {
