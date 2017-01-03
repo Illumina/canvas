@@ -66,7 +66,7 @@ namespace CanvasNormalize
             LoadBinCounts(binnedPath, manifest);
         }
 
-        public BinCounts(IEnumerable<GenomicBin> bins, NexteraManifest manifest = null)
+        public BinCounts(IEnumerable<SampleGenomicBin> bins, NexteraManifest manifest = null)
         {
             Manifest = manifest;
             LoadBinCounts(bins, manifest);
@@ -84,7 +84,7 @@ namespace CanvasNormalize
             }
         }
 
-        private void LoadBinCounts(IEnumerable<GenomicBin> bins, NexteraManifest manifest)
+        private void LoadBinCounts(IEnumerable<SampleGenomicBin> bins, NexteraManifest manifest)
         {
             if (manifest == null)
             {
@@ -112,7 +112,7 @@ namespace CanvasNormalize
             }
         }
 
-        private static void LoadBinCounts(IEnumerable<GenomicBin> bins, NexteraManifest manifest,
+        private static void LoadBinCounts(IEnumerable<SampleGenomicBin> bins, NexteraManifest manifest,
             out List<double> binCounts, out List<int> onTargetIndices)
         {
             binCounts = new List<double>();
@@ -126,9 +126,9 @@ namespace CanvasNormalize
             int binIdx = 0;
             foreach (var bin in bins)
             {
-                if (currChrom != bin.Chromosome)
+                if (currChrom != bin.GenomicBin.Chromosome)
                 {
-                    currChrom = bin.Chromosome;
+                    currChrom = bin.GenomicBin.Chromosome;
                     onTarget = false;
                     if (!regionsByChrom.ContainsKey(currChrom))
                     {

@@ -6,7 +6,7 @@ namespace CanvasBin
     /// <summary>
     /// Hit counts by position - counting 0, 1, or several hits per unique 35mer.
     /// </summary>
-    class HitArray
+    public class HitArray
     {
         #region Members
         public byte[] Data = null;

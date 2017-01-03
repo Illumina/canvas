@@ -28,7 +28,7 @@ namespace CanvasSmooth
             // smooth bins on each chromosome
             RepeatedMedianSmoother smoother = new RepeatedMedianSmoother(MaxHalfWindowSize);
             var chromosomes = binsByChrom.Keys;
-            ConcurrentDictionary<string, List<GenomicBin>> smoothedBinsByChrom = new ConcurrentDictionary<string, List<GenomicBin>>();
+            ConcurrentDictionary<string, List<SampleGenomicBin>> smoothedBinsByChrom = new ConcurrentDictionary<string, List<SampleGenomicBin>>();
             Console.WriteLine("Launch smoothing jobs...");
             Parallel.ForEach(chromosomes, chrom =>
             {
@@ -52,13 +52,13 @@ namespace CanvasSmooth
             MaxHalfWindowSize = maxHalfWindowSize;
         }
 
-        public List<GenomicBin> Smooth(List<GenomicBin> bins)
+        public List<SampleGenomicBin> Smooth(List<SampleGenomicBin> bins)
         {
             IEnumerable<float> counts = bins.Select(b => b.Count);
             IEnumerable<float> smoothedCounts = RepeatedMedianFilter(counts, MaxHalfWindowSize);
-            List<GenomicBin> smoothedBins = new List<GenomicBin>();
+            List<SampleGenomicBin> smoothedBins = new List<SampleGenomicBin>();
             smoothedBins.AddRange(Enumerable.Zip(bins, smoothedCounts, (bin, count)
-                => new GenomicBin(bin.Chromosome, bin.Start, bin.Stop, bin.GC, count)));
+                => new SampleGenomicBin(bin.GenomicBin.Chromosome, bin.Start, bin.Stop, bin.GenomicBin.GC, count)));
             return smoothedBins;
         }
 

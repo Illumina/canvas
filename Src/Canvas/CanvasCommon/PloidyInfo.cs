@@ -1,6 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
+using System.Runtime.Remoting.Messaging;
+using Illumina.Common;
 using Isas.SequencingFiles;
+using Isas.SequencingFiles.Vcf;
 
 namespace CanvasCommon
 {
@@ -80,6 +84,49 @@ namespace CanvasCommon
                 }
             }
             return referenceCN;
+        }
+
+        public static PloidyInfo LoadPloidyFromVcfFile(string vcfPath, string sampleName)
+        {
+            int sampleIndex = 0;
+            PloidyInfo ploidy = new PloidyInfo();
+
+            using (VcfReader reader = new VcfReader(vcfPath))
+            {
+                if (!sampleName.IsNullOrEmpty())
+                {
+                    if (!sampleName.IsNullOrEmpty() && reader.Samples.Count < 2)
+                        throw new ArgumentException(
+                            $"File '{vcfPath}' must be a multi-sample sample VCF containing > 1 samples");
+                    if (reader.Samples.Select(x => Convert.ToInt32(x == sampleName)).Sum() != 1)
+                        throw new ArgumentException(
+                            $"File '{vcfPath}' should contain one genotypes column corresponding to sample {sampleName}");
+                    sampleIndex = reader.Samples.IndexOf(sampleName);
+                }
+
+                ploidy.HeaderLine = string.Join(" ", reader.HeaderLines);
+
+                while (true)
+                {
+                    VcfVariant record;
+                    bool result = reader.GetNextVariant(out record);
+                    if (!result) break;
+                    string chromosome = record.ReferenceName;
+                    if (!ploidy.PloidyByChromosome.ContainsKey(chromosome))
+                    {
+                        ploidy.PloidyByChromosome[chromosome] = new List<PloidyInterval>();
+                    }
+                    PloidyInterval interval = new PloidyInterval(chromosome);
+                    interval.Start = record.ReferencePosition;
+                    interval.End = int.Parse(record.InfoFields["END"]);
+                    if (record.GenotypeColumns[sampleIndex].ContainsKey("CN"))
+                        interval.Ploidy = int.Parse(record.GenotypeColumns[sampleIndex]["CN"]);
+                    else
+                        throw new ArgumentException($"File '{vcfPath}' must contain one genotype CN column!");
+                    ploidy.PloidyByChromosome[chromosome].Add(interval);
+                }
+            }
+            return ploidy;
         }
 
         public static PloidyInfo LoadPloidyFromBedFile(string filePath)

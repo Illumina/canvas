@@ -14,13 +14,15 @@ namespace Canvas
         private readonly IFileLocation _normalBam;
         private readonly IFileLocation _manifest;
         public CommonOptions CommonOptions { get; }
+        public SingleSampleCommonOptions SingleSampleCommonOptions { get; }
 
-        public TumorNormalEnrichmentRunner(CommonOptions commonOptions, TumorNormalOptions tumorNormalOptions, IFileLocation normalBam, IFileLocation manifest)
+        public TumorNormalEnrichmentRunner(CommonOptions commonOptions, SingleSampleCommonOptions singleSampleCommonOptions, TumorNormalOptions tumorNormalOptions, IFileLocation normalBam, IFileLocation manifest)
         {
             _tumorNormalOptions = tumorNormalOptions;
             _normalBam = normalBam;
             _manifest = manifest;
             CommonOptions = commonOptions;
+            SingleSampleCommonOptions = singleSampleCommonOptions;
         }
 
         public void Run(ILogger logger, ICheckpointRunnerAsync checkpointRunner, IWorkManager workManager)
@@ -32,22 +34,19 @@ namespace Canvas
 
         private CanvasCallset GetCallset(ILogger logger)
         {
+            AnalysisDetails analysisDetails = new AnalysisDetails(CommonOptions.OutputDirectory, CommonOptions.WholeGenomeFasta, CommonOptions.KmerFasta, CommonOptions.FilterBed, SingleSampleCommonOptions.PloidyBed, null);
             IFileLocation outputVcfPath = CommonOptions.OutputDirectory.GetFileLocation("CNV.vcf.gz");
             var manifest = new NexteraManifest(_manifest.FullName, null, logger.Error);
             CanvasCallset callSet = new CanvasCallset(
                     _tumorNormalOptions.TumorBam,
-                    CommonOptions.SampleName,
-                    CommonOptions.WholeGenomeFasta,
-                    CommonOptions.OutputDirectory,
-                    CommonOptions.KmerFasta,
-                    CommonOptions.FilterBed,
-                    CommonOptions.PloidyBed,
-                    CommonOptions.BAlleleSites,
-                    CommonOptions.IsDbSnpVcf,
+                    SingleSampleCommonOptions.SampleName,
+                    SingleSampleCommonOptions.BAlleleSites,
+                    SingleSampleCommonOptions.IsDbSnpVcf,
                     new[] { _normalBam },
                     manifest,
                     _tumorNormalOptions.SomaticVcf,
-                    outputVcfPath);
+                    outputVcfPath,
+                    analysisDetails);
             return callSet;
         }
     }

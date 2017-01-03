@@ -6,6 +6,6 @@ namespace CanvasNormalize
 {
     interface IRatioCalculator
     {
-        IEnumerable<GenomicBin> Run(IFileLocation sampleBedFile, IFileLocation referenceBedFile);
+        IEnumerable<SampleGenomicBin> Run(IFileLocation sampleBedFile, IFileLocation referenceBedFile);
     }
 }
