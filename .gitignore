@@ -233,5 +233,4 @@ _Pvt_Extensions
 
 # FAKE - F# Make
 .fake/
-/Src/Canvas/Canvas/SmallPedigreeWorkflow.cs
-/Src/Canvas/Canvas/SmallPedigreeCallset.cs
+
