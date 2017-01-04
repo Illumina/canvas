@@ -21,8 +21,7 @@ namespace CanvasPedigreeCaller
                     multiplier = 0.9;
                 if (copyNumber == 3)
                     multiplier = 1.1;
-
-                CnDistribution.Add(NegativeBinomialWrapper(haploidMean* copyNumber * multiplier, variance, maxValue));
+                CnDistribution.Add(NegativeBinomialWrapper(haploidMean * copyNumber * multiplier, variance, maxValue));
             }
 
             _alleleDistribution = new Tuple<List<double>, List<double>>[numCnStates][];
