@@ -6,6 +6,8 @@ using System.Linq;
 using CanvasCommon;
 using MathNet.Numerics.Distributions;
 using System.Threading.Tasks;
+using System.Xml.Schema;
+using Illumina.Common;
 using Isas.SequencingFiles;
 
 namespace CanvasPedigreeCaller
@@ -203,17 +205,23 @@ namespace CanvasPedigreeCaller
             var probands = GetProbands(offsprings);
             var singleSampleQualityScores = GetSingleSampleQualityScores(copyNumberLikelihoods, cnStates, names);
 
-            var probandIndex = names.IndexOf(probands.First().Name);
             var parent1Index = names.IndexOf(parents.First().Name);
             var parent2Index = names.IndexOf(parents.Last().Name);
 
-            if (cnStates[probandIndex] != 2 && cnStates[parent1Index] == 2 && cnStates[parent2Index] == 2 &&
-                singleSampleQualityScores[probandIndex] > QualityFilterThreshold)
+            foreach (PedigreeMember proband in probands)
             {
-                var deNovoQualityScore = GetConditionalDeNovoQualityScore(copyNumberLikelihoods, probandIndex,
-                    cnStates[probandIndex], names[probandIndex], parent1Index, parent2Index);
-                probands.First().Segments[segmentIndex].DQScore = deNovoQualityScore;
+                var probandIndex = names.IndexOf(proband.Name);
+                var remainingProbandIndex = probands.Except(proband.ToSingleItemEnumerable()).Select(x => names.IndexOf(x.Name));
+
+                if (cnStates[probandIndex] != 2 && cnStates[parent1Index] == 2 && cnStates[parent2Index] == 2 &&
+                    remainingProbandIndex.All(index => cnStates[index] == 2) && singleSampleQualityScores[probandIndex] > QualityFilterThreshold)
+                {
+                    var deNovoQualityScore = GetConditionalDeNovoQualityScore(copyNumberLikelihoods, probandIndex,
+                        cnStates[probandIndex], names[probandIndex], parent1Index, parent2Index);
+                    probands.First().Segments[segmentIndex].DQScore = deNovoQualityScore;
+                }
             }
+
             var counter = 0;
             foreach (PedigreeMember sample in parents.Concat(offsprings))
             {

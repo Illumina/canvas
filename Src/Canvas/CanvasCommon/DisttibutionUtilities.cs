@@ -14,6 +14,14 @@ namespace CanvasCommon
         public static List<List<int>> GetGenotypeCombinations(int numberOfStates, int currentState)
         {
             const int diploidState = 2;
+            const int maxnumberOfStates = 4;
+            if (numberOfStates > maxnumberOfStates)
+            {
+                Console.WriteLine($"CanvasPartition.exe: number of states/samples {numberOfStates} is too large for full combinatorial enumeration\n" +
+                    $"Stettign to the default number {maxnumberOfStates}");
+                numberOfStates = maxnumberOfStates;
+            }
+
             var upperSetBound = SpecialFunctions.Factorial(numberOfStates) * SpecialFunctions.Factorial(numberOfStates / 2);
             var allCombinations = new List<List<int>>(Convert.ToInt32(upperSetBound));
             for (int numberOfDiploidStates = 1; numberOfDiploidStates < numberOfStates; numberOfDiploidStates++)
