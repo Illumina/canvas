@@ -882,6 +882,14 @@ namespace Illumina.SecondaryAnalysis
                     $"Error: Missing filter bed file required for CNV calling at '{canvasBedPath}'");
             }
 
+            // interim proband number restriction 
+            var numProbands = callset.PedigreeSample.Where(x => x.SampleType == SampleType.Proband).ToList().Count;
+            if (numProbands > 2)
+            {
+                throw new ApplicationException(
+                    $"Error: Cannot run Canvas with more than two probands");
+            }
+
             // CanvasBin:
             var binnedPaths = _checkpointRunner.RunCheckpoint("CanvasBin", () => InvokeCanvasBin(callset, canvasReferencePath, canvasBedPath));
             if (binnedPaths == null) return;

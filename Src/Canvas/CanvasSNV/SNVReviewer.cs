@@ -125,6 +125,10 @@ namespace CanvasSNV
                     // we chose not to or because we're on a reference without annotation available.
                     //if (variant.Identifier == ".") continue;
                     // Remember all the variants that pass all our tests:
+
+                    // Empty GenotypeColumns to save space as they are no longer needed
+                    variant.GenotypeColumns?.Clear();
+
                     this.Variants.Add(variant);
                     variant = new VcfVariant();
                 }

@@ -217,7 +217,7 @@ namespace CanvasPedigreeCaller
                     remainingProbandIndex.All(index => cnStates[index] == 2) && singleSampleQualityScores[probandIndex] > QualityFilterThreshold)
                 {
                     var deNovoQualityScore = GetConditionalDeNovoQualityScore(copyNumberLikelihoods, probandIndex,
-                        cnStates[probandIndex], names[probandIndex], parent1Index, parent2Index);
+                        cnStates[probandIndex], names[probandIndex], parent1Index, parent2Index, remainingProbandIndex.ToList());
                     probands.First().Segments[segmentIndex].DQScore = deNovoQualityScore;
                 }
             }
@@ -585,6 +585,7 @@ namespace CanvasPedigreeCaller
         public List<double> GetSingleSampleQualityScores(CopyNumberDistribution density, List<int> cnStates, List<string> sampleNames)
         {
             var singleSampleQualityScores = new List<double>();
+            const int trioSize = 3;
             if (density.Count != cnStates.Count)
                 throw new ArgumentException("Size of CopyNumberDistribution should be equal to number of CN states");
             for (int index = 0; index < sampleNames.Count; index++)
@@ -624,7 +625,7 @@ namespace CanvasPedigreeCaller
         }
 
         public double GetConditionalDeNovoQualityScore(CopyNumberDistribution density, int probandIndex,
-                    int probandCopyNumber, string probandName, int parent1Index, int parent2Index)
+                    int probandCopyNumber, string probandName, int parent1Index, int parent2Index, List<int> remainingProbandIndex)
         {
 
             double numerator = 0.0;
@@ -641,12 +642,13 @@ namespace CanvasPedigreeCaller
                 {
                     var holder = density.GetJointProbability(copyNumberIndex.ToArray());
                     denominator += holder;
-                    if (copyNumberIndex[parent1Index] == diploidState && copyNumberIndex[parent2Index] == diploidState)
+
+                    if (copyNumberIndex[parent1Index] == diploidState && copyNumberIndex[parent2Index] == diploidState && remainingProbandIndex.All(index => copyNumberIndex[index] == 2))
                         numerator += holder;
                 }
             }
 
-            var q60 = 0.000001;
+            const double q60 = 0.000001;
             var denovoProbability = (1-numerator / denominator) * (1-probandMarginalAlt);
             var qscore = -10.0 * Math.Log10(Math.Max(denovoProbability, q60));
             return qscore;
