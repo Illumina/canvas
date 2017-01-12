@@ -91,7 +91,7 @@ sudo apt-get install gcc
 sudo apt-get install g++
 sudo apt-get install gettext
 sudo apt-get install automake
-sudo apt-get install libtool
+sudo apt install libtool-bin
 ./autogen.sh --prefix=/home/ubuntu/mono-4.0.2 --with-large-heap=yes --enable-parallel-mark --with-sgen=yes
 
 Installing binaries (make sure mono-4.0.2 is installed)
