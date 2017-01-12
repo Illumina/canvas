@@ -585,7 +585,6 @@ namespace CanvasPedigreeCaller
         public List<double> GetSingleSampleQualityScores(CopyNumberDistribution density, List<int> cnStates, List<string> sampleNames)
         {
             var singleSampleQualityScores = new List<double>();
-            const int trioSize = 3;
             if (density.Count != cnStates.Count)
                 throw new ArgumentException("Size of CopyNumberDistribution should be equal to number of CN states");
             for (int index = 0; index < sampleNames.Count; index++)
