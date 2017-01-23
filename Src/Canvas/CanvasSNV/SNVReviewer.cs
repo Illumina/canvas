@@ -22,6 +22,7 @@ namespace CanvasSNV
         protected readonly string BamPath;
         protected readonly string OutputPath;
         protected readonly string SampleName;
+        protected readonly bool IsDbSnpVcf;
         List<VcfVariant> Variants;
         int[] ReferenceCounts;
         int[] VariantCounts;
@@ -30,13 +31,14 @@ namespace CanvasSNV
 
         #endregion
 
-        public SNVReviewer(string chromosome, string vcfPath, string bamPath, string outputPath, string sampleName, int minMapQ)
+        public SNVReviewer(string chromosome, string vcfPath, string bamPath, string outputPath, string sampleName, bool isDbSnpVcf, int minMapQ)
         {
             SampleName = sampleName;
             Chromosome = chromosome;
             VcfPath = vcfPath;
             BamPath = bamPath;
             OutputPath = outputPath;
+            IsDbSnpVcf = isDbSnpVcf;
             MinimumMapQ = minMapQ;
         }
 
@@ -74,7 +76,7 @@ namespace CanvasSNV
             int sampleIndex = 0;
             using (VcfReader reader = new VcfReader(vcfPath, requireGenotypes: false))
             {
-                if (!SampleName.IsNullOrEmpty())
+                if (!SampleName.IsNullOrEmpty() && IsDbSnpVcf == false)
                 {
                     if (!SampleName.IsNullOrEmpty() && reader.Samples.Count < 2)
                         throw new ArgumentException($"File '{vcfPath}' must be a multi-sample sample VCF containing > 1 samples");

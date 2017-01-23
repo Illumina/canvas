@@ -705,6 +705,8 @@ namespace Illumina.SecondaryAnalysis
                 job.CommandLine += $" {chromosome.Name} {normalVcfPath} {bamPath} {outputPath}";
                 if (!sampleName.IsNullOrEmpty())
                     job.CommandLine += $" {sampleName}";
+                if (callset.SingleSampleCallset.IsDbSnpVcf)
+                    job.CommandLine += " true";
                 if (_customParameters.ContainsKey("CanvasSNV"))
                 {
                     job.CommandLine = Utilities.MergeCommandLineOptions(job.CommandLine, _customParameters["CanvasSNV"], true);

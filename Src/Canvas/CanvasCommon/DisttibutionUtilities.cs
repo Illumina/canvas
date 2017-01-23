@@ -35,10 +35,14 @@ namespace CanvasCommon
             return allCombinations;
         }
 
-        public static List<double> NegativeBinomialWrapper(double mean, double variance, int maxValue)
+        public static List<double> NegativeBinomialWrapper(double mean, double variance, int maxValue, bool adjustR = false)
         {
             var density = Enumerable.Repeat(0.0, maxValue).ToList();
             double r = Math.Pow(Math.Max(mean, 0.1), 2) / (Math.Max(variance, mean * 1.2) - mean);
+            if (adjustR)
+                r = r < 6.0 ? 6.0 : r;
+            else
+                r = r < 2.0 ? 2.0 : r;
             for (int x = 0; x < maxValue; x++)
             {
                 var tmpDensity = Math.Exp(Math.Log(Math.Pow(1 + mean / r, -r)) + Math.Log(Math.Pow(mean / (mean + r), x)) + SpecialFunctions.GammaLn(r + x) -

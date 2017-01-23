@@ -65,10 +65,13 @@ namespace CanvasPartition
 
                         breakpoints.Add(0);
                         for (int i = 1; i < length; i++)
+                        {
                             if (bestPathViterbi[i] - bestPathViterbi[i - 1] != 0)
                             {
                                 breakpoints.Add(i);
                             }
+                        }
+
 
                         if (_commonCnVs != null)
                         {

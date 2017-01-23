@@ -85,8 +85,8 @@ namespace CanvasCommon
         {
             get
             {
-                var sorted = new SortedList<double>(this.Counts.Select(x=>Convert.ToDouble(x)));
-                return sorted.Median();              
+                var sorted = new SortedList<double>(this.Counts.Select(x => Convert.ToDouble(x)));
+                return sorted.Median();
             }
         }
 
@@ -280,14 +280,14 @@ namespace CanvasCommon
             double totalPloidy = 0;
             double totalWeight = 0;
             foreach (CanvasSegment segment in segments.Where(segment => segment.Filter == "PASS"))
-                {
-                    totalWeight += segment.End - segment.Begin;
-                    totalPloidy += segment.CopyNumber * (segment.End - segment.Begin);
-                }
+            {
+                totalWeight += segment.End - segment.Begin;
+                totalPloidy += segment.CopyNumber * (segment.End - segment.Begin);
+            }
             if (totalWeight > 0)
             {
                 writer.WriteLine($"##OverallPloidy={totalPloidy / totalWeight:F2}");
-                if (diploidCoverage != null)  writer.WriteLine($"##DiploidCoverage={diploidCoverage:F2}");
+                if (diploidCoverage != null) writer.WriteLine($"##DiploidCoverage={diploidCoverage:F2}");
             }
         }
 
@@ -426,7 +426,7 @@ namespace CanvasCommon
                 totalBins += segment.Counts.Count;
                 totalLength += segment.End - segment.Begin;
             }
-            
+
             // Plot points that have at least 25% as much coverage info as we expect to see on average
             return Math.Max(1, (int)(0.25f * totalBins / (totalLength / pointLength)));
         }
@@ -446,7 +446,7 @@ namespace CanvasCommon
             Dictionary<string, List<CanvasSegment>> segmentsByChromosome = GetSegmentsByChromosome(segments);
             GenomeMetadata genome = new GenomeMetadata();
             genome.Deserialize(Path.Combine(referenceFolder, "GenomeSize.xml"));
-            
+
             List<float> counts = new List<float>();
             List<float> MAF = new List<float>();
             List<float> VF = new List<float>();
@@ -735,22 +735,34 @@ namespace CanvasCommon
 
         /// <summary>
         /// Iterates through a list of segments and merges those which have the same copy number call.
+        /// For multisample workflow a 2D list of regions x samples is provided to test for identity of CN
+        /// calls across all samples.
         /// Also, for segments smaller than MinimumCallSize, assimilate them into the neighbor with the best 
         /// quality score.  Two consecutive segments are considered neighbors if they're on the same chromosome
         /// and the space between them is not too large.
         /// </summary>
-        static public void MergeSegments(ref List<CanvasSegment> segments, int MinimumCallSize = 0, int maximumMergeSpan = 10000)
+        static public void MergeSegments(ref List<CanvasSegment> segments, int MinimumCallSize = 0, int maximumMergeSpan = 10000,
+            List<List<int>> copyNumbers = null, List<double> qscores = null)
         {
             if (!segments.Any()) return;
+            if ((copyNumbers == null && qscores != null) || (copyNumbers != null & qscores == null))
+                throw new ArgumentException("Both copyNumbers and qscores arguments must be specified.");
+            if (copyNumbers != null && copyNumbers.Count != segments.Count)
+                throw new ArgumentException("Length of copyNumbers list should be equal to the number of segments.");
+            if (qscores != null && qscores.Count != segments.Count)
+                throw new ArgumentException("Length of qscores list should be equal to the number of segments.");
+            var newCopyNumbers = new List<List<int>>();
 
             // Assimilate short segments into the *best* available neighbor:
             List<CanvasSegment> mergedSegments = new List<CanvasSegment>();
-            int segmentIndex = 0;
+            int segmentIndex = 0;   
             while (segmentIndex < segments.Count)
             {
                 if (segments[segmentIndex].End - segments[segmentIndex].Begin >= MinimumCallSize)
                 {
                     mergedSegments.Add(segments[segmentIndex]);
+                    if (copyNumbers != null)
+                        newCopyNumbers.Add(copyNumbers[segmentIndex]);
                     segmentIndex++;
                     continue;
                 }
@@ -764,7 +776,7 @@ namespace CanvasCommon
                     if (segments[checkIndex].End - segments[checkIndex].Begin < MinimumCallSize) continue;
                     if (segments[segmentIndex].Begin - segments[checkIndex].End > maximumMergeSpan) break;
                     prevIndex = checkIndex;
-                    prevQ = segments[checkIndex].QScore;
+                    prevQ = qscores != null ? segments[checkIndex].QScore : qscores[checkIndex];
                     break;
                 }
                 // Look forward for a segment:
@@ -776,7 +788,7 @@ namespace CanvasCommon
                     if (segments[checkIndex].End - segments[checkIndex].Begin < MinimumCallSize) continue;
                     if (segments[checkIndex].Begin - segments[segmentIndex].End > maximumMergeSpan) continue;
                     nextIndex = checkIndex;
-                    nextQ = segments[checkIndex].QScore;
+                    nextQ = qscores != null ? segments[checkIndex].QScore : qscores[checkIndex];
                     break;
                 }
 
@@ -799,28 +811,40 @@ namespace CanvasCommon
                     segmentIndex = nextIndex;
                     continue;
                 }
-
+                if (copyNumbers != null)
+                    newCopyNumbers.Add(copyNumbers[segmentIndex]);
                 mergedSegments.Add(segments[segmentIndex]);
                 segmentIndex++;
             }
             segments = mergedSegments;
+            if (copyNumbers != null && newCopyNumbers.Count != segments.Count)
+                throw new ArgumentException("Length of copyNumbers list should equal the number of segments.");
 
             // Now, merge together adjacent segments with same calls!
             mergedSegments = new List<CanvasSegment>();
             CanvasSegment lastSegment = segments[0];
+            int lastSegmentIndex = 0;
             mergedSegments.Add(lastSegment);
             segmentIndex = 1;
             while (segmentIndex < segments.Count)
             {
                 // Assimilate an adjacent segment with the same copy number call and heterogeneity flag:
-                if (lastSegment.CopyNumber == segments[segmentIndex].CopyNumber && lastSegment.Chr == segments[segmentIndex].Chr &&
-                    segments[segmentIndex].Begin - lastSegment.End < maximumMergeSpan && lastSegment.IsHeterogeneous == segments[segmentIndex].IsHeterogeneous)
+                bool mergeSegments = copyNumbers == null ? lastSegment.CopyNumber == segments[segmentIndex].CopyNumber &&
+                                    lastSegment.Chr == segments[segmentIndex].Chr &&
+                                    segments[segmentIndex].Begin - lastSegment.End < maximumMergeSpan &&
+                                    lastSegment.IsHeterogeneous == segments[segmentIndex].IsHeterogeneous :
+                                    newCopyNumbers[lastSegmentIndex].SequenceEqual(newCopyNumbers[segmentIndex]) &&
+                                    lastSegment.Chr == segments[segmentIndex].Chr &&
+                                    segments[segmentIndex].Begin - lastSegment.End < maximumMergeSpan;
+
+                if (mergeSegments)
                 {
                     lastSegment.MergeIn(segments[segmentIndex]);
                     segmentIndex++;
                     continue;
                 }
                 lastSegment = segments[segmentIndex];
+                lastSegmentIndex = segmentIndex;
                 mergedSegments.Add(segments[segmentIndex]);
                 segmentIndex++;
             }

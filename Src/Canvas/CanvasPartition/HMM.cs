@@ -497,12 +497,14 @@ namespace CanvasPartition
                     currentStateDuration = 1;
                     counter++;
                     bestStateDuration[counter] = currentStateDuration;
+                    lastBestState = bestState;
                 }
             }
 
             for (var k = 3; k < bestStates.Count - 3; k++)
             {
                 const int stateDurationCutoff = 5;
+                // small segments
                 if (bestStates[k] != bestStates[k + 1] && bestStates[k + 1] == bestStates[k + 2] &&
                                     bestStates[k] == bestStates[k + 2] && bestStateDuration[k] > stateDurationCutoff)
                 {
@@ -511,9 +513,22 @@ namespace CanvasPartition
                     bestStateDuration[k + 1] = bestStateDuration[k] + bestStateDuration[k + 1];
                     bestStateDuration[k + 2] = bestStateDuration[k + 1] + bestStateDuration[k + 2];
                 }
-
+                // oversegmentation
+                if (bestStates[k] != bestStates[k + 1] && bestStates[k - 1] != bestStates[k] &&
+                    bestStateDuration[k] > stateDurationCutoff)
+                {
+                    if (bestStates[k - 1] != bestStates[k + 1])
+                    {
+                        bestStates[k - 1] = bestStates[k];
+                        bestStateDuration[k] = bestStateDuration[k] + bestStateDuration[k - 1];
+                    }
+                    else
+                    {
+                        bestStates[k] = bestStates[k-1];
+                        bestStateDuration[k] = bestStateDuration[k] + bestStateDuration[k - 1];
+                    }
+                }
             }
-
         }
     }
 }

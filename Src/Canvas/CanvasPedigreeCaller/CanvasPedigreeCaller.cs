@@ -7,6 +7,7 @@ using CanvasCommon;
 using MathNet.Numerics.Distributions;
 using System.Threading.Tasks;
 using System.Xml.Schema;
+using Combinatorics.Collections;
 using Illumina.Common;
 using Isas.SequencingFiles;
 
@@ -16,8 +17,11 @@ namespace CanvasPedigreeCaller
     {
         #region Members
         // Static:
-        static int MaximumCopyNumber = 5;
+        private const int MaximumCopyNumber = 5;
+        private const int MaxAlleleNumber = 3;
         private const int DefaultAlleleDensityThreshold = 1000;
+        private const double MaxQscore = 60.0;
+        private const int DefaultPerSegmentAlleleMaxCounts = 100;
         private const int DefaultAlleleCountThreshold = 4;
         private const int MaxNumOffspringGenotypes = 500;
         private const double DeNovoRate = 0.00001;
@@ -85,9 +89,9 @@ namespace CanvasPedigreeCaller
                             var enumerable = alleleCounts as int[] ?? alleleCounts.ToArray();
                             var alleleDensity = enumerable.Average() / pedigreeMembers.First().Segments[segmentIndex].Length;
                             var useCnLikelihood = enumerable.Select(x => x > DefaultAlleleCountThreshold).Any(c => c == false) &&
-                                alleleDensity < DefaultAlleleDensityThreshold;
+                                alleleDensity < DefaultAlleleDensityThreshold && enumerable.Average() < DefaultPerSegmentAlleleMaxCounts;
                             CopyNumberDistribution copyNumberLikelihoods = useCnLikelihood ?
-                            MaximalCnLikelihoodWithPedigreeInfo(parents, offsprings, segmentIndex, transitionMatrix, offspringsGenotypes):
+                            MaximalCnLikelihoodWithPedigreeInfo(parents, offsprings, segmentIndex, transitionMatrix, offspringsGenotypes) :
                             MaximalGtLikelihoodWithPedigreeInfo(parents, offsprings, segmentIndex, parentalGenotypes, offspringsGenotypes);
                             EstimateQScoresWithPedigreeInfo(parents, offsprings, segmentIndex, copyNumberLikelihoods);
                         }
@@ -102,7 +106,7 @@ namespace CanvasPedigreeCaller
             {
                 CanvasSegment.MergeSegments(ref pedigreeMember.Segments, MinimumCallSize);
                 CanvasSegment.WriteSegments(outVcfFiles[pedigreeMemberIndex], pedigreeMember.Segments,
-                    pedigreeMember.MeanCoverage, referenceFolder, pedigreeMember.Name, null, null, 
+                    pedigreeMember.MeanCoverage, referenceFolder, pedigreeMember.Name, null, null,
                     QualityFilterThreshold, DeNovoQualityFilterThreshold);
                 pedigreeMemberIndex++;
             }
@@ -124,7 +128,9 @@ namespace CanvasPedigreeCaller
 
             var numberOfSegments = pedigreeMembers.First().Segments.Count;
             List<GenomicInterval> segmentIntervals = GetParallelIntevals(numberOfSegments, Environment.ProcessorCount);
-            List<Tuple<int, int>> genotypes = GenerateParentalGenotypes(MaximumCopyNumber);
+            var genotypes = GenerateGenotypeCombinations(MaximumCopyNumber, MaxAlleleNumber);
+            var copyNumberCombinations = GenerateCopyNumberCombinations(MaximumCopyNumber, MaxAlleleNumber);
+
 
             foreach (PedigreeMember pedigreeMember in pedigreeMembers)
                 pedigreeMember.CnModel = new CopyNumberModel(MaximumCopyNumber, pedigreeMember.MeanCoverage / 2.0, pedigreeMember.MeanMafCoverage / 2.0,
@@ -149,9 +155,9 @@ namespace CanvasPedigreeCaller
                             var enumerable = alleleCounts as int[] ?? alleleCounts.ToArray();
                             var alleleDensity = enumerable.Average() / pedigreeMembers.First().Segments[segmentIndex].Length;
                             var useCnLikelihood = enumerable.Select(x => x > DefaultAlleleCountThreshold).Any(c => c == false) &&
-                                alleleDensity < DefaultAlleleDensityThreshold;
-                            double[][] copyNumberLikelihoods = useCnLikelihood ? 
-                            MaximalCnLikelihoodNoPedigreeInfo(pedigreeMembers, segmentIndex) :
+                                alleleDensity < DefaultAlleleDensityThreshold && enumerable.Average() < DefaultPerSegmentAlleleMaxCounts;
+                            double[][] copyNumberLikelihoods = useCnLikelihood ?
+                            MaximalCnLikelihoodNoPedigreeInfo(pedigreeMembers, segmentIndex, copyNumberCombinations) :
                             MaximalGtLikelihoodNoPedigreeInfo(pedigreeMembers, segmentIndex, genotypes);
                             EstimateQScoresNoPedigreeInfo(pedigreeMembers, segmentIndex, copyNumberLikelihoods);
                         }
@@ -160,10 +166,25 @@ namespace CanvasPedigreeCaller
                     Console.WriteLine($"{DateTime.Now} Finished SPW task for segment {interval.Start} - {interval.End}");
                 });
 
+            int nSegments = pedigreeMembers.First().Segments.Count;
+            var copyNumbers = new List<List<int>>(nSegments);
+            var qscores = new List<double>(nSegments);
+            foreach (int segmentIndex in Enumerable.Range(0, nSegments))
+            {
+                copyNumbers.Add(new List<int>());
+                qscores.Add(0);
+                foreach (var pedigreeMember in pedigreeMembers)
+                {
+                    copyNumbers[segmentIndex].Add(pedigreeMember.Segments[segmentIndex].CopyNumber);
+                    qscores[segmentIndex] += pedigreeMember.Segments[segmentIndex].QScore;
+                }
+                qscores[segmentIndex] /= pedigreeMembers.Count;
+            }
+
             int pedigreeMemberIndex = 0;
             foreach (var pedigreeMember in pedigreeMembers)
             {
-                CanvasSegment.MergeSegments(ref pedigreeMember.Segments, MinimumCallSize);
+                CanvasSegment.MergeSegments(ref pedigreeMember.Segments, MinimumCallSize, copyNumbers: copyNumbers, qscores: qscores);
                 CanvasSegment.WriteSegments(outVcfFiles[pedigreeMemberIndex], pedigreeMember.Segments,
                     pedigreeMember.MeanCoverage, referenceFolder, pedigreeMember.Name, null, null,
                     QualityFilterThreshold, DeNovoQualityFilterThreshold);
@@ -218,6 +239,8 @@ namespace CanvasPedigreeCaller
                 {
                     var deNovoQualityScore = GetConditionalDeNovoQualityScore(copyNumberLikelihoods, probandIndex,
                         cnStates[probandIndex], names[probandIndex], parent1Index, parent2Index, remainingProbandIndex.ToList());
+                    if (Double.IsInfinity(deNovoQualityScore) | deNovoQualityScore > MaxQscore)
+                        deNovoQualityScore = MaxQscore;
                     probands.First().Segments[segmentIndex].DQScore = deNovoQualityScore;
                 }
             }
@@ -240,6 +263,8 @@ namespace CanvasPedigreeCaller
             {
                 double normalizationConstant = copyNumberLikelihoods[counter].Sum();
                 var qscore = -10.0 * Math.Log10((normalizationConstant - copyNumberLikelihoods[counter][cnStates[counter]]) / normalizationConstant);
+                if (Double.IsInfinity(qscore) | qscore > MaxQscore)
+                    qscore = MaxQscore;
                 sample.Segments[segmentIndex].QScore = qscore;
                 if (sample.Segments[segmentIndex].QScore < QualityFilterThreshold)
                     sample.Segments[segmentIndex].Filter = $"q{QualityFilterThreshold}";
@@ -361,8 +386,8 @@ namespace CanvasPedigreeCaller
         {
             double maximalLikelihood;
             InitializeLikelihood(out maximalLikelihood, segmentPosition, parents, children);
-            var parent1Likelihood = parents.First().CnModel.GetGtLikelihood(parents.First().GetAlleleCounts(segmentPosition));
-            var parent2Likelihood = parents.Last().CnModel.GetGtLikelihood(parents.Last().GetAlleleCounts(segmentPosition));
+            var parent1Likelihood = parents.First().CnModel.GetMedianGtLikelihood(parents.First().GetMedianAlleleCounts(segmentPosition));
+            var parent2Likelihood = parents.Last().CnModel.GetMedianGtLikelihood(parents.Last().GetMedianAlleleCounts(segmentPosition));
             int nCopies = MaximumCopyNumber;
             List<string> names = parents.Select(x => x.Name).Union(children.Select(x => x.Name)).ToList();
             var density = new CopyNumberDistribution(nCopies, names);
@@ -380,7 +405,7 @@ namespace CanvasPedigreeCaller
                         {
                             currentLikelihood *= GetTransitionProbability(parent1GtStates.Item1, parent1GtStates.Item2, offspringGtStates[counter].Item1, offspringGtStates[counter].Item2) *
                                                  GetTransitionProbability(parent2GtStates.Item1, parent2GtStates.Item2, offspringGtStates[counter].Item1, offspringGtStates[counter].Item2) *
-                                                 child.CnModel.GetGtLikelihood(child.GetAlleleCounts(segmentPosition))[offspringGtStates[counter].Item1][offspringGtStates[counter].Item2];
+                                                 child.CnModel.GetMedianGtLikelihood(child.GetMedianAlleleCounts(segmentPosition))[offspringGtStates[counter].Item1][offspringGtStates[counter].Item2];
                             counter++;
                         }
 
@@ -420,7 +445,7 @@ namespace CanvasPedigreeCaller
         /// <param name="children"></param>
         /// <param name="segmentPosition"></param>
         /// <param name="transitionMatrix"></param>
-        public double[][] MaximalCnLikelihoodNoPedigreeInfo(List<PedigreeMember> samples, int segmentPosition)
+        public double[][] MaximalCnLikelihoodNoPedigreeInfo(List<PedigreeMember> samples, int segmentPosition, List<List<int>> copyNumberCombinations)
         {
             int defaultCn = 2;
             double maximalLikelihood = 0;
@@ -428,22 +453,42 @@ namespace CanvasPedigreeCaller
                 sample.Segments[segmentPosition].CopyNumber = defaultCn;
             int nCopies = MaximumCopyNumber;
             List<string> names = samples.Select(x => x.Name).ToList();
-            var density = new double[samples.Count][];
+            var totalLikelihoods = new List<double>();
+            foreach (var copyNumberCombination in copyNumberCombinations)
+            {
+                double totalLikelihood = 0;
+                foreach (PedigreeMember sample in samples)
+                {
+                    maximalLikelihood = 0;
+                    foreach (var copyNumber in copyNumberCombination)
+                    {
+                        var currentLikelihood = sample.CnModel.GetCnLikelihood(Math.Min(sample.GetCoverage(segmentPosition), sample.MeanCoverage * 3.0))[copyNumber];
+                        currentLikelihood = Double.IsNaN(currentLikelihood) || Double.IsInfinity(currentLikelihood) ? 0 : currentLikelihood;
+                        if (currentLikelihood > maximalLikelihood)
+                            maximalLikelihood = currentLikelihood;
+                    }
+                    totalLikelihood += maximalLikelihood;
+                }
+                totalLikelihoods.Add(totalLikelihood);
+            }
+
+            var bestcopyNumberCombination = copyNumberCombinations[totalLikelihoods.IndexOf(totalLikelihoods.Max())];
             int counter = 0;
+            var density = new double[samples.Count][];
             foreach (PedigreeMember sample in samples)
             {
+                maximalLikelihood = 0;
                 density[counter] = new double[nCopies];
                 counter++;
-                foreach (var copyNumber in Enumerable.Range(0, nCopies))
+                foreach (var copyNumber in bestcopyNumberCombination)
                 {
                     var currentLikelihood = sample.CnModel.GetCnLikelihood(Math.Min(sample.GetCoverage(segmentPosition), sample.MeanCoverage * 3.0))[copyNumber];
                     currentLikelihood = Double.IsNaN(currentLikelihood) || Double.IsInfinity(currentLikelihood) ? 0 : currentLikelihood;
-                    density[names.FindIndex(name => name == sample.Name)][copyNumber] = currentLikelihood;
-
                     if (currentLikelihood > maximalLikelihood)
                     {
                         maximalLikelihood = currentLikelihood;
                         sample.Segments[segmentPosition].CopyNumber = copyNumber;
+                        density[names.FindIndex(name => name == sample.Name)][copyNumber] = maximalLikelihood;
                     }
                 }
             }
@@ -455,8 +500,9 @@ namespace CanvasPedigreeCaller
         /// </summary>
         /// <param name="parents"></param>
         /// <param name="children"></param>
-        /// <param name="segmentPosition"></param>
-        public double[][] MaximalGtLikelihoodNoPedigreeInfo(List<PedigreeMember> samples, int segmentPosition, List<Tuple<int, int>> genotypes)
+        /// <param name="segmentPosition"></param>       
+        public double[][] MaximalGtLikelihoodNoPedigreeInfo(List<PedigreeMember> samples, int segmentPosition,
+            List<Dictionary<int, List<Tuple<int, int>>>> genotypesets)
         {
             int defaultCn = 2;
             double maximalLikelihood = 0;
@@ -464,22 +510,43 @@ namespace CanvasPedigreeCaller
                 sample.Segments[segmentPosition].CopyNumber = defaultCn;
             int nCopies = MaximumCopyNumber;
             List<string> names = samples.Select(x => x.Name).ToList();
-
-            var density = new double[samples.Count][];
-            foreach (var sample in Enumerable.Range(0, samples.Count))
+            var totalLikelihoods = new List<double>();
+            foreach (var genotypeset in genotypesets)
             {
-                density[sample] = new double[nCopies];
-                foreach (var copyNumber in Enumerable.Range(0, nCopies))
-                    density[sample][copyNumber] = maximalLikelihood;
+                double totalLikelihood = 0;
+                foreach (PedigreeMember sample in samples)
+                {
+                    maximalLikelihood = 0;
+                    foreach (var genotype in genotypeset)
+                    {
+                        var selectedGtState = 0;
+                        var currentLikelihood = sample.CnModel.GetGtLikelihood(sample.GetAlleleCounts(segmentPosition),
+                            genotype.Value, ref selectedGtState, sample.MaxCoverage);
+                        currentLikelihood = Double.IsNaN(currentLikelihood) || Double.IsInfinity(currentLikelihood) ? 0 : currentLikelihood;
+                        if (currentLikelihood > maximalLikelihood)
+                            maximalLikelihood = currentLikelihood;
+                    }
+                    totalLikelihood += maximalLikelihood;
+                }
+                totalLikelihoods.Add(totalLikelihood);
             }
-           
+
+            var bestGenotypeset = genotypesets[totalLikelihoods.IndexOf(totalLikelihoods.Max())];
+            int counter = 0;
+            var density = new double[samples.Count][];
+
             foreach (PedigreeMember sample in samples)
             {
-                foreach (var genotype in genotypes)
+                maximalLikelihood = 0;
+                density[counter] = new double[nCopies];
+                counter++;
+                foreach (var genotype in bestGenotypeset)
                 {
-                    var currentLikelihood = sample.CnModel.GetGtLikelihood(sample.GetAlleleCounts(segmentPosition))[genotype.Item1][genotype.Item2];
-                    int copyNumber = genotype.Item1 + genotype.Item2;
-                    currentLikelihood = Double.IsNaN(currentLikelihood) || Double.IsInfinity(currentLikelihood) ? 0 : currentLikelihood;
+                    var selectedGtState = 0;
+                    var currentLikelihood = sample.CnModel.GetGtLikelihood(sample.GetAlleleCounts(segmentPosition),
+                        genotype.Value, ref selectedGtState, sample.MaxCoverage);
+                    int copyNumber = genotype.Key;
+                    currentLikelihood = Double.IsNaN(currentLikelihood) || Double.IsInfinity(currentLikelihood)? 0 : currentLikelihood;
                     density[names.FindIndex(name => name == sample.Name)][copyNumber] = Math.Max(currentLikelihood,
                         density[names.FindIndex(name => name == sample.Name)][copyNumber]);
 
@@ -487,12 +554,14 @@ namespace CanvasPedigreeCaller
                     {
                         maximalLikelihood = currentLikelihood;
                         sample.Segments[segmentPosition].CopyNumber = copyNumber;
-                        sample.Segments[segmentPosition].MajorChromosomeCount = Math.Max(genotype.Item1, genotype.Item2);
+                        sample.Segments[segmentPosition].MajorChromosomeCount = Math.Max(genotype.Value[selectedGtState].Item1,
+                            genotype.Value[selectedGtState].Item2);
                     }
                 }
             }
             return density;
         }
+
 
         private static void InitializeLikelihood(out double maximalLikelihood, int segmentPosition, List<PedigreeMember> parents, List<PedigreeMember> children)
         {
@@ -505,6 +574,26 @@ namespace CanvasPedigreeCaller
                 child.Segments[segmentPosition].CopyNumber = defaultCn;
         }
 
+        /// <summary>
+        /// Generate all possible copy number combinations with the maximal number of copy numbers per segment set to maxAlleleNumber.
+        /// </summary>
+        /// <param name="numberOfCnStates"></param>
+        /// <param name="maxAlleleNumber"></param>
+        /// <returns></returns>
+        public static List<List<int>> GenerateCopyNumberCombinations(int numberOfCnStates, int maxAlleleNumber)
+        {
+            if (numberOfCnStates <= 0)
+                throw new ArgumentOutOfRangeException(nameof(numberOfCnStates));
+            var cnStates = Enumerable.Range(0, numberOfCnStates).ToList();
+            var allCombinations = new List<List<int>>();
+            for (int currentAlleleNumber = 1; currentAlleleNumber <= maxAlleleNumber; currentAlleleNumber++)
+            {
+                var permutations = new Combinations<int>(cnStates, currentAlleleNumber);
+                var list = permutations.Select(x => x.ToList()).ToList();
+                allCombinations.AddRange(list);
+            }
+            return allCombinations;
+        }
 
         public List<Tuple<int, int>> GenerateParentalGenotypes(int numCnStates)
         {
@@ -517,6 +606,46 @@ namespace CanvasPedigreeCaller
                 }
             }
             return genotypes;
+        }
+
+        /// <summary>
+        /// Generate all possible copy number genotype combinations with the maximal number of alleles per segment set to maxAlleleNumber.
+        /// </summary>
+        /// <param name="numberOfCnStates"></param>
+        /// <param name="maxAlleleNumber"></param>
+        /// <returns> </returns>
+        public List<Dictionary<int, List<Tuple<int, int>>>> GenerateGenotypeCombinations(int numberOfCnStates, int maxAlleleNumber)
+        {
+            Dictionary<int, List<Tuple<int, int>>> genotypes = new Dictionary<int, List<Tuple<int, int>>>();
+            for (int cn = 0; cn < numberOfCnStates; cn++)
+            {
+                genotypes[cn] = new List<Tuple<int, int>>();
+                for (int gt = 0; gt <= cn; gt++)
+                {
+                    genotypes[cn].Add(new Tuple<int, int>(gt, cn - gt));
+                }
+            }
+
+            var cnStates = Enumerable.Range(0, numberOfCnStates).ToList();
+            var allCombinations = new List<List<int>>();
+            for (int currentAlleleNumber = 1; currentAlleleNumber <= maxAlleleNumber; currentAlleleNumber++)
+            {
+                var permutations = new Combinations<int>(cnStates, currentAlleleNumber);
+                var list = permutations.Select(x => x.ToList()).ToList();
+                allCombinations.AddRange(list);
+            }
+            List < Dictionary < int, List < Tuple<int, int>>>> genotypeCombinations = new List<Dictionary<int, List<Tuple<int, int>>>>();
+            foreach (List<int> combination in allCombinations)
+            {
+                var tmpDictionary = new Dictionary<int, List<Tuple<int, int>>>();
+                foreach (int index in combination)
+                {
+                    int key = genotypes.Keys.ToList()[index];
+                    tmpDictionary.Add(key, genotypes[index]);
+                }
+                genotypeCombinations.Add(tmpDictionary);
+            }
+            return genotypeCombinations;
         }
 
         public void GenerateOffspringGenotypes(List<List<Tuple<int, int>>> offspringGenotypes, List<Tuple<int, int>> genotypeSet, int nOffsprings, List<Tuple<int, int>> partialGenotypes)
@@ -593,6 +722,8 @@ namespace CanvasPedigreeCaller
                 var cnMarginalProbabilities = density.GetMarginalProbability(cnStates.Count, MaximumCopyNumber, sampleName);
                 double normalizationConstant = cnMarginalProbabilities.Sum();
                 var qscore = -10.0 * Math.Log10((normalizationConstant - cnMarginalProbabilities[cnStates[index]]) / normalizationConstant);
+                if (Double.IsInfinity(qscore) | qscore > MaxQscore)
+                    qscore = MaxQscore;
                 singleSampleQualityScores.Add(qscore);
             }
             return singleSampleQualityScores;
@@ -611,15 +742,15 @@ namespace CanvasPedigreeCaller
             var firstParentMarginalProbabilities = density.GetMarginalProbability(nSamples, MaximumCopyNumber, parentNames.First());
             var secondParentMarginalProbabilities = density.GetMarginalProbability(nSamples, MaximumCopyNumber, parentNames.Last());
             normalization = firstParentMarginalProbabilities[sampleValue] + firstParentMarginalProbabilities[diploidState];
-            var firstParentMarginalAlt  = Math.Min(Math.Max(firstParentMarginalProbabilities[sampleValue] / normalization, 0.001), 0.999);
+            var firstParentMarginalAlt = Math.Min(Math.Max(firstParentMarginalProbabilities[sampleValue] / normalization, 0.001), 0.999);
             normalization = secondParentMarginalProbabilities[sampleValue] + secondParentMarginalProbabilities[diploidState];
             var secondParentMarginalAlt = Math.Min(Math.Max(secondParentMarginalProbabilities[sampleValue] / normalization, 0.001), 0.999);
-            
+
             normalization = (1 - firstParentMarginalAlt) * secondParentMarginalAlt + firstParentMarginalAlt * secondParentMarginalAlt + (1 - firstParentMarginalAlt) * (1 - firstParentMarginalAlt) +
             (1 - secondParentMarginalAlt) * firstParentMarginalAlt;
             var diploidProbability = (1 - firstParentMarginalAlt) * (1 - secondParentMarginalAlt) / normalization;
             var denovoProbability = diploidProbability * probandMarginalAlt;
-            var qscore = -10.0 * Math.Log10(1-denovoProbability);
+            var qscore = -10.0 * Math.Log10(1 - denovoProbability);
             return qscore;
         }
 
@@ -648,7 +779,7 @@ namespace CanvasPedigreeCaller
             }
 
             const double q60 = 0.000001;
-            var denovoProbability = (1-numerator / denominator) * (1-probandMarginalAlt);
+            var denovoProbability = (1 - numerator / denominator) * (1 - probandMarginalAlt);
             var qscore = -10.0 * Math.Log10(Math.Max(denovoProbability, q60));
             return qscore;
         }

@@ -57,6 +57,7 @@ namespace Canvas
                     {
                         IDirectoryLocation loggingFolder = outFolder.CreateSubdirectory("Logging");
                         IsasConfiguration config = IsasConfiguration.GetConfiguration();
+                        logger.Info($"MaximumHoursPerProcess: {config.MaximumHoursPerProcess}");
                         IWorkManager workManager = new LocalWorkManager(logger, loggingFolder, 0, config.MaximumMemoryGB, config.MaximumHoursPerProcess);
                         _modeRunner.Run(logger, checkpointRunner, workManager);
                         manager.CheckFinalState();
