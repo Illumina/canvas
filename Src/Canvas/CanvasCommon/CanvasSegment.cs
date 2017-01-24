@@ -336,7 +336,7 @@ namespace CanvasCommon
                 writer.WriteLine("##FORMAT=<ID=BC,Number=1,Type=Float,Description=\"Number of bins in the region\">");
                 writer.WriteLine("##FORMAT=<ID=CN,Number=1,Type=Integer,Description=\"Copy number genotype for imprecise events\">");
                 writer.WriteLine("##FORMAT=<ID=MCC,Number=1,Type=Integer,Description=\"Major chromosome count (equal to copy number for LOH regions)\">");
-                writer.WriteLine("#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\tNormal\t" + sampleName);
+                writer.WriteLine("#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\t" + sampleName);
 
                 SanityCheckChromosomeNames(genome, segments);
 
@@ -386,8 +386,6 @@ namespace CanvasCommon
                         {
                             writer.Write(":MCC");
                         }
-                        //  Normal
-                        writer.Write("\t.");
                         writer.Write("\t{1}:{2}:{3}", segment.End, Math.Round(segment.MeanCount, 0, MidpointRounding.AwayFromZero), segment.BinCount, segment.CopyNumber);
                         if (segment.MajorChromosomeCount.HasValue)
                         {
@@ -858,10 +856,11 @@ namespace CanvasCommon
                     score += GetQScorePredictor(QScorePredictor.LogBinCount) * qscoreParameters.LogisticLogBinCount;
                     score += GetQScorePredictor(QScorePredictor.ModelDistance) * qscoreParameters.LogisticModelDistance;
                     score += GetQScorePredictor(QScorePredictor.DistanceRatio) * qscoreParameters.LogisticDistanceRatio;
+                    score += GetQScorePredictor(QScorePredictor.BinCountAmpDistance);
                     score = Math.Exp(score);
                     score = score / (score + 1);
                     // Transform probability into a q-score:
-                    qscore = (int)(Math.Round(-10 * Math.Log10(1 - score)));
+                    qscore = (int) Math.Round(-10 * Math.Log10(1 - score));
                     qscore = Math.Min(60, qscore);
                     qscore = Math.Max(2, qscore);
                     return qscore;
@@ -881,6 +880,7 @@ namespace CanvasCommon
                     linearFit += qscoreParameters.GeneralizedLinearFitMafMean *
                                  GetQScorePredictor(QScorePredictor.MafMean);
                     linearFit += qscoreParameters.GeneralizedLinearFitLogMafCv * GetQScorePredictor(QScorePredictor.LogMafCv);
+                    linearFit += GetQScorePredictor(QScorePredictor.BinCountAmpDistance);
                     score = -11.9 - 11.4 * linearFit; // Scaling to achieve 2 <= qscore <= 61
                     score = Math.Max(2, score);
                     score = Math.Min(61, score);
@@ -895,7 +895,7 @@ namespace CanvasCommon
         /// </summary>
         public enum QScorePredictor
         {
-            BinCount, LogBinCount, BinMean, BinCv, MafCount, MafMean, MafCv, LogMafCv, ModelDistance,
+            BinCount, LogBinCount, BinCountAmpDistance, BinMean, BinCv, MafCount, MafMean, MafCv, LogMafCv, ModelDistance,
             RunnerUpModelDistance, DistanceRatio, CopyNumber, MajorChromosomeCount
         };
         public double GetQScorePredictor(QScorePredictor predictorId)
@@ -907,6 +907,9 @@ namespace CanvasCommon
 
                 case QScorePredictor.LogBinCount:
                     return Math.Log10(1 + this.BinCount);
+
+                case QScorePredictor.BinCountAmpDistance:
+                    return this.CopyNumber >= 15 ? Math.Log10(1 + this.BinCount) : 0.0;
 
                 case QScorePredictor.BinMean:
                     if (this.Counts.Count == 0) return 0;
