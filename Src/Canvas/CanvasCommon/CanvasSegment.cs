@@ -336,7 +336,7 @@ namespace CanvasCommon
                 writer.WriteLine("##FORMAT=<ID=BC,Number=1,Type=Float,Description=\"Number of bins in the region\">");
                 writer.WriteLine("##FORMAT=<ID=CN,Number=1,Type=Integer,Description=\"Copy number genotype for imprecise events\">");
                 writer.WriteLine("##FORMAT=<ID=MCC,Number=1,Type=Integer,Description=\"Major chromosome count (equal to copy number for LOH regions)\">");
-                writer.WriteLine("#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\tNormal\t" + sampleName);
+                writer.WriteLine("#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\t" + sampleName);
 
                 SanityCheckChromosomeNames(genome, segments);
 
@@ -386,8 +386,6 @@ namespace CanvasCommon
                         {
                             writer.Write(":MCC");
                         }
-                        //  Normal
-                        writer.Write("\t.");
                         writer.Write("\t{1}:{2}:{3}", segment.End, Math.Round(segment.MeanCount, 0, MidpointRounding.AwayFromZero), segment.BinCount, segment.CopyNumber);
                         if (segment.MajorChromosomeCount.HasValue)
                         {
