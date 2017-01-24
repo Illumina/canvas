@@ -74,7 +74,7 @@ namespace CanvasCommon
                 if (this.Alleles.Frequencies.Count <= 5)
                     return null;
 
-                return this.Alleles.Frequencies.Average();
+                return this.Alleles.Frequencies.Select(VF=>VF > 0.5 ? 1 - VF : VF).Average();
             }
         }
 
