@@ -14,12 +14,12 @@ namespace CanvasCommon
         public static List<List<int>> GetGenotypeCombinations(int numberOfStates, int currentState)
         {
             const int diploidState = 2;
-            const int maxnumberOfStates = 4;
-            if (numberOfStates > maxnumberOfStates)
+            const int maxNumberOfStates = 4;
+            if (numberOfStates > maxNumberOfStates)
             {
                 Console.WriteLine($"CanvasPartition.exe: number of states/samples {numberOfStates} is too large for full combinatorial enumeration\n" +
-                    $"Stettign to the default number {maxnumberOfStates}");
-                numberOfStates = maxnumberOfStates;
+                    $"Settings to the default number {maxNumberOfStates}");
+                numberOfStates = maxNumberOfStates;
             }
 
             var upperSetBound = SpecialFunctions.Factorial(numberOfStates) * SpecialFunctions.Factorial(numberOfStates / 2);
@@ -39,10 +39,7 @@ namespace CanvasCommon
         {
             var density = Enumerable.Repeat(0.0, maxValue).ToList();
             double r = Math.Pow(Math.Max(mean, 0.1), 2) / (Math.Max(variance, mean * 1.2) - mean);
-            if (adjustR)
-                r = r < 6.0 ? 6.0 : r;
-            else
-                r = r < 2.0 ? 2.0 : r;
+            r = Math.Max(adjustR ? 6.0 : 2.0, r);
             for (int x = 0; x < maxValue; x++)
             {
                 var tmpDensity = Math.Exp(Math.Log(Math.Pow(1 + mean / r, -r)) + Math.Log(Math.Pow(mean / (mean + r), x)) + SpecialFunctions.GammaLn(r + x) -

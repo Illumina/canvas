@@ -1140,8 +1140,7 @@ namespace Illumina.SecondaryAnalysis
                 throw new Exception($"Number of output CanvasPartition files {partitionedPaths.Count} is not equal to the number of Canvas callsets {callsets.PedigreeSample.Count}");
 
 
-            bool isProband = callsets.PedigreeSample.Where(x => x.SampleType == SampleType.Proband).ToList().Count > 0;
-
+            bool haveProband = callsets.PedigreeSample.Where(x => x.SampleType == SampleType.Proband).ToList().Count > 0;
 
             // CanvasSmallPedigreeCaller:
             StringBuilder commandLine = new StringBuilder {Length = 0};
@@ -1162,7 +1161,7 @@ namespace Illumina.SecondaryAnalysis
                 commandLine.AppendFormat("-o \"{0}\" ", callset.Sample.OutputVcfPath); 
             }
             commandLine.AppendFormat("-r \"{0}\" ", callsets.AnalysisDetails.WholeGenomeFastaFolder);
-            if (isProband)
+            if (haveProband)
             {
                 string pedigreeFile = WritePedigreeFile(callsets);
                 commandLine.AppendFormat("-f \"{0}\" ", pedigreeFile);

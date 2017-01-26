@@ -182,6 +182,13 @@ namespace CanvasPedigreeCaller
             }
 
             int pedigreeMemberIndex = 0;
+            if ((copyNumbers == null && qscores != null) || (copyNumbers != null & qscores == null))
+                throw new ArgumentException("Both copyNumbers and qscores arguments must be specified.");
+            if (copyNumbers != null && copyNumbers.Count != pedigreeMembers.First().Segments.Count)
+                throw new ArgumentException("Length of copyNumbers list should be equal to the number of segments.");
+            if (qscores != null && qscores.Count != pedigreeMembers.First().Segments.Count)
+                throw new ArgumentException("Length of qscores list should be equal to the number of segments.");
+
             foreach (var pedigreeMember in pedigreeMembers)
             {
                 CanvasSegment.MergeSegments(ref pedigreeMember.Segments, MinimumCallSize, copyNumbers: copyNumbers, qscores: qscores);

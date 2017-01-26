@@ -122,7 +122,6 @@ namespace CanvasCommon
             this.Counts.AddRange(s.Counts);
             Alleles.Frequencies.AddRange(s.Alleles.Frequencies);
             Alleles.TotalCoverage.AddRange(s.Alleles.TotalCoverage);
-
         }
 
         public CanvasSegment(string chr, int begin, int end, List<float> counts)
@@ -745,12 +744,6 @@ namespace CanvasCommon
             List<List<int>> copyNumbers = null, List<double> qscores = null)
         {
             if (!segments.Any()) return;
-            if ((copyNumbers == null && qscores != null) || (copyNumbers != null & qscores == null))
-                throw new ArgumentException("Both copyNumbers and qscores arguments must be specified.");
-            if (copyNumbers != null && copyNumbers.Count != segments.Count)
-                throw new ArgumentException("Length of copyNumbers list should be equal to the number of segments.");
-            if (qscores != null && qscores.Count != segments.Count)
-                throw new ArgumentException("Length of qscores list should be equal to the number of segments.");
             var newCopyNumbers = new List<List<int>>();
 
             // Assimilate short segments into the *best* available neighbor:
