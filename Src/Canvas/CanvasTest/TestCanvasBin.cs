@@ -90,7 +90,7 @@ namespace CanvasTest
         [TestMethod]
         public void TestBinSingleEndBam()
         {
-            string assemblyFolder = Isas.Shared.Utilities.Utilities.GetAssemblyFolder(typeof(TestCanvasBin));
+            string assemblyFolder = Isas.Framework.Utilities.Utilities.GetAssemblyFolder(typeof(TestCanvasBin));
             string dataFolder = Path.Combine(assemblyFolder, "Data");
             string bedPath = Path.Combine(dataFolder, "bins_chrM.bed");
             string bamPath = Path.Combine(dataFolder, "single-end.bam");
@@ -114,7 +114,7 @@ namespace CanvasTest
         public void TestAllChromsInBedAreInBam()
         {
             CanvasBinParameters parameters = new CanvasBinParameters();
-            string assemblyFolder = Isas.Shared.Utilities.Utilities.GetAssemblyFolder(typeof(TestCanvasBin));
+            string assemblyFolder = Isas.Framework.Utilities.Utilities.GetAssemblyFolder(typeof(TestCanvasBin));
             string dataFolder = Path.Combine(assemblyFolder, "Data");
             parameters.predefinedBinsFile = Path.Combine(dataFolder, "bins_chrU.bed");
             parameters.bamFile = Path.Combine(dataFolder, "single-end.bam");

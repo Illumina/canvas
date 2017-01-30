@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using CanvasCommon;
-using Isas.Shared.Utilities.FileSystem;
+using Illumina.Common.FileSystem;
 using NDesk.Options;
 
 namespace CanvasNormalize

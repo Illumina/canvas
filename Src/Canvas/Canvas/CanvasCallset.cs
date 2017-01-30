@@ -1,11 +1,10 @@
-using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using Illumina.Common;
+using Illumina.Common.FileSystem;
+using Isas.Framework.DataTypes;
+using Isas.Manifests.NexteraManifest;
 using Isas.SequencingFiles;
-using Isas.Shared.DataTypes;
-using Isas.Shared.Utilities.FileSystem;
 
 namespace Canvas
 {

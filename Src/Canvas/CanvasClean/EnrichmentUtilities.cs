@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using CanvasCommon;
+using Isas.Manifests.NexteraManifest;
 using Isas.SequencingFiles;
 
 namespace CanvasClean

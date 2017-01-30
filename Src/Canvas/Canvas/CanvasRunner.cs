@@ -1,24 +1,25 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.IO;
 using System.Text;
-using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Canvas;
 using Canvas.CommandLineParsing;
 using Canvas.SmallPedigree;
-using CanvasBin;
 using CanvasPartition;
 using CanvasCommon;
 using Illumina.Common;
+using Illumina.Common.FileSystem;
+using Isas.Framework.Checkpointing;
+using Isas.Framework.Checkpointing.Legacy;
+using Isas.Framework.DataTypes;
+using Isas.Framework.Logging;
+using Isas.Framework.Utilities;
+using Isas.Framework.WorkManagement;
+using Isas.Manifests.NexteraManifest;
 using Isas.SequencingFiles;
-using Isas.Shared.Checkpointing;
-using Isas.Shared.DataTypes;
-using Isas.Shared.Utilities;
-using Isas.Shared.Utilities.FileSystem;
-using Utilities = Isas.Shared.Utilities.Utilities;
+using Utilities = Isas.Framework.Utilities.Utilities;
 
 namespace Illumina.SecondaryAnalysis
 {
@@ -35,19 +36,19 @@ namespace Illumina.SecondaryAnalysis
         private readonly int _countsPerBin;
         private readonly ILogger _logger;
         private readonly IWorkManager _workManager;
-        private readonly ICheckpointRunnerAsync _checkpointRunner;
+        private readonly ICheckpointRunner _checkpointRunner;
         private readonly bool _isSomatic;
         private readonly Dictionary<string, string> _customParameters = new Dictionary<string, string>();
         #endregion
 
-        public CanvasRunner(ILogger logger, IWorkManager workManager, ICheckpointRunnerAsync checkpointRunner, bool isSomatic, CanvasCoverageMode coverageMode,
+        public CanvasRunner(ILogger logger, IWorkManager workManager, ICheckpointRunner checkpointRunner, bool isSomatic, CanvasCoverageMode coverageMode,
             int countsPerBin, Dictionary<string, string> customParameters = null)
         {
             _logger = logger;
             _workManager = workManager;
             _checkpointRunner = checkpointRunner;
             _isSomatic = isSomatic;
-            _canvasFolder = Path.Combine(Utilities.GetAssemblyFolder(typeof(CanvasRunner)));
+            _canvasFolder = Path.Combine(Isas.Framework.Utilities.Utilities.GetAssemblyFolder(typeof(CanvasRunner)));
             _coverageMode = coverageMode;
             _countsPerBin = countsPerBin;
             if (customParameters != null)
@@ -63,7 +64,7 @@ namespace Illumina.SecondaryAnalysis
             if (_customParameters.ContainsKey("CanvasBin"))
             {
                 string beforeFirstOption;
-                var options = Utilities.GetCommandOptions(_customParameters["CanvasBin"], out beforeFirstOption);
+                var options = Isas.Framework.Utilities.Utilities.GetCommandOptions(_customParameters["CanvasBin"], out beforeFirstOption);
                 foreach (var option in options)
                 {
                     if (option.Key != "-m" && option.Key != "--mode")
@@ -71,7 +72,7 @@ namespace Illumina.SecondaryAnalysis
                     mode = CanvasCommon.Utilities.ParseCanvasCoverageMode(option.Value.TrimStart('=').Trim());
                 }
                 // remove mode from custom parameters
-                _customParameters["CanvasBin"] = Utilities.MergeCommandLineOptions(_customParameters["CanvasBin"], "#m #mode");
+                _customParameters["CanvasBin"] = Isas.Framework.Utilities.Utilities.MergeCommandLineOptions(_customParameters["CanvasBin"], "#m #mode");
             }
         }
 
@@ -80,7 +81,7 @@ namespace Illumina.SecondaryAnalysis
             if (_customParameters.ContainsKey("CanvasNormalize"))
             {
                 string beforeFirstOption;
-                var options = Utilities.GetCommandOptions(_customParameters["CanvasNormalize"], out beforeFirstOption);
+                var options = Isas.Framework.Utilities.Utilities.GetCommandOptions(_customParameters["CanvasNormalize"], out beforeFirstOption);
                 foreach (var option in options)
                 {
                     if (option.Key != "-m" && option.Key != "--mode")
@@ -88,7 +89,7 @@ namespace Illumina.SecondaryAnalysis
                     mode = CanvasCommon.Utilities.ParseCanvasNormalizeMode(option.Value.TrimStart('=').Trim());
                 }
                 // remove mode from custom parameters
-                _customParameters["CanvasNormalize"] = Utilities.MergeCommandLineOptions(_customParameters["CanvasNormalize"], "#m #mode");
+                _customParameters["CanvasNormalize"] = Isas.Framework.Utilities.Utilities.MergeCommandLineOptions(_customParameters["CanvasNormalize"], "#m #mode");
             }
         }
 
@@ -114,7 +115,7 @@ namespace Illumina.SecondaryAnalysis
             string canvasBinPath = Path.Combine(_canvasFolder, "CanvasBin.exe");
             string executablePath = canvasBinPath;
             if (CrossPlatform.IsThisMono())
-                executablePath = Utilities.GetMonoPath();
+                executablePath = Isas.Framework.Utilities.Utilities.GetMonoPath();
 
             StringBuilder commandLine = new StringBuilder();
             if (CrossPlatform.IsThisMono())
@@ -151,7 +152,7 @@ namespace Illumina.SecondaryAnalysis
             };
             if (_customParameters.ContainsKey("CanvasBin"))
             {
-                binJob.CommandLine = Utilities.MergeCommandLineOptions(binJob.CommandLine, _customParameters["CanvasBin"], true);
+                binJob.CommandLine = Isas.Framework.Utilities.Utilities.MergeCommandLineOptions(binJob.CommandLine, _customParameters["CanvasBin"], true);
             }
             _workManager.DoWorkSingleThread(binJob);
 
@@ -195,7 +196,7 @@ namespace Illumina.SecondaryAnalysis
             string canvasBinPath = Path.Combine(_canvasFolder, "CanvasBin.exe");
             string executablePath = canvasBinPath;
             if (CrossPlatform.IsThisMono())
-                executablePath = Utilities.GetMonoPath();
+                executablePath = Isas.Framework.Utilities.Utilities.GetMonoPath();
 
             //use bam as input
             if (callset.SingleSampleCallset.Bam == null)
@@ -258,7 +259,7 @@ namespace Illumina.SecondaryAnalysis
             string canvasBinPath = Path.Combine(_canvasFolder, "CanvasBin.exe");
             string executablePath = canvasBinPath;
             if (CrossPlatform.IsThisMono())
-                executablePath = Utilities.GetMonoPath();
+                executablePath = Isas.Framework.Utilities.Utilities.GetMonoPath();
 
             //use bam as input
             List<string> bamPaths = new List<string>();
@@ -341,7 +342,7 @@ namespace Illumina.SecondaryAnalysis
                 };
                 if (_customParameters.ContainsKey("CanvasBin"))
                 {
-                    finalBinJob.CommandLine = Utilities.MergeCommandLineOptions(finalBinJob.CommandLine,
+                    finalBinJob.CommandLine = Isas.Framework.Utilities.Utilities.MergeCommandLineOptions(finalBinJob.CommandLine,
                         _customParameters["CanvasBin"], true);
                 }
                 finalBinJobs.Add(finalBinJob);

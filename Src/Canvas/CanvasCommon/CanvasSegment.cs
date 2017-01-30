@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.IO;
-using System.Net.Mime;
 using Illumina.Common;
 using Isas.SequencingFiles;
 

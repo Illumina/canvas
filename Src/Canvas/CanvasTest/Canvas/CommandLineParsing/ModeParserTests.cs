@@ -2,7 +2,7 @@
 using Canvas.CommandLineParsing;
 using CanvasCommon.CommandLineParsing.CoreOptionTypes;
 using CanvasCommon.CommandLineParsing.OptionProcessing;
-using Isas.Shared.Utilities.FileSystem;
+using Illumina.Common.FileSystem;
 using Ploeh.AutoFixture.Xunit2;
 using UnitTests;
 using Xunit;

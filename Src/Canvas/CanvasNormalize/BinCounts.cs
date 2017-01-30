@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using CanvasCommon;
+using Isas.Manifests.NexteraManifest;
 using Isas.SequencingFiles;
 
 namespace CanvasNormalize

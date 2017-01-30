@@ -1,13 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Security.Principal;
-using CanvasCommon;
 using MathNet.Numerics.Distributions;
-using System.Threading;
 using System.Threading.Tasks;
-using Isas.Shared.Utilities;
-using MathNet.Numerics.LinearAlgebra;
 
 namespace CanvasPartition
 {
