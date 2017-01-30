@@ -5,9 +5,9 @@ using System.Threading;
 using System.Threading.Tasks;
 
 using CanvasCommon;
+using Illumina.Common.FileSystem;
+using Isas.Framework.DataTypes;
 using Isas.SequencingFiles;
-using Isas.Shared.DataTypes;
-using Isas.Shared.Utilities.FileSystem;
 
 namespace CanvasBin
 {

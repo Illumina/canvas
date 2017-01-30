@@ -1,13 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading;
 using CanvasCommon.CommandLineParsing.CoreOptionTypes;
 using CanvasCommon.CommandLineParsing.OptionProcessing;
+using Illumina.Common.FileSystem;
 using Isas.SequencingFiles;
-using Isas.Shared.DataTypes;
-using Isas.Shared.Utilities.FileSystem;
-using Illumina.Common;
 
 namespace Canvas.CommandLineParsing
 {

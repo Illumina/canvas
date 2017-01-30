@@ -1,11 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using Isas.Shared.Utilities;
-using Isas.Shared.Utilities.FileSystem;
 using NDesk.Options;
 using Newtonsoft.Json;
 using System.Linq;
+using Illumina.Common.FileSystem;
+using Isas.Framework.Utilities;
 
 namespace CanvasPedigreeCaller
 {

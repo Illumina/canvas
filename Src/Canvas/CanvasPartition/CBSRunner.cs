@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Threading;
-using Isas.Shared.Utilities;
 using MathNet.Numerics.Random;
 
 namespace CanvasPartition
@@ -86,7 +85,7 @@ namespace CanvasPartition
 
                 }));
             }
-            Isas.Shared.Utilities.Utilities.DoWorkParallelThreads(tasks);
+            Isas.Framework.Utilities.Utilities.DoWorkParallelThreads(tasks);
 
             // Quick sanity-check: If we don't have any segments, then return a dummy result.
             int n = 0;
@@ -143,8 +142,8 @@ namespace CanvasPartition
                     }
                 }));
             }
-            
-            Isas.Shared.Utilities.Utilities.DoWorkParallelThreads(tasks);
+
+            Isas.Framework.Utilities.Utilities.DoWorkParallelThreads(tasks);
             // segmentation.SegmentationResults = new Segmentation.GenomeSegmentationResults(segmentByChr);
             Console.WriteLine("{0} Completed CBS tasks", DateTime.Now);
             Console.WriteLine("{0} Segmentation results complete", DateTime.Now);

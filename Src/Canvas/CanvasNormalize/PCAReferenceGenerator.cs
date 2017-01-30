@@ -3,8 +3,9 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using CanvasCommon;
+using Illumina.Common.FileSystem;
+using Isas.Manifests.NexteraManifest;
 using Isas.SequencingFiles;
-using Isas.Shared.Utilities.FileSystem;
 
 namespace CanvasNormalize
 {
@@ -57,7 +58,7 @@ namespace CanvasNormalize
             double medianRatio = ratios.OnTargetMedianBinCount;
 
             // delete temporary reference count file
-            Isas.Shared.Utilities.Utilities.SafeDelete(tempReferenceFile.FullName);
+            Isas.Framework.Utilities.Utilities.SafeDelete(tempReferenceFile.FullName);
 
             // multiply reference counts by the median ratio
             var referenceBins = Enumerable.Zip(sampleBins, referenceVector,

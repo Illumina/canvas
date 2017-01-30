@@ -1,6 +1,6 @@
 ﻿using System;
+using Isas.Framework.Utilities;
 using Isas.SequencingFiles;
-using Isas.Shared.Utilities;
 
 namespace FlagUniqueKmers
 {

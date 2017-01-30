@@ -1,6 +1,6 @@
 ﻿using System;
 using System.IO;
-using Isas.Shared.Utilities.FileSystem;
+using Illumina.Common.FileSystem;
 
 namespace UnitTests
 {

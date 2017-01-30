@@ -4,7 +4,6 @@ using System.Linq;
 using System.Text;
 using System.IO;
 using CanvasCommon;
-using Illumina.Common;
 using Isas.SequencingFiles;
 using Isas.SequencingFiles.Vcf;
 
