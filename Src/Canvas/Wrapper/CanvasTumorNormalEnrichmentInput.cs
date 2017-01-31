@@ -1,4 +1,8 @@
-﻿namespace Illumina.SecondaryAnalysis.VariantCalling.StructuralVariants.Canvas
+﻿using Isas.Framework.DataTypes;
+using Isas.Manifests.NexteraManifest;
+using Isas.SequencingFiles;
+
+namespace Canvas.Wrapper
 {
     public class CanvasTumorNormalEnrichmentInput : ICanvasEnrichmentInput
     {

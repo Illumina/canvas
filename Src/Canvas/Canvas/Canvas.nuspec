@@ -1,6 +1,5 @@
 <?xml version="1.0"?>
 <package>
-
   <metadata>
     <id>Canvas</id>
     <version>$version$</version>
@@ -9,13 +8,17 @@
     <owners>Illumina</owners>
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
     <description>Canvas</description>
-    <copyright>Copyright 2016</copyright>
-    <tags>Canvas</tags>	
+    <copyright>Copyright 2017</copyright>
+    <tags>Canvas</tags>
+    <dependency id="Isas.Manifests" version="[2.2.0,3.0.0)" />
+    <dependency id="Isas.Ploidy" version="(0.0.0,1.0.0)" />
+    <dependency id="Isas.SequencingFiles" version="(3.4.0,4.0.0)" />
+    <dependency id="Isas.Framework" version="(3.3.0,4.0.0)" />
   </metadata>
-  
   <files>
     <file src="..\x64\Release\*" target="build/Canvas" />
-    <file src="Canvas.targets" target="build/Canvas.targets" />	
-  </files>	
-
+    <file src="Canvas.targets" target="build/Canvas.targets" />
+    <file src="..\Wrapper\x64\Release\Canvas.Wrapper.dll" target="lib\net451" />
+    <file src="..\Wrapper\x64\Release\Canvas.Wrapper.XML" target="lib\net451" />
+  </files>
 </package>

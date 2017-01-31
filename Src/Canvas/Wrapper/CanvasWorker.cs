@@ -1,6 +1,9 @@
 ﻿using System.Threading.Tasks;
+using Isas.Framework.Checkpointing;
+using Isas.Framework.Checkpointing.Legacy;
+using Isas.Framework.DataTypes;
 
-namespace Illumina.SecondaryAnalysis.VariantCalling.StructuralVariants.Canvas
+namespace Canvas.Wrapper
 {
     public interface ICanvasWorker<TCanvasInput, TCanvasOutput> where TCanvasOutput : ICanvasOutput
     {

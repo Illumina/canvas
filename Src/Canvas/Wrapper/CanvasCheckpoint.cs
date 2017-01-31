@@ -1,6 +1,10 @@
 ﻿using System;
+using Illumina.Common.FileSystem;
+using Isas.Framework.Checkpointing.Legacy;
+using Isas.Framework.DataTypes;
+using Isas.SequencingFiles;
 
-namespace Illumina.SecondaryAnalysis.VariantCalling.StructuralVariants.Canvas
+namespace Canvas.Wrapper
 {
     public interface ICanvasCheckpointInput
     {

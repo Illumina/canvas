@@ -1,6 +1,12 @@
 ﻿using System.Text;
+using Illumina.Common;
+using Illumina.Common.FileSystem;
+using Isas.Framework.DataTypes;
+using Isas.Framework.Logging;
+using Isas.Framework.Utilities;
+using Isas.Framework.WorkManagement;
 
-namespace Illumina.SecondaryAnalysis.VariantCalling.StructuralVariants.Canvas
+namespace Canvas.Wrapper
 {
     /// <summary>
     /// Run Canvas T/N on WGS data to generate somatic CNV calls:

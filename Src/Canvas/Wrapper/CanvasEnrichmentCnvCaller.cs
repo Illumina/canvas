@@ -1,7 +1,15 @@
 ﻿using System.Collections.Generic;
+using System.Linq;
 using System.Text;
+using Illumina.Common;
+using Illumina.Common.FileSystem;
+using Illumina.SecondaryAnalysis.VariantCalling;
+using Isas.Framework.DataTypes;
+using Isas.Framework.Logging;
+using Isas.Framework.Utilities;
+using Isas.Framework.WorkManagement;
 
-namespace Illumina.SecondaryAnalysis.VariantCalling.StructuralVariants.Canvas
+namespace Canvas.Wrapper
 {
     /// <summary>
     /// Run Canvas on enrichment data to generate CNV calls:

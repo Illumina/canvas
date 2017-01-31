@@ -1,8 +1,13 @@
 ﻿using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
+using Illumina.Common.FileSystem;
+using Illumina.SecondaryAnalysis.VariantCalling;
+using Isas.Framework.DataTypes;
+using Isas.Manifests.NexteraManifest;
+using Isas.SequencingFiles;
 
-namespace Illumina.SecondaryAnalysis.VariantCalling.StructuralVariants.Canvas
+namespace Canvas.Wrapper
 {
     public interface ICanvasEnrichmentInput : ICanvasCheckpointInput
     {

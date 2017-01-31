@@ -1,6 +1,9 @@
 using System.Collections.Generic;
+using Illumina.Common.FileSystem;
+using Isas.Framework.DataTypes;
+using Isas.Manifests.NexteraManifest;
 
-namespace Illumina.SecondaryAnalysis.VariantCalling.StructuralVariants.Canvas
+namespace Canvas.Wrapper
 {
     public class CanvasEnrichmentInputCreator<TCanvasEnrichmentInput> where TCanvasEnrichmentInput : ICanvasEnrichmentInput
     {
@@ -39,7 +42,7 @@ namespace Illumina.SecondaryAnalysis.VariantCalling.StructuralVariants.Canvas
         private IFileLocation CreateDbSnpVcfForManifest(IFileLocation fullDbSnpVcf, NexteraManifest manifest, IDirectoryLocation sandBox)
         {
             IFileLocation targetedDbSnpVcf = sandBox.GetFileLocation($"{manifest.Name}_{fullDbSnpVcf.Name}");
-            VcfUtilities.IntersectVcfWithManifest(fullDbSnpVcf.FullName, targetedDbSnpVcf.FullName, manifest);
+            Isas.Manifests.NexteraManifest.VcfUtilities.IntersectVcfWithManifest(fullDbSnpVcf.FullName, targetedDbSnpVcf.FullName, manifest);
             return targetedDbSnpVcf;
         }
     }
