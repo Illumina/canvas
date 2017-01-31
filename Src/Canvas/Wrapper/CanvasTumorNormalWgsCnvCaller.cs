@@ -58,7 +58,7 @@ namespace Canvas.Wrapper
             StringBuilder commandLine = new StringBuilder("Somatic-WGS");
             commandLine.Append(_singleSampleInputCommandLineBuilder.GetSingleSampleCommandLine(sampleId, input.TumorBam, input.GenomeMetadata, sampleSandbox));
 
-            commandLine.Append($" --b-allele-vcf {input.NormalVcf.VcfFile.WrapWithShellQuote()}");
+            commandLine.Append($" --sample-b-allele-vcf {input.NormalVcf.VcfFile.WrapWithShellQuote()}");
 
             commandLine.Append($" --somatic-vcf {input.SomaticVcf.VcfFile.WrapWithShellQuote()}");
 
