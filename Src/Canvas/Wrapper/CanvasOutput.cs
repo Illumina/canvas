@@ -1,6 +1,9 @@
 using System;
+using Illumina.Common.FileSystem;
+using Isas.Framework.DataTypes;
+using Isas.Framework.Utilities;
 
-namespace Illumina.SecondaryAnalysis.VariantCalling.StructuralVariants.Canvas
+namespace Canvas.Wrapper
 {
     public class CanvasOutput : ICanvasOutput
     {

@@ -1,8 +1,14 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
+using Illumina.Common.FileSystem;
+using Isas.Framework.DataTypes;
+using Isas.Framework.Utilities;
+using Isas.Framework.WorkManagement;
+using Isas.SequencingFiles;
 
-namespace Illumina.SecondaryAnalysis.VariantCalling.StructuralVariants.Canvas
+namespace Canvas.Wrapper
 {
     public interface ICanvasSingleSampleInputCommandLineBuilder
     {

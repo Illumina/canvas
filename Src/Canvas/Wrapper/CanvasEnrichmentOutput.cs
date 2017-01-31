@@ -1,6 +1,7 @@
 ﻿using System;
+using Illumina.Common.FileSystem;
 
-namespace Illumina.SecondaryAnalysis.VariantCalling.StructuralVariants.Canvas
+namespace Canvas.Wrapper
 {
     public class CanvasEnrichmentOutput : ICanvasOutput
     {

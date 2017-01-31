@@ -78,12 +78,12 @@
       <HintPath>..\Canvas\packages\Illumina.Common.1.40.1-O00002develop\lib\net451\Illumina.Common.dll</HintPath>
       <Private>True</Private>
     </Reference>
-    <Reference Include="Isas.Framework, Version=3.1.0.0, Culture=neutral, processorArchitecture=AMD64">
-      <HintPath>..\Canvas\packages\Isas.Framework.3.1.0\lib\net451\Isas.Framework.dll</HintPath>
+    <Reference Include="Isas.Framework, Version=3.3.1.15, Culture=neutral, processorArchitecture=AMD64">
+      <HintPath>..\Canvas\packages\Isas.Framework.3.3.1-O00015develop\lib\net451\Isas.Framework.dll</HintPath>
       <Private>True</Private>
     </Reference>
-    <Reference Include="Isas.SequencingFiles, Version=3.3.3.59, Culture=neutral, processorArchitecture=AMD64">
-      <HintPath>..\Canvas\packages\Isas.SequencingFiles.3.3.3-O00059develop\lib\net451\Isas.SequencingFiles.dll</HintPath>
+    <Reference Include="Isas.SequencingFiles, Version=3.5.0.63, Culture=neutral, processorArchitecture=AMD64">
+      <HintPath>..\Canvas\packages\Isas.SequencingFiles.3.5.0-O00063develop\lib\net451\Isas.SequencingFiles.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="NDesk.Options, Version=0.2.1.0, Culture=neutral, processorArchitecture=MSIL">
@@ -143,12 +143,12 @@
     <PostBuildEvent>
     </PostBuildEvent>
   </PropertyGroup>
-  <Import Project="..\Canvas\packages\Isas.FileCompression.3.3.3-O00059develop\build\net451\Isas.FileCompression.targets" Condition="Exists('..\Canvas\packages\Isas.FileCompression.3.3.3-O00059develop\build\net451\Isas.FileCompression.targets')" />
+  <Import Project="..\Canvas\packages\Isas.FileCompression.3.5.0-O00063develop\build\net451\Isas.FileCompression.targets" Condition="Exists('..\Canvas\packages\Isas.FileCompression.3.5.0-O00063develop\build\net451\Isas.FileCompression.targets')" />
   <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
     <PropertyGroup>
       <ErrorText>This project references NuGet package(s) that are missing on this computer. Use NuGet Package Restore to download them.  For more information, see http://go.microsoft.com/fwlink/?LinkID=322105. The missing file is {0}.</ErrorText>
     </PropertyGroup>
-    <Error Condition="!Exists('..\Canvas\packages\Isas.FileCompression.3.3.3-O00059develop\build\net451\Isas.FileCompression.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\Canvas\packages\Isas.FileCompression.3.3.3-O00059develop\build\net451\Isas.FileCompression.targets'))" />
+    <Error Condition="!Exists('..\Canvas\packages\Isas.FileCompression.3.5.0-O00063develop\build\net451\Isas.FileCompression.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\Canvas\packages\Isas.FileCompression.3.5.0-O00063develop\build\net451\Isas.FileCompression.targets'))" />
   </Target>
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

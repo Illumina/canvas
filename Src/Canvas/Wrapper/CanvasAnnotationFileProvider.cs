@@ -4,7 +4,7 @@ using System.Linq;
 using Illumina.Common.FileSystem;
 using Isas.SequencingFiles;
 
-namespace Illumina.SecondaryAnalysis.VariantCalling.StructuralVariants.Canvas
+namespace Canvas.Wrapper
 {
     public interface ICanvasAnnotationFileProvider
     {

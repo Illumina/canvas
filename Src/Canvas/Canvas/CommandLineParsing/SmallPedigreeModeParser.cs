@@ -36,9 +36,9 @@ namespace Canvas.CommandLineParsing
     internal class SmallPedigreeOptionsParser : Option<SmallPedigreeOptions>
     {
         private static readonly MultiValueOption<IFileLocation> Bams = new MultiValueOption<IFileLocation>(FileOption.CreateRequired("Bam files", "bams"));
-        private static readonly FileOption PloidyVcf =FileOption.Create("multisample .vcf file containing regions of known ploidy. Copy number calls matching the known ploidy in these regions will be considered non-variant","ploidy-bed");
+        private static readonly FileOption PloidyVcf = FileOption.Create("multisample .vcf file containing regions of known ploidy. Copy number calls matching the known ploidy in these regions will be considered non-variant", "ploidy-bed");
         private static readonly FileOption PopulationBAlleleSites = SingleSampleCommonOptionsParser.PopulationBAlleleSites;
-        private static readonly FileOption SampleBAlleleSites = FileOption.CreateRequired("multisample .vcf file containing SNV b-allele sites (only sites with PASS in the filter column will be used)","b-allele-vcf");
+        private static readonly FileOption SampleBAlleleSites = FileOption.CreateRequired("multisample .vcf file containing SNV b-allele sites (only sites with PASS in the filter column will be used)", "b-allele-vcf");
         private static readonly FileOption CommonCnvsBed = FileOption.Create(".bed file containing regions of known common CNVs", "common-cnvs-bed");
         private static readonly MultiValueOption<string> Proband = new MultiValueOption<string>(StringOption.Create("Proband sample name", "proband"));
         private static readonly StringOption Mother = StringOption.Create("Mother sample name", "mother");
@@ -102,7 +102,7 @@ namespace Canvas.CommandLineParsing
                 using (var bamReader = new BamReader(bam.FullName))
                 {
                     var sampleNames = bamReader.GetReadGroupSamples();
-                    if (sampleNames.Count <1)
+                    if (sampleNames.Count < 1)
                         throw new ArgumentException($"Bam file '{bam}' must contain reads from one sample only");
                     map.Add(sampleNames.First(), bam);
                 }

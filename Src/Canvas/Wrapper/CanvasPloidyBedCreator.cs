@@ -1,4 +1,12 @@
-namespace Illumina.SecondaryAnalysis.VariantCalling.StructuralVariants.Canvas
+using System.Linq;
+using Illumina.Common.FileSystem;
+using Illumina.SecondaryAnalysis.VariantCalling;
+using Isas.Framework.DataTypes;
+using Isas.Framework.Logging;
+using Isas.Framework.WorkManagement;
+using Isas.SequencingFiles;
+
+namespace Canvas.Wrapper
 {
     public class CanvasPloidyBedCreator
     {
@@ -50,14 +58,12 @@ namespace Illumina.SecondaryAnalysis.VariantCalling.StructuralVariants.Canvas
             IFileLocation ploidyBed = sampleSandbox.GetFileLocation("ploidy.bed.gz");
             if (sexKaryotype.ToLower().Contains("y"))
             {
-                ploidyInfo.ProvidedPloidyX = 1;
-                ploidyInfo.ProvidedPloidyY = 1;
+                ploidyInfo.ProvidedPloidy = SexPloidyInfo.NormalMale;
                 _logger.Info($"Creating male ploidy bed file at {ploidyBed}.");
             }
             else
             {
-                ploidyInfo.ProvidedPloidyX = 2;
-                ploidyInfo.ProvidedPloidyY = 0;
+                ploidyInfo.ProvidedPloidy = SexPloidyInfo.NormalFemale;
                 _logger.Info($"Creating female ploidy bed file at {ploidyBed}.");
             }
             string headerLine = $"{PloidyCorrector.ReferenceSexChromosomeKaryotype}={PloidyCorrector.PrettyPrintPloidy(ploidyInfo.ProvidedPloidyX.Value, ploidyInfo.ProvidedPloidyY.Value)}";
