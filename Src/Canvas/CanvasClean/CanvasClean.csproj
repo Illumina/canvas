@@ -82,9 +82,17 @@
       <HintPath>..\Canvas\packages\Isas.Framework.3.3.1-O00015develop\lib\net451\Isas.Framework.dll</HintPath>
       <Private>True</Private>
     </Reference>
-    <Reference Include="Isas.Manifests.NexteraManifest, Version=2.0.0.0, Culture=neutral, processorArchitecture=AMD64">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\Canvas\packages\Isas.Manifests.2.0.0\lib\net451\Isas.Manifests.NexteraManifest.dll</HintPath>
+    <Reference Include="Isas.Manifests.AmpliconManifest, Version=2.2.0.0, Culture=neutral, processorArchitecture=AMD64">
+      <HintPath>..\Canvas\packages\Isas.Manifests.2.2.0\lib\net451\Isas.Manifests.AmpliconManifest.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Isas.Manifests.ForenSeqManifest, Version=2.2.0.0, Culture=neutral, processorArchitecture=AMD64">
+      <HintPath>..\Canvas\packages\Isas.Manifests.2.2.0\lib\net451\Isas.Manifests.ForenSeqManifest.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Isas.Manifests.NexteraManifest, Version=2.2.0.0, Culture=neutral, processorArchitecture=AMD64">
+      <HintPath>..\Canvas\packages\Isas.Manifests.2.2.0\lib\net451\Isas.Manifests.NexteraManifest.dll</HintPath>
+      <Private>True</Private>
     </Reference>
     <Reference Include="Isas.SequencingFiles, Version=3.5.0.63, Culture=neutral, processorArchitecture=AMD64">
       <HintPath>..\Canvas\packages\Isas.SequencingFiles.3.5.0-O00063develop\lib\net451\Isas.SequencingFiles.dll</HintPath>
