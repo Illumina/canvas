@@ -75,9 +75,12 @@ namespace Canvas.Wrapper
             if (_annotationFileProvider.CustomDbSnpVcf(input.GenomeMetadata))
             {
                 bAlleleVcf = _annotationFileProvider.GetDbSnpVcf(input.GenomeMetadata);
-                commandLine.Append(" --exclude-non-het-b-allele-sites");
+                commandLine.Append($" --population-b-allele-vcf {bAlleleVcf.WrapWithShellQuote()}");
             }
-            commandLine.Append($" --b-allele-vcf {bAlleleVcf.WrapWithShellQuote()}");
+            else
+            {
+                commandLine.Append($" --sample-b-allele-vcf {bAlleleVcf.WrapWithShellQuote()}");
+            }
 
             IFileLocation ploidyBed = _canvasPloidyBedCreator.CreateGermlinePloidyBed(input.Vcf, input.GenomeMetadata, sampleSandbox);
             if (ploidyBed != null)

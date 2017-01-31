@@ -85,10 +85,13 @@ namespace Canvas.Wrapper
             commandLine.Append(_singleSampleInputCommandLineBuilder.GetSingleSampleCommandLine(sampleId, input.TumorBam, input.GenomeMetadata, sampleSandbox));
             commandLine.Append($" --normal-bam {input.NormalBam.BamFile.WrapWithShellQuote()}");
             commandLine.Append($" --manifest {manifest.WrapWithShellQuote()}");
-            commandLine.Append($" --b-allele-vcf {bAlleleVcf.WrapWithShellQuote()}");
             if (isDbSnpVcf)
             {
-                commandLine.Append(" --exclude-non-het-b-allele-sites");
+                commandLine.Append($" --population-b-allele-vcf {bAlleleVcf.WrapWithShellQuote()}");
+            }
+            else
+            {
+                commandLine.Append($" --sample-b-allele-vcf {bAlleleVcf.WrapWithShellQuote()}");
             }
 
             commandLine.Append($" --somatic-vcf {input.SomaticVcf.VcfFile.WrapWithShellQuote()}");

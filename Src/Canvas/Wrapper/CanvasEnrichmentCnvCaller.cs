@@ -111,8 +111,7 @@ namespace Canvas.Wrapper
                     commandLine.Append($" --control-ploidy-bed {controlPloidyBed.WrapWithShellQuote()}");
                 }
             }
-            commandLine.Append($" --b-allele-vcf {dbSnpVcf.WrapWithShellQuote()}");
-            commandLine.Append(" --exclude-non-het-b-allele-sites");
+            commandLine.Append($" --population-b-allele-vcf {dbSnpVcf.WrapWithShellQuote()}");
             commandLine.Append($" --manifest {manifest.WrapWithShellQuote()}");
 
             if (sexChromosomeKaryotype != null)
