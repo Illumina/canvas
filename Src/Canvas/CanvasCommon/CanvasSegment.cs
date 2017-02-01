@@ -13,7 +13,7 @@ namespace CanvasCommon
         public List<float> Frequencies = new List<float>();
         public List<int> TotalCoverage = new List<int>();
         public List<Tuple<int, int>> Counts = new List<Tuple<int, int>>();
-        public Tuple<int, int> MedianCounts;
+        public Tuple<int, int> MedianCounts = new Tuple<int, int>(0, 0);
         public void SetMedianCounts()
         {
             var item1 = Utilities.Median(Counts.Select(x => x.Item1).ToList());
@@ -769,7 +769,7 @@ namespace CanvasCommon
                     if (segments[checkIndex].End - segments[checkIndex].Begin < MinimumCallSize) continue;
                     if (segments[segmentIndex].Begin - segments[checkIndex].End > maximumMergeSpan) break;
                     prevIndex = checkIndex;
-                    prevQ = qscores != null ? segments[checkIndex].QScore : qscores[checkIndex];
+                    prevQ = qscores == null ? segments[checkIndex].QScore : qscores[checkIndex];
                     break;
                 }
                 // Look forward for a segment:
@@ -781,7 +781,7 @@ namespace CanvasCommon
                     if (segments[checkIndex].End - segments[checkIndex].Begin < MinimumCallSize) continue;
                     if (segments[checkIndex].Begin - segments[segmentIndex].End > maximumMergeSpan) continue;
                     nextIndex = checkIndex;
-                    nextQ = qscores != null ? segments[checkIndex].QScore : qscores[checkIndex];
+                    nextQ = qscores == null ? segments[checkIndex].QScore : qscores[checkIndex];
                     break;
                 }
 
