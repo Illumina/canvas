@@ -3,8 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.IO;
 using Illumina.Common;
+using Illumina.Common.FileSystem;
 using Isas.SequencingFiles;
-using Isas.Shared.Utilities.FileSystem;
 
 namespace CanvasCommon
 {

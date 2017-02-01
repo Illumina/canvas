@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using Isas.Shared.Utilities.FileSystem;
+using Illumina.Common.FileSystem;
 using NDesk.Options;
 using Newtonsoft.Json;
 
@@ -43,9 +43,9 @@ namespace CanvasSomaticCaller
             float? userPloidy = null;
             CanvasCommon.CanvasSomaticClusteringMode somaticClusteringMode =
                 CanvasCommon.CanvasSomaticClusteringMode.Density;
-            string parameterconfigPath = Path.Combine(Isas.Shared.Utilities.Utilities.GetAssemblyFolder(typeof(Program)),
+            string parameterconfigPath = Path.Combine(Isas.Framework.Utilities.Utilities.GetAssemblyFolder(typeof(Program)),
                 "SomaticCallerParameters.json");
-            string qualityScoreConfigPath = Path.Combine(Isas.Shared.Utilities.Utilities.GetAssemblyFolder(typeof(Program)),
+            string qualityScoreConfigPath = Path.Combine(Isas.Framework.Utilities.Utilities.GetAssemblyFolder(typeof(Program)),
                 "QualityScoreParameters.json");
 
 

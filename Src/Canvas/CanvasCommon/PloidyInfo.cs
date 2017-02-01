@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Runtime.Remoting.Messaging;
 using Illumina.Common;
 using Isas.SequencingFiles;
 using Isas.SequencingFiles.Vcf;

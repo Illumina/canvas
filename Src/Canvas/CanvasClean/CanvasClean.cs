@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using CanvasCommon;
 using System.IO;
+using Isas.Manifests.NexteraManifest;
 using Isas.SequencingFiles;
 using NDesk.Options;
 

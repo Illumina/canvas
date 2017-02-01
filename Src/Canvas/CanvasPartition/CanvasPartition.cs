@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using Isas.SequencingFiles;
 using NDesk.Options;
 
 namespace CanvasPartition

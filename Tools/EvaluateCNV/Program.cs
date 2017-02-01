@@ -1,9 +1,8 @@
 ﻿using System;
-using System.IO;
 using System.Linq;
 using CanvasCommon.CommandLineParsing.CoreOptionTypes;
 using CanvasCommon.CommandLineParsing.OptionProcessing;
-using Isas.Shared.Utilities.FileSystem;
+using Illumina.Common.FileSystem;
 
 namespace EvaluateCNV
 {
