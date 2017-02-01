@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using CanvasCommon;
-using Isas.SequencingFiles;
+using Isas.Manifests.NexteraManifest;
 
 namespace CanvasClean
 {

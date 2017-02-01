@@ -1,14 +1,14 @@
 ﻿using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using Canvas.CommandLineParsing;
 using Canvas.SmallPedigree;
 using CanvasCommon;
+using Illumina.Common.FileSystem;
 using Illumina.SecondaryAnalysis;
-using Isas.Shared.Checkpointing;
-using Isas.Shared.DataTypes;
-using Isas.Shared.Utilities;
-using Isas.Shared.Utilities.FileSystem;
+using Isas.Framework.Checkpointing;
+using Isas.Framework.DataTypes;
+using Isas.Framework.Logging;
+using Isas.Framework.WorkManagement;
 
 namespace Canvas
 {
@@ -23,7 +23,7 @@ namespace Canvas
             CommonOptions = commonOptions;
         }
 
-        public void Run(ILogger logger, ICheckpointRunnerAsync checkpointRunner, IWorkManager workManager)
+        public void Run(ILogger logger, ICheckpointRunner checkpointRunner, IWorkManager workManager)
         {
             CanvasRunner runner = new CanvasRunner(logger, workManager, checkpointRunner, false, CanvasCoverageMode.TruncatedDynamicRange, 100, CommonOptions.CustomParams);
             var callset = GetCallset();

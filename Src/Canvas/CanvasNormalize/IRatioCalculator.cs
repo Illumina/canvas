@@ -1,6 +1,6 @@
 ﻿using System.Collections.Generic;
 using CanvasCommon;
-using Isas.Shared.Utilities.FileSystem;
+using Illumina.Common.FileSystem;
 
 namespace CanvasNormalize
 {

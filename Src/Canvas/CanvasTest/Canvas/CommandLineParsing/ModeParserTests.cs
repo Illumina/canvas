@@ -2,7 +2,7 @@
 using Canvas.CommandLineParsing;
 using CanvasCommon.CommandLineParsing.CoreOptionTypes;
 using CanvasCommon.CommandLineParsing.OptionProcessing;
-using Isas.Shared.Utilities.FileSystem;
+using Illumina.Common.FileSystem;
 using Ploeh.AutoFixture.Xunit2;
 using UnitTests;
 using Xunit;
@@ -223,13 +223,12 @@ namespace CanvasTest.Canvas.CommandLineParsing
             // arrange
             Option<CommonOptions> commonOptionsParser = new CommonOptionsParser();
             var kmerFasta = tempDirectory.CreateFile("kmer.fa");
-            var bAlleleVcf = tempDirectory.GetFileLocation("ballele.vcf").Touch();
             var filterBed = tempDirectory.GetFileLocation("filter.bed").Touch();
             var output = tempDirectory.CreateSubdirectory("output");
             var genome = tempDirectory.CreateSubdirectory("WholeGenomeFasta");
             string[] stringInputArgument =
             {
-                "-r", kmerFasta.ToString(), "-o", output.ToString(), "-g", genome.ToString(), "--population-b-allele-vcf", bAlleleVcf.ToString(), "--filter-bed", filterBed.ToString(), "--sample-name", "SampleName"
+                "-r", kmerFasta.ToString(), "-o", output.ToString(), "-g", genome.ToString(), "--filter-bed", filterBed.ToString()
             };
 
             // act
@@ -250,13 +249,12 @@ namespace CanvasTest.Canvas.CommandLineParsing
             // arrange
             Option<CommonOptions> commonOptionsParser = new CommonOptionsParser();
             var kmerFasta = tempDirectory.GetFileLocation("kmer.fa");
-            var bAlleleVcf = tempDirectory.GetFileLocation("ballele.vcf").Touch();
             var filterBed = tempDirectory.GetFileLocation("filter.bed").Touch();
             var output = tempDirectory.CreateSubdirectory("output");
             var genome = tempDirectory.CreateSubdirectory("WholeGenomeFasta");
             string[] stringInputArgument =
             {
-                "-r", kmerFasta.ToString(), "-o", output.ToString(), "-g", genome.ToString(), "--sample-b-allele-vcf", bAlleleVcf.ToString(), "--filter-bed", filterBed.ToString(), "--sample-name", "SampleName"
+                "-r", kmerFasta.ToString(), "-o", output.ToString(), "-g", genome.ToString(), "--filter-bed", filterBed.ToString()
             };
 
             // act

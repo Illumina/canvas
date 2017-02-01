@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using Isas.Shared.Utilities;
-using Isas.Shared.Utilities.FileSystem;
+using Illumina.Common.FileSystem;
+using Isas.Framework.Utilities;
 using NDesk.Options;
 using Newtonsoft.Json;
 

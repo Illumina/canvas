@@ -1,9 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using MathNet.Numerics.Distributions;
-using System.Text;
-using System.Threading.Tasks;
 using Combinatorics.Collections;
 using MathNet.Numerics;
 

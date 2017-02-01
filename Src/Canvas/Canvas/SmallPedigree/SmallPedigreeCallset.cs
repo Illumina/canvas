@@ -1,11 +1,7 @@
-using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using Canvas.CommandLineParsing;
-using Isas.SequencingFiles;
-using Isas.Shared.DataTypes;
-using Isas.Shared.Utilities.FileSystem;
 
 namespace Canvas.SmallPedigree
 {

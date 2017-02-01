@@ -1,5 +1,5 @@
 ﻿using System.Collections.Generic;
-using Isas.SequencingFiles;
+using Isas.Manifests.NexteraManifest;
 
 namespace CanvasBin
 {

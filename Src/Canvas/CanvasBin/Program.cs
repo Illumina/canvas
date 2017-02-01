@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.IO;
 using NDesk.Options;
-using Newtonsoft.Json.Linq;
 
 
 namespace CanvasBin
