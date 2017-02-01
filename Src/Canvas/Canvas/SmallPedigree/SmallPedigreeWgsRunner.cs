@@ -40,7 +40,7 @@ namespace Canvas
                 string sampleName = sample.SampleName;
                 IDirectoryLocation outputDirectory = new DirectoryLocation(Path.Combine(CommonOptions.OutputDirectory.FullName, sampleName));
                 Directory.CreateDirectory(outputDirectory.FullName);
-                IFileLocation outputVcfPath = CommonOptions.OutputDirectory.GetFileLocation("CNV.vcf.gz");
+                IFileLocation outputVcfPath = outputDirectory.GetFileLocation("CNV.vcf.gz");
                 SingleSampleCallset callSet = new SingleSampleCallset(
                     new Bam(sample.Bam),
                     sampleName,

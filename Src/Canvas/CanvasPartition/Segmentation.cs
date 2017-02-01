@@ -43,65 +43,65 @@ namespace CanvasPartition
             HMM
         }
 
-        public Segmentation(string inputBinPath, string forbiddenBedPath, int maxInterBinDistInSegment, 
+        public Segmentation(string inputBinPath, string forbiddenBedPath, int maxInterBinDistInSegment,
             string dataType = "logratio")
-                    {
+        {
             this.InputBinPath = inputBinPath;
             this.ForbiddenIntervalBedPath = forbiddenBedPath;
             this.MaxInterBinDistInSegment = maxInterBinDistInSegment;
             this.ReadBEDInput();
-                    }
+        }
 
         private Segmentation.GenomeSegmentationResults GetDummySegmentationResults()
-                    {
+        {
             Segmentation.GenomeSegmentationResults results = new Segmentation.GenomeSegmentationResults(new Dictionary<string, Segmentation.Segment[]>());
             return results;
+        }
+
+
+        public static Segmentation.Segment[] DeriveSegments(List<int> breakpoints, int sizeScoreByChr, uint[] startByChr, uint[] endByChr)
+        {
+            List<int> startBreakpointsPos = new List<int>();
+            List<int> endBreakpointPos = new List<int>();
+            List<int> lengthSeg = new List<int>();
+            if (breakpoints.Count() >= 2 && sizeScoreByChr > 10)
+            {
+                startBreakpointsPos.Add(breakpoints[0]);
+                endBreakpointPos.Add(breakpoints[1] - 1);
+                lengthSeg.Add(breakpoints[1] - 1);
+                for (int i = 1; i < breakpoints.Count - 1; i++)
+                {
+                    startBreakpointsPos.Add(breakpoints[i] - 1);
+                    endBreakpointPos.Add(breakpoints[i + 1]);
+                    lengthSeg.Add(breakpoints[i + 1] - 1 - breakpoints[i]);
+                }
+                startBreakpointsPos.Add(breakpoints[breakpoints.Count - 1]);
+                endBreakpointPos.Add(sizeScoreByChr - 1);
+                lengthSeg.Add(sizeScoreByChr - breakpoints[breakpoints.Count - 1] - 1);
+            }
+            else
+            {
+                startBreakpointsPos.Add(0);
+                endBreakpointPos.Add(sizeScoreByChr - 1);
+                lengthSeg.Add(sizeScoreByChr - 1);
             }
 
 
-        public static Segmentation.Segment[] DeriveSegments(List<int> breakpoints, int sizeScoreByChr, uint[] startByChr,  uint[] endByChr)
-            {
-                    List<int> startBreakpointsPos = new List<int>();
-                    List<int> endBreakpointPos = new List<int>();
-                    List<int> lengthSeg = new List<int>();
-                    if (breakpoints.Count() >= 2 && sizeScoreByChr > 10)
-                    {
-                        startBreakpointsPos.Add(breakpoints[0]);
-                        endBreakpointPos.Add(breakpoints[1] - 1);
-                        lengthSeg.Add(breakpoints[1] - 1);
-                        for (int i = 1; i < breakpoints.Count - 1; i++)
-                        {
-                    startBreakpointsPos.Add(breakpoints[i]-1);
-                    endBreakpointPos.Add(breakpoints[i + 1]);
-                            lengthSeg.Add(breakpoints[i + 1] - 1 - breakpoints[i]);
-                        }
-                        startBreakpointsPos.Add(breakpoints[breakpoints.Count - 1]);
-                        endBreakpointPos.Add(sizeScoreByChr - 1);
-                        lengthSeg.Add(sizeScoreByChr - breakpoints[breakpoints.Count - 1] - 1);
-                    }
-                    else
-                    {
-                        startBreakpointsPos.Add(0);
-                        endBreakpointPos.Add(sizeScoreByChr - 1);
-                        lengthSeg.Add(sizeScoreByChr - 1);
-                    }
-
-
             Segmentation.Segment[] segments = new Segmentation.Segment[startBreakpointsPos.Count];
-                    for (int i = 0; i < startBreakpointsPos.Count; i++)
-                    {
-                        int start = startBreakpointsPos[i];
-                        int end = endBreakpointPos[i];
+            for (int i = 0; i < startBreakpointsPos.Count; i++)
+            {
+                int start = startBreakpointsPos[i];
+                int end = endBreakpointPos[i];
                 segments[i] = new Segmentation.Segment
-                    {
+                {
                     start = startByChr[start],
                     end = endByChr[end]
                 };
                 // Genomic start
                 // Genomic end
-        }
+            }
             return segments;
-                    }
+        }
 
 
         /// <summary>
@@ -199,7 +199,7 @@ namespace CanvasPartition
                 if (index > length)
                     break;
                 var startSegment = RemapIndex(startByChr, endByChr, commonRegion.Start, length, ref index);
-                var endSegment   = RemapIndex(startByChr, endByChr, commonRegion.Stop,  length, ref index);
+                var endSegment = RemapIndex(startByChr, endByChr, commonRegion.Stop, length, ref index);
 
                 if (startSegment.HasValue && endSegment.HasValue)
                 {
@@ -298,26 +298,26 @@ namespace CanvasPartition
 
         private bool IsNewSegment(Dictionary<string, bool> starts, string key, List<SampleGenomicBin> excludeIntervals, uint previousBinEnd,
             uint end, uint start, ref int excludeIndex)
-                        {
+        {
             bool newSegment = starts.ContainsKey(key) ? true : false;
 
-                        if (excludeIntervals != null)
-                        {
+            if (excludeIntervals != null)
+            {
                 while (excludeIndex < excludeIntervals.Count && excludeIntervals[excludeIndex].Stop < previousBinEnd)
                     excludeIndex++;
-                            if (excludeIndex < excludeIntervals.Count)
-                            {
-                                // Note: forbiddenZoneMid should never fall inside a bin, becuase these intervals were already excluded 
-                                // from consideration during the call to CanvasBin.
-                    int forbiddenZoneMid = (excludeIntervals[excludeIndex].Start + excludeIntervals[excludeIndex].Stop)/2;
-                                if (previousBinEnd < forbiddenZoneMid && end >= forbiddenZoneMid) newSegment = true;
-                            }
-                        }
-                        if (previousBinEnd > 0 && MaxInterBinDistInSegment >= 0 && previousBinEnd + MaxInterBinDistInSegment < start
-                            && !newSegment)
-                        {
-                            newSegment = true;
-                        }
+                if (excludeIndex < excludeIntervals.Count)
+                {
+                    // Note: forbiddenZoneMid should never fall inside a bin, becuase these intervals were already excluded 
+                    // from consideration during the call to CanvasBin.
+                    int forbiddenZoneMid = (excludeIntervals[excludeIndex].Start + excludeIntervals[excludeIndex].Stop) / 2;
+                    if (previousBinEnd < forbiddenZoneMid && end >= forbiddenZoneMid) newSegment = true;
+                }
+            }
+            if (previousBinEnd > 0 && MaxInterBinDistInSegment >= 0 && previousBinEnd + MaxInterBinDistInSegment < start
+                && !newSegment)
+            {
+                newSegment = true;
+            }
             return newSegment;
         }
     }

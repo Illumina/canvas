@@ -11,7 +11,6 @@ namespace CanvasPedigreeCaller
         public int Count { get; }
         public List<int[]> Indices { get; }
 
-
         public CopyNumberDistribution(int nCopyNumbers, List<string> names)
         {
             int nSamples = names.Count;

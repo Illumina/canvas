@@ -6,6 +6,7 @@ using Newtonsoft.Json;
 using System.Linq;
 using Illumina.Common.FileSystem;
 using Isas.Framework.Utilities;
+>>>>>>> develop
 
 namespace CanvasPedigreeCaller
 {
@@ -97,20 +98,26 @@ namespace CanvasPedigreeCaller
                 return 1;
             }
 
+            // Set parameters:
+            // caller.germlineScoreParameters = qscoreParametersJSON;
+            // FileLocation qscoreConfigFile = new FileLocation(qualityScoreConfigPath);
+
+            CanvasPedigreeCaller caller = new CanvasPedigreeCaller();
+            if (pedigreeFile.IsNullOrEmpty())
+            {
+
+                Console.WriteLine($"CanvasPedigreeCaller.exe: pedigreeFile option is not used! Calling CNV variants without family information.");
+                return caller.CallVariants(variantFrequencyFiles, segmentFiles, outFiles, ploidyBedPath, referenceFolder,
+                    sampleNames, pedigreeFile);
+            }
             if (!File.Exists(pedigreeFile))
             {
-                Console.WriteLine($"CanvasPedigreeCaller.exe: File {pedigreeFile} does not exist! Exiting.");
+                Console.WriteLine($"CanvasPedigreeCaller.exe: File {pedigreeFile} does not exist! Exiting. Call variants without using family information.");
                 return 1;
             }
-
-            
-            FileLocation qscoreConfigFile = new FileLocation(qualityScoreConfigPath);
-
-            // Set parameters:
-            CanvasPedigreeCaller caller = new CanvasPedigreeCaller();
-            // caller.germlineScoreParameters = qscoreParametersJSON;
-            return caller.CallVariants(variantFrequencyFiles, segmentFiles, outFiles, ploidyBedPath, referenceFolder, sampleNames, pedigreeFile);
+            return caller.CallVariantsInPedigree(variantFrequencyFiles, segmentFiles, outFiles, ploidyBedPath, referenceFolder, sampleNames, pedigreeFile);
         }
+
         private static T Deserialize<T>(IFileLocation path)
         {
             using (StreamReader reader = path.OpenText())

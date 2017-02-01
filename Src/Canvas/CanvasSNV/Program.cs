@@ -23,10 +23,15 @@ namespace CanvasSNV
             {
                 sampleName = arguments[4];
             }
-            int minMapQ = 0; // only use reads with MAPQ greater than this number
+            bool isDbSnpVcf = false; // assume vcf file comes from a small variant caller (Strelka)
             if (arguments.Length == 6)
             {
-                minMapQ = int.Parse(arguments[5]);
+                isDbSnpVcf = bool.Parse(arguments[5]);
+            }
+            int minMapQ = 0; // only use reads with MAPQ greater than this number
+            if (arguments.Length == 7)
+            {
+                minMapQ = int.Parse(arguments[6]);
             }
 
             // Handle some special cases, if the "chromosome" is a special string:
@@ -42,7 +47,7 @@ namespace CanvasSNV
             }
 
             // Standard logic: Process one chromosome, write output to the specified file path:
-            SNVReviewer processor = new SNVReviewer(chromosome, vcfPath, bamPath, outputPath, sampleName, minMapQ);
+            SNVReviewer processor = new SNVReviewer(chromosome, vcfPath, bamPath, outputPath, sampleName, isDbSnpVcf, minMapQ);
             return processor.Run();
         }
 

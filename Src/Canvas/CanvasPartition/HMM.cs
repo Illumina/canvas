@@ -456,9 +456,11 @@ namespace CanvasPartition
                 bestStates.Add(bestStateSequence[backtrack][bestState]);
                 backtrack--;
             }
+
             bestStates.Reverse();
             OutlierMask(bestStates);
             SmallSegmentsMask(bestStates);
+            OversegmentationMask(bestStates);
 
             return bestStates;
         }
@@ -473,6 +475,7 @@ namespace CanvasPartition
             }
 
         }
+
         public void SmallSegmentsMask(List<int> bestStates)
         {
             List<int> bestStateDuration = Enumerable.Repeat(1, bestStates.Count + 1).ToList();
@@ -492,12 +495,21 @@ namespace CanvasPartition
                     currentStateDuration = 1;
                     counter++;
                     bestStateDuration[counter] = currentStateDuration;
+                    lastBestState = bestState;
                 }
             }
+        }
 
-            for (var k = 3; k < bestStates.Count - 3; k++)
+        public void OversegmentationMask(List<int> bestStates)
+        {
+            List<int> bestStateDuration = Enumerable.Repeat(1, bestStates.Count + 1).ToList();
+            const int stateDurationCutoff = 5;
+            const int halfWindow = 3;
+
+
+            for (var k = halfWindow; k < bestStates.Count - halfWindow; k++)
             {
-                const int stateDurationCutoff = 5;
+                // small segments
                 if (bestStates[k] != bestStates[k + 1] && bestStates[k + 1] == bestStates[k + 2] &&
                                     bestStates[k] == bestStates[k + 2] && bestStateDuration[k] > stateDurationCutoff)
                 {
@@ -506,9 +518,22 @@ namespace CanvasPartition
                     bestStateDuration[k + 1] = bestStateDuration[k] + bestStateDuration[k + 1];
                     bestStateDuration[k + 2] = bestStateDuration[k + 1] + bestStateDuration[k + 2];
                 }
-
+                // oversegmentation
+                if (bestStates[k] != bestStates[k + 1] && bestStates[k - 1] != bestStates[k] &&
+                    bestStateDuration[k] > stateDurationCutoff)
+                {
+                    if (bestStates[k - 1] != bestStates[k + 1])
+                    {
+                        bestStates[k - 1] = bestStates[k];
+                        bestStateDuration[k] = bestStateDuration[k] + bestStateDuration[k - 1];
+                    }
+                    else
+                    {
+                        bestStates[k] = bestStates[k-1];
+                        bestStateDuration[k] = bestStateDuration[k] + bestStateDuration[k - 1];
+                    }
+                }
             }
-
         }
     }
 }

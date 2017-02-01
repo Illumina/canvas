@@ -706,6 +706,8 @@ namespace Illumina.SecondaryAnalysis
                 job.CommandLine += $" {chromosome.Name} {normalVcfPath} {bamPath} {outputPath}";
                 if (!sampleName.IsNullOrEmpty())
                     job.CommandLine += $" {sampleName}";
+                if (callset.SingleSampleCallset.IsDbSnpVcf)
+                    job.CommandLine += " true";
                 if (_customParameters.ContainsKey("CanvasSNV"))
                 {
                     job.CommandLine = Utilities.MergeCommandLineOptions(job.CommandLine, _customParameters["CanvasSNV"], true);
@@ -881,6 +883,14 @@ namespace Illumina.SecondaryAnalysis
             {
                 throw new ApplicationException(
                     $"Error: Missing filter bed file required for CNV calling at '{canvasBedPath}'");
+            }
+
+            // interim proband number restriction 
+            var numProbands = callset.PedigreeSample.Where(x => x.SampleType == SampleType.Proband).ToList().Count;
+            if (numProbands > 2)
+            {
+                throw new ApplicationException(
+                    $"Error: Cannot run Canvas with more than two probands");
             }
 
             // CanvasBin:
@@ -1130,7 +1140,8 @@ namespace Illumina.SecondaryAnalysis
             if (callsets.PedigreeSample.Count != partitionedPaths.Count)
                 throw new Exception($"Number of output CanvasPartition files {partitionedPaths.Count} is not equal to the number of Canvas callsets {callsets.PedigreeSample.Count}");
 
-            string pedigreeFile = WritePedigreeFile(callsets);
+
+            bool haveProband = callsets.PedigreeSample.Where(x => x.SampleType == SampleType.Proband).ToList().Count > 0;
 
             // CanvasSmallPedigreeCaller:
             StringBuilder commandLine = new StringBuilder {Length = 0};
@@ -1151,7 +1162,11 @@ namespace Illumina.SecondaryAnalysis
                 commandLine.AppendFormat("-o \"{0}\" ", callset.Sample.OutputVcfPath); 
             }
             commandLine.AppendFormat("-r \"{0}\" ", callsets.AnalysisDetails.WholeGenomeFastaFolder);
-            commandLine.AppendFormat("-f \"{0}\" ", pedigreeFile);
+            if (haveProband)
+            {
+                string pedigreeFile = WritePedigreeFile(callsets);
+                commandLine.AppendFormat("-f \"{0}\" ", pedigreeFile);
+            }
             commandLine.AppendFormat("-p \"{0}\" ", callsets.AnalysisDetails.PloidyVcf);
 
             UnitOfWork callJob = new UnitOfWork()
