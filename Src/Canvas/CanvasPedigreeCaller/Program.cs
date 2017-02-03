@@ -4,9 +4,9 @@ using System.IO;
 using NDesk.Options;
 using Newtonsoft.Json;
 using System.Linq;
+using Illumina.Common;
 using Illumina.Common.FileSystem;
 using Isas.Framework.Utilities;
-using Illumina.Common;
 
 namespace CanvasPedigreeCaller
 {
