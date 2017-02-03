@@ -6,7 +6,7 @@ using Newtonsoft.Json;
 using System.Linq;
 using Illumina.Common.FileSystem;
 using Isas.Framework.Utilities;
->>>>>>> develop
+using Illumina.Common;
 
 namespace CanvasPedigreeCaller
 {
