@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Canvas.CommandLineParsing;
 using Illumina.Common.FileSystem;
 using Isas.Framework.Checkpointing;
+using Isas.Framework.FrameworkFactory;
 using Isas.Framework.Logging;
 using Isas.Framework.Settings;
 using Isas.Framework.Utilities;
@@ -43,40 +44,28 @@ namespace Canvas
             IDirectoryLocation outFolder = commonOptions.OutputDirectory;
             var log = outFolder.GetFileLocation("CanvasLog.txt");
             var error = outFolder.GetFileLocation("CanvasError.txt");
-
-            using (ILogger logger = new Logger(log, error))
-            {
-                // Get work manager
-                IDirectoryLocation loggingFolder = outFolder.CreateSubdirectory("Logging");
-                IsasConfiguration config = IsasConfiguration.GetConfiguration();
-                IWorkManager workManager = new LocalWorkManager(logger, loggingFolder, 0, config.MaximumMemoryGB, config.MaximumHoursPerProcess);
-                try
+            IsasConfiguration config = IsasConfiguration.GetConfiguration();
+            IDirectoryLocation genomeRoot = commonOptions.WholeGenomeFasta?.Parent?.Parent?.Parent?.Parent?.Parent;
+            int returnValue = 0;
+            IsasFrameworkFactory.RunWithIsasFramework(outFolder, log, error, commonOptions.StartCheckpoint, commonOptions.StopCheckpoint, 0,
+                config.MaximumMemoryGB, config.MaximumHoursPerProcess, false, genomeRoot,
+                frameworkServices =>
                 {
-                    logger.Info($"Running Canvas {_mode} {_version}");
-                    logger.Info($"Command-line arguments: {string.Join(" ", _args)}");
-                    // Manager factory
-                    CheckpointManagerFactory checkpointManagerFactory = new CheckpointManagerFactory(logger, commonOptions.StartCheckpoint, commonOptions.StopCheckpoint);
-                    IDirectoryLocation genomeRoot = commonOptions.WholeGenomeFasta?.Parent?.Parent?.Parent?.Parent?.Parent;
-                    CheckpointSerializerFactory serializerFactory = new CheckpointSerializerFactory(logger, outFolder, genomeRoot);
-
-                    checkpointManagerFactory.RunWithArgument(checkpointManager =>
+                    var logger = frameworkServices.Logger;
+                    try
                     {
-                        var basicCheckpointerFactory = new SerializingCheckpointerFactory(logger, checkpointManager, serializerFactory.GetJsonSerializer());
-                        SandboxCheckpointerFactory checkpointerFactory = new SandboxCheckpointerFactory(basicCheckpointerFactory, outFolder, true);
-                        checkpointerFactory.RunWithArgument(checkpointer =>
-                        {
-                            _modeRunner.Run(logger, checkpointer, workManager);
-                        });
-                    });
-                }
-                catch (StopCheckpointFoundException) { }
-                catch (Exception e)
-                {
-                    logger.Error($"Canvas workflow error: {e}");
-                    return -1;
-                }
-            }
-            return 0;
+                        frameworkServices.Logger.Info($"Running Canvas {_mode} {_version}");
+                        logger.Info($"Command-line arguments: {string.Join(" ", _args)}");
+                        _modeRunner.Run(logger, frameworkServices.Checkpointer, frameworkServices.WorkManager);
+                    }
+                    catch (Exception e)
+                    {
+                        logger.Error($"Canvas workflow error: {e}");
+                        returnValue = -1;
+                    }
+                    returnValue = 0;
+                });
+            return returnValue;
         }
     }
 
