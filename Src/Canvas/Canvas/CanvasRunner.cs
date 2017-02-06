@@ -220,7 +220,7 @@ namespace Illumina.SecondaryAnalysis
             }
           
             // read bams 
-            var intermediateDataPathsByBamPath = ReadBams(callset.AnalysisDetails.GenomeMetadata, callset.SingleSampleCallset.Bam.IsPairedEnd, new List<string>(){callset.SingleSampleCallset.SampleName}, callset.SingleSampleCallset.SampleName,
+            var intermediateDataPathsByBamPath = ReadBams(callset.AnalysisDetails.GenomeMetadata, callset.SingleSampleCallset.Bam.IsPairedEnd, new List<string>(){callset.SingleSampleCallset.SampleName}, callset.AnalysisDetails.TempFolder,
                 canvasReferencePath, canvasBedPath, bamPaths, commandLine, canvasBinPath, executablePath, callset.TempManifestPath);
 
             // get bin size (of the smallest BAM) if normal BAMs are given
