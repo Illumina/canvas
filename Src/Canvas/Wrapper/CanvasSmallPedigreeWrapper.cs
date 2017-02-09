@@ -12,7 +12,7 @@ namespace Canvas.Wrapper
     /// <summary>
     /// Run Canvas to generate CNV calls:
     /// </summary>
-    public class CanvasSmallPedigreeCaller : ICanvasCnvCaller<CanvasSmallPedigreeInput, CanvasSmallPedigreeOutput>
+    public class CanvasSmallPedigreeWrapper
     {
         private readonly IWorkManager _workManager;
         private readonly ILogger _logger;
@@ -21,7 +21,7 @@ namespace Canvas.Wrapper
         private readonly ICanvasSingleSampleInputCommandLineBuilder _singleSampleInputCommandLineBuilder;
         private readonly CanvasPloidyBedCreator _canvasPloidyBedCreator;
 
-        public CanvasSmallPedigreeCaller(
+        public CanvasSmallPedigreeWrapper(
             IWorkManager workManager,
             ILogger logger,
             IFileLocation canvasExe,
