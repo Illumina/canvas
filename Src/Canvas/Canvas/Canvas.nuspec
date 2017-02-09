@@ -12,7 +12,7 @@
     <tags>Canvas</tags>
     <dependencies>
       <dependency id="Isas.Manifests" version="[2.3.0,3.0.0)" />
-      <dependency id="Isas.Ploidy" version="(0.1.0,1.0.0)" />
+      <dependency id="Isas.Ploidy" version="(0.2.0,1.0.0)" />
       <dependency id="Isas.SequencingFiles" version="(3.4.0,4.0.0)" />
       <dependency id="Isas.Framework" version="(4.0.0,5.0.0)" />
     </dependencies>

@@ -24,21 +24,11 @@ namespace Canvas.Wrapper
         /// <summary>
         /// Write out the ploidy bed file if ploidy information is available from the vcf header
         /// </summary>
-        public IFileLocation CreatePloidyVcf(SampleSet<SexPloidyInfo> ploidyInfos, GenomeMetadata genomeMetadata, IDirectoryLocation sampleSandbox)
+        public Vcf CreatePloidyVcf(SampleSet<SexPloidyInfo> ploidyInfos, GenomeMetadata genomeMetadata, IDirectoryLocation sampleSandbox)
         {
-            IFileLocation ploidyVcf = sampleSandbox.GetFileLocation("ploidy.vcf.gz");
-            _ploidyFixer.WritePloidyVcfFile()
-            string fastaPath = genomeMetadata.Sequences.First().FastaPath;
-            if (_ploidyFixer.GeneratePloidyBedFileFromVcf(
-                genomeMetadata,
-                fastaPath,
-                vcf.VcfFile.FullName,
-                ploidyBed.FullName, sampleSandbox.FullName, _logger, _workManager))
-            {
-                return ploidyBed;
-            }
-            _logger.Warn($"Sex chromosome ploidy not found in {vcf.VcfFile} header. No ploidy will be provided to Canvas.");
-            return null;
+            var ploidyVcf = new Vcf(sampleSandbox.GetFileLocation("ploidy.vcf.gz"));
+            _ploidyFixer.WritePloidyVcfFile(ploidyVcf, ploidyInfos, genomeMetadata);
+            return ploidyVcf;
         }
     }
 }
