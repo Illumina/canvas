@@ -57,13 +57,13 @@ namespace Canvas
                         frameworkServices.Logger.Info($"Running Canvas {_mode} {_version}");
                         logger.Info($"Command-line arguments: {string.Join(" ", _args)}");
                         _modeRunner.Run(logger, frameworkServices.Checkpointer, frameworkServices.WorkManager);
+                        returnValue = 0;
                     }
                     catch (Exception e)
                     {
                         logger.Error($"Canvas workflow error: {e}");
                         returnValue = -1;
                     }
-                    returnValue = 0;
                 });
             return returnValue;
         }
