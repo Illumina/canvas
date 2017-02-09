@@ -92,6 +92,9 @@
     <Compile Include="CanvasResequencingCnvCaller.cs" />
     <Compile Include="CanvasResequencingInput.cs" />
     <Compile Include="CanvasSingleSampleInputCommandLineBuilder.cs" />
+    <Compile Include="CanvasSmallPedigreeCaller.cs" />
+    <Compile Include="CanvasSmallPedigreeInput.cs" />
+    <Compile Include="CanvasSmallPedigreeOutput.cs" />
     <Compile Include="CanvasTumorNormalEnrichmentCnvCaller.cs" />
     <Compile Include="CanvasTumorNormalEnrichmentInput.cs" />
     <Compile Include="CanvasTumorNormalWgsCnvCaller.cs" />
@@ -99,6 +102,7 @@
     <Compile Include="CanvasWorker.cs" />
     <Compile Include="CanvasWorkerFactory.cs" />
     <Compile Include="DbSnpVcfProcessor.cs" />
+    <Compile Include="ICanvasCnvCaller.cs" />
     <Compile Include="ICanvasOutput.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
