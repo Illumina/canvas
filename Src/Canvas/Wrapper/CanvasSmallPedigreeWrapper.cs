@@ -19,7 +19,7 @@ namespace Canvas.Wrapper
         private readonly IFileLocation _canvasExe;
         private readonly ICanvasAnnotationFileProvider _annotationFileProvider;
         private readonly ICanvasSingleSampleInputCommandLineBuilder _singleSampleInputCommandLineBuilder;
-        private readonly CanvasPloidyBedCreator _canvasPloidyBedCreator;
+        private readonly CanvasPloidyVcfCreator _canvasPloidyVcfCreator;
 
         public CanvasSmallPedigreeWrapper(
             IWorkManager workManager,
@@ -27,43 +27,34 @@ namespace Canvas.Wrapper
             IFileLocation canvasExe,
             ICanvasAnnotationFileProvider annotationFileProvider,
             ICanvasSingleSampleInputCommandLineBuilder singleSampleInputCommandLineBuilder,
-            CanvasPloidyBedCreator canvasPloidyBedCreator)
+            CanvasPloidyVcfCreator canvasPloidyVcfCreator)
         {
             _workManager = workManager;
             _logger = logger;
             _canvasExe = canvasExe;
             _annotationFileProvider = annotationFileProvider;
             _singleSampleInputCommandLineBuilder = singleSampleInputCommandLineBuilder;
-            _canvasPloidyBedCreator = canvasPloidyBedCreator;
+            _canvasPloidyVcfCreator = canvasPloidyVcfCreator;
         }
 
-        public SampleSet<CanvasSmallPedigreeOutput> Run(SampleSet<CanvasSmallPedigreeInput> inputs, IDirectoryLocation sandbox)
-        {
-            var outputs = new SampleSet<CanvasSmallPedigreeOutput>();
-            foreach (var input in inputs)
-            {
-                IDirectoryLocation sampleSandbox = sandbox.CreateSubdirectory(input.Key.Id);
-                //outputs.Add(input.Key, RunSingleSample(input.Key.Id, input.Value, sampleSandbox));
-            }
-            return outputs;
-        }
 
-        private CanvasOutput RunSingleSample(string sampleId, CanvasResequencingInput input, IDirectoryLocation sampleSandbox)
+        public CanvasSmallPedigreeOutput Run(CanvasSmallPedigreeInput input, IDirectoryLocation sampleSandbox)
         {
+            var pedigreeName = input.PedigreeName;
             if (!_annotationFileProvider.IsSupported(input.GenomeMetadata))
             {
-                _logger.Info($"Skipping Canvas for sample {sampleId}: unsupported reference genome '{input.GenomeMetadata.Name}'");
+                _logger.Info($"Skipping Canvas for pedigree {pedigreeName}: unsupported reference genome '{input.GenomeMetadata.Name}'");
                 return null;
             }
 
             if (!_annotationFileProvider.CustomDbSnpVcf(input.GenomeMetadata) && input.Vcf == null)
             {
-                _logger.Info($"Skipping Canvas for sample {sampleId}. A dbSNP VCF file was not provided and no small variant VCF file is available");
+                _logger.Info($"Skipping Canvas for sample {pedigreeName}. A dbSNP VCF file was not provided and no small variant VCF file is available");
                 return null;
             }
 
             StringBuilder commandLine = new StringBuilder("Germline-WGS");
-            commandLine.Append(_singleSampleInputCommandLineBuilder.GetSingleSampleCommandLine(sampleId, input.Bam, input.GenomeMetadata, sampleSandbox));
+            commandLine.Append(_singleSampleInputCommandLineBuilder.GetSingleSampleCommandLine(pedigreeName, input.Bam, input.GenomeMetadata, sampleSandbox));
 
             // use normal vcf by default (performance could be similar with dbSNP vcf though)
             IFileLocation bAlleleVcf = input.Vcf.VcfFile;
@@ -77,9 +68,9 @@ namespace Canvas.Wrapper
                 commandLine.Append($" --sample-b-allele-vcf {bAlleleVcf.WrapWithShellQuote()}");
             }
 
-            IFileLocation ploidyBed = _canvasPloidyBedCreator.CreateGermlinePloidyBed(input.Vcf, input.GenomeMetadata, sampleSandbox);
-            if (ploidyBed != null)
-                commandLine.Append($" --ploidy-bed {ploidyBed.WrapWithShellQuote()}");
+            var ploidyVcf = _canvasPloidyVcfCreator.CreatePloidyVcf(input.PloidyInfos, input.GenomeMetadata, sampleSandbox);
+            if (ploidyVcf != null)
+                commandLine.Append($" --ploidy-bed {ploidyVcf.VcfFile.WrapWithShellQuote()}");
             var canvasPartitionParam = $@"--commoncnvs {_annotationFileProvider.GetCanvasAnnotationFile(input.GenomeMetadata, "commoncnvs.bed").WrapWithEscapedShellQuote()}";
             var moreCustomParameters = new Dictionary<string, string>();
             moreCustomParameters["CanvasPartition"] = canvasPartitionParam;
@@ -88,25 +79,25 @@ namespace Canvas.Wrapper
 
             UnitOfWork singleSampleJob = new UnitOfWork()
             {
-                ExecutablePath = CrossPlatform.IsThisMono() ? Utilities.GetMonoPath() : _canvasExe.FullName,
-                CommandLine = CrossPlatform.IsThisMono() ? _canvasExe + " " + commandLine : commandLine.ToString(),
+                ExecutablePath = CrossPlatform.IsThisLinux() ? Utilities.GetMonoPath() : _canvasExe.FullName,
+                CommandLine = CrossPlatform.IsThisLinux() ? _canvasExe + " " + commandLine : commandLine.ToString(),
                 LoggingFolder = _workManager.LoggingFolder.FullName,
-                LoggingStub = "Canvas_" + sampleId,
+                LoggingStub = "Canvas_" + pedigreeName,
             };
             _workManager.DoWorkSingleThread(singleSampleJob);
-            return GetCanvasOutput(sampleId, sampleSandbox);
+            return GetCanvasOutput(pedigreeName, sampleSandbox);
         }
 
-        private CanvasOutput GetCanvasOutput(string sampleId, IDirectoryLocation sampleSandbox)
+        private CanvasSmallPedigreeOutput GetCanvasOutput(string pedigreeName, IDirectoryLocation sampleSandbox)
         {
             var cnvVcf = new Vcf(sampleSandbox.GetFileLocation("CNV.vcf.gz"));
-            var tempCnvDirectory = sampleSandbox.GetDirectoryLocation($"TempCNV_{sampleId}");
-            var variantFrequencies = tempCnvDirectory.GetFileLocation($"VFResults{sampleId}.txt.gz");
-            var variantFrequenciesBaf = tempCnvDirectory.GetFileLocation($"VFResults{sampleId}.txt.gz.baf");
+            var tempCnvDirectory = sampleSandbox.GetDirectoryLocation($"TempCNV_{pedigreeName}");
+            var variantFrequencies = tempCnvDirectory.GetFileLocation($"VFResults{pedigreeName}.txt.gz");
+            var variantFrequenciesBaf = tempCnvDirectory.GetFileLocation($"VFResults{pedigreeName}.txt.gz.baf");
             IFileLocation coverageAndVariantFrequencies = sampleSandbox.GetFileLocation("CNV.CoverageAndVariantFrequency.txt");
-            IFileLocation tempStub = tempCnvDirectory.GetFileLocation($"{sampleId}");
+            IFileLocation tempStub = tempCnvDirectory.GetFileLocation($"{pedigreeName}");
             IFileLocation partitioned = tempStub.AppendName(".partitioned");
-            return new CanvasOutput(cnvVcf, coverageAndVariantFrequencies, variantFrequencies,
+            return new CanvasSmallPedigreeOutput(cnvVcf, coverageAndVariantFrequencies, variantFrequencies,
                 variantFrequenciesBaf, partitioned);
         }
     }
