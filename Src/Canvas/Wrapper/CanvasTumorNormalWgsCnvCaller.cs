@@ -70,8 +70,8 @@ namespace Canvas.Wrapper
             commandLine = _singleSampleInputCommandLineBuilder.MergeCustomCanvasParameters(commandLine);
             UnitOfWork singleSampleJob = new UnitOfWork()
             {
-                ExecutablePath = CrossPlatform.IsThisMono() ? Utilities.GetMonoPath() : _canvasExe.FullName,
-                CommandLine = CrossPlatform.IsThisMono() ? _canvasExe + " " + commandLine : commandLine.ToString(),
+                ExecutablePath = CrossPlatform.IsThisLinux() ? Utilities.GetMonoPath() : _canvasExe.FullName,
+                CommandLine = CrossPlatform.IsThisLinux() ? _canvasExe + " " + commandLine : commandLine.ToString(),
                 LoggingFolder = _workManager.LoggingFolder.FullName,
                 LoggingStub = "Canvas_" + sampleId,
             };

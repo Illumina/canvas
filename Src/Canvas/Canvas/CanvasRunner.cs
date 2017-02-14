@@ -114,11 +114,11 @@ namespace Illumina.SecondaryAnalysis
         {
             string canvasBinPath = Path.Combine(_canvasFolder, "CanvasBin.exe");
             string executablePath = canvasBinPath;
-            if (CrossPlatform.IsThisMono())
+            if (CrossPlatform.IsThisLinux())
                 executablePath = Isas.Framework.Utilities.Utilities.GetMonoPath();
 
             StringBuilder commandLine = new StringBuilder();
-            if (CrossPlatform.IsThisMono())
+            if (CrossPlatform.IsThisLinux())
             {
                 commandLine.AppendFormat("{0} ", canvasBinPath);
             }
@@ -195,7 +195,7 @@ namespace Illumina.SecondaryAnalysis
             StringBuilder commandLine = new StringBuilder();
             string canvasBinPath = Path.Combine(_canvasFolder, "CanvasBin.exe");
             string executablePath = canvasBinPath;
-            if (CrossPlatform.IsThisMono())
+            if (CrossPlatform.IsThisLinux())
                 executablePath = Isas.Framework.Utilities.Utilities.GetMonoPath();
 
             //use bam as input
@@ -258,7 +258,7 @@ namespace Illumina.SecondaryAnalysis
             StringBuilder commandLine = new StringBuilder();
             string canvasBinPath = Path.Combine(_canvasFolder, "CanvasBin.exe");
             string executablePath = canvasBinPath;
-            if (CrossPlatform.IsThisMono())
+            if (CrossPlatform.IsThisLinux())
                 executablePath = Isas.Framework.Utilities.Utilities.GetMonoPath();
 
             //use bam as input
@@ -311,7 +311,7 @@ namespace Illumina.SecondaryAnalysis
                 string binnedPath = Path.Combine(tempFolder, string.Format("{0}_{1}.binned", Id.ToList()[bamIdx], bamIdx));
                 bamToBinned[bamPath] = binnedPath;
                 commandLine.Clear();
-                if (CrossPlatform.IsThisMono())
+                if (CrossPlatform.IsThisLinux())
                 {
                     commandLine.AppendFormat("{0} ", canvasBinPath);
                 }
@@ -375,7 +375,7 @@ namespace Illumina.SecondaryAnalysis
 
                     string bamPath = bamPaths[bamIndex];
                     commandLine.Clear();
-                    if (CrossPlatform.IsThisMono())
+                    if (CrossPlatform.IsThisLinux())
                     {
                         commandLine.AppendFormat("{0} ", canvasBinPath);
                     }
@@ -420,7 +420,7 @@ namespace Illumina.SecondaryAnalysis
             StringBuilder commandLine = new StringBuilder();
             string canvasBinPath = Path.Combine(_canvasFolder, "CanvasBin.exe");
             string executablePath = canvasBinPath;
-            if (CrossPlatform.IsThisMono())
+            if (CrossPlatform.IsThisLinux())
                 executablePath = Utilities.GetMonoPath();
 
             // require predefined bins
@@ -457,7 +457,7 @@ namespace Illumina.SecondaryAnalysis
                 bamToBinned[bamPath] = binnedPath;
 
                 commandLine.Clear();
-                if (CrossPlatform.IsThisMono())
+                if (CrossPlatform.IsThisLinux())
                 {
                     commandLine.AppendFormat("{0} ", canvasBinPath);
                 }
@@ -530,11 +530,11 @@ namespace Illumina.SecondaryAnalysis
 
             string canvasNormalizePath = Path.Combine(_canvasFolder, "CanvasNormalize.exe");
             string executablePath = canvasNormalizePath;
-            if (CrossPlatform.IsThisMono())
+            if (CrossPlatform.IsThisLinux())
                 executablePath = Utilities.GetMonoPath();
 
             StringBuilder commandLine = new StringBuilder();
-            if (CrossPlatform.IsThisMono())
+            if (CrossPlatform.IsThisLinux())
             {
                 commandLine.AppendFormat("{0} ", canvasNormalizePath);
             }
@@ -695,7 +695,7 @@ namespace Illumina.SecondaryAnalysis
 
                 UnitOfWork job = new UnitOfWork();
                 job.ExecutablePath = Path.Combine(_canvasFolder, "CanvasSNV.exe");
-                if (CrossPlatform.IsThisMono())
+                if (CrossPlatform.IsThisLinux())
                 {
                     job.CommandLine = job.ExecutablePath;
                     job.ExecutablePath = Utilities.GetMonoPath();
@@ -938,7 +938,7 @@ namespace Illumina.SecondaryAnalysis
             NormalizeCanvasClean(cleanedPaths, callsets.AnalysisDetails.TempFolder);
             StringBuilder commandLine = new StringBuilder();
             string executablePath = Path.Combine(_canvasFolder, "CanvasPartition.exe");
-            if (CrossPlatform.IsThisMono())
+            if (CrossPlatform.IsThisLinux())
             {
                 commandLine.AppendFormat("{0} ", executablePath);
                 executablePath = Utilities.GetMonoPath();
@@ -980,7 +980,7 @@ namespace Illumina.SecondaryAnalysis
         {
             StringBuilder commandLine = new StringBuilder();
             string executablePath = Path.Combine(_canvasFolder, "CanvasPartition.exe");
-            if (CrossPlatform.IsThisMono())
+            if (CrossPlatform.IsThisLinux())
             {
                 commandLine.AppendFormat("{0} ", executablePath);
                 executablePath = Utilities.GetMonoPath();
@@ -1034,7 +1034,7 @@ namespace Illumina.SecondaryAnalysis
             StringBuilder commandLine = new StringBuilder();
             commandLine.Length = 0;
             string executablePath = Path.Combine(_canvasFolder, "CanvasClean.exe");
-            if (CrossPlatform.IsThisMono())
+            if (CrossPlatform.IsThisLinux())
             {
                 commandLine.AppendFormat("{0} ", executablePath);
                 executablePath = Utilities.GetMonoPath();
@@ -1091,7 +1091,7 @@ namespace Illumina.SecondaryAnalysis
             UnitOfWork callerJob = new UnitOfWork();
             var cnvVcfPath = callset.SingleSampleCallset.OutputVcfPath;
             callerJob.ExecutablePath = Path.Combine(this._canvasFolder, "CanvasSomaticCaller.exe");
-            if (CrossPlatform.IsThisMono())
+            if (CrossPlatform.IsThisLinux())
             {
                 callerJob.CommandLine = callerJob.ExecutablePath;
                 callerJob.ExecutablePath = Utilities.GetMonoPath();
@@ -1147,7 +1147,7 @@ namespace Illumina.SecondaryAnalysis
             StringBuilder commandLine = new StringBuilder {Length = 0};
 
             string executablePath = Path.Combine(_canvasFolder, "CanvasPedigreeCaller.exe");
-            if (CrossPlatform.IsThisMono())
+            if (CrossPlatform.IsThisLinux())
             {
                 commandLine.AppendFormat("{0} ", executablePath);
                 executablePath = Utilities.GetMonoPath();
@@ -1212,7 +1212,7 @@ namespace Illumina.SecondaryAnalysis
             // CanvasDiploidCaller:
             commandLine.Length = 0;
             string executablePath = Path.Combine(_canvasFolder, "CanvasDiploidCaller.exe");
-            if (CrossPlatform.IsThisMono())
+            if (CrossPlatform.IsThisLinux())
             {
                 commandLine.AppendFormat("{0} ", executablePath);
                 executablePath = Utilities.GetMonoPath();
