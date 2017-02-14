@@ -1,6 +1,6 @@
 using CanvasCommon.CommandLineParsing.CoreOptionTypes;
 using CanvasCommon.CommandLineParsing.OptionProcessing;
-using Isas.Shared.Utilities.FileSystem;
+using Illumina.Common.FileSystem;
 
 namespace Canvas.CommandLineParsing
 {
@@ -8,6 +8,8 @@ namespace Canvas.CommandLineParsing
     {
         private static readonly CommonOptionsParser CommonOptionsParser = new CommonOptionsParser();
         private static readonly TumorNormalOptionsParser TumorNormalOptionsParser = new TumorNormalOptionsParser();
+        private static readonly SingleSampleCommonOptionsParser SingleSampleCommonOptionsParser = new SingleSampleCommonOptionsParser();
+
 
         public TumorNormalWgsModeParser(string name, string description) : base(name, description)
         {
@@ -16,15 +18,16 @@ namespace Canvas.CommandLineParsing
         public override ParsingResult<IModeRunner> Parse(SuccessfulResultCollection parseInput)
         {
             CommonOptions commonOptions = parseInput.Get(CommonOptionsParser);
+            SingleSampleCommonOptions singleSampleCommonOptions = parseInput.Get(SingleSampleCommonOptionsParser);
             TumorNormalOptions tumorNormalOptions = parseInput.Get(TumorNormalOptionsParser);
-            return ParsingResult<IModeRunner>.SuccessfulResult(new TumorNormalWgsRunner(commonOptions, tumorNormalOptions));
+            return ParsingResult<IModeRunner>.SuccessfulResult(new TumorNormalWgsRunner(commonOptions, singleSampleCommonOptions, tumorNormalOptions));
         }
 
         public override OptionCollection<IModeRunner> GetOptions()
         {
             return new OptionCollection<IModeRunner>
             {
-                TumorNormalOptionsParser, CommonOptionsParser
+                TumorNormalOptionsParser, CommonOptionsParser, SingleSampleCommonOptionsParser
             };
         }
     }

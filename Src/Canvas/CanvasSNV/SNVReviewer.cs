@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using Illumina.Common;
 using Isas.SequencingFiles;
 using Isas.SequencingFiles.Vcf;
 
@@ -20,19 +21,24 @@ namespace CanvasSNV
         protected readonly string VcfPath;
         protected readonly string BamPath;
         protected readonly string OutputPath;
+        protected readonly string SampleName;
+        protected readonly bool IsDbSnpVcf;
         List<VcfVariant> Variants;
         int[] ReferenceCounts;
         int[] VariantCounts;
         int MinimumBaseQScore = 20; // You must be >= this base call quality to be counted.
         protected readonly int MinimumMapQ;
+
         #endregion
 
-        public SNVReviewer(string chromosome, string vcfPath, string bamPath, string outputPath, int minMapQ)
+        public SNVReviewer(string chromosome, string vcfPath, string bamPath, string outputPath, string sampleName, bool isDbSnpVcf, int minMapQ)
         {
+            SampleName = sampleName;
             Chromosome = chromosome;
             VcfPath = vcfPath;
             BamPath = bamPath;
             OutputPath = outputPath;
+            IsDbSnpVcf = isDbSnpVcf;
             MinimumMapQ = minMapQ;
         }
 
@@ -67,8 +73,23 @@ namespace CanvasSNV
             this.Variants = new List<VcfVariant>();
             int overallCount = 0; 
             int countThisChromosome = 0;
+            int sampleIndex = 0;
             using (VcfReader reader = new VcfReader(vcfPath, requireGenotypes: false))
             {
+                if (!SampleName.IsNullOrEmpty() && IsDbSnpVcf == false)
+                {
+                    if (!SampleName.IsNullOrEmpty() && reader.Samples.Count < 2)
+                        throw new ArgumentException($"File '{vcfPath}' must be a multi-sample sample VCF containing > 1 samples");
+                    if (reader.Samples.Select(x => Convert.ToInt32(x == SampleName)).Sum() != 1)
+                        throw new ArgumentException($"File '{vcfPath}' should contain one genotypes column corresponding to sample {SampleName}");
+                    sampleIndex = reader.Samples.IndexOf(SampleName);
+                }
+                else
+                {
+                    if (reader.Samples.Count > 1)
+                        throw new ArgumentException($"File '{vcfPath}' conatins >1 samples, name for a sample of interest must be provided");
+                }
+
                 VcfVariant variant = new VcfVariant();
                 while (true)
                 {
@@ -86,24 +107,30 @@ namespace CanvasSNV
                     // Single-allele SNVs only:
                     if (variant.VariantAlleles.Length != 1 || variant.VariantAlleles[0].Length != 1 || variant.ReferenceAllele.Length != 1) continue;
                     // PF variants only:
-                    if ((variant.GenotypeColumns != null && variant.GenotypeColumns.Any()) && variant.Filters != "PASS") continue; // FILTER may not say PASS for a dbSNP VCF file
+                    if (variant.GenotypeColumns != null && variant.GenotypeColumns.Any() && variant.Filters != "PASS") continue; // FILTER may not say PASS for a dbSNP VCF file
                     if (variant.GenotypeColumns != null && variant.GenotypeColumns.Any()) // not available if we use a dbSNP VCF file
                     {
-                        if (!variant.GenotypeColumns[0].ContainsKey("GT")) continue; // no genotype - we don't know if it's a het SNV.
-                        string genotype = variant.GenotypeColumns[0]["GT"];
-                        if (genotype != "0/1" && genotype != "1/0") continue;
+                        if (!variant.GenotypeColumns[sampleIndex].ContainsKey("GT")) continue; // no genotype - we don't know if it's a het SNV.
+                        // string genotype = variant.GenotypeColumns[0]["GT"];
+                        // if (genotype != "0/1" && genotype != "1/0") continue;
 
                         // Also require they have a high enough quality score:
-                        if (variant.GenotypeColumns[0].ContainsKey("GQX")) // Note: Allow no GQX field, in case we want to use another caller (e.g. Pisces) and not crash
+                        if (variant.GenotypeColumns[sampleIndex].ContainsKey("GQX")) // Note: Allow no GQX field, in case we want to use another caller (e.g. Pisces) and not crash
                         {
-                            float GQX = float.Parse(variant.GenotypeColumns[0]["GQX"]);
-                            if (GQX < 30) continue;
+                            if (variant.GenotypeColumns[sampleIndex]["GQX"].Equals("."))
+                                continue;
+                            if (float.Parse(variant.GenotypeColumns[sampleIndex]["GQX"]) < 30)
+                                continue;
                         }
                     }
                     // Note: Let's NOT require the variant be in dbSNP.  Maybe we didn't do annotation, either because
                     // we chose not to or because we're on a reference without annotation available.
                     //if (variant.Identifier == ".") continue;
                     // Remember all the variants that pass all our tests:
+
+                    // Empty GenotypeColumns to save space as they are no longer needed
+                    variant.GenotypeColumns?.Clear();
+
                     this.Variants.Add(variant);
                     variant = new VcfVariant();
                 }
@@ -266,7 +293,9 @@ namespace CanvasSNV
         {
             double? baf = null;
             double totalAlleleCount = referenceCount + variantCount;
-            if (totalAlleleCount == 0)
+            if (totalAlleleCount < 1)
+                return baf;
+            if (variant.ReferenceAllele.Equals(".") || variant.VariantAlleles[0].Equals("."))
                 return baf;
 
             if (BAllelePreference(variant.ReferenceAllele) < BAllelePreference(variant.VariantAlleles[0]))

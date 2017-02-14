@@ -20,7 +20,7 @@ namespace CanvasSomaticCaller
         List<SegmentPloidy> AllPloidies;
         CopyNumberOracle CNOracle = null;
         CoveragePurityModel Model;
-        Dictionary<string, List<GenomicBin>> ExcludedIntervals = new Dictionary<string, List<GenomicBin>>();
+        Dictionary<string, List<SampleGenomicBin>> ExcludedIntervals = new Dictionary<string, List<SampleGenomicBin>>();
         Dictionary<CanvasSegment, double> HeterogeneousSegmentsSignature = new Dictionary<CanvasSegment, double>();
 
 
@@ -123,7 +123,7 @@ namespace CanvasSomaticCaller
                     int CN = this.GetKnownCNForSegment(segment);
                     if (CN < 0) continue;
                     List<float> MAF = new List<float>();
-                    foreach (float VF in segment.VariantFrequencies)
+                    foreach (float VF in segment.Alleles.Frequencies)
                     {
                         MAF.Add(VF > 0.5 ? 1 - VF : VF);
                     }
@@ -378,11 +378,11 @@ namespace CanvasSomaticCaller
                 this.DebugModelSegmentCoverageByCN();
             }
 
-            this.MeanCoverage = CanvasIO.LoadVariantFrequencies(variantFrequencyFile, this.Segments);
+            this.MeanCoverage = CanvasIO.LoadFrequencies(variantFrequencyFile, this.Segments);
             if (this.IsDbsnpVcf)
             {
                 int tmpMinimumVariantFreq = somaticCallerParameters.MinimumVariantFrequenciesForInformativeSegment;
-                CanvasCommon.Utilities.PruneVariantFrequencies(this.Segments, this.TempFolder, ref tmpMinimumVariantFreq);
+                CanvasCommon.Utilities.PruneFrequencies(this.Segments, this.TempFolder, ref tmpMinimumVariantFreq);
                 somaticCallerParameters.MinimumVariantFrequenciesForInformativeSegment = tmpMinimumVariantFreq;
             }
 
@@ -482,10 +482,10 @@ namespace CanvasSomaticCaller
                 int CN = this.GetKnownCNForSegment(segment);
                 // Require the segment have a known CN and reasonably large number of variants:
                 if (CN < 0) continue;
-                if (segment.VariantFrequencies.Count < somaticCallerParameters.MinimumVariantFrequenciesForInformativeSegment) continue;
+                if (segment.Alleles.Frequencies.Count < somaticCallerParameters.MinimumVariantFrequenciesForInformativeSegment) continue;
 
                 List<float> MAF = new List<float>();
-                foreach (float VF in segment.VariantFrequencies)
+                foreach (float VF in segment.Alleles.Frequencies)
                 {
                     MAF.Add(VF > 0.5 ? 1 - VF : VF);
                 }
@@ -1236,7 +1236,7 @@ namespace CanvasSomaticCaller
                     bestModelPoint.EmpiricalMAF += info.Weight * info.MAF;
                     bestModelPoint.MAFWeight += info.Weight;
                 }
-                // add CN variant of the segment to the model 
+                // add CN variant of the segment to the model
                 if (bestCN == 2 && info.Ploidy.MajorChromosomeCount == 2)
                     // aproximate LOH; we presume that LOH counts as one event, hence similar in effect to HET deletions
                     model.CNs.Add(1);
@@ -1273,6 +1273,7 @@ namespace CanvasSomaticCaller
             }
 
             // get model ploidy
+            model.Ploidy = 0;
             for (int index = 0; index < model.PercentCN.Length; index++)
             {
                 model.Ploidy += index * model.PercentCN[index];
@@ -1374,7 +1375,7 @@ namespace CanvasSomaticCaller
 
         }
 
-        static public List<SegmentInfo> GetUsableSegmentsForModeling(List<CanvasSegment> segments, bool IsEnrichment, int minimumVariantFrequenciesForInformativeSegment)
+        static public List<SegmentInfo> GetUsableSegmentsForModeling(List<CanvasSegment> segments, bool IsEnrichment, int MinimumVariantFrequenciesForInformativeSegment)
         {
             // Get the average count everwhere.  Exclude segments whose coverage is >2x this average.
             List<float> tempCountsList = new List<float>();
@@ -1405,14 +1406,14 @@ namespace CanvasSomaticCaller
                 // If the segment has few or no variants, then don't use the MAF for this segment - set to -1 (no frequency)
                 // Typically a segment will have no variants if it's on chrX or chrY and starling knows not to call a
                 // heterozygous variant there (other than in the PAR regions).
-                if (segment.VariantFrequencies.Count < minimumVariantFrequenciesForInformativeSegment)
+                if (segment.Alleles.Frequencies.Count < MinimumVariantFrequenciesForInformativeSegment)
                 {
                     info.MAF = -1;
                 }
                 else
                 {
                     List<double> MAF = new List<double>();
-                    foreach (float value in segment.VariantFrequencies) MAF.Add(value > 0.5 ? 1 - value : value);
+                    foreach (float value in segment.Alleles.Frequencies) MAF.Add(value > 0.5 ? 1 - value : value);
                     MAF.Sort();
                     info.MAF = MAF[MAF.Count / 2];
                 }
@@ -1426,9 +1427,9 @@ namespace CanvasSomaticCaller
                 {
                     info.Weight = segment.BinCount;
                 }
-                if (segment.VariantFrequencies.Count < 10)
+                if (segment.Alleles.Frequencies.Count < 10)
                 {
-                    info.Weight *= (double)segment.VariantFrequencies.Count / 10;
+                    info.Weight *= (double)segment.Alleles.Frequencies.Count / 10;
                 }
                 usableSegments.Add(info);
             }
@@ -1965,8 +1966,8 @@ namespace CanvasSomaticCaller
             else
                 CanvasSegment.MergeSegmentsUsingExcludedIntervals(ref canvasSegments, somaticCallerParameters.MinimumCallSize, ExcludedIntervals);
             CanvasSegment.AssignQualityScores(canvasSegments, CanvasSegment.QScoreMethod.Logistic, this.somaticCallerQscoreParameters);
-
-            var nonDiploidMAFs = canvasSegments.Where(segment => (segment.CopyNumber == 1 && segment.MeanMAF.HasValue && segment.VariantFrequencies.Count > minSizeMAFs))
+           
+            var nonDiploidMAFs = canvasSegments.Where(segment => (segment.CopyNumber == 1 && segment.MeanMAF.HasValue && segment.Alleles.Frequencies.Count > minSizeMAFs))
                 .Select(segment => (double)segment.MeanMAF).ToArray();
             Console.WriteLine($">>> nonDiploidMAFs length {nonDiploidMAFs.Length }");
 
@@ -2032,7 +2033,7 @@ namespace CanvasSomaticCaller
             {
                 // Compute (MAF, Coverage) for this segment:
                 List<double> MAF = new List<double>();
-                foreach (float VF in segment.VariantFrequencies) MAF.Add(VF > 0.5 ? 1 - VF : VF);
+                foreach (float VF in segment.Alleles.Frequencies) MAF.Add(VF > 0.5 ? 1 - VF : VF);
                 double medianCoverage = CanvasCommon.Utilities.Median(segment.Counts);
                 MAF.Sort();
 
@@ -2148,7 +2149,7 @@ namespace CanvasSomaticCaller
             {
                 // Compute (MAF, Coverage) for this segment:
                 List<double> MAF = new List<double>();
-                foreach (float VF in segment.VariantFrequencies) MAF.Add(VF > 0.5 ? 1 - VF : VF);
+                foreach (float VF in segment.Alleles.Frequencies) MAF.Add(VF > 0.5 ? 1 - VF : VF);
                 double medianCoverage = CanvasCommon.Utilities.Median(segment.Counts);
                 MAF.Sort();
                 double medianMAF = dummyMAF;
@@ -2330,7 +2331,7 @@ namespace CanvasSomaticCaller
         {
             Dictionary<string, List<CanvasSegment>> segmentsByChromosome = CanvasSegment.GetSegmentsByChromosome(Segments);
             int recordCount = 0;
-            List<float> variantFrequencies = new List<float>();
+            List<float> Frequencies = new List<float>();
             using (VcfReader reader = new VcfReader(this.SomaticVCFPath))
             {
                 foreach (VcfVariant variant in reader.GetVariants())
@@ -2362,16 +2363,16 @@ namespace CanvasSomaticCaller
                     foreach (string bit in counts) altCount += int.Parse(bit);
                     float VF = altCount / (float)(altCount + refCount);
                     if (VF >= 0.5) continue;
-                    variantFrequencies.Add(VF);
+                    Frequencies.Add(VF);
                 }
             }
-            Console.WriteLine(">>>Loaded {0} somatic variants; saved {1} somatic SNV frequencies", recordCount, variantFrequencies.Count);
+            Console.WriteLine(">>>Loaded {0} somatic variants; saved {1} somatic SNV frequencies", recordCount, Frequencies.Count);
             // Don't bother providing an estimate if we have very few events:
-            if (variantFrequencies.Count < 100)
+            if (Frequencies.Count < 100)
             {
                 return double.NaN;
             }
-            double mean = variantFrequencies.Average();
+            double mean = Frequencies.Average();
             double estimatedPurity = Math.Min(1, mean * 2);
             Console.WriteLine(">>>Estimated tumor purity of {0} from somatic SNV calls", estimatedPurity);
 
@@ -2510,7 +2511,7 @@ namespace CanvasSomaticCaller
                     if (CN < 0) continue;
                     if (segment.End - segment.Begin < 5000) continue;
                     List<float> MAF = new List<float>();
-                    foreach (float VF in segment.VariantFrequencies)
+                    foreach (float VF in segment.Alleles.Frequencies)
                     {
                         MAF.Add(VF > 0.5 ? 1 - VF : VF);
                     }

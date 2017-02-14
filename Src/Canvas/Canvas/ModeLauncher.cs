@@ -1,9 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
 using Canvas.CommandLineParsing;
-using Isas.Shared.Checkpointing;
-using Isas.Shared.Utilities;
-using Isas.Shared.Utilities.FileSystem;
+using Illumina.Common.FileSystem;
+using Isas.Framework.Checkpointing;
+using Isas.Framework.FrameworkFactory;
+using Isas.Framework.Logging;
+using Isas.Framework.Settings;
+using Isas.Framework.Utilities;
+using Isas.Framework.WorkManagement;
 using Newtonsoft.Json;
 
 namespace Canvas
@@ -16,7 +20,7 @@ namespace Canvas
     public interface IModeRunner
     {
         CommonOptions CommonOptions { get; }
-        void Run(ILogger logger, ICheckpointRunnerAsync checkpointRunner, IWorkManager workManager);
+        void Run(ILogger logger, ICheckpointRunner checkpointRunner, IWorkManager workManager);
     }
 
     public class ModeLauncher : IModeLauncher
@@ -40,53 +44,28 @@ namespace Canvas
             IDirectoryLocation outFolder = commonOptions.OutputDirectory;
             var log = outFolder.GetFileLocation("CanvasLog.txt");
             var error = outFolder.GetFileLocation("CanvasError.txt");
-            using (ILogger logger = new Logger(log, error))
-            {
-                try
+            IsasConfiguration config = IsasConfiguration.GetConfiguration();
+            IDirectoryLocation genomeRoot = commonOptions.WholeGenomeFasta?.Parent?.Parent?.Parent?.Parent?.Parent;
+            int returnValue = 0;
+            IsasFrameworkFactory.RunWithIsasFramework(outFolder, log, error, commonOptions.StartCheckpoint, commonOptions.StopCheckpoint, 0,
+                config.MaximumMemoryGB, config.MaximumHoursPerProcess, false, genomeRoot,
+                frameworkServices =>
                 {
-                    logger.Info($"Running Canvas {_mode} {_version}");
-                    logger.Info($"Command-line arguments: {string.Join(" ", _args)}");
-                    var checkpointRunner =
-                        GetCheckpointRunner(
-                            logger,
-                            outFolder,
-                            commonOptions.StartCheckpoint,
-                            commonOptions.StopCheckpoint,
-                            commonOptions.WholeGenomeFasta);
-                    using (var manager = checkpointRunner.Manager)
+                    var logger = frameworkServices.Logger;
+                    try
                     {
-                        IDirectoryLocation loggingFolder = outFolder.CreateSubdirectory("Logging");
-                        IsasConfiguration config = IsasConfiguration.GetConfiguration();
-                        IWorkManager workManager = new LocalWorkManager(logger, loggingFolder, 0, config.MaximumMemoryGB, config.MaximumHoursPerProcess);
-                        _modeRunner.Run(logger, checkpointRunner, workManager);
-                        manager.CheckFinalState();
+                        frameworkServices.Logger.Info($"Running Canvas {_mode} {_version}");
+                        logger.Info($"Command-line arguments: {string.Join(" ", _args)}");
+                        _modeRunner.Run(logger, frameworkServices.Checkpointer, frameworkServices.WorkManager);
+                        returnValue = 0;
                     }
-                }
-                catch (StopCheckpointFoundException) { }
-                catch (Exception e)
-                {
-                    logger.Error($"Canvas workflow error: {e}");
-                    return -1;
-                }
-            }
-            return 0;
-        }
-
-        private CheckpointRunnerAsync GetCheckpointRunner(ILogger logger, IDirectoryLocation outputDirectory, string startCheckpoint, string stopCheckpoint, IDirectoryLocation wholeGenomeFastaFolder)
-        {
-
-            var parentDirectories = new Dictionary<string, IDirectoryLocation>
-            {
-                {"Output", outputDirectory},
-            };
-            // Homo_sapiens/UCSC/hg19/Sequence/WholeGenomeFasta
-            IDirectoryLocation genomeRoot = wholeGenomeFastaFolder?.Parent?.Parent?.Parent?.Parent?.Parent;
-            if (genomeRoot != null) parentDirectories.Add("Genome", genomeRoot);
-
-            JsonConverter[] converters = { new FileSystemLocationConverter(parentDirectories) };
-
-            ICheckpointSerializerAsync serializer = new CheckpointJsonSerializerAsync(CheckpointManagerFactory.GetCheckpointFolder(outputDirectory), logger, converters);
-            return CheckpointRunnerAsync.Create(serializer, logger, outputDirectory, startCheckpoint, stopCheckpoint, true);
+                    catch (Exception e)
+                    {
+                        logger.Error($"Canvas workflow error: {e}");
+                        returnValue = -1;
+                    }
+                });
+            return returnValue;
         }
     }
 

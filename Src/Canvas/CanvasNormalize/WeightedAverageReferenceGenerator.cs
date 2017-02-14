@@ -2,8 +2,9 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using Illumina.Common.FileSystem;
+using Isas.Manifests.NexteraManifest;
 using Isas.SequencingFiles;
-using Isas.Shared.Utilities.FileSystem;
 
 namespace CanvasNormalize
 {

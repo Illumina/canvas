@@ -1,95 +1,111 @@
-using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using Illumina.Common.FileSystem;
+using Isas.Framework.DataTypes;
+using Isas.Manifests.NexteraManifest;
 using Isas.SequencingFiles;
-using Isas.Shared.DataTypes;
-using Isas.Shared.Utilities.FileSystem;
 
 namespace Canvas
 {
-    public class CanvasCallset
+
+    public class AnalysisDetails
     {
-        public IDirectoryLocation WholeGenomeFastaFolder { get; }
         public IDirectoryLocation OutputFolder { get; }
-        public IFileLocation KmerFasta { get; }
-        public string Id => SampleName; // unique ID for this callset
-        public string SampleName { get; }
-        public Bam Bam { get; }
-        public IEnumerable<Bam> NormalBamPaths { get; }
-        public IFileLocation NormalVcfPath { get; }// set to the Starling VCF path (if tumor normal, the normal vcf path) 
-        public bool IsDbSnpVcf { get; set; }// NormalVcfPath points to a dbSNP VCF file
-        public IFileLocation SomaticVcfPath { get; } // set to the strelka VCF path
-        public IFileLocation OutputVcfPath { get; }
-        public NexteraManifest Manifest { get; }
+        public IDirectoryLocation WholeGenomeFastaFolder { get; }
+        public IFileLocation KmerFasta { get;  }
         public GenomeMetadata GenomeMetadata { get; }
         public IFileLocation FilterBed { get; }
-        public IFileLocation PloidyBed { get; }
+        public IFileLocation PloidyVcf { get; }
+        public IFileLocation CommonCnvsBed { get; }
+
+        public AnalysisDetails(IDirectoryLocation outputFolder, IDirectoryLocation wholeGenomeFastaFolder,
+           IFileLocation kmerFasta, IFileLocation filterBed, IFileLocation ploidyVcf, IFileLocation commonCnvsBed)        
+        {
+            WholeGenomeFastaFolder = wholeGenomeFastaFolder;
+            OutputFolder = outputFolder;
+            KmerFasta = kmerFasta;
+            FilterBed = filterBed;
+            PloidyVcf = ploidyVcf;
+            CommonCnvsBed = commonCnvsBed;
+            var genomeSizeXml = WholeGenomeFastaFolder.GetFileLocation("GenomeSize.xml");
+            GenomeMetadata = new GenomeMetadata();
+            GenomeMetadata.Deserialize(genomeSizeXml.FullName);
+        }
+        internal string TempFolder => Path.Combine(OutputFolder.FullName, "TempCNV");
+    }
+
+
+    public class SingleSampleCallset
+    {
+        public SingleSampleCallset(Bam bam, string sampleName, IFileLocation normalVcfPath, bool isDbSnpVcf, IDirectoryLocation outputFolder, IFileLocation outputVcfPath)
+        {
+            Bam = bam;
+            SampleName = sampleName;
+            NormalVcfPath = normalVcfPath;
+            IsDbSnpVcf = isDbSnpVcf;
+            OutputFolder = outputFolder;
+            OutputVcfPath = outputVcfPath;
+        }
+
+        public string SampleName { get; }
+        public IFileLocation OutputVcfPath { get; }
+        public Bam Bam { get; }
+        public IFileLocation NormalVcfPath { get; }
+        public bool IsDbSnpVcf { get; set; }
+        public IDirectoryLocation OutputFolder { get; }
+        internal string TempFolder => Path.Combine(OutputFolder.FullName, $"TempCNV_{SampleName}");
+        internal string BinSizePath => Path.Combine(TempFolder, $"{SampleName}.binsize");
+        internal string VfSummaryPath => Path.Combine(TempFolder, $"VFResults{SampleName}.txt.gz");
+        internal string VfSummaryBafPath => VfSummaryPath + ".baf";
+        internal string NormalBinnedPath => Path.Combine(TempFolder, $"{SampleName}.normal.binned");
+    }
+
+    public class CanvasCallset
+    {
+        public readonly SingleSampleCallset SingleSampleCallset;
+        public IEnumerable<Bam> NormalBamPaths { get; }
+        public IFileLocation SomaticVcfPath { get; } // set to the strelka VCF path
+        public AnalysisDetails AnalysisDetails { get; set; }
+        public NexteraManifest Manifest { get; }
+
 
         public CanvasCallset(
             IFileLocation bam,
             string sampleName,
-            IDirectoryLocation wholeGenomeFastaFolder,
-            IDirectoryLocation outputFolder,
-            IFileLocation kmerFasta,
-            IFileLocation filterBed,
-            IFileLocation ploidyBed,
             IFileLocation normalVcfPath,
             bool isDbSnpVcf,
             IEnumerable<IFileLocation> normalBamPaths,
             NexteraManifest manifest,
             IFileLocation somaticVcfPath,
-            IFileLocation outputVcfPath)
+            IFileLocation outputVcfPath,
+            AnalysisDetails analysisDetails) 
+
         {
-            Bam = new Bam(bam);
-            SampleName = sampleName;
-            WholeGenomeFastaFolder = wholeGenomeFastaFolder;
-            OutputFolder = outputFolder;
-            KmerFasta = kmerFasta;
-            FilterBed = filterBed;
-            PloidyBed = ploidyBed;
-            NormalVcfPath = normalVcfPath;
-            IsDbSnpVcf = isDbSnpVcf;
+            SingleSampleCallset = new SingleSampleCallset(new Bam(bam), sampleName, normalVcfPath, isDbSnpVcf, analysisDetails.OutputFolder, outputVcfPath);
             Manifest = manifest;
             SomaticVcfPath = somaticVcfPath;
-            OutputVcfPath = outputVcfPath;
+            AnalysisDetails = analysisDetails;
             NormalBamPaths = normalBamPaths.Select(file => new Bam(file));
-
-            var genomeSizeXml = WholeGenomeFastaFolder.GetFileLocation("GenomeSize.xml");
-            GenomeMetadata = new GenomeMetadata();
-            GenomeMetadata.Deserialize(genomeSizeXml.FullName);
         }
 
+        public CanvasCallset(
+            SingleSampleCallset singleSampleCallset,
+            AnalysisDetails analysisDetails,
+            IEnumerable<IFileLocation> normalBamPaths,
+            NexteraManifest manifest,
+            IFileLocation somaticVcfPath)
+
+        {
+            SingleSampleCallset = singleSampleCallset;
+            Manifest = manifest;
+            if (somaticVcfPath != null)
+                SomaticVcfPath = somaticVcfPath;
+            AnalysisDetails = analysisDetails;
+            if (normalBamPaths != null)
+                NormalBamPaths = normalBamPaths.Select(file => new Bam(file));
+        }
         public bool IsEnrichment => Manifest != null;
-
-        internal string TempFolder
-        {
-            get { return Path.Combine(OutputFolder.FullName, String.Format("TempCNV_{0}", Id)); }
-        }
-
-        internal string NormalBinnedPath
-        {
-            get { return Path.Combine(TempFolder, String.Format("{0}.normal.binned", Id)); }
-        }
-
-        internal string BinSizePath
-        {
-            get { return Path.Combine(TempFolder, String.Format("{0}.binsize", Id)); }
-        }
-
-        internal string VfSummaryPath
-        {
-            get { return Path.Combine(TempFolder, String.Format("VFResults{0}.txt.gz", Id)); }
-        }
-
-        internal string VfSummaryBafPath
-        {
-            get { return VfSummaryPath + ".baf"; }
-        }
-
-        internal string TempManifestPath
-        {
-            get { return Path.Combine(TempFolder, "manifest.txt"); }
-        }
+        internal string TempManifestPath => Path.Combine(SingleSampleCallset.TempFolder, "manifest.txt");
     }
 }

@@ -1,10 +1,11 @@
 ﻿using System.Linq;
 using Canvas.CommandLineParsing;
 using CanvasCommon;
+using Illumina.Common.FileSystem;
 using Illumina.SecondaryAnalysis;
-using Isas.Shared.Checkpointing;
-using Isas.Shared.Utilities;
-using Isas.Shared.Utilities.FileSystem;
+using Isas.Framework.Checkpointing;
+using Isas.Framework.Logging;
+using Isas.Framework.WorkManagement;
 
 namespace Canvas
 {
@@ -12,14 +13,16 @@ namespace Canvas
     {
         private readonly TumorNormalOptions _tumorNormalOptions;
         public CommonOptions CommonOptions { get; }
+        public SingleSampleCommonOptions SingleSampleCommonOptions { get; }
 
-        public TumorNormalWgsRunner(CommonOptions commonOptions, TumorNormalOptions tumorNormalOptions)
+        public TumorNormalWgsRunner(CommonOptions commonOptions, SingleSampleCommonOptions singleSampleCommonOptions, TumorNormalOptions tumorNormalOptions)
         {
             _tumorNormalOptions = tumorNormalOptions;
             CommonOptions = commonOptions;
+            SingleSampleCommonOptions = singleSampleCommonOptions;
         }
 
-        public void Run(ILogger logger, ICheckpointRunnerAsync checkpointRunner, IWorkManager workManager)
+        public void Run(ILogger logger, ICheckpointRunner checkpointRunner, IWorkManager workManager)
         {
             CanvasRunner runner = new CanvasRunner(logger, workManager, checkpointRunner, true, CanvasCoverageMode.GCContentWeighted, 100, CommonOptions.CustomParams);
             var callset = GetCallset();
@@ -28,21 +31,18 @@ namespace Canvas
 
         private CanvasCallset GetCallset()
         {
+            AnalysisDetails analysisDetails = new AnalysisDetails(CommonOptions.OutputDirectory, CommonOptions.WholeGenomeFasta, CommonOptions.KmerFasta, CommonOptions.FilterBed, SingleSampleCommonOptions.PloidyBed, null);
             IFileLocation outputVcfPath = CommonOptions.OutputDirectory.GetFileLocation("CNV.vcf.gz");
             CanvasCallset callSet = new CanvasCallset(
                     _tumorNormalOptions.TumorBam,
-                    CommonOptions.SampleName,
-                    CommonOptions.WholeGenomeFasta,
-                    CommonOptions.OutputDirectory,
-                    CommonOptions.KmerFasta,
-                    CommonOptions.FilterBed,
-                    CommonOptions.PloidyBed,
-                    CommonOptions.BAlleleSites,
-                    CommonOptions.IsDbSnpVcf,
+                    SingleSampleCommonOptions.SampleName,
+                    SingleSampleCommonOptions.BAlleleSites,
+                    SingleSampleCommonOptions.IsDbSnpVcf,
                     Enumerable.Empty<IFileLocation>(),
                     null,
                     _tumorNormalOptions.SomaticVcf,
-                    outputVcfPath);
+                    outputVcfPath,
+                    analysisDetails);
             return callSet;
         }
     }

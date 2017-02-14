@@ -33,7 +33,7 @@ namespace CanvasTest
                 CanvasSegment segment = new CanvasSegment("chr1", currentPosition, currentPosition + length, counts);
                 for (int varIndex = 0; varIndex < variantCount; varIndex++)
                 {
-                    segment.VariantFrequencies.Add(RNG.Next());
+                    segment.Alleles.Frequencies.Add(RNG.Next());
                 }
                 segments.Add(segment);
             }

@@ -60,5 +60,40 @@ namespace CanvasCommon.CommandLineParsing.CoreOptionTypes
         {
             return new OptionCollection<T> { Info };
         }
+
+        public override bool Equals(object obj)
+        {
+            // If parameter is null return false.
+            if (obj == null)
+            {
+                return false;
+            }
+
+            // If parameter cannot be cast to OptionInfo<T> return false.
+            var p = obj as ValueOption<T>;
+            if (p == null)
+            {
+                return false;
+            }
+
+            // Return true if the fields match:
+            return Equals(p);
+        }
+
+        public bool Equals(ValueOption<T> p)
+        {
+            // If parameter is null return false:
+            if (p == null)
+            {
+                return false;
+            }
+
+            return Info.Equals(p.Info) && Equals(_defaultValue, p._defaultValue);
+        }
+
+        public override int GetHashCode()
+        {
+            return Info.GetHashCode();
+        }
     }
 }

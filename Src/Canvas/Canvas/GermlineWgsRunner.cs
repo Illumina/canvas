@@ -1,10 +1,11 @@
 ﻿using System.Linq;
 using Canvas.CommandLineParsing;
 using CanvasCommon;
+using Illumina.Common.FileSystem;
 using Illumina.SecondaryAnalysis;
-using Isas.Shared.Checkpointing;
-using Isas.Shared.Utilities;
-using Isas.Shared.Utilities.FileSystem;
+using Isas.Framework.Checkpointing;
+using Isas.Framework.Logging;
+using Isas.Framework.WorkManagement;
 
 namespace Canvas
 {
@@ -12,38 +13,43 @@ namespace Canvas
     {
         private readonly IFileLocation _bam;
         public CommonOptions CommonOptions { get; }
+        public SingleSampleCommonOptions SingleSampleCommonOptions { get; }
 
-        public GermlineWgsRunner(CommonOptions commonOptions, IFileLocation bam)
+        public GermlineWgsRunner(CommonOptions commonOptions, SingleSampleCommonOptions singleSampleCommonOptions, IFileLocation bam)
         {
             _bam = bam;
             CommonOptions = commonOptions;
+            SingleSampleCommonOptions = singleSampleCommonOptions;
         }
 
-        public void Run(ILogger logger, ICheckpointRunnerAsync checkpointRunner, IWorkManager workManager)
+        public void Run(ILogger logger, ICheckpointRunner checkpointRunner, IWorkManager workManager)
         {
             CanvasRunner runner = new CanvasRunner(logger, workManager, checkpointRunner, false, CanvasCoverageMode.TruncatedDynamicRange, 100, CommonOptions.CustomParams);
             var callset = GetCallset();
-            logger.Info($"Normal Vcf path: {callset.NormalVcfPath}");
+            logger.Info($"Normal Vcf path: {callset.SingleSampleCallset.NormalVcfPath}");
             runner.CallSample(callset);
         }
 
         private CanvasCallset GetCallset()
         {
             IFileLocation outputVcfPath = CommonOptions.OutputDirectory.GetFileLocation("CNV.vcf.gz");
+            AnalysisDetails analysisDetails = new AnalysisDetails(
+                CommonOptions.OutputDirectory,
+                CommonOptions.WholeGenomeFasta,
+                CommonOptions.KmerFasta,
+                CommonOptions.FilterBed,
+                SingleSampleCommonOptions.PloidyBed,
+                null);
             CanvasCallset callSet = new CanvasCallset(
-                    _bam,
-                    CommonOptions.SampleName,
-                    CommonOptions.WholeGenomeFasta,
-                    CommonOptions.OutputDirectory,
-                    CommonOptions.KmerFasta,
-                    CommonOptions.FilterBed,
-                    CommonOptions.PloidyBed,
-                    CommonOptions.BAlleleSites,
-                    CommonOptions.IsDbSnpVcf,
-                    Enumerable.Empty<IFileLocation>(),
-                    null,
-                    null,
-                    outputVcfPath);
+                _bam,
+                SingleSampleCommonOptions.SampleName,
+                SingleSampleCommonOptions.BAlleleSites,
+                SingleSampleCommonOptions.IsDbSnpVcf,
+                Enumerable.Empty<IFileLocation>(),
+                null,
+                null,
+                outputVcfPath,
+                analysisDetails);
             return callSet;
         }
     }

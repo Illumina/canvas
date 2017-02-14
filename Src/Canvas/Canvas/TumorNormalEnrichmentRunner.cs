@@ -1,10 +1,11 @@
 ﻿using Canvas.CommandLineParsing;
 using CanvasCommon;
+using Illumina.Common.FileSystem;
 using Illumina.SecondaryAnalysis;
-using Isas.SequencingFiles;
-using Isas.Shared.Checkpointing;
-using Isas.Shared.Utilities;
-using Isas.Shared.Utilities.FileSystem;
+using Isas.Framework.Checkpointing;
+using Isas.Framework.Logging;
+using Isas.Framework.WorkManagement;
+using Isas.Manifests.NexteraManifest;
 
 namespace Canvas
 {
@@ -14,16 +15,18 @@ namespace Canvas
         private readonly IFileLocation _normalBam;
         private readonly IFileLocation _manifest;
         public CommonOptions CommonOptions { get; }
+        public SingleSampleCommonOptions SingleSampleCommonOptions { get; }
 
-        public TumorNormalEnrichmentRunner(CommonOptions commonOptions, TumorNormalOptions tumorNormalOptions, IFileLocation normalBam, IFileLocation manifest)
+        public TumorNormalEnrichmentRunner(CommonOptions commonOptions, SingleSampleCommonOptions singleSampleCommonOptions, TumorNormalOptions tumorNormalOptions, IFileLocation normalBam, IFileLocation manifest)
         {
             _tumorNormalOptions = tumorNormalOptions;
             _normalBam = normalBam;
             _manifest = manifest;
             CommonOptions = commonOptions;
+            SingleSampleCommonOptions = singleSampleCommonOptions;
         }
 
-        public void Run(ILogger logger, ICheckpointRunnerAsync checkpointRunner, IWorkManager workManager)
+        public void Run(ILogger logger, ICheckpointRunner checkpointRunner, IWorkManager workManager)
         {
             CanvasRunner runner = new CanvasRunner(logger, workManager, checkpointRunner, true, CanvasCoverageMode.GCContentWeighted, 300, CommonOptions.CustomParams);
             var callset = GetCallset(logger);
@@ -32,22 +35,19 @@ namespace Canvas
 
         private CanvasCallset GetCallset(ILogger logger)
         {
+            AnalysisDetails analysisDetails = new AnalysisDetails(CommonOptions.OutputDirectory, CommonOptions.WholeGenomeFasta, CommonOptions.KmerFasta, CommonOptions.FilterBed, SingleSampleCommonOptions.PloidyBed, null);
             IFileLocation outputVcfPath = CommonOptions.OutputDirectory.GetFileLocation("CNV.vcf.gz");
             var manifest = new NexteraManifest(_manifest.FullName, null, logger.Error);
             CanvasCallset callSet = new CanvasCallset(
                     _tumorNormalOptions.TumorBam,
-                    CommonOptions.SampleName,
-                    CommonOptions.WholeGenomeFasta,
-                    CommonOptions.OutputDirectory,
-                    CommonOptions.KmerFasta,
-                    CommonOptions.FilterBed,
-                    CommonOptions.PloidyBed,
-                    CommonOptions.BAlleleSites,
-                    CommonOptions.IsDbSnpVcf,
+                    SingleSampleCommonOptions.SampleName,
+                    SingleSampleCommonOptions.BAlleleSites,
+                    SingleSampleCommonOptions.IsDbSnpVcf,
                     new[] { _normalBam },
                     manifest,
                     _tumorNormalOptions.SomaticVcf,
-                    outputVcfPath);
+                    outputVcfPath,
+                    analysisDetails);
             return callSet;
         }
     }

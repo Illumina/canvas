@@ -2,13 +2,14 @@ using System.Collections.Generic;
 using System.Linq;
 using CanvasCommon.CommandLineParsing.CoreOptionTypes;
 using CanvasCommon.CommandLineParsing.OptionProcessing;
-using Isas.Shared.Utilities.FileSystem;
+using Illumina.Common.FileSystem;
 
 namespace Canvas.CommandLineParsing
 {
     public class SomaticEnrichmentModeParser : ModeParser
     {
         private static readonly CommonOptionsParser CommonOptionsParser = new CommonOptionsParser();
+        private static readonly SingleSampleCommonOptionsParser SingleSampleCommonOptionsParser = new SingleSampleCommonOptionsParser();
         private static readonly SomaticEnrichmentOptionsParser SomaticEnrichmentOptionsParser = new SomaticEnrichmentOptionsParser();
 
         public SomaticEnrichmentModeParser(string name, string description) : base(name, description)
@@ -19,14 +20,15 @@ namespace Canvas.CommandLineParsing
         {
             CommonOptions commonOptions = parseInput.Get(CommonOptionsParser);
             SomaticEnrichmentOptions somaticEnrichmentOptions = parseInput.Get(SomaticEnrichmentOptionsParser);
-            return ParsingResult<IModeRunner>.SuccessfulResult(new SomaticEnrichmentRunner(commonOptions, somaticEnrichmentOptions));
+            SingleSampleCommonOptions singleSampleCommonOptions = parseInput.Get(SingleSampleCommonOptionsParser);
+            return ParsingResult<IModeRunner>.SuccessfulResult(new SomaticEnrichmentRunner(commonOptions, singleSampleCommonOptions, somaticEnrichmentOptions));
         }
 
         public override OptionCollection<IModeRunner> GetOptions()
         {
             return new OptionCollection<IModeRunner>
             {
-                SomaticEnrichmentOptionsParser, CommonOptionsParser
+                SomaticEnrichmentOptionsParser, CommonOptionsParser, SingleSampleCommonOptionsParser
             };
         }
     }

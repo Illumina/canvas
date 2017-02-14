@@ -1,8 +1,8 @@
 ﻿using System.Collections.Generic;
 using System.IO;
 using CanvasCommon;
-using Isas.SequencingFiles;
-using Isas.Shared.Utilities.FileSystem;
+using Illumina.Common.FileSystem;
+using Isas.Manifests.NexteraManifest;
 
 namespace CanvasNormalize
 {
@@ -17,7 +17,7 @@ namespace CanvasNormalize
             _manifest = manifest;
         }
 
-        public IEnumerable<GenomicBin> Run(IFileLocation sampleBedFile, IFileLocation referenceBedFile)
+        public IEnumerable<SampleGenomicBin> Run(IFileLocation sampleBedFile, IFileLocation referenceBedFile)
         {
             if (!sampleBedFile.Exists)
                 throw new FileNotFoundException(sampleBedFile.FullName + " does not exist.");
@@ -42,7 +42,7 @@ namespace CanvasNormalize
                     // It would be better to just drop these bins so we don't introduce too much noise into segmentation and CNV calling.
                     if (referenceBin.Count < 1) { continue; } // skip the bin
                     double ratio = sampleBin.Count / referenceBin.Count * librarySizeFactor;
-                    yield return new GenomicBin(sampleBin.Chromosome, sampleBin.Start, sampleBin.Stop, sampleBin.GC, (float)ratio);
+                    yield return new SampleGenomicBin(sampleBin.GenomicBin.Chromosome, sampleBin.Start, sampleBin.Stop, sampleBin.GenomicBin.GC, (float)ratio);
                 }
             }
         }

@@ -1,8 +1,8 @@
 ﻿using System.Collections.Generic;
 using System.IO;
 using CanvasCommon;
-using Isas.SequencingFiles;
-using Isas.Shared.Utilities.FileSystem;
+using Illumina.Common.FileSystem;
+using Isas.Manifests.NexteraManifest;
 
 namespace CanvasNormalize
 {
@@ -20,7 +20,7 @@ namespace CanvasNormalize
             _maxReferenceCount = maxReferecneCount;
         }
 
-        public IEnumerable<GenomicBin> Run(IFileLocation sampleBedFile, IFileLocation referenceBedFile)
+        public IEnumerable<SampleGenomicBin> Run(IFileLocation sampleBedFile, IFileLocation referenceBedFile)
         {
             if (!sampleBedFile.Exists)
                 throw new FileNotFoundException(sampleBedFile.FullName + " does not exist.");
@@ -42,7 +42,7 @@ namespace CanvasNormalize
                     if (referenceBin.Count > _maxReferenceCount) { continue; } // skip the bin
                     double sampleCount = eSampleBins.Current.Count;
                     double ratio = sampleBin.Count / referenceBin.Count;
-                    yield return new GenomicBin(sampleBin.Chromosome, sampleBin.Start, sampleBin.Stop, sampleBin.GC, (float)ratio);
+                    yield return new SampleGenomicBin(sampleBin.GenomicBin.Chromosome, sampleBin.Start, sampleBin.Stop, sampleBin.GenomicBin.GC, (float)ratio);
                 }
             }
         }
