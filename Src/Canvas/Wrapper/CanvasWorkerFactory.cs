@@ -40,11 +40,13 @@ namespace Canvas.Wrapper
 
         public ICanvasWorker<CanvasEnrichmentInput, CanvasEnrichmentOutput> GetCanvasEnrichmentWorker()
         {
+            var mono = new FileLocation(_executableProcessor.GetMonoPath());
             var annotationProvider = GetAnnotationFileProvider();
             var canvasCnvCaller = new CanvasEnrichmentCnvCaller(
                 _workManager,
                 _logger,
                 GetCanvasExe(),
+                mono,
                 annotationProvider,
                 GetCanvasSingleSampleInputCommandLineBuilderWithSomaticQualityThreshold(annotationProvider),
                 new CanvasEnrichmentInputCreator<CanvasEnrichmentInput>(),
@@ -64,10 +66,12 @@ namespace Canvas.Wrapper
             }
 
             var annotationProvider = GetAnnotationFileProvider();
+            var mono = new FileLocation(_executableProcessor.GetMonoPath());
             var canvasCnvCaller = new CanvasResequencingCnvCaller(
                 _workManager,
                 _logger,
                 GetCanvasExe(),
+                mono,
                 annotationProvider,
                 GetCanvasSingleSampleInputCommandLineBuilder(annotationProvider),
                 GetCanvasPloidyBedCreator());
@@ -82,10 +86,12 @@ namespace Canvas.Wrapper
         public ICanvasWorker<CanvasTumorNormalWgsInput, CanvasOutput> GetCanvasTumorNormalWorker()
         {
             var annotationProvider = GetAnnotationFileProvider();
+            var mono = new FileLocation(_executableProcessor.GetMonoPath());
             var canvasCnvCaller = new CanvasTumorNormalWgsCnvCaller(
                 _workManager,
                 _logger,
                 GetCanvasExe(),
+                mono,
                 annotationProvider,
                 GetCanvasSingleSampleInputCommandLineBuilderWithSomaticQualityThreshold(annotationProvider),
                 GetCanvasPloidyBedCreator());
@@ -95,10 +101,12 @@ namespace Canvas.Wrapper
         public ICanvasWorker<CanvasTumorNormalEnrichmentInput, CanvasOutput> GetCanvasTumorNormalEnrichmentWorker()
         {
             var annotationProvider = GetAnnotationFileProvider();
+            var mono = new FileLocation(_executableProcessor.GetMonoPath());
             var canvasCnvCaller = new CanvasTumorNormalEnrichmentCnvCaller(
                 _workManager,
                 _logger,
                 GetCanvasExe(),
+                mono,
                 annotationProvider,
                 GetCanvasSingleSampleInputCommandLineBuilderWithSomaticQualityThreshold(annotationProvider),
                 new CanvasEnrichmentInputCreator<CanvasTumorNormalEnrichmentInput>(),
@@ -109,7 +117,7 @@ namespace Canvas.Wrapper
         private CanvasPloidyBedCreator GetCanvasPloidyBedCreator()
         {
             return new CanvasPloidyBedCreator(_logger, _workManager,
-                new PloidyCorrector(_logger, _workManager, new PloidyEstimator(_logger, _workManager)));
+                new PloidyCorrector(_logger, _workManager, new PloidyEstimator(_logger, _workManager, _executableProcessor.GetExecutable("samtools"), false), new Isas.ClassicBioinfoTools.Tabix.TabixWrapper(_logger, _workManager, _executableProcessor.GetExecutable("tabix")), true));
         }
 
         public bool RequireNormalVcf()

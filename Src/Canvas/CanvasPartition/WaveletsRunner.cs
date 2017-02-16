@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 using CanvasCommon;
 
 namespace CanvasPartition
@@ -76,7 +77,7 @@ namespace CanvasPartition
 
                 }));
             }
-            Isas.Framework.Utilities.Utilities.DoWorkParallelThreads(tasks);
+            Parallel.ForEach(tasks, task => task.Invoke());
             // Quick sanity-check: If we don't have any segments, then return a dummy result.
             int n = finiteScoresByChr.Values.Sum(list => list.Length);
 
@@ -126,7 +127,7 @@ namespace CanvasPartition
 
             }
             Console.WriteLine("{0} Launching wavelet tasks", DateTime.Now);
-            Isas.Framework.Utilities.Utilities.DoWorkParallelThreads(tasks);
+            Parallel.ForEach(tasks, task => task.Invoke());
             Console.WriteLine("{0} Completed wavelet tasks", DateTime.Now);
             Console.WriteLine("{0} Segmentation results complete", DateTime.Now);
             return segmentByChr;

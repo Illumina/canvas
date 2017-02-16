@@ -7,6 +7,7 @@ using System.Threading;
 using CanvasCommon;
 using ProtoBuf;
 using System.Linq;
+using System.Threading.Tasks;
 using Isas.Manifests.NexteraManifest;
 using Isas.SequencingFiles;
 
@@ -35,7 +36,7 @@ namespace CanvasBin
                 manifestRegionsByChrom = manifest.GetManifestRegionsByChromosome();
             }
 
-            List<ThreadStart> tasks = new List<ThreadStart>();
+            var tasks = new List<Action>();
             foreach (string chr in possibleAlignments.Keys)
             {
                 // We don't want to include the sex chromosomes because they may not be copy number 2
@@ -50,7 +51,7 @@ namespace CanvasBin
                     regions = manifestRegionsByChrom[chr];
                 }
 
-                tasks.Add(new ThreadStart(() =>
+                tasks.Add(() =>
                 {
                     int numberObserved = observed.CountSetBits(regions);
                     int numberPossible = CanvasBin.CountSetBits(possible, regions);
@@ -62,9 +63,9 @@ namespace CanvasBin
                         rates.Add(rate);
                     }
 
-                }));
+                });
             }
-            Isas.Framework.Utilities.Utilities.DoWorkParallelThreads(tasks);
+            Parallel.ForEach(tasks, task => task.Invoke());
             return rates;
         }
 
@@ -467,13 +468,13 @@ namespace CanvasBin
             if (coverageMode == CanvasCoverageMode.GCContentWeighted)
             {
                 byte gcCap = (byte)numberOfGCbins;
-                List<ThreadStart> normalizationTasks = new List<ThreadStart>();
+                var normalizationTasks = new List<Action>();
                 foreach (KeyValuePair<string, Int16[]> fragmentLengthsKVP in fragmentLengths)
                 {
                     string chr = fragmentLengthsKVP.Key;
                     GenericRead fastaEntry = fastaEntries[chr];
 
-                    normalizationTasks.Add(new ThreadStart(() =>
+                    normalizationTasks.Add(() =>
                     {
                         // contains GC content of the forward read at every position for current chr
                         byte[] gcContent = new byte[fastaEntry.Bases.Length];
@@ -510,12 +511,12 @@ namespace CanvasBin
                         {
                             readGCContent[chr] = gcContent;
                         }
-                    }));
+                    });
                 }
 
                 Console.WriteLine("{0} Launching normalization tasks.", DateTime.Now);
                 Console.Out.Flush();
-                Isas.Framework.Utilities.Utilities.DoWorkParallelThreads(normalizationTasks);
+                Parallel.ForEach(normalizationTasks, task => task.Invoke());
                 Console.WriteLine("{0} Normalization tasks complete.", DateTime.Now);
                 Console.Out.Flush();
             }
@@ -526,7 +527,7 @@ namespace CanvasBin
                 observedVsExpectedGC = ComputeObservedVsExpectedGC(observedAlignments, readGCContent, manifest, debugGCCorrection, outFile);
 
             Dictionary<string, List<SampleGenomicBin>> perChromosomeBins = new Dictionary<string, List<SampleGenomicBin>>();
-            List<ThreadStart> binningTasks = new List<ThreadStart>();
+            var binningTasks = new List<Action>();
             foreach (KeyValuePair<string, GenericRead> fastaEntryKVP in fastaEntries)
             {
                 string chr = fastaEntryKVP.Key;
@@ -547,12 +548,11 @@ namespace CanvasBin
                 else
                     args.ReadGCContent = null;
                 args.ObservedVsExpectedGC = observedVsExpectedGC;
-                binningTasks.Add(new ThreadStart(() => { BinCountsForChromosome(args); }));
+                binningTasks.Add(() => { BinCountsForChromosome(args); });
             }
             Console.WriteLine("{0} Launch BinCountsForChromosome jobs...", DateTime.Now);
             Console.Out.WriteLine();
-            //Parallel.ForEach(binningTasks, t => { t.Invoke(); });
-            Isas.Framework.Utilities.Utilities.DoWorkParallelThreads(binningTasks);
+            Parallel.ForEach(binningTasks, task => task.Invoke());
             Console.WriteLine("{0} Completed BinCountsForChromosome jobs.", DateTime.Now);
             Console.Out.WriteLine();
 

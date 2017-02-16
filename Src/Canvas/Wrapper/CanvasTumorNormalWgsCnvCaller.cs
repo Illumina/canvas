@@ -19,11 +19,12 @@ namespace Canvas.Wrapper
         private readonly ICanvasAnnotationFileProvider _annotationFileProvider;
         private readonly ICanvasSingleSampleInputCommandLineBuilder _singleSampleInputCommandLineBuilder;
         private readonly CanvasPloidyBedCreator _canvasPloidyBedCreator;
+        private readonly IFileLocation _mono;
 
         public CanvasTumorNormalWgsCnvCaller(
             IWorkManager workManager,
             ILogger logger,
-            IFileLocation canvasExe,
+            IFileLocation canvasExe, IFileLocation mono,
             ICanvasAnnotationFileProvider annotationFileProvider,
             ICanvasSingleSampleInputCommandLineBuilder singleSampleInputCommandLineBuilder,
             CanvasPloidyBedCreator canvasPloidyBedCreator)
@@ -34,6 +35,7 @@ namespace Canvas.Wrapper
             _annotationFileProvider = annotationFileProvider;
             _singleSampleInputCommandLineBuilder = singleSampleInputCommandLineBuilder;
             _canvasPloidyBedCreator = canvasPloidyBedCreator;
+            _mono = mono;
         }
 
         public SampleSet<CanvasOutput> Run(SampleSet<CanvasTumorNormalWgsInput> inputs, IDirectoryLocation sandbox)
@@ -70,7 +72,7 @@ namespace Canvas.Wrapper
             commandLine = _singleSampleInputCommandLineBuilder.MergeCustomCanvasParameters(commandLine);
             UnitOfWork singleSampleJob = new UnitOfWork()
             {
-                ExecutablePath = CrossPlatform.IsThisLinux() ? Utilities.GetMonoPath() : _canvasExe.FullName,
+                ExecutablePath = CrossPlatform.IsThisLinux() ? _mono.FullName : _canvasExe.FullName,
                 CommandLine = CrossPlatform.IsThisLinux() ? _canvasExe + " " + commandLine : commandLine.ToString(),
                 LoggingFolder = _workManager.LoggingFolder.FullName,
                 LoggingStub = "Canvas_" + sampleId,
