@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Canvas.CommandLineParsing;
 using Illumina.Common.FileSystem;
 using Isas.Framework.Checkpointing;
+using Isas.Framework.DataTypes;
 using Isas.Framework.FrameworkFactory;
 using Isas.Framework.Logging;
 using Isas.Framework.Settings;
@@ -20,7 +21,7 @@ namespace Canvas
     public interface IModeRunner
     {
         CommonOptions CommonOptions { get; }
-        void Run(ILogger logger, ICheckpointRunner checkpointRunner, IWorkManager workManager);
+        void Run(ILogger logger, ICheckpointRunner checkpointRunner, IWorkManager workManager, IFileLocation mono);
     }
 
     public class ModeLauncher : IModeLauncher
@@ -54,9 +55,11 @@ namespace Canvas
                     var logger = frameworkServices.Logger;
                     try
                     {
+                        var executableProcessor = new ExecutableProcessor(new NullSampleSettings(), logger);
+                        var mono = new FileLocation(executableProcessor.GetMonoPath());
                         frameworkServices.Logger.Info($"Running Canvas {_mode} {_version}");
                         logger.Info($"Command-line arguments: {string.Join(" ", _args)}");
-                        _modeRunner.Run(logger, frameworkServices.Checkpointer, frameworkServices.WorkManager);
+                        _modeRunner.Run(logger, frameworkServices.Checkpointer, frameworkServices.WorkManager, mono);
                         returnValue = 0;
                     }
                     catch (Exception e)
@@ -75,5 +78,71 @@ namespace Canvas
         {
             return 0;
         }
+    }
+
+    public class NullSampleSettings : ISampleSettings
+    {
+        /// <summary>
+        /// Returns the value associated with the given key in the Header section.
+        /// </summary>
+        /// <param name="key">The key to look up.</param>
+        /// <returns>The value associated with the key, or null if key not present.</returns>
+        public string GetHeader(string key)
+        {
+            return null;
+        }
+
+        /// <summary>
+        /// Returns the value associated with the given key in the Settings section.
+        /// </summary>
+        /// <param name="key">The key to look up.</param>
+        /// <returns>The value associated with the key, or null if key not present.</returns>
+        public string GetSetting(string key)
+        {
+            return null;
+        }
+
+        /// <summary>Returns all the setting keys.</summary>
+        /// <returns></returns>
+        public IEnumerable<string> GetSettingKeys()
+        {
+            return null;
+        }
+
+        /// <summary>
+        /// </summary>
+        /// <param name="key"></param>
+        /// <returns>SampleSet&lt;List&lt;string&gt;&gt;, or SampleSet&lt;List&lt;(string)null&gt;&gt; if key not present.</returns>
+        public SampleSet<List<string>> GetDataColumn(string key)
+        {
+            throw new NotImplementedException();
+        }
+
+        public SampleSet<SampleInfo> GetSamples()
+        {
+            throw new NotImplementedException();
+        }
+
+        public string GetManifest(string key)
+        {
+            throw new NotImplementedException();
+        }
+
+        public IEnumerable<string> GetManifestKeys()
+        {
+            throw new NotImplementedException();
+        }
+
+        public List<string> GetSection(string sectionName)
+        {
+            throw new NotImplementedException();
+        }
+
+        public void CheckUnusedEntries()
+        {
+            throw new NotImplementedException();
+        }
+
+        public string SampleSheetPath => null;
     }
 }
