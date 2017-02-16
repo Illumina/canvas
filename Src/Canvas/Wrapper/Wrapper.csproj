@@ -94,9 +94,13 @@
     <Compile Include="CanvasEnrichmentOutput.cs" />
     <Compile Include="CanvasOutput.cs" />
     <Compile Include="CanvasPloidyBedCreator.cs" />
+    <Compile Include="CanvasPloidyVcfCreator.cs" />
     <Compile Include="CanvasResequencingCnvCaller.cs" />
     <Compile Include="CanvasResequencingInput.cs" />
     <Compile Include="CanvasSingleSampleInputCommandLineBuilder.cs" />
+    <Compile Include="CanvasSmallPedigreeInput.cs" />
+    <Compile Include="CanvasSmallPedigreeOutput.cs" />
+    <Compile Include="CanvasSmallPedigreeWrapper.cs" />
     <Compile Include="CanvasTumorNormalEnrichmentCnvCaller.cs" />
     <Compile Include="CanvasTumorNormalEnrichmentInput.cs" />
     <Compile Include="CanvasTumorNormalWgsCnvCaller.cs" />
