@@ -58,7 +58,7 @@ namespace CanvasNormalize
             double medianRatio = ratios.OnTargetMedianBinCount;
 
             // delete temporary reference count file
-            Isas.Framework.Utilities.Utilities.SafeDelete(tempReferenceFile.FullName);
+            tempReferenceFile.Delete();
 
             // multiply reference counts by the median ratio
             var referenceBins = Enumerable.Zip(sampleBins, referenceVector,
