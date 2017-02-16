@@ -104,6 +104,7 @@
     <Compile Include="CanvasWorker.cs" />
     <Compile Include="CanvasWorkerFactory.cs" />
     <Compile Include="DbSnpVcfProcessor.cs" />
+    <Compile Include="ICanvasCnvCaller.cs" />
     <Compile Include="ICanvasOutput.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
