@@ -8,6 +8,7 @@ namespace CanvasCommon
         Loss,
         LossOfHeterozygosity,
         Reference,
+        ComplexCnv,
     }
 
     public static class CnvTypeExtensions

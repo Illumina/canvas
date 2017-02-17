@@ -1143,7 +1143,6 @@ namespace Illumina.SecondaryAnalysis
             if (callsets.PedigreeSample.Count != partitionedPaths.Count)
                 throw new Exception($"Number of output CanvasPartition files {partitionedPaths.Count} is not equal to the number of Canvas callsets {callsets.PedigreeSample.Count}");
 
-
             bool haveProband = callsets.PedigreeSample.Where(x => x.SampleType == SampleType.Proband).ToList().Count > 0;
 
             // CanvasSmallPedigreeCaller:
@@ -1162,8 +1161,8 @@ namespace Illumina.SecondaryAnalysis
             {
                 commandLine.AppendFormat("-v \"{0}\" ", callset.Sample.VfSummaryPath);
                 commandLine.AppendFormat("-n \"{0}\" ", callset.Sample.SampleName);
-                commandLine.AppendFormat("-o \"{0}\" ", callset.Sample.OutputVcfPath);
             }
+            commandLine.AppendFormat("-o \"{0}\" ", Path.Combine(callsets.AnalysisDetails.OutputFolder.ToString(), "CNV.vcf.gz"));
             commandLine.AppendFormat("-r \"{0}\" ", callsets.AnalysisDetails.WholeGenomeFastaFolder);
             if (haveProband)
             {

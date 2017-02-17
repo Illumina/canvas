@@ -28,7 +28,7 @@ namespace CanvasPedigreeCaller
         static int Main(string[] args)
         {
             CanvasCommon.Utilities.LogCommandLine(args);
-            List<string> outFiles = new List<string>();
+            string outFile = null;
             List<string> segmentFiles = new List<string>();
             List<string> variantFrequencyFiles = new List<string>();
             string ploidyBedPath = null;
@@ -44,7 +44,7 @@ namespace CanvasPedigreeCaller
             {
                 { "i|infile=",        "file containing bins, their counts, and assigned segments (obtained from CanvasPartition.exe)",  v => segmentFiles.Add(v) },
                 { "v|varfile=",       "file containing variant frequencies (obtained from CanvasSNV.exe)",                              v => variantFrequencyFiles.Add(v) },
-                { "o|outfile=",       "name of output directory",                                                                       v => outFiles.Add(v) },
+                { "o|outfile=",       "name of output directory",                                                                       v => outFile = v },
                 { "r|reference=",     "reference genome folder that contains GenomeSize.xml",                                           v => referenceFolder = v },
                 { "n|sampleName=",    "sample name for output VCF header (optional)",                                                   v => sampleNames.Add(v)},
                 { "f|pedigree=",      "relationship withoin pedigree (parents/proband)",                                                v => pedigreeFile = v },
@@ -67,11 +67,12 @@ namespace CanvasPedigreeCaller
                 return 0;
             }
 
-            if (!segmentFiles.Any() || !outFiles.Any() || !variantFrequencyFiles.Any() || string.IsNullOrEmpty(referenceFolder))
+            if (!segmentFiles.Any()  || !variantFrequencyFiles.Any() || string.IsNullOrEmpty(referenceFolder) || string.IsNullOrEmpty(outFile))
             {
                 ShowHelp(p);
                 return 0;
             }
+
 
             foreach (string segmentFile in segmentFiles)
             {
@@ -107,7 +108,7 @@ namespace CanvasPedigreeCaller
             {
 
                 Console.WriteLine($"CanvasPedigreeCaller.exe: pedigreeFile option is not used! Calling CNV variants without family information.");
-                return caller.CallVariants(variantFrequencyFiles, segmentFiles, outFiles, ploidyBedPath, referenceFolder,
+                return caller.CallVariants(variantFrequencyFiles, segmentFiles, outFile, ploidyBedPath, referenceFolder,
                     sampleNames, pedigreeFile);
             }
             if (!File.Exists(pedigreeFile))
@@ -115,7 +116,7 @@ namespace CanvasPedigreeCaller
                 Console.WriteLine($"CanvasPedigreeCaller.exe: File {pedigreeFile} does not exist! Exiting. Call variants without using family information.");
                 return 1;
             }
-            return caller.CallVariantsInPedigree(variantFrequencyFiles, segmentFiles, outFiles, ploidyBedPath, referenceFolder, sampleNames, pedigreeFile);
+            return caller.CallVariantsInPedigree(variantFrequencyFiles, segmentFiles, outFile, ploidyBedPath, referenceFolder, sampleNames, pedigreeFile);
         }
 
         private static T Deserialize<T>(IFileLocation path)

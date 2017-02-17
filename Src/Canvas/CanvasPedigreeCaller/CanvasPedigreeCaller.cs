@@ -31,7 +31,7 @@ namespace CanvasPedigreeCaller
 
         #endregion
 
-        internal int CallVariantsInPedigree(List<string> variantFrequencyFiles, List<string> segmentFiles, List<string> outVcfFiles, string ploidyBedPath, string referenceFolder, List<string> sampleNames, string pedigreeFile)
+        internal int CallVariantsInPedigree(List<string> variantFrequencyFiles, List<string> segmentFiles, string outVcfFile, string ploidyBedPath, string referenceFolder, List<string> sampleNames, string pedigreeFile)
         {
             // load files
             // initialize data structures and classes
@@ -100,19 +100,18 @@ namespace CanvasPedigreeCaller
                     Console.WriteLine($"{DateTime.Now} Finished SPW task for segment {interval.Start} - {interval.End}");
                 });
 
-            int pedigreeMemberIndex = 0;
             foreach (var pedigreeMember in pedigreeMembers)
-            {
                 CanvasSegment.MergeSegments(ref pedigreeMember.Segments, MinimumCallSize);
-                CanvasSegment.WriteSegments(outVcfFiles[pedigreeMemberIndex], pedigreeMember.Segments,
-                    pedigreeMember.MeanCoverage, referenceFolder, pedigreeMember.Name, null, null,
-                    QualityFilterThreshold, DeNovoQualityFilterThreshold);
-                pedigreeMemberIndex++;
-            }
+            var names = pedigreeMembers.Select(x => x.Name).ToList();
+            var coverage = pedigreeMembers.Select(x => (double? )x.MeanCoverage).ToList();
+            var segments = pedigreeMembers.Select(x => x.Segments).ToList();
+
+            CanvasSegmentWriter.WriteMultiSampleSegments(outVcfFile, segments, coverage, referenceFolder, names, null, null,
+            QualityFilterThreshold, DeNovoQualityFilterThreshold);
             return 0;
         }
 
-        internal int CallVariants(List<string> variantFrequencyFiles, List<string> segmentFiles, List<string> outVcfFiles, string ploidyBedPath, string referenceFolder, List<string> sampleNames, string pedigreeFile)
+        internal int CallVariants(List<string> variantFrequencyFiles, List<string> segmentFiles, string outVcfFile, string ploidyBedPath, string referenceFolder, List<string> sampleNames, string pedigreeFile)
         {
             // load files
             // initialize data structures and classes
@@ -189,13 +188,13 @@ namespace CanvasPedigreeCaller
                 throw new ArgumentException("Length of qscores list should be equal to the number of segments.");
 
             foreach (var pedigreeMember in pedigreeMembers)
-            {
-                CanvasSegment.MergeSegments(ref pedigreeMember.Segments, MinimumCallSize, copyNumbers: copyNumbers, qscores: qscores);
-                CanvasSegment.WriteSegments(outVcfFiles[pedigreeMemberIndex], pedigreeMember.Segments,
-                    pedigreeMember.MeanCoverage, referenceFolder, pedigreeMember.Name, null, null,
-                    QualityFilterThreshold, DeNovoQualityFilterThreshold);
-                pedigreeMemberIndex++;
-            }
+                CanvasSegment.MergeSegments(ref pedigreeMember.Segments, MinimumCallSize);
+            var names = pedigreeMembers.Select(x => x.Name).ToList();
+            var coverage = pedigreeMembers.Select(x => (double?)x.MeanCoverage).ToList();
+            var segments = pedigreeMembers.Select(x => x.Segments).ToList();
+
+            CanvasSegmentWriter.WriteMultiSampleSegments(outVcfFile, segments, coverage, referenceFolder, names, null, null,
+            QualityFilterThreshold, DeNovoQualityFilterThreshold);
             return 0;
         }
 
