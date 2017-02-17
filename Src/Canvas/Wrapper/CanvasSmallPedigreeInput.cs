@@ -1,22 +1,36 @@
+using Canvas.CommandLineParsing;
 using Illumina.SecondaryAnalysis.VariantCalling;
 using Isas.Framework.DataTypes;
 using Isas.SequencingFiles;
+
 
 namespace Canvas.Wrapper
 {
     public class CanvasSmallPedigreeInput : ICanvasCheckpointInput
     {
-        public Bam Bam { get; }
         public GenomeMetadata GenomeMetadata { get; }
         public Vcf Vcf { get; }
-        public SampleSet<SexPloidyInfo> PloidyInfos { get; set; }
-        public string PedigreeName { get; set; }
+        public SampleSet<CanvasPedigreeSample> Samples { get; }
 
-        public CanvasSmallPedigreeInput(Bam bam, Vcf vcf, GenomeMetadata genomeMetadata)
+        public CanvasSmallPedigreeInput(GenomeMetadata genomeMetadata, SampleSet<CanvasPedigreeSample> samples, Vcf vcf)
         {
-            Bam = bam;
             GenomeMetadata = genomeMetadata;
+            Samples = samples;
             Vcf = vcf;
         }
+    }
+
+    public class CanvasPedigreeSample
+    {
+        public CanvasPedigreeSample(Bam bam, SampleType sampleType, SexPloidyInfo ploidyInfo)
+        {
+            Bam = bam;
+            SampleType = sampleType;
+            PloidyInfo = ploidyInfo;
+        }
+
+        public Bam Bam { get; }
+        public SampleType SampleType { get; }
+        public SexPloidyInfo PloidyInfo { get; }
     }
 }
