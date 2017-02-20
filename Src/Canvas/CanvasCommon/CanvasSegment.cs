@@ -604,7 +604,7 @@ namespace CanvasCommon
         /// quality score.  Two consecutive segments are considered neighbors if they're on the same chromosome
         /// and the space between them is not too large.
         /// </summary>
-        static public void MergeSegments(ref List<CanvasSegment> segments, int MinimumCallSize = 0, int maximumMergeSpan = 10000,
+        public static void MergeSegments(ref List<CanvasSegment> segments, int minimumCallSize = 0, int maximumMergeSpan = 10000,
             List<List<int>> copyNumbers = null, List<double> qscores = null)
         {
             if (!segments.Any()) return;
@@ -615,7 +615,7 @@ namespace CanvasCommon
             int segmentIndex = 0;   
             while (segmentIndex < segments.Count)
             {
-                if (segments[segmentIndex].End - segments[segmentIndex].Begin >= MinimumCallSize)
+                if (segments[segmentIndex].End - segments[segmentIndex].Begin >= minimumCallSize)
                 {
                     mergedSegments.Add(segments[segmentIndex]);
                     if (copyNumbers != null)
@@ -630,10 +630,10 @@ namespace CanvasCommon
                 {
                     // Stop, if you jump to another chromosome, or cross a forbidden interval:
                     if (segments[checkIndex].Chr != segments[segmentIndex].Chr) break;
-                    if (segments[checkIndex].End - segments[checkIndex].Begin < MinimumCallSize) continue;
+                    if (segments[checkIndex].End - segments[checkIndex].Begin < minimumCallSize) continue;
                     if (segments[segmentIndex].Begin - segments[checkIndex].End > maximumMergeSpan) break;
                     prevIndex = checkIndex;
-                    prevQ = qscores == null ? segments[checkIndex].QScore : qscores[checkIndex];
+                    prevQ = qscores?[checkIndex] ?? segments[checkIndex].QScore;
                     break;
                 }
                 // Look forward for a segment:
@@ -642,10 +642,10 @@ namespace CanvasCommon
                 for (int checkIndex = segmentIndex + 1; checkIndex < segments.Count; checkIndex++)
                 {
                     if (segments[checkIndex].Chr != segments[segmentIndex].Chr) break;
-                    if (segments[checkIndex].End - segments[checkIndex].Begin < MinimumCallSize) continue;
+                    if (segments[checkIndex].End - segments[checkIndex].Begin < minimumCallSize) continue;
                     if (segments[checkIndex].Begin - segments[segmentIndex].End > maximumMergeSpan) continue;
                     nextIndex = checkIndex;
-                    nextQ = qscores == null ? segments[checkIndex].QScore : qscores[checkIndex];
+                    nextQ = qscores?[checkIndex] ?? segments[checkIndex].QScore;
                     break;
                 }
 
@@ -679,8 +679,8 @@ namespace CanvasCommon
 
             // Now, merge together adjacent segments with same calls!
             mergedSegments = new List<CanvasSegment>();
-            CanvasSegment lastSegment = segments[0];
-            int lastSegmentIndex = 0;
+            var lastSegment = segments[0];
+            var lastSegmentIndex = 0;
             mergedSegments.Add(lastSegment);
             segmentIndex = 1;
             while (segmentIndex < segments.Count)

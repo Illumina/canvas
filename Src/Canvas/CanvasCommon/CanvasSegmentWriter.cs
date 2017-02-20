@@ -71,27 +71,19 @@ namespace CanvasCommon
             if (denovoQualityThreshold.HasValue)
             {
                 denovoQualityFilter = $"dq{denovoQualityThreshold}";
-                writer.WriteLine(
-                    $"##FILTER=<ID={denovoQualityFilter},Description=\"De novo quality score above {denovoQualityThreshold.Value}\">");
+                writer.WriteLine($"##FILTER=<ID={denovoQualityFilter},Description=\"De novo quality score above {denovoQualityThreshold.Value}\">");
             }
-            writer.WriteLine(
-                "##INFO=<ID=CIEND,Number=2,Type=Integer,Description=\"Confidence interval around END for imprecise variants\">");
-            writer.WriteLine(
-                "##INFO=<ID=CIPOS,Number=2,Type=Integer,Description=\"Confidence interval around POS for imprecise variants\">");
-            writer.WriteLine(
-                "##INFO=<ID=CNVLEN,Number=1,Type=Integer,Description=\"Number of reference positions spanned by this CNV\">");
-            writer.WriteLine(
-                "##INFO=<ID=END,Number=1,Type=Integer,Description=\"End position of the variant described in this record\">");
+            writer.WriteLine("##INFO=<ID=CIEND,Number=2,Type=Integer,Description=\"Confidence interval around END for imprecise variants\">");
+            writer.WriteLine("##INFO=<ID=CIPOS,Number=2,Type=Integer,Description=\"Confidence interval around POS for imprecise variants\">");
+            writer.WriteLine("##INFO=<ID=CNVLEN,Number=1,Type=Integer,Description=\"Number of reference positions spanned by this CNV\">");
+            writer.WriteLine("##INFO=<ID=END,Number=1,Type=Integer,Description=\"End position of the variant described in this record\">");
             writer.WriteLine("##INFO=<ID=SVTYPE,Number=1,Type=String,Description=\"Type of structural variant\">");
-            writer.WriteLine(
-                "##INFO=<ID=DQSCORE,Number=1,Type=String,Description=\"De novo Phred-scaled quality score\">");
             writer.WriteLine("##INFO=<ID=SUBCLONAL,Number=0,Type=Flag,Description=\"Subclonal variant\">");
             writer.WriteLine("##FORMAT=<ID=RC,Number=1,Type=Float,Description=\"Mean counts per bin in the region\">");
             writer.WriteLine("##FORMAT=<ID=BC,Number=1,Type=Float,Description=\"Number of bins in the region\">");
-            writer.WriteLine(
-                "##FORMAT=<ID=CN,Number=1,Type=Integer,Description=\"Copy number genotype for imprecise events\">");
-            writer.WriteLine(
-                "##FORMAT=<ID=MCC,Number=1,Type=Integer,Description=\"Major chromosome count (equal to copy number for LOH regions)\">");
+            writer.WriteLine("##FORMAT=<ID=CN,Number=1,Type=Integer,Description=\"Copy number genotype for imprecise events\">");
+            writer.WriteLine("##FORMAT=<ID=MCC,Number=1,Type=Integer,Description=\"Major chromosome count (equal to copy number for LOH regions)\">");
+            writer.WriteLine("##FORMAT=<ID=DQSCORE,Number=1,Type=String,Description=\"De novo Phred-scaled quality score\">");
             string names = sampleNames.Count == 1 ? sampleNames.First() : string.Join("\t", sampleNames.ToArray()) ;
             writer.WriteLine("#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\t" + names);
             SanityCheckChromosomeNames(genome, segments);
@@ -108,7 +100,7 @@ namespace CanvasCommon
             var nSamples = segments.Count;
             foreach (GenomeMetadata.SequenceMetadata chromosome in genome.Sequences)
             {
-                for (int segmentIndex = 0; segmentIndex < segments.Single().Count; segmentIndex++)
+                for (int segmentIndex = 0; segmentIndex < segments.First().Count; segmentIndex++)
                 {
                     if (!segments.First()[segmentIndex].Chr.Equals(chromosome.Name, StringComparison.OrdinalIgnoreCase))
                         continue;
@@ -131,7 +123,7 @@ namespace CanvasCommon
                     else
                         cnvType = CnvType.ComplexCnv;
                             
-                    WriteVcfVariantInfo(ploidy, writer, segments.First()[segmentIndex], cnvType);
+                    WriteVcfVariantInfo(writer, segments.First()[segmentIndex], cnvType);
                     //  FORMAT field
                     if (segments.Count == 1)
                         WriteSingleSampleInfo(writer, segments.First()[segmentIndex]);
@@ -160,27 +152,27 @@ namespace CanvasCommon
         private static void WriteMultiSampleInfo(BgzipOrStreamWriter writer, List<CanvasSegment> segments)
         {
             writer.Write("\tRC:BC:CN:MCC:DQSCORE");
-            string nullValue = ".";
+            const string nullValue = ".";
             foreach (var segment in segments)
             {
                 var mcc = segment.MajorChromosomeCount.HasValue ? segment.MajorChromosomeCount.ToString() : nullValue;
                 var dqscore = segment.DQScore.HasValue ? $"{segment.DQScore.Value:F2}" : nullValue;
                 var rc = Math.Round(segment.MeanCount, 0, MidpointRounding.AwayFromZero);
-                writer.Write($"{rc}:{segment.BinCount}:{ segment.CopyNumber}:{mcc}:{dqscore}");
+                writer.Write($"\t{rc}:{segment.BinCount}:{ segment.CopyNumber}:{mcc}:{dqscore}");
             }
+            writer.WriteLine();
         }
 
         /// <summary>
         /// Write to a file a single CanvasSegment record as a non-Format VCF columns 
         /// </summary>
-        /// <param name="ploidy"></param>
         /// <param name="writer"></param>
         /// <param name="denovoQualityFilter"></param>
         /// <param name="denovoQualityThreshold"></param>
         /// <param name="segment"></param>
         /// <param name="chromosome"></param>
         /// <returns></returns>
-        private static void WriteVcfVariantInfo(PloidyInfo ploidy, BgzipOrStreamWriter writer, CanvasSegment segment, CnvType cnvType)
+        private static void WriteVcfVariantInfo(BgzipOrStreamWriter writer, CanvasSegment segment, CnvType cnvType)
         {
 
             // From vcf 4.1 spec:

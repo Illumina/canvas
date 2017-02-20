@@ -119,18 +119,25 @@ namespace Canvas.Wrapper
                 LoggingStub = "Canvas_" + pedigreeId,
             };
             _workManager.DoWorkSingleThread(singleSampleJob);
-            return GetCanvasOutput(pedigreeId, sampleSandbox);
+            var sampleNames = input.Samples.Select(x => x.Key.Id);
+            return GetCanvasOutput(sampleNames, sampleSandbox);
         }
 
-        private CanvasSmallPedigreeOutput GetCanvasOutput(string pedigreeName, IDirectoryLocation sampleSandbox)
+        private CanvasSmallPedigreeOutput GetCanvasOutput(IEnumerable<string> pedigreeNames, IDirectoryLocation sampleSandbox)
         {
+            var coverageAndVariantFrequencies = new List<IFileLocation>();
+            var variantFrequencies = new List<IFileLocation>();
+            var variantFrequenciesBaf = new List<IFileLocation>();
+            var partitioned = new List<IFileLocation>();
             var cnvVcf = new Vcf(sampleSandbox.GetFileLocation("CNV.vcf.gz"));
-            var tempCnvDirectory = sampleSandbox.GetDirectoryLocation($"TempCNV_{pedigreeName}");
-            var variantFrequencies = tempCnvDirectory.GetFileLocation($"VFResults{pedigreeName}.txt.gz");
-            var variantFrequenciesBaf = tempCnvDirectory.GetFileLocation($"VFResults{pedigreeName}.txt.gz.baf");
-            IFileLocation coverageAndVariantFrequencies = sampleSandbox.GetFileLocation("CNV.CoverageAndVariantFrequency.txt");
-            IFileLocation tempStub = tempCnvDirectory.GetFileLocation($"{pedigreeName}");
-            IFileLocation partitioned = tempStub.AppendName(".partitioned");
+            foreach(var pedigreeName in pedigreeNames) { 
+                var tempCnvDirectory = sampleSandbox.GetDirectoryLocation($"TempCNV_{pedigreeName}");
+                variantFrequencies.Add(tempCnvDirectory.GetFileLocation($"VFResults{pedigreeName}.txt.gz"));
+                variantFrequenciesBaf.Add(tempCnvDirectory.GetFileLocation($"VFResults{pedigreeName}.txt.gz.baf"));
+                coverageAndVariantFrequencies.Add(sampleSandbox.GetFileLocation("CNV.CoverageAndVariantFrequency.txt"));
+                IFileLocation tempStub = tempCnvDirectory.GetFileLocation($"{pedigreeName}");
+                partitioned.Add(tempStub.AppendName(".partitioned"));
+            }
             return new CanvasSmallPedigreeOutput(cnvVcf, coverageAndVariantFrequencies, variantFrequencies,
                 variantFrequenciesBaf, partitioned);
         }

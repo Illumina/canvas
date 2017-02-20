@@ -1,45 +1,53 @@
 using System;
+using System.Collections.Generic;
 using Illumina.Common.FileSystem;
 using Isas.Framework.DataTypes;
 using Isas.Framework.Utilities;
 
 namespace Canvas.Wrapper
 {
-    public class CanvasSmallPedigreeOutput : ICanvasOutput
+    public class CanvasSmallPedigreeTmpOutput
     {
-        public Vcf CnvVcf { get; }
-        public IFileLocation CoverageAndVariantFrequencies { get; }
-        public IFileLocation VariantFrequencies { get; }
-        public IFileLocation VariantFrequenciesBaf { get; }
-        public IFileLocation Partitioned { get; }
-
-        public CanvasSmallPedigreeOutput(
-            Vcf cnvVcf,
-            IFileLocation coverageAndVariantFrequencies,
-            IFileLocation variantFrequencies = null,
-            IFileLocation variantFrequenciesBaf = null,
-            IFileLocation partitioned = null,
-            IFileLocation binSize = null,
-            IFileLocation normalBinned = null)
+        public CanvasSmallPedigreeTmpOutput(IFileLocation coverageAndVariantFrequencies, IFileLocation variantFrequencies, IFileLocation variantFrequenciesBaf, IFileLocation partitioned)
         {
-            CnvVcf = cnvVcf;
             CoverageAndVariantFrequencies = coverageAndVariantFrequencies;
             VariantFrequencies = variantFrequencies;
             VariantFrequenciesBaf = variantFrequenciesBaf;
             Partitioned = partitioned;
         }
 
-        public static CanvasSmallPedigreeOutput GetFromStub(IFileLocation stub, bool includeIntermediateResults)
+        public IFileLocation CoverageAndVariantFrequencies { get; }
+        public IFileLocation VariantFrequencies { get; }
+        public IFileLocation VariantFrequenciesBaf { get; }
+        public IFileLocation Partitioned { get; }
+    }
+
+    public class CanvasSmallPedigreeOutput : ICanvasOutput
+    {
+        public List<CanvasSmallPedigreeTmpOutput> CanvasSmallPedigreeTmpOutput { get; set; }
+        public Vcf CnvVcf { get; }
+
+        public CanvasSmallPedigreeOutput(
+            Vcf cnvVcf,
+            List<IFileLocation> coverageAndVariantFrequencies,
+            List<IFileLocation> variantFrequencies = null,
+            List<IFileLocation> variantFrequenciesBaf = null,
+            List<IFileLocation> partitioned = null)
+        {
+            CnvVcf = cnvVcf;
+            var tmpOutputFiles = new List<CanvasSmallPedigreeTmpOutput>();
+            for (int index = 0; index < coverageAndVariantFrequencies.Count; index++) {
+                tmpOutputFiles.Add(new CanvasSmallPedigreeTmpOutput(coverageAndVariantFrequencies[index], variantFrequencies?[index], 
+            variantFrequenciesBaf?[index], partitioned?[index]));
+            }
+            CanvasSmallPedigreeTmpOutput = tmpOutputFiles;
+        }
+
+        public static CanvasSmallPedigreeOutput GetFromStub(IFileLocation stub, bool includeIntermediateResults = false )
         {
             Vcf cnvVcf = Vcf.GetVcfFromStub(stub);
-            IFileLocation coverageAndVariantFrequencies = stub.AppendName(".CoverageAndVariantFrequency.txt");
-            if (!includeIntermediateResults)
-                return new CanvasSmallPedigreeOutput(cnvVcf, coverageAndVariantFrequencies);
-            IFileLocation variantFrequencies = stub.AppendName(".VFResults.txt.gz");
-            IFileLocation variantFrequenciesBaf = stub.AppendName(".VFResults.baf");
-            IFileLocation partitioned = stub.AppendName(".partitioned");
-            return new CanvasSmallPedigreeOutput(cnvVcf, coverageAndVariantFrequencies, variantFrequencies,
-                variantFrequenciesBaf, partitioned);
+            // for now only copy multi-sample VCF
+            return new CanvasSmallPedigreeOutput(cnvVcf, null);
         }
 
         public static string GetCoverageAndVariantFrequencyOutputPath(string outputVcfPath)
@@ -56,10 +64,6 @@ namespace Canvas.Wrapper
         {
             CanvasSmallPedigreeOutput destination = GetFromStub(fileNameStub, includeIntermediateResults);
             CnvVcf.Move(destination.CnvVcf, move);
-            move(CoverageAndVariantFrequencies, destination.CoverageAndVariantFrequencies);
-            VariantFrequencies.MoveIfNotNull(destination.VariantFrequencies, move);
-            VariantFrequenciesBaf.MoveIfNotNull(destination.VariantFrequenciesBaf, move);
-            Partitioned.MoveIfNotNull(destination.Partitioned, move);
         }
     }
 }
