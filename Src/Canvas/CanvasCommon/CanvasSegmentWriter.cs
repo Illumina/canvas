@@ -123,12 +123,12 @@ namespace CanvasCommon
                     else
                         cnvType = CnvType.ComplexCnv;
                             
-                    WriteVcfVariantInfo(writer, firstSampleSegment , cnvType, denovoQualityThreshold);
+                    WriteInfoField(writer, firstSampleSegment , cnvType, denovoQualityThreshold);
                     //  FORMAT field
                     if (segments.Count == 1)
                         WriteSingleSampleInfo(writer, firstSampleSegment);
                     else
-                        WriteMultiSampleInfo(writer, currentSegments);
+                        WriteFormatField(writer, currentSegments);
                 }
             }
         }
@@ -149,7 +149,7 @@ namespace CanvasCommon
             writer.WriteLine();
         }
 
-        private static void WriteMultiSampleInfo(BgzipOrStreamWriter writer, List<CanvasSegment> segments)
+        private static void WriteFormatField(BgzipOrStreamWriter writer, List<CanvasSegment> segments)
         {
             writer.Write("\tRC:BC:CN:MCC:DQSCORE");
             const string nullValue = ".";
@@ -171,7 +171,7 @@ namespace CanvasCommon
         /// <param name="cnvType"></param>
         /// <param name="denovoQualityThreshold"></param>
         /// <returns></returns>
-        private static void WriteVcfVariantInfo(BgzipOrStreamWriter writer, CanvasSegment segment, CnvType cnvType, int? denovoQualityThreshold)
+        private static void WriteInfoField(BgzipOrStreamWriter writer, CanvasSegment segment, CnvType cnvType, int? denovoQualityThreshold)
         {
 
             // From vcf 4.1 spec:
@@ -183,6 +183,7 @@ namespace CanvasCommon
                 : segment.Begin + 1;
 
             writer.Write($"{segment.Chr}\t{position}\tCanvas:{cnvType.ToVcfId()}:{segment.Chr}:{segment.Begin + 1}-{segment.End}\t");
+                    
             writer.Write($"N\t{alternateAllele}\t{segment.QScore:F2}\t{segment.Filter}\t", alternateAllele, segment.QScore, segment.Filter);
 
             if (cnvType != CnvType.Reference)
@@ -195,6 +196,7 @@ namespace CanvasCommon
                 writer.Write($"dq{denovoQualityThreshold};");
 
             writer.Write($"END={segment.End}");
+
             if (cnvType != CnvType.Reference)
                 writer.Write($";CNVLEN={segment.End - segment.Begin}");
 
