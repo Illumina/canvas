@@ -405,7 +405,7 @@ namespace CanvasSomaticCaller
                 {
                     Console.WriteLine("IsTrainingMode activated. Not calling any CNVs. Reason: {0}", e.Message);
                     Segments.Clear();
-                    CanvasSegment.WriteSegments(outputVCFPath, this.Segments, Model.DiploidCoverage, referenceFolder, name, ExtraHeaders,
+                    CanvasSegmentWriter.WriteSegments(outputVCFPath, this.Segments, Model.DiploidCoverage, referenceFolder, name, ExtraHeaders,
                     this.ReferencePloidy, QualityFilterThreshold);
                     Environment.Exit(0);
                 }
@@ -458,7 +458,7 @@ namespace CanvasSomaticCaller
             ExtraHeaders.Add($"##EstimatedChromosomeCount={this.EstimateChromosomeCount():F2}");
 
             // Write out results.  Note that model may be null here, in training mode, if we hit an UncallableDataException:
-            CanvasSegment.WriteSegments(outputVCFPath, this.Segments, Model?.DiploidCoverage, referenceFolder, name, ExtraHeaders, this.ReferencePloidy, QualityFilterThreshold);
+            CanvasSegmentWriter.WriteSegments(outputVCFPath, this.Segments, Model?.DiploidCoverage, referenceFolder, name, ExtraHeaders, this.ReferencePloidy, QualityFilterThreshold);
 
             return 0;
         }

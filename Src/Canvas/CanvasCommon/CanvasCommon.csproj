@@ -104,6 +104,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="CanvasSegment.cs" />
+    <Compile Include="CanvasSegmentWriter.cs" />
     <Compile Include="ClusterInfo.cs" />
     <Compile Include="CommandLineParsing\CoreOptionTypes\DictionaryOption.cs" />
     <Compile Include="CommandLineParsing\CoreOptionTypes\DirectoryOption.cs" />
