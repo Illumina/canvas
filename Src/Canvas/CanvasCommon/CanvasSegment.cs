@@ -101,7 +101,6 @@ namespace CanvasCommon
             return CnvType.Reference;
         }
 
-
         /// <summary>
         /// Merge another neighboring segment into this one.
         /// </summary>

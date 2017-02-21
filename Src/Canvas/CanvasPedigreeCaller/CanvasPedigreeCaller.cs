@@ -28,7 +28,6 @@ namespace CanvasPedigreeCaller
         // QualityFilterThreshold based on 
         public int QualityFilterThreshold { get; } = 7;
         public int DeNovoQualityFilterThreshold { get; } = 20;
-
         #endregion
 
         internal int CallVariantsInPedigree(List<string> variantFrequencyFiles, List<string> segmentFiles, string outVcfFile, string ploidyBedPath, string referenceFolder, List<string> sampleNames, string pedigreeFile)
@@ -97,7 +96,7 @@ namespace CanvasPedigreeCaller
                             var alleleDensity = enumerable.Average() / pedigreeMembers.First().Segments[segmentIndex].Length;
                             var useCnLikelihood = enumerable.Select(x => x > DefaultAlleleCountThreshold).Any(c => c == false) &&
                                 alleleDensity < DefaultAlleleDensityThreshold && enumerable.Average() < DefaultPerSegmentAlleleMaxCounts;
-                            CopyNumberDistribution copyNumberLikelihoods = useCnLikelihood ?
+                            var copyNumberLikelihoods = useCnLikelihood ?
                             MaximalCnLikelihoodWithPedigreeInfo(parents, offsprings, segmentIndex, transitionMatrix, offspringsGenotypes) :
                             MaximalGtLikelihoodWithPedigreeInfo(parents, offsprings, segmentIndex, parentalGenotypes, offspringsGenotypes);
                             EstimateQScoresWithPedigreeInfo(parents, offsprings, segmentIndex, copyNumberLikelihoods);
@@ -119,7 +118,7 @@ namespace CanvasPedigreeCaller
         }
 
 
-        internal int CallVariants(List<string> variantFrequencyFiles, List<string> segmentFiles, string outVcfFile, string ploidyBedPath, string referenceFolder, List<string> sampleNames, string pedigreeFile)
+        internal int CallVariants(List<string> variantFrequencyFiles, List<string> segmentFiles, string outVcfFile, string ploidyBedPath, string referenceFolder, List<string> sampleNames)
         {
             // load files
             // initialize data structures and classes
@@ -787,11 +786,11 @@ namespace CanvasPedigreeCaller
             var normalization = probandMarginalProbabilities[probandCopyNumber] + probandMarginalProbabilities[diploidState];
             var probandMarginalAlt = probandMarginalProbabilities[probandCopyNumber] / normalization;
 
-            foreach (var copyNumberIndex in density.Indices.Where(x => x[probandIndex] == probandCopyNumber).ToArray())
+            foreach (var copyNumberIndex in density.Indices.Where(x => x[probandIndex] == probandCopyNumber))
             {
                 if (!(density.GetJointProbability(copyNumberIndex.ToArray()) > 0.0)) continue;
 
-                var holder = density.GetJointProbability(copyNumberIndex.ToArray());
+                var holder = density.GetJointProbability(copyNumberIndex);
                 denominator += holder;
 
                 if (copyNumberIndex[parent1Index] == diploidState && copyNumberIndex[parent2Index] == diploidState && remainingProbandIndex.All(index => copyNumberIndex[index] == 2))

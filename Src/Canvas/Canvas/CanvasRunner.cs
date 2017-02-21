@@ -1162,7 +1162,8 @@ namespace Illumina.SecondaryAnalysis
                 commandLine.AppendFormat("-v \"{0}\" ", callset.Sample.VfSummaryPath);
                 commandLine.AppendFormat("-n \"{0}\" ", callset.Sample.SampleName);
             }
-            commandLine.AppendFormat("-o \"{0}\" ", Path.Combine(callsets.AnalysisDetails.OutputFolder.ToString(), "CNV.vcf.gz"));
+            var vcf = callsets.AnalysisDetails.OutputFolder.GetFileLocation("CNV.vcf.gz");
+            commandLine.Append($"-o {vcf.WrapWithShellQuote()} ");            
             commandLine.AppendFormat("-r \"{0}\" ", callsets.AnalysisDetails.WholeGenomeFastaFolder);
             if (haveProband)
             {

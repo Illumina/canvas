@@ -94,9 +94,7 @@ namespace Canvas.Wrapper
                 commandLine.Append($" --sample-b-allele-vcf {bAlleleVcf.WrapWithShellQuote()}");
             }
 
-            var ploidyInfos = new SampleSet<SexPloidyInfo>();
-            foreach (var sample in input.Samples)
-                ploidyInfos.Add(sample.Key,sample.Value.PloidyInfo);
+            var ploidyInfos = input.Samples.SelectData(sample => sample.PloidyInfo);
 
             var ploidyVcf = _canvasPloidyVcfCreator.CreatePloidyVcf(ploidyInfos, input.GenomeMetadata, sampleSandbox);
             if (ploidyVcf != null)
@@ -107,7 +105,7 @@ namespace Canvas.Wrapper
             commandLine.Append(_singleSampleInputCommandLineBuilder.GetCustomParameters(moreCustomParameters));
             commandLine = _singleSampleInputCommandLineBuilder.MergeCustomCanvasParameters(commandLine);
             // use Proband or, when proband is not available, first sample as pedigree id
-            var pedigreeId = input.Samples.Where(x => x.Value.SampleType == SampleType.Proband).Select(x => x.Key.Id).First();
+            var pedigreeId = input.Samples.Where(x => x.Value.SampleType == SampleType.Proband).Select(x => x.Key.Id).FirstOrDefault();
             if (pedigreeId.IsNullOrEmpty())
                 pedigreeId = input.Samples.First().Key.Id;
 
