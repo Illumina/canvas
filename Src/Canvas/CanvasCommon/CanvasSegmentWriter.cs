@@ -105,7 +105,7 @@ namespace CanvasCommon
                     if (!firstSampleSegment.Chr.Equals(chromosome.Name, StringComparison.OrdinalIgnoreCase))
                         continue;
                     var referenceCopyNumbers = segments.Select(segment => ploidy?.GetReferenceCopyNumber(segment[segmentIndex]) ?? 2).ToList();
-                    var currentSegments = segments.Select(x => x[segmentIndex]).ToList();
+                    var currentSegments = segments.Select(x=>x[segmentIndex]).ToList();
                     var cnvTypes = new List<CnvType>();
                     for (int sampleIndex = 0; sampleIndex < nSamples; sampleIndex++)
                     {
@@ -128,7 +128,7 @@ namespace CanvasCommon
                     if (segments.Count == 1)
                         WriteSingleSampleInfo(writer, firstSampleSegment);
                     else
-                        WriteMultiSampleInfo(writer, segments.Select(x=>x[segmentIndex]).ToList());
+                        WriteMultiSampleInfo(writer, currentSegments);
                 }
             }
         }
