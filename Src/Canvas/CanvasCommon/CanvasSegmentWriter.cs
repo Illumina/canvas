@@ -76,7 +76,7 @@ namespace CanvasCommon
             if (denovoQualityThreshold.HasValue)
             {
                 string denovoQualityFilter = $"dq{denovoQualityThreshold}";
-                writer.WriteLine($"##FILTER=<ID={denovoQualityFilter},Description=\"De novo quality score above {denovoQualityThreshold.Value}\">");
+                writer.WriteLine($"##INFO=<ID={denovoQualityFilter},Description=\"De novo quality score above {denovoQualityThreshold.Value}\">");
             }
             writer.WriteLine("##FORMAT=<ID=RC,Number=1,Type=Float,Description=\"Mean counts per bin in the region\">");
             writer.WriteLine("##FORMAT=<ID=BC,Number=1,Type=Float,Description=\"Number of bins in the region\">");

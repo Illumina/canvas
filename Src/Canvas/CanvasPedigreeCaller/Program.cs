@@ -49,7 +49,6 @@ namespace CanvasPedigreeCaller
                 { "p|ploidyBed=",     "bed file specifying reference ploidy (e.g. for sex chromosomes) (optional)",                     v => ploidyBedPath = v },
                 { "h|help",           "show this message and exit",                                                                     v => needHelp = v != null },
                 { "s|qscoreconfig=", $"parameter configuration path (default {qualityScoreConfigPath})",                                v => qualityScoreConfigPath = v },
-                { "t|truth=", "path to vcf/bed with CNV truth data (optional)",                                                         v => truthDataPath = v },
             };
 
             var extraArgs = p.Parse(args);
