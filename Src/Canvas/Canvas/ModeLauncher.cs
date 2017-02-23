@@ -7,9 +7,7 @@ using Isas.Framework.DataTypes;
 using Isas.Framework.FrameworkFactory;
 using Isas.Framework.Logging;
 using Isas.Framework.Settings;
-using Isas.Framework.Utilities;
 using Isas.Framework.WorkManagement;
-using Newtonsoft.Json;
 
 namespace Canvas
 {

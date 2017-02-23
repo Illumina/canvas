@@ -1,16 +1,14 @@
 ﻿using System.Collections.Generic;
 using System.IO;
 using Canvas.CommandLineParsing;
-using Canvas.SmallPedigree;
 using CanvasCommon;
 using Illumina.Common.FileSystem;
-using Illumina.SecondaryAnalysis;
 using Isas.Framework.Checkpointing;
 using Isas.Framework.DataTypes;
 using Isas.Framework.Logging;
 using Isas.Framework.WorkManagement;
 
-namespace Canvas
+namespace Canvas.SmallPedigree
 {
     public class SmallPedigreeWgsRunner : IModeRunner
     {

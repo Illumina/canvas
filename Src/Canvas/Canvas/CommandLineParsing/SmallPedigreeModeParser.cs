@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using Canvas.SmallPedigree;
 using CanvasCommon.CommandLineParsing.CoreOptionTypes;
 using CanvasCommon.CommandLineParsing.OptionProcessing;
 using Illumina.Common.FileSystem;
@@ -93,24 +94,15 @@ namespace Canvas.CommandLineParsing
             return SampleType.Other;
         }
 
-
         private Dictionary<string, IFileLocation> MapSampleNameToBam(List<IFileLocation> bams)
         {
             var map = new Dictionary<string, IFileLocation>();
             foreach (IFileLocation bam in bams)
             {
-                using (var bamReader = new BamReader(bam.FullName))
-                {
-                    var sampleNames = bamReader.GetReadGroupSamples();
-                    if (sampleNames.Count < 1)
-                        throw new ArgumentException($"Bam file '{bam}' must contain reads from one sample only");
-                    map.Add(sampleNames.First(), bam);
-                }
+                BamReader.WrapException(bam, reader => map.Add(reader.GetReadGroupSample(), bam));
             }
             return map;
         }
-
-
     }
 
     public class SmallPedigreeOptions

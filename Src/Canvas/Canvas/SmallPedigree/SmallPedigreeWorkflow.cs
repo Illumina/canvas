@@ -1,7 +1,4 @@
-﻿using Canvas.SmallPedigree;
-using Illumina.SecondaryAnalysis;
-
-namespace Canvas
+﻿namespace Canvas.SmallPedigree
 {
     public class SmallPedigreeWorkflow
     {

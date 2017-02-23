@@ -4,16 +4,10 @@ using Illumina.Common;
 using Illumina.Common.FileSystem;
 using Isas.Framework.DataTypes;
 using Isas.Framework.Logging;
-using Isas.Framework.Utilities;
 using Isas.Framework.WorkManagement;
 
 namespace Canvas.Wrapper
 {
-    public interface ICanvasCnvCaller<TCanvasInput, TCanvasOutput>
-    {
-        SampleSet<TCanvasOutput> Run(SampleSet<TCanvasInput> inputs, IDirectoryLocation sandbox);
-    }
-
     /// <summary>
     /// Run Canvas to generate CNV calls:
     /// </summary>

@@ -1,7 +1,6 @@
 using Canvas.CommandLineParsing;
 using CanvasCommon;
 using Illumina.Common.FileSystem;
-using Illumina.SecondaryAnalysis;
 using Isas.Framework.Checkpointing;
 using Isas.Framework.Logging;
 using Isas.Framework.WorkManagement;

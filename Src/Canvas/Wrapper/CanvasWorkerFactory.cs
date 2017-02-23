@@ -116,8 +116,12 @@ namespace Canvas.Wrapper
 
         private CanvasPloidyBedCreator GetCanvasPloidyBedCreator()
         {
-            return new CanvasPloidyBedCreator(_logger, _workManager,
-                new PloidyCorrector(_logger, _workManager, new PloidyEstimator(_logger, _workManager, _executableProcessor.GetExecutable("samtools"), false), new Isas.ClassicBioinfoTools.Tabix.TabixWrapper(_logger, _workManager, _executableProcessor.GetExecutable("tabix")), true));
+            return new CanvasPloidyBedCreator(_logger, _workManager, GetPloidyCorrector());
+        }
+
+        internal PloidyCorrector GetPloidyCorrector()
+        {
+            return new PloidyCorrector(_logger, _workManager, new PloidyEstimator(_logger, _workManager, _executableProcessor.GetExecutable("samtools"), false), new Isas.ClassicBioinfoTools.Tabix.TabixWrapper(_logger, _workManager, _executableProcessor.GetExecutable("tabix")), true);
         }
 
         public bool RequireNormalVcf()
@@ -164,18 +168,23 @@ namespace Canvas.Wrapper
             if (!RunCnvDetection(_detectCnvDefault)) return new NullCanvasWorker<TCanvasInput, TCanvasOutput>();
 
             ICanvasAnnotationFileProvider annotationFileProvider = GetAnnotationFileProvider();
-            bool includeIntermediateResults = _sampleSettings.GetSetting("RetainIntermediateCNVFiles", false);
+            bool includeIntermediateResults = IncludeIntermediateResults();
             var canvasOutputNamingConventionFactory = new CanvasOutputNamingConventionFactory<TCanvasInput, TCanvasOutput>(annotationFileProvider, includeIntermediateResults, getFromStub);
             var canvasCheckpoint = new CanvasCheckpoint<TCanvasInput, TCanvasOutput>(canvasCnvCaller, canvasOutputNamingConventionFactory);
             return new CanvasWorker<TCanvasInput, TCanvasOutput>(canvasCheckpoint);
         }
 
-        private IFileLocation GetCanvasExe()
+        internal bool IncludeIntermediateResults()
+        {
+            return _sampleSettings.GetSetting("RetainIntermediateCNVFiles", false);
+        }
+
+        internal IFileLocation GetCanvasExe()
         {
             return new FileLocation(_executableProcessor.GetExecutable("Canvas", "Canvas"));
         }
 
-        private ICanvasAnnotationFileProvider GetAnnotationFileProvider()
+        internal ICanvasAnnotationFileProvider GetAnnotationFileProvider()
         {
             return new CanvasAnnotationFileProvider(GetDbSnpVcfPath(), new ReferenceGenomeFactory());
         }
@@ -185,7 +194,7 @@ namespace Canvas.Wrapper
             return _dbSnpVcfProcessor.GetDbSnpVcfPath();
         }
 
-        private CanvasSingleSampleInputCommandLineBuilder GetCanvasSingleSampleInputCommandLineBuilder(ICanvasAnnotationFileProvider annotationFileProvider)
+        internal CanvasSingleSampleInputCommandLineBuilder GetCanvasSingleSampleInputCommandLineBuilder(ICanvasAnnotationFileProvider annotationFileProvider)
         {
             var allCustomParams = CommonCustomParams();
             return new CanvasSingleSampleInputCommandLineBuilder(annotationFileProvider, allCustomParams, GetCustomCanvasParameters());
