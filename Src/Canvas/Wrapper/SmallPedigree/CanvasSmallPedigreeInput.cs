@@ -3,8 +3,7 @@ using Illumina.SecondaryAnalysis.VariantCalling;
 using Isas.Framework.DataTypes;
 using Isas.SequencingFiles;
 
-
-namespace Canvas.Wrapper
+namespace Canvas.Wrapper.SmallPedigree
 {
     public class CanvasSmallPedigreeInput : ICanvasCheckpointInput
     {

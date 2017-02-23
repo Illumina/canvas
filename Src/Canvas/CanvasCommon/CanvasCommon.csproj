@@ -136,6 +136,7 @@
     <Compile Include="CopyNumberOracle.cs" />
     <Compile Include="PloidyInfo.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="SingleSampleCallset.cs" />
     <Compile Include="Utilities.cs" />
   </ItemGroup>
   <ItemGroup>

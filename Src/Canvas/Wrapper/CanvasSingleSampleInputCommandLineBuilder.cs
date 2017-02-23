@@ -4,7 +4,6 @@ using System.Linq;
 using System.Text;
 using Illumina.Common.FileSystem;
 using Isas.Framework.DataTypes;
-using Isas.Framework.Utilities;
 using Isas.Framework.WorkManagement;
 using Isas.SequencingFiles;
 

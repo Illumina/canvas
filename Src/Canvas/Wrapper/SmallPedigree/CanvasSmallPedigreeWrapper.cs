@@ -2,16 +2,15 @@
 using System.Linq;
 using System.Text;
 using Canvas.CommandLineParsing;
+using CanvasCommon;
 using Illumina.Common;
 using Illumina.Common.FileSystem;
-using Illumina.SecondaryAnalysis.VariantCalling;
 using Isas.Framework.DataTypes;
 using Isas.Framework.Logging;
-using Isas.Framework.Utilities;
 using Isas.Framework.WorkManagement;
 using Isas.SequencingFiles;
 
-namespace Canvas.Wrapper
+namespace Canvas.Wrapper.SmallPedigree
 {
     /// <summary>
     /// Run Canvas to generate CNV calls:
@@ -101,7 +100,7 @@ namespace Canvas.Wrapper
                 commandLine.Append($" --ploidy-bed {ploidyVcf.VcfFile.WrapWithShellQuote()}");
             var canvasPartitionParam = $@"--commoncnvs {_annotationFileProvider.GetCanvasAnnotationFile(input.GenomeMetadata, "commoncnvs.bed").WrapWithEscapedShellQuote()}";
 
-            var moreCustomParameters = new Dictionary<string, string> {["CanvasPartition"] = canvasPartitionParam};
+            var moreCustomParameters = new Dictionary<string, string> { ["CanvasPartition"] = canvasPartitionParam };
             commandLine.Append(_singleSampleInputCommandLineBuilder.GetCustomParameters(moreCustomParameters));
             commandLine = _singleSampleInputCommandLineBuilder.MergeCustomCanvasParameters(commandLine);
             // use Proband or, when proband is not available, first sample as pedigree id
@@ -117,27 +116,31 @@ namespace Canvas.Wrapper
                 LoggingStub = "Canvas_" + pedigreeId,
             };
             _workManager.DoWorkSingleThread(singleSampleJob);
-            var sampleNames = input.Samples.Select(x => x.Key.Id);
-            return GetCanvasOutput(sampleNames, sampleSandbox);
+            var sampleBams = input.Samples.SelectData(sample => sample.Bam);
+            return GetCanvasOutput(sampleBams, sampleSandbox);
         }
 
-        private CanvasSmallPedigreeOutput GetCanvasOutput(IEnumerable<string> pedigreeNames, IDirectoryLocation sampleSandbox)
+        private CanvasSmallPedigreeOutput GetCanvasOutput(SampleSet<Bam> pedigreeBams, IDirectoryLocation sampleSandbox)
         {
-            var coverageAndVariantFrequencies = new List<IFileLocation>();
-            var variantFrequencies = new List<IFileLocation>();
-            var variantFrequenciesBaf = new List<IFileLocation>();
-            var partitioned = new List<IFileLocation>();
+            var readGroupSamples = pedigreeBams.SelectData(GetReadGroupSample);
+            var intermediateResults = readGroupSamples.SelectData(readGroupSample =>
+            {
+                var variantFrequencies = SingleSampleCallset.GetVfSummaryPath(sampleSandbox, readGroupSample);
+                var variantFrequenciesBaf = SingleSampleCallset.GetVfSummaryBafPath(sampleSandbox, readGroupSample);
+                var partitioned = SingleSampleCallset.GetPartitionedPath(sampleSandbox, readGroupSample);
+                var coverageAndVariantFrequencies = SingleSampleCallset.GetCoverageAndVariantFrequencyOutput(sampleSandbox, readGroupSample);
+                return new IntermediateOutput(coverageAndVariantFrequencies, variantFrequencies, variantFrequenciesBaf, partitioned);
+            });
             var cnvVcf = new Vcf(sampleSandbox.GetFileLocation("CNV.vcf.gz"));
-            foreach(var pedigreeName in pedigreeNames) { 
-                var tempCnvDirectory = sampleSandbox.GetDirectoryLocation($"TempCNV_{pedigreeName}");
-                variantFrequencies.Add(tempCnvDirectory.GetFileLocation($"VFResults{pedigreeName}.txt.gz"));
-                variantFrequenciesBaf.Add(tempCnvDirectory.GetFileLocation($"VFResults{pedigreeName}.txt.gz.baf"));
-                coverageAndVariantFrequencies.Add(sampleSandbox.GetFileLocation("CNV.CoverageAndVariantFrequency.txt"));
-                IFileLocation tempStub = tempCnvDirectory.GetFileLocation($"{pedigreeName}");
-                partitioned.Add(tempStub.AppendName(".partitioned"));
+            return new CanvasSmallPedigreeOutput(cnvVcf, intermediateResults);
+        }
+
+        private static string GetReadGroupSample(Bam bam)
+        {
+            using (var reader = new BamReader(bam.BamFile))
+            {
+                return reader.GetReadGroupSample();
             }
-            return new CanvasSmallPedigreeOutput(cnvVcf, coverageAndVariantFrequencies, variantFrequencies,
-                variantFrequenciesBaf, partitioned);
         }
     }
 }

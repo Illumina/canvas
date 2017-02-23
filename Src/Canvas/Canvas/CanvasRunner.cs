@@ -1,13 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.IO;
+using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using Canvas;
 using Canvas.CommandLineParsing;
 using Canvas.SmallPedigree;
-using CanvasPartition;
 using CanvasCommon;
 using Illumina.Common;
 using Illumina.Common.FileSystem;
@@ -15,13 +13,11 @@ using Isas.Framework.Checkpointing;
 using Isas.Framework.Checkpointing.Legacy;
 using Isas.Framework.DataTypes;
 using Isas.Framework.Logging;
-using Isas.Framework.Utilities;
 using Isas.Framework.WorkManagement;
 using Isas.Manifests.NexteraManifest;
 using Isas.SequencingFiles;
-using Utilities = Isas.Framework.Utilities.Utilities;
 
-namespace Illumina.SecondaryAnalysis
+namespace Canvas
 {
     /// <summary>
     /// Run Canvas tools to generate CNV calls:
@@ -957,7 +953,7 @@ namespace Illumina.SecondaryAnalysis
             List<IFileLocation> partitionedPaths = new List<IFileLocation>();
             foreach (var pedigreeSample in callsets.PedigreeSample)
             {
-                IFileLocation partitionedPath = new FileLocation(Path.Combine(pedigreeSample.Sample.TempFolder, $"{pedigreeSample.Sample.SampleName}.partitioned"));
+                IFileLocation partitionedPath = pedigreeSample.Sample.PartitionedPath;
                 partitionedPaths.Add(partitionedPath);
                 commandLine.AppendFormat("-o \"{0}\" ", partitionedPath);
             }
@@ -990,7 +986,7 @@ namespace Illumina.SecondaryAnalysis
             }
             commandLine.AppendFormat("-i \"{0}\" ", cleanedPath);
             commandLine.AppendFormat("-b \"{0}\" ", canvasBedPath);
-            string partitionedPath = Path.Combine(callset.SingleSampleCallset.TempFolder, string.Format("{0}.partitioned", callset.SingleSampleCallset.SampleName));
+            string partitionedPath = callset.SingleSampleCallset.PartitionedPath.FullName;
             commandLine.AppendFormat("-o \"{0}\" ", partitionedPath);
             if (!_isSomatic)
                 commandLine.AppendFormat(" -g");
@@ -1163,7 +1159,7 @@ namespace Illumina.SecondaryAnalysis
                 commandLine.AppendFormat("-n \"{0}\" ", callset.Sample.SampleName);
             }
             var vcf = callsets.AnalysisDetails.OutputFolder.GetFileLocation("CNV.vcf.gz");
-            commandLine.Append($"-o {vcf.WrapWithShellQuote()} ");            
+            commandLine.Append($"-o {vcf.WrapWithShellQuote()} ");
             commandLine.AppendFormat("-r \"{0}\" ", callsets.AnalysisDetails.WholeGenomeFastaFolder);
             if (haveProband)
             {

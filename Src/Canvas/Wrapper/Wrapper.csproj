@@ -98,9 +98,11 @@
     <Compile Include="CanvasResequencingCnvCaller.cs" />
     <Compile Include="CanvasResequencingInput.cs" />
     <Compile Include="CanvasSingleSampleInputCommandLineBuilder.cs" />
-    <Compile Include="CanvasSmallPedigreeInput.cs" />
-    <Compile Include="CanvasSmallPedigreeOutput.cs" />
-    <Compile Include="CanvasSmallPedigreeWrapper.cs" />
+    <Compile Include="SmallPedigree\IntermediateOutput.cs" />
+    <Compile Include="SmallPedigree\SmallPedigreeCheckpointFactory.cs" />
+    <Compile Include="SmallPedigree\CanvasSmallPedigreeInput.cs" />
+    <Compile Include="SmallPedigree\CanvasSmallPedigreeOutput.cs" />
+    <Compile Include="SmallPedigree\CanvasSmallPedigreeWrapper.cs" />
     <Compile Include="CanvasTumorNormalEnrichmentCnvCaller.cs" />
     <Compile Include="CanvasTumorNormalEnrichmentInput.cs" />
     <Compile Include="CanvasTumorNormalWgsCnvCaller.cs" />
@@ -111,12 +113,17 @@
     <Compile Include="ICanvasCnvCaller.cs" />
     <Compile Include="ICanvasOutput.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="SmallPedigree\SmallPedigreeCheckpoint.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="app.config" />
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\CanvasCommon\CanvasCommon.csproj">
+      <Project>{ec8755f1-74bd-4a1f-9b82-5133d2f6a93b}</Project>
+      <Name>CanvasCommon</Name>
+    </ProjectReference>
     <ProjectReference Include="..\Canvas\Canvas.csproj">
       <Project>{f7eb30ca-eb4a-4e80-a067-0d9498a9f5b6}</Project>
       <Name>Canvas</Name>

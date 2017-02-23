@@ -5,9 +5,9 @@ using System.Linq;
 using CanvasCommon;
 using MathNet.Numerics.Distributions;
 using System.Threading.Tasks;
-using System.Xml.Schema;
 using Combinatorics.Collections;
 using Illumina.Common;
+using Illumina.Common.FileSystem;
 using Isas.SequencingFiles;
 
 namespace CanvasPedigreeCaller
@@ -109,14 +109,20 @@ namespace CanvasPedigreeCaller
 
             MergeSegments(pedigreeMembers);
             var names = pedigreeMembers.Select(x => x.Name).ToList();
-            var coverage = pedigreeMembers.Select(x => (double? )x.MeanCoverage).ToList();
+            var coverage = pedigreeMembers.Select(x => (double?)x.MeanCoverage).ToList();
             var segments = pedigreeMembers.Select(x => x.Segments).ToList();
+
+            var outputFolder = new FileLocation(outVcfFile).Directory;
+            foreach (var member in pedigreeMembers)
+            {
+                var coverageOutputPath = SingleSampleCallset.GetCoverageAndVariantFrequencyOutput(outputFolder, member.Name);
+                CanvasSegment.WriteCoveragePlotData(member.Segments, member.MeanCoverage, member.Ploidy, coverageOutputPath.FullName, referenceFolder);
+            }
 
             CanvasSegmentWriter.WriteMultiSampleSegments(outVcfFile, segments, coverage, referenceFolder, names, null, null,
             QualityFilterThreshold, DeNovoQualityFilterThreshold);
             return 0;
         }
-
 
         internal int CallVariants(List<string> variantFrequencyFiles, List<string> segmentFiles, string outVcfFile, string ploidyBedPath, string referenceFolder, List<string> sampleNames)
         {
@@ -233,7 +239,7 @@ namespace CanvasPedigreeCaller
                             .ToArray()), 2);
             pedigreeMember.MeanCoverage = pedigreeMember.Segments.Select(x => x.MedianCount).Average();
             pedigreeMember.MaxCoverage = Convert.ToInt32(pedigreeMember.Segments.Select(x => x.MedianCount).Max() + 10);
-            if (! ploidyBedPath.IsNullOrEmpty() && File.Exists(ploidyBedPath))
+            if (!ploidyBedPath.IsNullOrEmpty() && File.Exists(ploidyBedPath))
                 pedigreeMember.Ploidy = PloidyInfo.LoadPloidyFromVcfFile(ploidyBedPath, pedigreeMember.Name);
             return pedigreeMember;
         }
@@ -566,7 +572,7 @@ namespace CanvasPedigreeCaller
                     var currentLikelihood = sample.CnModel.GetGtLikelihood(sample.GetAlleleCounts(segmentPosition),
                         genotype.Value, ref selectedGtState, sample.MaxCoverage);
                     int copyNumber = genotype.Key;
-                    currentLikelihood = Double.IsNaN(currentLikelihood) || Double.IsInfinity(currentLikelihood)? 0 : currentLikelihood;
+                    currentLikelihood = Double.IsNaN(currentLikelihood) || Double.IsInfinity(currentLikelihood) ? 0 : currentLikelihood;
                     density[names.FindIndex(name => name == sample.Name)][copyNumber] = Math.Max(currentLikelihood,
                         density[names.FindIndex(name => name == sample.Name)][copyNumber]);
 

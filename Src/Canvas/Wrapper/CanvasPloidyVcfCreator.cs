@@ -1,4 +1,3 @@
-using System.Linq;
 using Illumina.Common.FileSystem;
 using Illumina.SecondaryAnalysis.VariantCalling;
 using Isas.Framework.DataTypes;
@@ -10,15 +9,10 @@ namespace Canvas.Wrapper
 {
     public class CanvasPloidyVcfCreator
     {
-        public CanvasPloidyVcfCreator(ILogger logger, IWorkManager workManager, PloidyCorrector ploidyFixer)
+        public CanvasPloidyVcfCreator(PloidyCorrector ploidyFixer)
         {
-            _logger = logger;
-            _workManager = workManager;
             _ploidyFixer = ploidyFixer;
         }
-
-        private readonly IWorkManager _workManager;
-        private readonly ILogger _logger;
         private readonly PloidyCorrector _ploidyFixer;
 
         /// <summary>

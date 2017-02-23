@@ -8,7 +8,6 @@ using Isas.SequencingFiles;
 
 namespace CanvasCommon
 {
-
     public enum CanvasCoverageMode
     {
         Binary = 0, // Count 0 or 1 hits per kmer; not used any more!
@@ -32,8 +31,8 @@ namespace CanvasCommon
 
     public enum CanvasSomaticClusteringMode
     {
-        GaussianMixture, 
-        Density 
+        GaussianMixture,
+        Density
     }
 
     public static class Utilities
@@ -53,18 +52,7 @@ namespace CanvasCommon
             return path.Substring(0, path.Length - oldSuffix.Length) + newSuffix;
         }
 
-        static public string GetCoverageAndVariantFrequencyOutputPath(string outputVcfPath)
-        {
-            string coveragePath = outputVcfPath;
-            if (outputVcfPath.EndsWith(".vcf.gz"))
-                coveragePath = coveragePath.ReplaceFileNameExtension(".vcf.gz", "");
-            else
-                coveragePath.ReplaceFileNameExtension(".vcf", "");
-            return coveragePath + ".CoverageAndVariantFrequency.txt";
-        }
-
-
-        static public CanvasCoverageMode ParseCanvasCoverageMode(string mode)
+        public static CanvasCoverageMode ParseCanvasCoverageMode(string mode)
         {
             switch (mode.ToLowerInvariant().Trim())
             {
@@ -501,9 +489,9 @@ namespace CanvasCommon
         /// <param name="x">List of (number, weight) tuples</param>
         /// <param name="probs"></param>
         /// <returns></returns>
-        public static double[] WeightedQuantiles(List<Tuple<float, float>> x, List<float> probs) 
+        public static double[] WeightedQuantiles(List<Tuple<float, float>> x, List<float> probs)
         {
-            if (x.Any(t => t.Item2 < 0)) 
+            if (x.Any(t => t.Item2 < 0))
             {
                 throw new ArgumentException("Weight cannot be negative.");
             }
@@ -516,7 +504,7 @@ namespace CanvasCommon
             {
                 cumulativeWeight += nwTuple.Item2;
                 cumulativeProb = cumulativeWeight / totalWeight;
-                for (int i = 0; i < probs.Count; i++) 
+                for (int i = 0; i < probs.Count; i++)
                 {
                     if (cumulativeProb <= probs[i]) { quantiles[i] = nwTuple.Item1; }
                 }
@@ -525,7 +513,7 @@ namespace CanvasCommon
             return quantiles;
         }
 
-        public static double WeightedMedian(List<Tuple<float, float>> x) 
+        public static double WeightedMedian(List<Tuple<float, float>> x)
         {
             return WeightedQuantiles(x, new List<float>() { 0.5f })[0];
         }
@@ -535,8 +523,8 @@ namespace CanvasCommon
         /// </summary>
         public static double WeightedIQR(List<Tuple<float, float>> x)
         {
-            double [] iqr = WeightedQuantiles(x, new List<float>() { 0.25f, 0.75f });
-            return iqr[1]-iqr[0];
+            double[] iqr = WeightedQuantiles(x, new List<float>() { 0.25f, 0.75f });
+            return iqr[1] - iqr[0];
         }
 
 
@@ -598,12 +586,12 @@ namespace CanvasCommon
         /// <summary>
         /// Returns t-test statistics from two-sample t-test presuming equal variance
         /// </summary>
-        public static double tTest(double[] vector , double mean)
+        public static double tTest(double[] vector, double mean)
         {
-            return (Mean(vector) - mean)/ (StandardDeviation(vector)/Math.Sqrt(vector.Length));
+            return (Mean(vector) - mean) / (StandardDeviation(vector) / Math.Sqrt(vector.Length));
         }
 
-        
+
         /// <summary>
         /// Returns the 2-norm of vector
         /// </summary>
@@ -726,7 +714,7 @@ namespace CanvasCommon
         /// <returns></returns>
         public static double[] Project(double[] v, IEnumerable<double[]> axes)
         {
-            if (axes == null  || !axes.Any())
+            if (axes == null || !axes.Any())
             {
                 throw new ApplicationException("No axes to project onto.");
             }
@@ -888,11 +876,11 @@ namespace CanvasCommon
                         int pos = int.Parse(lineBedFile[1]);
                         start[chr][pos] = pos;
                         stop[chr][pos] = int.Parse(lineBedFile[2]);
-  
-                        if (binCounts[chr].ContainsKey(pos))                      
-                            binCounts[chr][pos].Add(float.Parse(lineBedFile[3]));                       
+
+                        if (binCounts[chr].ContainsKey(pos))
+                            binCounts[chr][pos].Add(float.Parse(lineBedFile[3]));
                         else
-                            binCounts[chr][pos] = new List<float> {float.Parse(lineBedFile[3])};
+                            binCounts[chr][pos] = new List<float> { float.Parse(lineBedFile[3]) };
                     }
                 }
             }
@@ -917,7 +905,7 @@ namespace CanvasCommon
                     {
                         throw new ApplicationException($"Start must be less than Stop");
                     }
-                    GenomicBin interval = new GenomicBin(chr, new GenomicInterval(binStartPosition, stop[chr][binStartPosition]));                  
+                    GenomicBin interval = new GenomicBin(chr, new GenomicInterval(binStartPosition, stop[chr][binStartPosition]));
                     multiSampleGenomicBins[chr].Add(new MultiSampleGenomicBin(interval, binCounts[chr][binStartPosition]));
                 }
             }
@@ -1016,7 +1004,7 @@ namespace CanvasCommon
         /// <param name="b"></param>
         /// <param name="tol"></param>
         /// <returns></returns>
-        public static double GoldenSectionSearch(Func<double, double> f, double a, double b, double tol=1E-5)
+        public static double GoldenSectionSearch(Func<double, double> f, double a, double b, double tol = 1E-5)
         {
             const double goldenRatio = 0.618034; // golden ratio - 1: (Math.Sqrt(5) - 1) / 2
 

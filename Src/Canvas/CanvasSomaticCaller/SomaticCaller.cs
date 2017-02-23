@@ -422,7 +422,7 @@ namespace CanvasSomaticCaller
                 }
             }
 
-            string coverageOutputPath = CanvasCommon.Utilities.GetCoverageAndVariantFrequencyOutputPath(outputVCFPath);
+            string coverageOutputPath = SingleSampleCallset.GetCoverageAndVariantFrequencyOutputPath(outputVCFPath);
             CanvasSegment.WriteCoveragePlotData(this.Segments, this.Model?.DiploidCoverage, this.ReferencePloidy, coverageOutputPath, referenceFolder);
 
             if (this.ReferencePloidy != null && !string.IsNullOrEmpty(this.ReferencePloidy.HeaderLine))
@@ -1966,7 +1966,7 @@ namespace CanvasSomaticCaller
             else
                 CanvasSegment.MergeSegmentsUsingExcludedIntervals(ref canvasSegments, somaticCallerParameters.MinimumCallSize, ExcludedIntervals);
             CanvasSegment.AssignQualityScores(canvasSegments, CanvasSegment.QScoreMethod.Logistic, this.somaticCallerQscoreParameters);
-           
+
             var nonDiploidMAFs = canvasSegments.Where(segment => (segment.CopyNumber == 1 && segment.MeanMAF.HasValue && segment.Alleles.Frequencies.Count > minSizeMAFs))
                 .Select(segment => (double)segment.MeanMAF).ToArray();
             Console.WriteLine($">>> nonDiploidMAFs length {nonDiploidMAFs.Length }");
