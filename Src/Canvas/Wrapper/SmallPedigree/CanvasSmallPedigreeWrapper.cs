@@ -135,22 +135,11 @@ namespace Canvas.Wrapper.SmallPedigree
             var cnvVcf = new Vcf(sampleSandbox.GetFileLocation("CNV.vcf.gz"));
             return new CanvasSmallPedigreeOutput(cnvVcf, intermediateResults);
         }
-
-        public static string GetReadGroupSample(BamReader reader)
-        {
-            var samples = reader.GetReadGroupSamples().Where(sm => !sm.IsNullOrWhiteSpace()).Distinct().ToList();
-            if (!samples.Any())
-                throw new ArgumentException("A valid SM tag is required in the bam header.");
-            if (samples.Count > 1)
-                throw new ArgumentException($"Only one valid SM tag can be present in the bam header. Found '{samples.Join(",")}'");
-            return samples.First();
-        }
-
         private static string GetReadGroupSample(Bam bam)
         {
             using (var reader = new BamReader(bam.BamFile))
             {
-                return GetReadGroupSample(reader);
+                return reader.GetReadGroupSample();
             }
         }
     }
