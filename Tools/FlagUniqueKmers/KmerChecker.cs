@@ -10,7 +10,7 @@ namespace FlagUniqueKmers
     {
         #region Members
         static private int KmerLength = 35;
-        static private int MaxDictEntries = 400000000;  // We can go up this high, given the updates to app.config.
+        static private int MaxDictEntries = 40000000;  // We can go up this high, given the updates to app.config.
         Dictionary<string, long> Kmers = new Dictionary<string, long>(); // Dictionary: Kmer string -> first occurrence of the kmer in the genome
         List<BitArray> ChromosomeNonUniqueFlags = new List<BitArray>();
         List<BitArray> ChromosomeFinishedFlags = new List<BitArray>();

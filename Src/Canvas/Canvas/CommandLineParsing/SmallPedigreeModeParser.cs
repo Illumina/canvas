@@ -6,6 +6,7 @@ using CanvasCommon.CommandLineParsing.CoreOptionTypes;
 using CanvasCommon.CommandLineParsing.OptionProcessing;
 using Illumina.Common.FileSystem;
 using Isas.SequencingFiles;
+using Illumina.Common;
 
 namespace Canvas.CommandLineParsing
 {
@@ -93,6 +94,7 @@ namespace Canvas.CommandLineParsing
             if (isProband) return SampleType.Proband;
             return SampleType.Other;
         }
+
 
         private Dictionary<string, IFileLocation> MapSampleNameToBam(List<IFileLocation> bams)
         {
