@@ -5,9 +5,9 @@
   },
 
   "dependencies": {
-    "Illumina.Common": "2.0.1.64",
+    "Illumina.Common": "2.0.5.74",
     "Isas.Framework": "5.0.3.70",
-    "Isas.SequencingFiles": "3.7.0.121",
+    "Isas.SequencingFiles": "3.7.2-O00144XmlWriterSetti",
     "Microsoft.NETCore.App": {
       "type": "platform",
       "version": "1.0.1"
