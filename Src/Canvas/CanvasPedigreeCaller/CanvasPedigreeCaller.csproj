@@ -127,6 +127,7 @@
   <ItemGroup>
     <Compile Include="CanvasPedigreeCaller.cs" />
     <Compile Include="CopyNumberDistribution.cs" />
+    <Compile Include="PedigreeCallerParameters.cs" />
     <Compile Include="PedigreeMember.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
@@ -137,6 +138,9 @@
     <None Include="app.manifest" />
     <None Include="packages.config" />
     <None Include="Properties\app.manifest" />
+    <None Include="PedigreeCallerParameters.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\CanvasCommon\CanvasCommon.csproj">
