@@ -82,7 +82,8 @@ namespace CanvasCommon
             writer.WriteLine("##FORMAT=<ID=BC,Number=1,Type=Float,Description=\"Number of bins in the region\">");
             writer.WriteLine("##FORMAT=<ID=CN,Number=1,Type=Integer,Description=\"Copy number genotype for imprecise events\">");
             writer.WriteLine("##FORMAT=<ID=MCC,Number=1,Type=Integer,Description=\"Major chromosome count (equal to copy number for LOH regions)\">");
-            writer.WriteLine("##FORMAT=<ID=DQSCORE,Number=1,Type=String,Description=\"De novo Phred-scaled quality score\">");
+            writer.WriteLine("##FORMAT=<ID=DQ,Number=1,Type=Float,Description=\"De novo variants Phred-scaled quality score\">");
+            writer.WriteLine("##FORMAT=<ID=QS,Number=1,Type=Float,Description=\"Inherited variants Phred-scaled quality score\">");
             string names = sampleNames.Count == 1 ? sampleNames.First() : string.Join("\t", sampleNames.ToArray()) ;
             writer.WriteLine("#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\t" + names);
             SanityCheckChromosomeNames(genome, segments);
@@ -123,7 +124,7 @@ namespace CanvasCommon
                     else
                         cnvType = CnvType.ComplexCnv;
                             
-                    WriteInfoField(writer, firstSampleSegment , cnvType, denovoQualityThreshold);
+                    WriteInfoField(writer, firstSampleSegment , cnvType, denovoQualityThreshold, isMultisample: segments.Count > 1);
                     //  FORMAT field
                     if (segments.Count == 1)
                         WriteSingleSampleInfo(writer, firstSampleSegment);
@@ -151,14 +152,14 @@ namespace CanvasCommon
 
         private static void WriteFormatField(BgzipOrStreamWriter writer, List<CanvasSegment> segments)
         {
-            writer.Write("\tRC:BC:CN:MCC:DQSCORE");
+            writer.Write("\tRC:BC:CN:MCC:QS:DQ");
             const string nullValue = ".";
             foreach (var segment in segments)
             {
                 var mcc = segment.MajorChromosomeCount.HasValue ? segment.MajorChromosomeCount.ToString() : nullValue;
                 var dqscore = segment.DQScore.HasValue ? $"{segment.DQScore.Value:F2}" : nullValue;
                 var rc = Math.Round(segment.MeanCount, 0, MidpointRounding.AwayFromZero);
-                writer.Write($"\t{rc}:{segment.BinCount}:{ segment.CopyNumber}:{mcc}:{dqscore}");
+                writer.Write($"\t{rc}:{segment.BinCount}:{ segment.CopyNumber}:{mcc}:{segment.QScore}:{dqscore}");
             }
             writer.WriteLine();
         }
@@ -171,7 +172,7 @@ namespace CanvasCommon
         /// <param name="cnvType"></param>
         /// <param name="denovoQualityThreshold"></param>
         /// <returns></returns>
-        private static void WriteInfoField(BgzipOrStreamWriter writer, CanvasSegment segment, CnvType cnvType, int? denovoQualityThreshold)
+        private static void WriteInfoField(BgzipOrStreamWriter writer, CanvasSegment segment, CnvType cnvType, int? denovoQualityThreshold, bool isMultisample)
         {
 
             // From vcf 4.1 spec:
@@ -183,8 +184,9 @@ namespace CanvasCommon
                 : segment.Begin + 1;
 
             writer.Write($"{segment.Chr}\t{position}\tCanvas:{cnvType.ToVcfId()}:{segment.Chr}:{segment.Begin + 1}-{segment.End}\t");
-                    
-            writer.Write($"N\t{alternateAllele}\t{segment.QScore:F2}\t{segment.Filter}\t", alternateAllele, segment.QScore, segment.Filter);
+            string qScore = "";
+            qScore = isMultisample ? "." : "${ segment.QScore, F2}";
+            writer.Write($"N\t{alternateAllele}\t{qScore}\t{segment.Filter}\t", alternateAllele, segment.QScore, segment.Filter);
 
             if (cnvType != CnvType.Reference)
                 writer.Write($"SVTYPE={cnvType.ToSvType()};");
@@ -192,7 +194,7 @@ namespace CanvasCommon
             if (segment.IsHeterogeneous)
                 writer.Write("SUBCLONAL;");
 
-            if (denovoQualityThreshold.HasValue & segment.DQScore.HasValue)
+            if (denovoQualityThreshold.HasValue & segment.DQScore.HasValue & segment.DQScore >= denovoQualityThreshold)
                 writer.Write($"dq{denovoQualityThreshold};");
 
             writer.Write($"END={segment.End}");
