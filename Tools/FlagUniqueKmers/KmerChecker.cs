@@ -28,7 +28,7 @@ namespace FlagUniqueKmers
         /// </summary>
         private string GetKeyForKmer(string kmer)
         {
-            
+
             // Squish the kmer to a more byte-efficient representation:
             // 35 bases at 1 byte per character = 280 bits
             // using 2 bits per base, 35 bases can be encoded as 35*2=70 bits, which fits in 9 bytes.
@@ -65,13 +65,13 @@ namespace FlagUniqueKmers
             keyBuilder.Append((char)currentChar);
             if (badChar) return null;
             string key = keyBuilder.ToString();
-            
+
 
             // Now build key for the rev-comp:
             keyBuilder.Clear();
             currentChar = 0;
             int charCount = 0;
-            for (int tempChar = kmer.Length - 1; tempChar >= 0; tempChar--,charCount++)
+            for (int tempChar = kmer.Length - 1; tempChar >= 0; tempChar--, charCount++)
             {
                 currentChar *= 4;
                 switch (kmer[tempChar])

@@ -97,8 +97,8 @@
       <HintPath>packages\Isas.Manifests.2.9.0.14\lib\net451\Isas.Manifests.NexteraManifest.dll</HintPath>
       <Private>True</Private>
     </Reference>
-    <Reference Include="Isas.SequencingFiles, Version=0.0.0.0, Culture=neutral, processorArchitecture=AMD64">
-      <HintPath>packages\Isas.SequencingFiles.3.7.2-O00144XmlWriterSetti\lib\net451\Isas.SequencingFiles.dll</HintPath>
+    <Reference Include="Isas.SequencingFiles, Version=3.7.3.152, Culture=neutral, processorArchitecture=AMD64">
+      <HintPath>packages\Isas.SequencingFiles.3.7.3.152\lib\net451\Isas.SequencingFiles.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="NDesk.Options, Version=0.2.1.0, Culture=neutral, processorArchitecture=MSIL">
@@ -161,9 +161,9 @@
       <Project>{4fe7dc26-bb44-4a6e-b02b-785328c41260}</Project>
       <Name>CanvasBin</Name>
     </ProjectReference>
-    <ProjectReference Include="..\CanvasCommon\CanvasCommon.csproj">
+    <ProjectReference Include="..\CanvasCommon\CanvasCommon.net45\CanvasCommon.net45.csproj">
       <Project>{ec8755f1-74bd-4a1f-9b82-5133d2f6a93b}</Project>
-      <Name>CanvasCommon</Name>
+      <Name>CanvasCommon.net45</Name>
     </ProjectReference>
     <ProjectReference Include="..\CanvasPartition\CanvasPartition.csproj">
       <Project>{a1660795-cd4a-4fbc-9bf6-df2a420aa3ca}</Project>
@@ -198,12 +198,12 @@ if ERRORLEVEL 1 (
     exit /b 1
 )</PostBuildEvent>
   </PropertyGroup>
-  <Import Project="packages\Isas.FileCompression.3.7.2-O00144XmlWriterSetti\build\net451\Isas.FileCompression.targets" Condition="Exists('packages\Isas.FileCompression.3.7.2-O00144XmlWriterSetti\build\net451\Isas.FileCompression.targets')" />
+  <Import Project="packages\Isas.FileCompression.3.7.3.152\build\net451\Isas.FileCompression.targets" Condition="Exists('packages\Isas.FileCompression.3.7.3.152\build\net451\Isas.FileCompression.targets')" />
   <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
     <PropertyGroup>
       <ErrorText>This project references NuGet package(s) that are missing on this computer. Use NuGet Package Restore to download them.  For more information, see http://go.microsoft.com/fwlink/?LinkID=322105. The missing file is {0}.</ErrorText>
     </PropertyGroup>
-    <Error Condition="!Exists('packages\Isas.FileCompression.3.7.2-O00144XmlWriterSetti\build\net451\Isas.FileCompression.targets')" Text="$([System.String]::Format('$(ErrorText)', 'packages\Isas.FileCompression.3.7.2-O00144XmlWriterSetti\build\net451\Isas.FileCompression.targets'))" />
+    <Error Condition="!Exists('packages\Isas.FileCompression.3.7.3.152\build\net451\Isas.FileCompression.targets')" Text="$([System.String]::Format('$(ErrorText)', 'packages\Isas.FileCompression.3.7.3.152\build\net451\Isas.FileCompression.targets'))" />
   </Target>
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

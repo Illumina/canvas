@@ -70,8 +70,8 @@
       <HintPath>..\Canvas\packages\Isas.Framework.5.0.3.70\lib\net451\Isas.Framework.dll</HintPath>
       <Private>True</Private>
     </Reference>
-    <Reference Include="Isas.SequencingFiles, Version=0.0.0.0, Culture=neutral, processorArchitecture=AMD64">
-      <HintPath>..\Canvas\packages\Isas.SequencingFiles.3.7.2-O00144XmlWriterSetti\lib\net451\Isas.SequencingFiles.dll</HintPath>
+    <Reference Include="Isas.SequencingFiles, Version=3.7.3.152, Culture=neutral, processorArchitecture=AMD64">
+      <HintPath>..\Canvas\packages\Isas.SequencingFiles.3.7.3.152\lib\net451\Isas.SequencingFiles.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="NDesk.Options, Version=0.2.1.0, Culture=neutral, processorArchitecture=MSIL">
@@ -149,13 +149,9 @@
       <Project>{3ea57084-d8fd-4978-8cf9-0ef97cfa47d0}</Project>
       <Name>CanvasClean</Name>
     </ProjectReference>
-    <ProjectReference Include="..\CanvasCommon\CanvasCommon.csproj">
+    <ProjectReference Include="..\CanvasCommon\CanvasCommon.net45\CanvasCommon.net45.csproj">
       <Project>{ec8755f1-74bd-4a1f-9b82-5133d2f6a93b}</Project>
-      <Name>CanvasCommon</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\CanvasDiploidCaller\CanvasDiploidCaller.csproj">
-      <Project>{ffd9d459-c697-4e50-9e61-0b192a064211}</Project>
-      <Name>CanvasDiploidCaller</Name>
+      <Name>CanvasCommon.net45</Name>
     </ProjectReference>
     <ProjectReference Include="..\CanvasPartition\CanvasPartition.csproj">
       <Project>{a1660795-cd4a-4fbc-9bf6-df2a420aa3ca}</Project>
@@ -216,13 +212,13 @@
     </PropertyGroup>
     <Error Condition="!Exists('..\Canvas\packages\xunit.core.2.0.0\build\portable-net45+win+wpa81+wp80+monotouch+monoandroid+Xamarin.iOS\xunit.core.props')" Text="$([System.String]::Format('$(ErrorText)', '..\Canvas\packages\xunit.core.2.0.0\build\portable-net45+win+wpa81+wp80+monotouch+monoandroid+Xamarin.iOS\xunit.core.props'))" />
     <Error Condition="!Exists('..\Canvas\packages\xunit.runner.visualstudio.2.1.0\build\net20\xunit.runner.visualstudio.props')" Text="$([System.String]::Format('$(ErrorText)', '..\Canvas\packages\xunit.runner.visualstudio.2.1.0\build\net20\xunit.runner.visualstudio.props'))" />
-    <Error Condition="!Exists('..\Canvas\packages\Isas.FileCompression.3.7.2-O00144XmlWriterSetti\build\net451\Isas.FileCompression.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\Canvas\packages\Isas.FileCompression.3.7.2-O00144XmlWriterSetti\build\net451\Isas.FileCompression.targets'))" />
+    <Error Condition="!Exists('..\Canvas\packages\Isas.FileCompression.3.7.3.152\build\net451\Isas.FileCompression.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\Canvas\packages\Isas.FileCompression.3.7.3.152\build\net451\Isas.FileCompression.targets'))" />
   </Target>
   <PropertyGroup>
     <PostBuildEvent>
     </PostBuildEvent>
   </PropertyGroup>
-  <Import Project="..\Canvas\packages\Isas.FileCompression.3.7.2-O00144XmlWriterSetti\build\net451\Isas.FileCompression.targets" Condition="Exists('..\Canvas\packages\Isas.FileCompression.3.7.2-O00144XmlWriterSetti\build\net451\Isas.FileCompression.targets')" />
+  <Import Project="..\Canvas\packages\Isas.FileCompression.3.7.3.152\build\net451\Isas.FileCompression.targets" Condition="Exists('..\Canvas\packages\Isas.FileCompression.3.7.3.152\build\net451\Isas.FileCompression.targets')" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
   <Target Name="BeforeBuild">

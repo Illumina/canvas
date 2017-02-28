@@ -1,0 +1,16 @@
+{
+  "version": "1.0.0-*",
+
+  "dependencies": {
+    "Isas.Framework": "5.0.3.70",
+    "Isas.SequencingFiles": "3.7.3.152",
+    "NDesk.Options": "2.0.5-O00077Options",
+    "NETStandard.Library": "1.6.0"
+  },
+
+  "frameworks": {
+    "netstandard1.6": {
+      "imports": "dnxcore50"
+    }
+  }
+}
