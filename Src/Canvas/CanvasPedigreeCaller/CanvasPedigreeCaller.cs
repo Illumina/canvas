@@ -17,7 +17,6 @@ namespace CanvasPedigreeCaller
         #region Members
         public int QualityFilterThreshold { get; set; } = 7;
         public int DeNovoQualityFilterThreshold { get; set; } = 20;
-        public string TruthDataPath;
         public PedigreeCallerParameters CallerParameters { get; set; }
 
         #endregion

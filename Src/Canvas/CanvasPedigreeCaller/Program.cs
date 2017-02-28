@@ -125,7 +125,6 @@ namespace CanvasPedigreeCaller
                     Console.WriteLine($"CanvasPedigreeCaller.exe: File {truthDataPath} does not exist! Exiting.");
                     return 1;
                 }
-                caller.TruthDataPath = truthDataPath;
             }
 
             if (!File.Exists(parameterconfigPath))
