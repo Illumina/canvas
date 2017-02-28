@@ -82,9 +82,12 @@ namespace CanvasCommon
             writer.WriteLine("##FORMAT=<ID=BC,Number=1,Type=Float,Description=\"Number of bins in the region\">");
             writer.WriteLine("##FORMAT=<ID=CN,Number=1,Type=Integer,Description=\"Copy number genotype for imprecise events\">");
             writer.WriteLine("##FORMAT=<ID=MCC,Number=1,Type=Integer,Description=\"Major chromosome count (equal to copy number for LOH regions)\">");
-            writer.WriteLine("##FORMAT=<ID=DQ,Number=1,Type=Float,Description=\"De novo variants Phred-scaled quality score\">");
-            writer.WriteLine("##FORMAT=<ID=QS,Number=1,Type=Float,Description=\"Inherited variants Phred-scaled quality score\">");
-            string names = sampleNames.Count == 1 ? sampleNames.First() : string.Join("\t", sampleNames.ToArray()) ;
+            if (denovoQualityThreshold.HasValue)
+            {
+                writer.WriteLine("##FORMAT=<ID=DQ,Number=1,Type=Float,Description=\"De novo variants Phred-scaled quality score\">");
+                writer.WriteLine("##FORMAT=<ID=QS,Number=1,Type=Float,Description=\"Phred-scaled quality score\">");
+            }
+            string names = string.Join("\t", sampleNames.ToArray());
             writer.WriteLine("#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\t" + names);
             SanityCheckChromosomeNames(genome, segments);
             return genome;
