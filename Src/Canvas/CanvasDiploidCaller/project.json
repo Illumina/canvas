@@ -1,13 +1,14 @@
 {
   "version": "1.0.0-*",
   "buildOptions": {
-    "emitEntryPoint": true
+    "emitEntryPoint": true,
+    "optimize": true
   },
 
   "dependencies": {
     "CanvasCommon": "1.0.0-*",
     "Isas.Framework": "5.0.3.70",
-    "Isas.SequencingFiles": "3.7.3.152",
+    "Isas.SequencingFiles": "3.7.3-O00153FixFileCompres",
     "Microsoft.NETCore.App": {
       "type": "platform",
       "version": "1.0.1"

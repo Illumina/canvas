@@ -1,12 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-//using Combinatorics.Collections;
+using Combinatorics.Collections;
+
 using MathNet.Numerics;
 
 namespace CanvasCommon
 {
-    public static class DistibutionUtilities
+    public static class DistributionUtilities
     {
         public static List<List<int>> GetGenotypeCombinations(int numberOfStates, int currentState)
         {
@@ -25,8 +26,8 @@ namespace CanvasCommon
             {
                 IEnumerable<int> states = Enumerable.Repeat(currentState, numberOfStates - numberOfDiploidStates)
                     .Concat(Enumerable.Repeat(diploidState, numberOfDiploidStates));
-                //var permutations = new Permutations<int>(states.ToList(), GenerateOption.WithoutRepetition);
-                List<List<int>> permutations = null; // %%%
+                var permutations = new Permutations<int>(states.ToList(), GenerateOption.WithoutRepetition);
+                //List<List<int>> permutations = null; // %%%
                 var list = permutations.Select(x => x.ToList()).ToList();
                 allCombinations.AddRange(list);
             }

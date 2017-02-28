@@ -97,8 +97,8 @@
       <HintPath>..\Canvas\packages\Isas.Manifests.2.9.0.14\lib\net451\Isas.Manifests.NexteraManifest.dll</HintPath>
       <Private>True</Private>
     </Reference>
-    <Reference Include="Isas.SequencingFiles, Version=3.7.3.152, Culture=neutral, processorArchitecture=AMD64">
-      <HintPath>..\Canvas\packages\Isas.SequencingFiles.3.7.3.152\lib\net451\Isas.SequencingFiles.dll</HintPath>
+    <Reference Include="Isas.SequencingFiles, Version=3.7.3.153, Culture=neutral, processorArchitecture=AMD64">
+      <HintPath>..\Canvas\packages\Isas.SequencingFiles.3.7.3-O00153FixFileCompres\lib\net451\Isas.SequencingFiles.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="NDesk.Options, Version=0.2.1.0, Culture=neutral, processorArchitecture=MSIL">
@@ -160,12 +160,12 @@
     <PostBuildEvent>
     </PostBuildEvent>
   </PropertyGroup>
-  <Import Project="..\Canvas\packages\Isas.FileCompression.3.7.3.152\build\net451\Isas.FileCompression.targets" Condition="Exists('..\Canvas\packages\Isas.FileCompression.3.7.3.152\build\net451\Isas.FileCompression.targets')" />
+  <Import Project="..\Canvas\packages\Isas.FileCompression.3.7.3-O00153FixFileCompres\build\net451\Isas.FileCompression.targets" Condition="Exists('..\Canvas\packages\Isas.FileCompression.3.7.3-O00153FixFileCompres\build\net451\Isas.FileCompression.targets')" />
   <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
     <PropertyGroup>
       <ErrorText>This project references NuGet package(s) that are missing on this computer. Use NuGet Package Restore to download them.  For more information, see http://go.microsoft.com/fwlink/?LinkID=322105. The missing file is {0}.</ErrorText>
     </PropertyGroup>
-    <Error Condition="!Exists('..\Canvas\packages\Isas.FileCompression.3.7.3.152\build\net451\Isas.FileCompression.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\Canvas\packages\Isas.FileCompression.3.7.3.152\build\net451\Isas.FileCompression.targets'))" />
+    <Error Condition="!Exists('..\Canvas\packages\Isas.FileCompression.3.7.3-O00153FixFileCompres\build\net451\Isas.FileCompression.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\Canvas\packages\Isas.FileCompression.3.7.3-O00153FixFileCompres\build\net451\Isas.FileCompression.targets'))" />
   </Target>
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

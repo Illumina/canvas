@@ -7,7 +7,7 @@
   "dependencies": {
     "Illumina.Common": "2.0.5.74",
     "Isas.Framework": "5.0.3.70",
-    "Isas.SequencingFiles": "3.7.3.152",
+    "Isas.SequencingFiles": "3.7.3-O00153FixFileCompres",
     "Microsoft.NETCore.App": {
       "type": "platform",
       "version": "1.0.1"
