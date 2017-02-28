@@ -114,7 +114,9 @@ namespace CanvasSomaticCaller
         private void DebugModelSegmentsByPloidy()
         {
             Console.WriteLine("{0} DebugModelSegmentsByPloidy...", DateTime.Now);
-            using (StreamWriter writer = new StreamWriter(Path.Combine(this.OutputFolder, "SegmentsByPloidy.txt")))
+            string debugPath = Path.Combine(this.OutputFolder, "SegmentsByPloidy.txt");
+            using (FileStream stream = new FileStream(debugPath, FileMode.Create, FileAccess.Write))
+            using (StreamWriter writer = new StreamWriter(stream))
             {
                 writer.WriteLine("#Chr\tStart\tEnd\tCN\tPloidy\tMAF\tCoverage");
                 foreach (CanvasSegment segment in Segments)
@@ -222,7 +224,9 @@ namespace CanvasSomaticCaller
                 Console.WriteLine("CN {0} median {1} mean {2:F2} stddev {3:F2}", CN, median, mean, stddev);
             }
             // Dump histograms to a text file:
-            using (StreamWriter writer = new StreamWriter(Path.Combine(this.OutputFolder, "SegmentCoverageByCN.txt")))
+            string debugPath = Path.Combine(this.OutputFolder, "SegmentCoverageByCN.txt");
+            using (FileStream stream = new FileStream(debugPath, FileMode.Create, FileAccess.Write))
+            using (StreamWriter writer = new StreamWriter(stream))
             {
                 writer.Write("#Bin\tAllSegments\t");
                 for (int CN = 0; CN < 10; CN++)
@@ -327,7 +331,9 @@ namespace CanvasSomaticCaller
                 Console.WriteLine("CN {0} median {1} mean {2:F2} stddev {3:F2}", CN, median, mean, stddev);
             }
             // Dump histograms to a text file:
-            using (StreamWriter writer = new StreamWriter(Path.Combine(this.TempFolder, "BinCoverageByCN.txt")))
+            string debugPath = Path.Combine(this.TempFolder, "BinCoverageByCN.txt");
+            using (FileStream stream = new FileStream(debugPath, FileMode.Create, FileAccess.Write))
+            using (StreamWriter writer = new StreamWriter(stream))
             {
                 writer.Write("#Bin\tAllBins\t");
                 for (int CN = 0; CN < 10; CN++)
@@ -782,7 +788,8 @@ namespace CanvasSomaticCaller
             if (debugPath != null)
             {
                 // write Gaussian mixture model to debugPath
-                using (StreamWriter writer = new StreamWriter(debugPath))
+                using (FileStream stream = new FileStream(debugPath, FileMode.Create, FileAccess.Write))
+                using (StreamWriter writer = new StreamWriter(stream))
                 {
                     writer.WriteLine("CN\tMajor Chr #\tMAF\tCoverage\tOmega\tMu0\tMu1\tSigma00\tSigma01\tSigma10\tSigma11");
                     foreach (ModelPoint modelPoint in modelPoints)
@@ -1079,7 +1086,8 @@ namespace CanvasSomaticCaller
             //  write cluster deviations
             if (debugPathClusterInfo != null)
             {
-                using (StreamWriter debugWriter = new StreamWriter(debugPathClusterInfo))
+                using (FileStream stream = new FileStream(debugPathClusterInfo, FileMode.Create, FileAccess.Write))
+                using (StreamWriter debugWriter = new StreamWriter(stream))
                 {
                     // Write clustering results
                     debugWriter.WriteLine("#clusterID\tAverage\tMedian\tSD\tEntropy");
@@ -1308,7 +1316,8 @@ namespace CanvasSomaticCaller
             {
                 try
                 {
-                    using (StreamWriter debugWriter = new StreamWriter(debugPath))
+                    using (FileStream stream = new FileStream(debugPath, FileMode.Create, FileAccess.Write))
+                    using (StreamWriter debugWriter = new StreamWriter(stream))
                     {
                         debugWriter.WriteLine("#MAF\tCoverage\tGenotype");
                         foreach (ModelPoint modelPoint in modelPoints)
@@ -1821,7 +1830,8 @@ namespace CanvasSomaticCaller
             List<double> scores = new List<double>();
             // save all purity and ploidy models to a file 
             string debugPath = Path.Combine(this.TempFolder, "PurityModel.txt");
-            using (StreamWriter debugWriter = new StreamWriter(debugPath))
+            using (FileStream stream = new FileStream(debugPath, FileMode.Create, FileAccess.Write))
+            using (StreamWriter debugWriter = new StreamWriter(stream))
             {
                 debugWriter.Write("#Purity\tDiploidCoverage\t");
                 debugWriter.Write("Deviation\tAccuracyDeviation\tPrecisionDeviation\tWorstAllowedDeviation\tAccDev/best\tPrecDev/best\t");
@@ -2448,7 +2458,8 @@ namespace CanvasSomaticCaller
         private void GenerateClonalityReportVersusKnownCN(List<SegmentInfo> segments, List<ClusterInfo> clusterInfos, List<ModelPoint> modelPoints, int numClusters, CoveragePurityModel model)
         {
             string debugPath = Path.Combine(this.OutputFolder, "ClonalityVersusKnownCN.txt");
-            using (StreamWriter writer = new StreamWriter(debugPath))
+            using (FileStream stream = new FileStream(debugPath, FileMode.Create, FileAccess.Write))
+            using (StreamWriter writer = new StreamWriter(stream))
             {
                 writer.Write("#Clonality\tCN\tChr\tBegin\tEnd\tbestModelDistance\t");
                 writer.Write("MAF\tCoverage\tClusterEntropy\tClusterMedianDistance\tClusterMeanDistance\tClusterVariance\t");
@@ -2494,7 +2505,8 @@ namespace CanvasSomaticCaller
 
         {
             string debugPath = Path.Combine(this.TempFolder, "CallsVersusKnownCN.txt");
-            using (StreamWriter writer = new StreamWriter(debugPath))
+            using (FileStream stream = new FileStream(debugPath, FileMode.Create, FileAccess.Write))
+            using (StreamWriter writer = new StreamWriter(stream))
             {
                 writer.Write("#Chr\tBegin\tEnd\tTruthSetCN\tTruthSetClonality\tBestCN\tSecondBestCN\tisCNswapped\t");
                 writer.Write("Accurate\tDirectionAccurate\t");
@@ -2677,7 +2689,8 @@ namespace CanvasSomaticCaller
 
             // Output data as ExtendedCallsVersusKnownCN.txt
             string debugPath = Path.Combine(this.OutputFolder, "qscore_" + qscoreMethod.ToString() + "_ExtendedCallsVersusKnownCN.txt");
-            using (StreamWriter writer = new StreamWriter(debugPath))
+            using (FileStream stream = new FileStream(debugPath, FileMode.Create, FileAccess.Write))
+            using (StreamWriter writer = new StreamWriter(stream))
             {
                 writer.Write("#Chr\tBegin\tEnd\tTruthSetCN\tCalledCN\tMajorChromCount\tQScore\tInfo");
                 foreach (CanvasSegment.QScorePredictor predictorId in CanvasSegment.QScorePredictor.GetValues(typeof(CanvasSegment.QScorePredictor)))
@@ -2715,7 +2728,8 @@ namespace CanvasSomaticCaller
 
             // Output data by QScore
             debugPath = Path.Combine(this.OutputFolder, "qscore_" + qscoreMethod + "_cnaPerQscore.txt");
-            using (StreamWriter writer = new StreamWriter(debugPath))
+            using (FileStream stream = new FileStream(debugPath, FileMode.Create, FileAccess.Write))
+            using (StreamWriter writer = new StreamWriter(stream))
             {
                 writer.WriteLine("#Chr\tBegin\tEnd\tTruthSetCN\tCalledCN\tMajorChromCount\tMedianMAF\tMedianCoverage\tQScore\tInfo");
                 for (int qscore = 0; qscore < intervalsByQScore.Count(); qscore++)
@@ -2754,8 +2768,8 @@ namespace CanvasSomaticCaller
                 else
                     totalFP += countBases ? interval.End - interval.Start : 1;
             }
-
-            using (StreamWriter writer = new StreamWriter(debugPath))
+            using (FileStream stream = new FileStream(debugPath, FileMode.Create, FileAccess.Write))
+            using (StreamWriter writer = new StreamWriter(stream))
             {
                 writer.WriteLine("#QScore\tFP\tTP\tFPR(retained FP)\tTPR");
                 long TP = 0;
@@ -2853,7 +2867,8 @@ namespace CanvasSomaticCaller
             Console.WriteLine("Intersect {0:F2}% of {1} called bases", 100 * totalIntersect / (double)allSegmentBases, allSegmentBases);
             Console.WriteLine("Intersect {0:F2}% of {1} truth-set bases bases", 100 * totalIntersect / (double)allTruthBases, allTruthBases);
             string debugPath = Path.Combine(this.TempFolder, "CNVConfusionMatrix.txt");
-            using (StreamWriter writer = new StreamWriter(debugPath))
+            using (FileStream stream = new FileStream(debugPath, FileMode.Create, FileAccess.Write))
+            using (StreamWriter writer = new StreamWriter(stream))
             {
                 writer.WriteLine("#OverallAccuracy\t{0:F2}\t{1:F2}", 100 * correctBases / (double)totalIntersect,
                     100 * partialCreditBases / (double)totalIntersect);

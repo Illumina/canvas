@@ -62,16 +62,16 @@
     <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="Illumina.Common, Version=2.0.5.74, Culture=neutral, processorArchitecture=AMD64">
-      <HintPath>..\Canvas\packages\Illumina.Common.2.0.5.74\lib\net451\Illumina.Common.dll</HintPath>
+    <Reference Include="Illumina.Common, Version=2.0.5.80, Culture=neutral, processorArchitecture=AMD64">
+      <HintPath>..\Canvas\packages\Illumina.Common.2.0.5.80\lib\net451\Illumina.Common.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="Isas.Framework, Version=5.0.3.70, Culture=neutral, processorArchitecture=AMD64">
       <HintPath>..\Canvas\packages\Isas.Framework.5.0.3.70\lib\net451\Isas.Framework.dll</HintPath>
       <Private>True</Private>
     </Reference>
-    <Reference Include="Isas.SequencingFiles, Version=3.7.3.153, Culture=neutral, processorArchitecture=AMD64">
-      <HintPath>..\Canvas\packages\Isas.SequencingFiles.3.7.3-O00153FixFileCompres\lib\net451\Isas.SequencingFiles.dll</HintPath>
+    <Reference Include="Isas.SequencingFiles, Version=3.7.3.154, Culture=neutral, processorArchitecture=AMD64">
+      <HintPath>..\Canvas\packages\Isas.SequencingFiles.3.7.3.154\lib\net451\Isas.SequencingFiles.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="NDesk.Options, Version=0.2.1.0, Culture=neutral, processorArchitecture=MSIL">
@@ -161,9 +161,9 @@
       <Project>{4dc19472-77f6-4482-b5be-8d15760f89f7}</Project>
       <Name>CanvasSNV</Name>
     </ProjectReference>
-    <ProjectReference Include="..\CanvasSomaticCaller\CanvasSomaticCaller.csproj">
+    <ProjectReference Include="..\CanvasSomaticCaller\CanvasSomaticCaller.net45\CanvasSomaticCaller.net45.csproj">
       <Project>{a08c4a1e-133e-4339-89e4-54651d37baf0}</Project>
-      <Name>CanvasSomaticCaller</Name>
+      <Name>CanvasSomaticCaller.net45</Name>
     </ProjectReference>
     <ProjectReference Include="..\Canvas\Canvas.csproj">
       <Project>{f7eb30ca-eb4a-4e80-a067-0d9498a9f5b6}</Project>
@@ -212,13 +212,13 @@
     </PropertyGroup>
     <Error Condition="!Exists('..\Canvas\packages\xunit.core.2.0.0\build\portable-net45+win+wpa81+wp80+monotouch+monoandroid+Xamarin.iOS\xunit.core.props')" Text="$([System.String]::Format('$(ErrorText)', '..\Canvas\packages\xunit.core.2.0.0\build\portable-net45+win+wpa81+wp80+monotouch+monoandroid+Xamarin.iOS\xunit.core.props'))" />
     <Error Condition="!Exists('..\Canvas\packages\xunit.runner.visualstudio.2.1.0\build\net20\xunit.runner.visualstudio.props')" Text="$([System.String]::Format('$(ErrorText)', '..\Canvas\packages\xunit.runner.visualstudio.2.1.0\build\net20\xunit.runner.visualstudio.props'))" />
-    <Error Condition="!Exists('..\Canvas\packages\Isas.FileCompression.3.7.3-O00153FixFileCompres\build\net451\Isas.FileCompression.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\Canvas\packages\Isas.FileCompression.3.7.3-O00153FixFileCompres\build\net451\Isas.FileCompression.targets'))" />
+    <Error Condition="!Exists('..\Canvas\packages\Isas.FileCompression.3.7.3.154\build\net451\Isas.FileCompression.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\Canvas\packages\Isas.FileCompression.3.7.3.154\build\net451\Isas.FileCompression.targets'))" />
   </Target>
   <PropertyGroup>
     <PostBuildEvent>
     </PostBuildEvent>
   </PropertyGroup>
-  <Import Project="..\Canvas\packages\Isas.FileCompression.3.7.3-O00153FixFileCompres\build\net451\Isas.FileCompression.targets" Condition="Exists('..\Canvas\packages\Isas.FileCompression.3.7.3-O00153FixFileCompres\build\net451\Isas.FileCompression.targets')" />
+  <Import Project="..\Canvas\packages\Isas.FileCompression.3.7.3.154\build\net451\Isas.FileCompression.targets" Condition="Exists('..\Canvas\packages\Isas.FileCompression.3.7.3.154\build\net451\Isas.FileCompression.targets')" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
   <Target Name="BeforeBuild">

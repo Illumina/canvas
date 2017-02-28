@@ -30,7 +30,7 @@ namespace CanvasPartition
         {
             _negativeBinomials = new List<List<double>>();
             for (int i = 0; i < means.Count; i++)
-                _negativeBinomials.Add(DistibutionUtilities.NegativeBinomialWrapper(means[i], variances[i], maxValue));
+                _negativeBinomials.Add(DistributionUtilities.NegativeBinomialWrapper(means[i], variances[i], maxValue));
             Means = means;
             Variances = variances;
         }
@@ -56,7 +56,7 @@ namespace CanvasPartition
                 var newMeans = CanvasCommon.Utilities.WeightedMean(data.Select(x => x[dimension]).ToList(),
                     gamma.ToList());
                 Means[dimension] = newMeans;
-                NegativeBinomials[dimension] = DistibutionUtilities.NegativeBinomialWrapper(newMeans, variance[dimension], maxValue);
+                NegativeBinomials[dimension] = DistributionUtilities.NegativeBinomialWrapper(newMeans, variance[dimension], maxValue);
             }
         }
                 
@@ -236,7 +236,7 @@ namespace CanvasPartition
                 if (_negativeBinomialDistributions[cnState].Mean().Average() < haploidMeans.Average() * 1.5 ||
                     _negativeBinomialDistributions[cnState].Mean().Average() > haploidMeans.Average() * 1.5)
                 {
-                    currentGenotypePermutation = DistibutionUtilities.GetGenotypeCombinations(nDimensions, cnState);
+                    currentGenotypePermutation = DistributionUtilities.GetGenotypeCombinations(nDimensions, cnState);
                 }
                 GenotypePermutations[cnState] = currentGenotypePermutation;
             }
@@ -318,7 +318,7 @@ namespace CanvasPartition
                 if (_poissonDistributions[cnState].Mean().Average() < haploidMeans.Average() * 1.5 ||
                     _poissonDistributions[cnState].Mean().Average() > haploidMeans.Average() * 1.5)
                 {
-                    currentGenotypePermutation = DistibutionUtilities.GetGenotypeCombinations(nDimensions, cnState);
+                    currentGenotypePermutation = DistributionUtilities.GetGenotypeCombinations(nDimensions, cnState);
                 }
                 GenotypePermutations[cnState] = currentGenotypePermutation;
             }

@@ -2,8 +2,8 @@
 using System.Collections.Generic;
 using System.IO;
 using Illumina.Common.FileSystem;
-using NDesk.Options;
 using Newtonsoft.Json;
+using Illumina.Common;
 
 namespace CanvasSomaticCaller
 {

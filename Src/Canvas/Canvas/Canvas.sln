@@ -34,7 +34,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CanvasTest", "..\CanvasTest
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CanvasSNV", "..\CanvasSNV\CanvasSNV.csproj", "{4DC19472-77F6-4482-B5BE-8D15760F89F7}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CanvasSomaticCaller", "..\CanvasSomaticCaller\CanvasSomaticCaller.csproj", "{A08C4A1E-133E-4339-89E4-54651D37BAF0}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CanvasSomaticCaller.net45", "..\CanvasSomaticCaller\CanvasSomaticCaller.net45\CanvasSomaticCaller.net45.csproj", "{A08C4A1E-133E-4339-89E4-54651D37BAF0}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CanvasSmooth", "..\CanvasSmooth\CanvasSmooth.csproj", "{74169E0F-DB8F-4A86-AEBE-C7DC4E15F916}"
 EndProject
@@ -56,6 +56,8 @@ EndProject
 Project("{8BB2217D-0F2D-49D1-97BC-3654ED321F3B}") = "CanvasCommon", "..\CanvasCommon\CanvasCommon.xproj", "{FEBA6659-C876-4C0A-BDB5-F41B35AB710F}"
 EndProject
 Project("{8BB2217D-0F2D-49D1-97BC-3654ED321F3B}") = "Combinatorics", "..\Combinatorics\Combinatorics.xproj", "{A3F6394B-0943-4409-A9C1-700B8A72F887}"
+EndProject
+Project("{8BB2217D-0F2D-49D1-97BC-3654ED321F3B}") = "CanvasSomaticCaller", "..\CanvasSomaticCaller\CanvasSomaticCaller.xproj", "{35E4F059-D0DE-4F1F-A806-9713B5F6AA93}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -213,6 +215,14 @@ Global
 		{A3F6394B-0943-4409-A9C1-700B8A72F887}.Release|Any CPU.Build.0 = Release|Any CPU
 		{A3F6394B-0943-4409-A9C1-700B8A72F887}.Release|x64.ActiveCfg = Release|Any CPU
 		{A3F6394B-0943-4409-A9C1-700B8A72F887}.Release|x64.Build.0 = Release|Any CPU
+		{35E4F059-D0DE-4F1F-A806-9713B5F6AA93}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{35E4F059-D0DE-4F1F-A806-9713B5F6AA93}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{35E4F059-D0DE-4F1F-A806-9713B5F6AA93}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{35E4F059-D0DE-4F1F-A806-9713B5F6AA93}.Debug|x64.Build.0 = Debug|Any CPU
+		{35E4F059-D0DE-4F1F-A806-9713B5F6AA93}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{35E4F059-D0DE-4F1F-A806-9713B5F6AA93}.Release|Any CPU.Build.0 = Release|Any CPU
+		{35E4F059-D0DE-4F1F-A806-9713B5F6AA93}.Release|x64.ActiveCfg = Release|Any CPU
+		{35E4F059-D0DE-4F1F-A806-9713B5F6AA93}.Release|x64.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

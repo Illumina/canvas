@@ -4,11 +4,11 @@
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProjectGuid>{EC8755F1-74BD-4A1F-9B82-5133D2F6A93B}</ProjectGuid>
-    <OutputType>Library</OutputType>
+    <ProjectGuid>{A08C4A1E-133E-4339-89E4-54651D37BAF0}</ProjectGuid>
+    <OutputType>Exe</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>CanvasCommon</RootNamespace>
-    <AssemblyName>CanvasCommon</AssemblyName>
+    <RootNamespace>CanvasSomaticCaller</RootNamespace>
+    <AssemblyName>CanvasSomaticCaller</AssemblyName>
     <TargetFrameworkVersion>v4.5.1</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <SccProjectName>SAK</SccProjectName>
@@ -16,10 +16,26 @@
     <SccAuxPath>SAK</SccAuxPath>
     <SccProvider>SAK</SccProvider>
     <TargetFrameworkProfile />
+    <PublishUrl>publish\</PublishUrl>
+    <Install>true</Install>
+    <InstallFrom>Disk</InstallFrom>
+    <UpdateEnabled>false</UpdateEnabled>
+    <UpdateMode>Foreground</UpdateMode>
+    <UpdateInterval>7</UpdateInterval>
+    <UpdateIntervalUnits>Days</UpdateIntervalUnits>
+    <UpdatePeriodically>false</UpdatePeriodically>
+    <UpdateRequired>false</UpdateRequired>
+    <MapFileExtensions>true</MapFileExtensions>
+    <ApplicationRevision>0</ApplicationRevision>
+    <ApplicationVersion>1.0.0.%2a</ApplicationVersion>
+    <IsWebBootstrapper>false</IsWebBootstrapper>
+    <UseApplicationTrust>false</UseApplicationTrust>
+    <BootstrapperEnabled>true</BootstrapperEnabled>
     <NuGetPackageImportStamp>
     </NuGetPackageImportStamp>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <PlatformTarget>AnyCPU</PlatformTarget>
     <DebugSymbols>true</DebugSymbols>
     <DebugType>full</DebugType>
     <Optimize>false</Optimize>
@@ -27,43 +43,37 @@
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
-    <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <PlatformTarget>AnyCPU</PlatformTarget>
     <DebugType>pdbonly</DebugType>
     <Optimize>true</Optimize>
     <OutputPath>bin\Release\</OutputPath>
     <DefineConstants>TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
-    <PlatformTarget>AnyCPU</PlatformTarget>
-    <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|x64'">
     <DebugSymbols>true</DebugSymbols>
-    <OutputPath>bin\x64\Debug\</OutputPath>
+    <OutputPath>..\x64\Debug\</OutputPath>
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <DebugType>full</DebugType>
     <PlatformTarget>x64</PlatformTarget>
     <ErrorReport>prompt</ErrorReport>
     <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
-    <Prefer32Bit>false</Prefer32Bit>
+    <Prefer32Bit>true</Prefer32Bit>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|x64'">
-    <OutputPath>bin\x64\Release\</OutputPath>
+    <OutputPath>..\x64\Release\</OutputPath>
     <DefineConstants>TRACE</DefineConstants>
     <Optimize>true</Optimize>
     <DebugType>pdbonly</DebugType>
     <PlatformTarget>x64</PlatformTarget>
     <ErrorReport>prompt</ErrorReport>
     <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
-    <Prefer32Bit>false</Prefer32Bit>
+    <Prefer32Bit>true</Prefer32Bit>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="Combinatorics, Version=1.0.3.0, Culture=neutral, PublicKeyToken=d5738f21cd5d2f66, processorArchitecture=MSIL">
-      <HintPath>..\..\Canvas\packages\Combinatorics.1.0.3.2\lib\net40\Combinatorics.dll</HintPath>
-      <Private>True</Private>
-    </Reference>
     <Reference Include="Illumina.Common, Version=2.0.5.80, Culture=neutral, processorArchitecture=AMD64">
       <HintPath>..\..\Canvas\packages\Illumina.Common.2.0.5.80\lib\net451\Illumina.Common.dll</HintPath>
       <Private>True</Private>
@@ -76,10 +86,6 @@
       <HintPath>..\..\Canvas\packages\Isas.SequencingFiles.3.7.3.154\lib\net451\Isas.SequencingFiles.dll</HintPath>
       <Private>True</Private>
     </Reference>
-    <Reference Include="MathNet.Numerics, Version=3.13.1.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\..\Canvas\packages\MathNet.Numerics.3.13.1\lib\net40\MathNet.Numerics.dll</HintPath>
-      <Private>True</Private>
-    </Reference>
     <Reference Include="Newtonsoft.Json, Version=9.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
       <HintPath>..\..\Canvas\packages\Newtonsoft.Json.9.0.1\lib\net45\Newtonsoft.Json.dll</HintPath>
       <Private>True</Private>
@@ -89,14 +95,8 @@
       <Private>True</Private>
     </Reference>
     <Reference Include="System" />
-    <Reference Include="System.ComponentModel.Composition" />
     <Reference Include="System.Core" />
-    <Reference Include="System.Numerics" />
     <Reference Include="System.Runtime.Serialization" />
-    <Reference Include="System.Threading, Version=1.0.2856.102, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
-      <HintPath>..\..\Canvas\packages\TaskParallelLibrary.1.0.2856.0\lib\Net35\System.Threading.dll</HintPath>
-      <Private>True</Private>
-    </Reference>
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
     <Reference Include="Microsoft.CSharp" />
@@ -104,50 +104,41 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="CanvasSegment.cs" />
-    <Compile Include="CanvasSegmentWriter.cs" />
-    <Compile Include="ClusterInfo.cs" />
-    <Compile Include="CommandLineParsing\CoreOptionTypes\DictionaryOption.cs" />
-    <Compile Include="CommandLineParsing\CoreOptionTypes\DirectoryOption.cs" />
-    <Compile Include="CommandLineParsing\CoreOptionTypes\ExclusiveFileOption.cs" />
-    <Compile Include="CommandLineParsing\CoreOptionTypes\FileOption.cs" />
-    <Compile Include="CommandLineParsing\CoreOptionTypes\FlagOption.cs" />
-    <Compile Include="CommandLineParsing\CoreOptionTypes\MultipleValueOptionInfo.cs" />
-    <Compile Include="CommandLineParsing\CoreOptionTypes\MultiValueOption.cs" />
-    <Compile Include="CommandLineParsing\CoreOptionTypes\Option.cs" />
-    <Compile Include="CommandLineParsing\CoreOptionTypes\OptionInfo.cs" />
-    <Compile Include="CommandLineParsing\CoreOptionTypes\RequiredMultiOptionInfo.cs" />
-    <Compile Include="CommandLineParsing\CoreOptionTypes\RequiredValueOptionInfo.cs" />
-    <Compile Include="CommandLineParsing\CoreOptionTypes\StringOption.cs" />
-    <Compile Include="CommandLineParsing\CoreOptionTypes\ValueOption.cs" />
-    <Compile Include="CommandLineParsing\CoreOptionTypes\ValueOptionInfo.cs" />
-    <Compile Include="CommandLineParsing\OptionProcessing\OptionCollection.cs" />
-    <Compile Include="CommandLineParsing\OptionProcessing\ParsingResult.cs" />
-    <Compile Include="CommandLineParsing\OptionProcessing\ResultCollection.cs" />
-    <Compile Include="CommandLineParsing\OptionProcessing\SuccessfulResultCollection.cs" />
-    <Compile Include="GenomicBinFilter.cs" />
-    <Compile Include="DistributionUtilities.cs" />
-    <Compile Include="QualityScoreParameters.cs" />
-    <Compile Include="CanvasVersionInfo.cs" />
-    <Compile Include="CnvType.cs" />
-    <Compile Include="DensityClustering.cs" />
-    <Compile Include="GaussianMixtureModel.cs" />
-    <Compile Include="GenomicBin.cs" />
-    <Compile Include="IO.cs" />
-    <Compile Include="CopyNumberOracle.cs" />
-    <Compile Include="PloidyInfo.cs" />
+    <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="SingleSampleCallset.cs" />
-    <Compile Include="Utilities.cs" />
+    <Compile Include="SomaticCaller.cs" />
+    <Compile Include="SomaticCallerParameters.cs" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="app.config" />
+    <None Include="App.config" />
     <None Include="packages.config" />
-    <None Include="QualityScoreParameters.json">
+    <None Include="SomaticCallerParameters.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
   </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\CanvasCommon\CanvasCommon.net45\CanvasCommon.net45.csproj">
+      <Project>{ec8755f1-74bd-4a1f-9b82-5133d2f6a93b}</Project>
+      <Name>CanvasCommon.net45</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <BootstrapperPackage Include=".NETFramework,Version=v4.5.1">
+      <Visible>False</Visible>
+      <ProductName>Microsoft .NET Framework 4.5.1 %28x86 and x64%29</ProductName>
+      <Install>true</Install>
+    </BootstrapperPackage>
+    <BootstrapperPackage Include="Microsoft.Net.Framework.3.5.SP1">
+      <Visible>False</Visible>
+      <ProductName>.NET Framework 3.5 SP1</ProductName>
+      <Install>false</Install>
+    </BootstrapperPackage>
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <PropertyGroup>
+    <PostBuildEvent>
+    </PostBuildEvent>
+  </PropertyGroup>
   <Import Project="..\..\Canvas\packages\Isas.FileCompression.3.7.3.154\build\net451\Isas.FileCompression.targets" Condition="Exists('..\..\Canvas\packages\Isas.FileCompression.3.7.3.154\build\net451\Isas.FileCompression.targets')" />
   <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
     <PropertyGroup>
