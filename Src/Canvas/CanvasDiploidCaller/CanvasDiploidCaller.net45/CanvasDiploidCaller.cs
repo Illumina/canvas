@@ -131,7 +131,8 @@ namespace CanvasDiploidCaller
             if (debugPath != null)
             {
                 // write Gaussian mixture model to debugPath
-                using (StreamWriter writer = new StreamWriter(debugPath))
+                using (FileStream stream = new FileStream(debugPath, FileMode.Create, FileAccess.Write))
+                using (StreamWriter writer = new StreamWriter(stream))
                 {
                     writer.WriteLine("CN\tMajor Chr #\tMAF\tCoverage\tOmega\tMu0\tMu1\tSigma00\tSigma01\tSigma10\tSigma11");
                     foreach (ModelPoint modelPoint in modelPoints)
@@ -307,7 +308,8 @@ namespace CanvasDiploidCaller
         private void GenerateReportVersusKnownCN()
         {
             string debugPath = Path.Combine(this.TempFolder, "CallsVersusKnownCN.txt");
-            using (StreamWriter writer = new StreamWriter(debugPath))
+            using (FileStream stream = new FileStream(debugPath, FileMode.Create, FileAccess.Write))
+            using (StreamWriter writer = new StreamWriter(stream))
             {
                 writer.Write("#Accurate\tDirectionAccurate\t");
                 writer.Write("Chr\tBegin\tEnd\tTruthSetCN\t");

@@ -6,7 +6,7 @@ namespace CanvasCommon
     public class CanvasVersionInfo
     {
         public const string NameString = "Canvas";
-        public static string VersionString => FileVersionInfo.GetVersionInfo(Assembly.GetExecutingAssembly().Location).ProductVersion;
-        public static string CopyrightString => FileVersionInfo.GetVersionInfo(Assembly.GetExecutingAssembly().Location).LegalCopyright;
+        public static string VersionString => Assembly.GetEntryAssembly().GetCustomAttribute<AssemblyInformationalVersionAttribute>().InformationalVersion;
+        public static string CopyrightString => Assembly.GetEntryAssembly().GetCustomAttribute<AssemblyCopyrightAttribute>().Copyright;
     }
 }

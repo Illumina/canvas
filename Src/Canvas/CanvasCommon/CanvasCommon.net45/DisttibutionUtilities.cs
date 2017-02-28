@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using Combinatorics.Collections;
+//using Combinatorics.Collections;
 using MathNet.Numerics;
 
 namespace CanvasCommon
@@ -23,9 +23,10 @@ namespace CanvasCommon
             var allCombinations = new List<List<int>>(Convert.ToInt32(upperSetBound));
             for (int numberOfDiploidStates = 1; numberOfDiploidStates < numberOfStates; numberOfDiploidStates++)
             {
-                var states = Enumerable.Repeat(currentState, numberOfStates - numberOfDiploidStates)
+                IEnumerable<int> states = Enumerable.Repeat(currentState, numberOfStates - numberOfDiploidStates)
                     .Concat(Enumerable.Repeat(diploidState, numberOfDiploidStates));
-                var permutations = new Permutations<int>(states.ToList(), GenerateOption.WithoutRepetition);
+                //var permutations = new Permutations<int>(states.ToList(), GenerateOption.WithoutRepetition);
+                List<List<int>> permutations = null; // %%%
                 var list = permutations.Select(x => x.ToList()).ToList();
                 allCombinations.AddRange(list);
             }

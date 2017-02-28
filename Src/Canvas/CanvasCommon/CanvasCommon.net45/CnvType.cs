@@ -28,7 +28,7 @@ namespace CanvasCommon
                 case CnvType.ComplexCnv:
                     return "COMPLEXCNV";                   
                 default:
-                    throw new ApplicationException($"Unsupported CNV type: {cnvType}");
+                    throw new Illumina.Common.IlluminaException($"Unsupported CNV type: {cnvType}");
             }
         }
 
@@ -43,7 +43,7 @@ namespace CanvasCommon
                 case CnvType.LossOfHeterozygosity:
                     return "LOH";
                 default:
-                    throw new ApplicationException($"SVTYPE field is unsupported for CNV type: {cnvType}");
+                    throw new Illumina.Common.IlluminaException($"SVTYPE field is unsupported for CNV type: {cnvType}");
             }
         }
 
@@ -59,7 +59,7 @@ namespace CanvasCommon
                 case CnvType.Reference:
                     return ".";
                 default:
-                    throw new ApplicationException($"ALT is unsupported for CNV type: {cnvType}");
+                    throw new Illumina.Common.IlluminaException($"ALT is unsupported for CNV type: {cnvType}");
             }
         }
     }

@@ -49,7 +49,8 @@ namespace CanvasCommon
             bool stripChr = false;
             int count = 0;
             this.KnownCN = new Dictionary<string, List<CNInterval>>();
-            using (StreamReader reader = new StreamReader(oracleBedPath))
+            using (FileStream stream = new FileStream(oracleBedPath, FileMode.Open, FileAccess.Read))
+            using (StreamReader reader = new StreamReader(stream))
             {
                 while (true)
                 {

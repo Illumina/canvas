@@ -1720,7 +1720,7 @@ namespace CanvasSomaticCaller
                         }
                         break;
                     default:
-                        throw new ApplicationException("Unsupported CanvasSomatic clustering mode: " + clusteringMode.ToString());
+                        throw new Illumina.Common.IlluminaException("Unsupported CanvasSomatic clustering mode: " + clusteringMode.ToString());
                 }
             }
 

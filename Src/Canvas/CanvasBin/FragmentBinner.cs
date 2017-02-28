@@ -28,11 +28,11 @@ namespace CanvasBin
         {
             if (parameters.predefinedBinsFile == null)
             {
-                throw new ApplicationException("Predefined bins in BED is required for fragment binning.");
+                throw new Illumina.Common.IlluminaException("Predefined bins in BED is required for fragment binning.");
             }
             if (!parameters.isPairedEnd) // Janus-SRS-189
             {
-                throw new ApplicationException("Paired-end reads are required for fragment binning.");
+                throw new Illumina.Common.IlluminaException("Paired-end reads are required for fragment binning.");
             }
 
             Dictionary<string, List<SampleGenomicBin>> predefinedBins = Utilities.LoadBedFile(parameters.predefinedBinsFile, gcIndex: 3);
@@ -40,7 +40,7 @@ namespace CanvasBin
 
             if (!Utilities.IsSubset(predefinedBins.Keys, chromosomes))
             {
-                throw new ApplicationException(
+                throw new Illumina.Common.IlluminaException(
                     String.Format("Not all chromosomes in {0} are found in {1}.", parameters.predefinedBinsFile, parameters.bamFile));
             }
 
@@ -64,7 +64,7 @@ namespace CanvasBin
             long usableFragmentCount = tasks.Select(t => t.UsableFragmentCount).Sum();
             if (usableFragmentCount == 0)
             {
-                throw new ApplicationException(String.Format("No passing-filter fragments overlapping bins are found in {0}", parameters.bamFile));
+                throw new Illumina.Common.IlluminaException(String.Format("No passing-filter fragments overlapping bins are found in {0}", parameters.bamFile));
             }
 
             // Aggregate bins
@@ -199,7 +199,7 @@ namespace CanvasBin
                     desiredRefIndex = reader.GetReferenceIndex(Chromosome);
                     if (desiredRefIndex == -1)
                     {
-                        throw new ApplicationException(
+                        throw new Illumina.Common.IlluminaException(
                             string.Format("Unable to retrieve the reference sequence index for {0} in {1}.", Chromosome, Bam.BamFile.FullName));
                     }
                     bool result = reader.Jump(desiredRefIndex, 0);
@@ -228,7 +228,7 @@ namespace CanvasBin
 
                         if (alignment.Position < prevPosition) // Make sure the BAM is properly sorted
                         {
-                            throw new ApplicationException(
+                            throw new Illumina.Common.IlluminaException(
                                 string.Format("The alignment on {0} are not properly sorted in {1}: {2}", Chromosome, Bam.BamFile.FullName, alignment.Name));
                         }
                         prevPosition = alignment.Position;
@@ -241,7 +241,7 @@ namespace CanvasBin
                 }
                 if (pairedAlignmentCount == 0)
                 {
-                    throw new ApplicationException(string.Format("No paired alignments found for {0} in {1}", Chromosome, Bam.BamFile.FullName));
+                    throw new Illumina.Common.IlluminaException(string.Format("No paired alignments found for {0} in {1}", Chromosome, Bam.BamFile.FullName));
                 }
             }
 

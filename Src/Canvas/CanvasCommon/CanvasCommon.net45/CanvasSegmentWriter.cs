@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using Isas.SequencingFiles;
-using MathNet.Numerics.Statistics;
+//using MathNet.Numerics.Statistics;
 
 namespace CanvasCommon
 {
@@ -220,15 +220,29 @@ namespace CanvasCommon
             }
         }
         public static void WriteMultiSampleSegments(string outVcfPath, List<List<CanvasSegment>> segments, List<double?> diploidCoverage,
-        string wholeGenomeFastaDirectory, List<string> sampleNames,
-        List<string> extraHeaders, PloidyInfo ploidy, int qualityThreshold, int? denovoQualityThreshold = null)
+            string wholeGenomeFastaDirectory, List<string> sampleNames,
+            List<string> extraHeaders, PloidyInfo ploidy, int qualityThreshold, int? denovoQualityThreshold = null)
         {
             using (BgzipOrStreamWriter writer = new BgzipOrStreamWriter(outVcfPath))
             {
-                var genome = WriteVcfHeader(segments.First(), diploidCoverage.Mean(), wholeGenomeFastaDirectory, sampleNames,
+                var genome = WriteVcfHeader(segments.First(), GetMean(diploidCoverage), wholeGenomeFastaDirectory, sampleNames,
                     extraHeaders, qualityThreshold, writer, denovoQualityThreshold);
                 WriteVariants(segments, ploidy, genome, writer, denovoQualityThreshold);
             }
         }
+
+        private static double GetMean(IEnumerable<double?> values)
+        {
+            double result = 0;
+            int count = 0;
+            foreach (double? value in values)
+            {
+                if (value == null) continue;
+                result += (double)value;
+                count++;
+            }
+            return result / count;
+        }
+
     }
 }

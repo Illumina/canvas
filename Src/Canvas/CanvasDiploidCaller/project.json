@@ -5,6 +5,7 @@
   },
 
   "dependencies": {
+    "CanvasCommon": "1.0.0-*",
     "Isas.Framework": "5.0.3.70",
     "Isas.SequencingFiles": "3.7.3.152",
     "Microsoft.NETCore.App": {

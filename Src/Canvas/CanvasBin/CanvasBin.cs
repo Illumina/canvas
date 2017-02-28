@@ -233,7 +233,7 @@ namespace CanvasBin
                 desiredRefIndex = reader.GetReferenceIndex(chromosome);
                 if (desiredRefIndex == -1)
                 {
-                    throw new ApplicationException(
+                    throw new Illumina.Common.IlluminaException(
                         string.Format("Unable to retrieve the reference sequence index for {0} in {1}.", chromosome,
                         bamFile));
                 }

@@ -31,7 +31,7 @@ namespace CanvasCommon.CommandLineParsing.CoreOptionTypes
                 }
                 else if (typeof(T) != typeof(string))
                 {
-                    throw new ApplicationException(
+                    throw new Illumina.Common.IlluminaException(
                         $"Unexpected type for value option info: '{typeof(T)}' . Expected {typeof(string)} or {typeof(List<string>)}");
                 }
                 if (_required)

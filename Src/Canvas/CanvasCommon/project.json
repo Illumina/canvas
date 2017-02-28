@@ -4,6 +4,7 @@
   "dependencies": {
     "Isas.Framework": "5.0.3.70",
     "Isas.SequencingFiles": "3.7.3.152",
+    "MathNet.Numerics.Core": "3.17.0",
     "NDesk.Options": "2.0.5-O00077Options",
     "NETStandard.Library": "1.6.0"
   },

@@ -301,7 +301,7 @@ namespace CanvasCommon
             string filePath, string referenceFolder)
         {
             if (segments.Any() && !normalDiploidCoverage.HasValue)
-                throw new ApplicationException("normal diploid coverage must be specified");
+                throw new Illumina.Common.IlluminaException("normal diploid coverage must be specified");
             int pointLength = 100000;
             int minimumBinsToPlot = GetMinimumBinsForCoveragePlotPoint(segments, pointLength);
 
@@ -312,7 +312,8 @@ namespace CanvasCommon
             List<float> counts = new List<float>();
             List<float> MAF = new List<float>();
             List<float> VF = new List<float>();
-            using (StreamWriter writer = new StreamWriter(filePath))
+            using (FileStream stream = new FileStream(filePath, FileMode.Create, FileAccess.Write))
+            using (StreamWriter writer = new StreamWriter(stream))
             {
                 writer.NewLine = "\n";
                 writer.Write("#Chromosome\tStart\tEnd\tCopyNumber\tMajorChromosomeCount\tMedianHits\tNormalizedCoverage\tMedianMinorAlleleFrequency\tReferencePloidy\t");

@@ -77,7 +77,7 @@ namespace CanvasNormalize
                 .SkipWhile(sameBin => sameBin).TakeWhile(sameBin => !sameBin).Any();
 
             if (mismatch)
-                throw new ApplicationException("Bins must be in the same order as those in the model file.");
+                throw new Illumina.Common.IlluminaException("Bins must be in the same order as those in the model file.");
         }
 
         class PCAModel
@@ -134,7 +134,7 @@ namespace CanvasNormalize
                 }
 
                 if (!AreOrthogonal(axes))
-                    throw new ApplicationException(String.Format("Axes are not orthogonal to each other in {0}.",
+                    throw new Illumina.Common.IlluminaException(String.Format("Axes are not orthogonal to each other in {0}.",
                         modelFile.FullName));
             }
 

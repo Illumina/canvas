@@ -662,7 +662,7 @@ namespace CanvasCommon
         {
             if (v1.Length != v2.Length)
             {
-                throw new ApplicationException("Vectors must be of the same dimension to calculate dot product.");
+                throw new Illumina.Common.IlluminaException("Vectors must be of the same dimension to calculate dot product.");
             }
 
             double dotProduct = 0;
@@ -693,7 +693,7 @@ namespace CanvasCommon
         {
             if (v.Length != axis.Length)
             {
-                throw new ApplicationException("Vector and the axis must be of the same dimension.");
+                throw new Illumina.Common.IlluminaException("Vector and the axis must be of the same dimension.");
             }
 
             double size = DotProduct(v, axis); // size of the projected vector
@@ -716,12 +716,12 @@ namespace CanvasCommon
         {
             if (axes == null || !axes.Any())
             {
-                throw new ApplicationException("No axes to project onto.");
+                throw new Illumina.Common.IlluminaException("No axes to project onto.");
             }
 
             if (axes.Any(axis => axis.Length != v.Length))
             {
-                throw new ApplicationException("Vector and the axes must be of the same dimension.");
+                throw new Illumina.Common.IlluminaException("Vector and the axes must be of the same dimension.");
             }
 
             double[] projected = Project(v, axes.First());
@@ -787,7 +787,8 @@ namespace CanvasCommon
         {
             Dictionary<string, List<SampleGenomicBin>> excludedIntervals = new Dictionary<string, List<SampleGenomicBin>>();
             int count = 0;
-            using (StreamReader reader = new StreamReader(bedPath))
+            using (FileStream stream = new FileStream(bedPath, FileMode.Open, FileAccess.Read))
+            using (StreamReader reader = new StreamReader(stream))
             {
                 while (true)
                 {
@@ -802,11 +803,11 @@ namespace CanvasCommon
                     interval.Stop = int.Parse(bits[2]);
                     if (interval.Start < 0)
                     {
-                        throw new ApplicationException(String.Format("Start must be non-negative in a BED file: {0}", fileLine));
+                        throw new Illumina.Common.IlluminaException(String.Format("Start must be non-negative in a BED file: {0}", fileLine));
                     }
                     if (interval.Start >= interval.Stop) // Do not allow empty intervals
                     {
-                        throw new ApplicationException(String.Format("Start must be less than Stop in a BED file: {0}", fileLine));
+                        throw new Illumina.Common.IlluminaException(String.Format("Start must be less than Stop in a BED file: {0}", fileLine));
                     }
                     if (gcIndex.HasValue && gcIndex.Value < bits.Length)
                     {
@@ -899,11 +900,11 @@ namespace CanvasCommon
                         continue;
                     if (binStartPosition < 0)
                     {
-                        throw new ApplicationException($"Start must be non-negative");
+                        throw new Illumina.Common.IlluminaException($"Start must be non-negative");
                     }
                     if (binStartPosition >= stop[chr][binStartPosition]) // Do not allow empty intervals
                     {
-                        throw new ApplicationException($"Start must be less than Stop");
+                        throw new Illumina.Common.IlluminaException($"Start must be less than Stop");
                     }
                     GenomicBin interval = new GenomicBin(chr, new GenomicInterval(binStartPosition, stop[chr][binStartPosition]));
                     multiSampleGenomicBins[chr].Add(new MultiSampleGenomicBin(interval, binCounts[chr][binStartPosition]));
@@ -949,7 +950,8 @@ namespace CanvasCommon
         static public void PruneFrequencies(List<CanvasSegment> segments, string tempFolder, ref int MinimumVariantFrequenciesForInformativeSegment)
         {
             string debugPath = Path.Combine(tempFolder, "BAFDistributionPerSegment.txt");
-            using (StreamWriter writer = new StreamWriter(debugPath))
+            using (FileStream stream = new FileStream(debugPath, FileMode.Create, FileAccess.Write))
+            using (StreamWriter writer = new StreamWriter(stream))
             {
                 foreach (CanvasSegment segment in segments)
                 {

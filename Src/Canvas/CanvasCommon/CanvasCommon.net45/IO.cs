@@ -80,7 +80,8 @@ namespace CanvasCommon
         // write localSD metric
         public static void WriteLocalSDToTextFile(string outfile, double localSD) 
         {
-            using (StreamWriter writer = new StreamWriter(outfile))
+            using (FileStream stream = new FileStream(outfile, FileMode.Create, FileAccess.Write))
+            using (StreamWriter writer = new StreamWriter(stream))
             {
                 writer.Write("#localSD\t" + localSD);
                 writer.WriteLine();
@@ -91,7 +92,8 @@ namespace CanvasCommon
         public static double ReadLocalSDFromTextFile(string infile)
         {
             double localSDmetric = -1.0;
-            using (StreamReader reader = new StreamReader(infile))
+            using (FileStream stream = new FileStream(infile, FileMode.Open, FileAccess.Read))
+            using (StreamReader reader = new StreamReader(stream))
             {
                 string row;
 

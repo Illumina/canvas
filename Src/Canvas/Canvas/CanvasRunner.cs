@@ -815,11 +815,11 @@ namespace Canvas
             string canvasBedPath = callset.AnalysisDetails.FilterBed.FullName;
             if (!File.Exists(canvasReferencePath))
             {
-                throw new ApplicationException(string.Format("Error: Missing reference fasta file required for CNV calling at '{0}'", canvasReferencePath));
+                throw new Illumina.Common.IlluminaException(string.Format("Error: Missing reference fasta file required for CNV calling at '{0}'", canvasReferencePath));
             }
             if (!File.Exists(canvasBedPath))
             {
-                throw new ApplicationException(string.Format("Error: Missing filter bed file required for CNV calling at '{0}'", canvasBedPath));
+                throw new Illumina.Common.IlluminaException(string.Format("Error: Missing filter bed file required for CNV calling at '{0}'", canvasBedPath));
             }
 
             // CanvasSNV
@@ -875,12 +875,12 @@ namespace Canvas
                 commonCnvsBed = callset.AnalysisDetails.CommonCnvsBed.FullName;
             if (!File.Exists(canvasReferencePath))
             {
-                throw new ApplicationException(
+                throw new Illumina.Common.IlluminaException(
                     $"Error: Missing reference fasta file required for CNV calling at '{canvasReferencePath}'");
             }
             if (!File.Exists(canvasBedPath))
             {
-                throw new ApplicationException(
+                throw new Illumina.Common.IlluminaException(
                     $"Error: Missing filter bed file required for CNV calling at '{canvasBedPath}'");
             }
 
@@ -888,7 +888,7 @@ namespace Canvas
             var numProbands = callset.PedigreeSample.Where(x => x.SampleType == SampleType.Proband).ToList().Count;
             if (numProbands > 2)
             {
-                throw new ApplicationException(
+                throw new Illumina.Common.IlluminaException(
                     $"Error: Cannot run Canvas with more than two probands");
             }
 
