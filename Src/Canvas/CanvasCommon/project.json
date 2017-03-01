@@ -11,7 +11,7 @@
   "dependencies": {
     "Combinatorics": "1.0.0-*",
     "Illumina.Common": "2.0.5.80",
-    "Isas.Framework": "5.0.3.70",
+    "Isas.Framework": "5.0.3.73",
     "Isas.SequencingFiles": "3.7.3.154",
     "MathNet.Numerics.Core": "3.17.0",
     "NDesk.Options": "2.0.5-O00077Options",

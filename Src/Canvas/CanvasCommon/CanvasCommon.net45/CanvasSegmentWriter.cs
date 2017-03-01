@@ -186,9 +186,7 @@ namespace CanvasCommon
                 : segment.Begin + 1;
             writer.Write($"{segment.Chr}\t{position}\tCanvas:{cnvType.ToVcfId()}:{segment.Chr}:{segment.Begin + 1}-{segment.End}\t");
             string qScore = "";
-            qScore = isMultisample ? "." : string.Format("${ segment.QScore, F2}");
-
-            //writer.Write($"N\t{alternateAllele}\t{qScore}\t{segment.Filter}\t", alternateAllele, segment.QScore, segment.Filter);
+            qScore = isMultisample ? "." : $"{segment.QScore:F2}";
             writer.Write($"N\t{alternateAllele}\t{qScore}\t{segment.Filter}\t");
             if (cnvType != CnvType.Reference)
                 writer.Write($"SVTYPE={cnvType.ToSvType()};");
