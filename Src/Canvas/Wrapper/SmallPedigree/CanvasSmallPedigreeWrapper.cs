@@ -45,10 +45,13 @@ namespace Canvas.Wrapper.SmallPedigree
         public StringBuilder GetMultiSampleCommandLine(SampleSet<CanvasPedigreeSample> samples, GenomeMetadata genomeMetadata, Vcf vcf, IDirectoryLocation sampleSandbox)
         {
             StringBuilder commandLine = new StringBuilder();
-            foreach (var sample in samples)
+            foreach (var sampleKvp in samples)
             {
-                commandLine.Append($" --bam {sample.Value.Bam.BamFile.WrapWithShellQuote()}");
-                commandLine.Append($" --{sample.Value.SampleType.ToString().WrapWithShellQuote()} {sample.Key.Id}");
+                var sampleId = sampleKvp.Key.Id;
+                var sample = sampleKvp.Value;
+                commandLine.Append($" --bam {sample.Bam.BamFile.WrapWithShellQuote()}");
+                if (sample.SampleType != SampleType.Other)
+                    commandLine.Append($" --{sample.SampleType.GetOptionName()} {sampleId}");
             }
             IFileLocation kmerFasta = _annotationFileProvider.GetKmerFasta(genomeMetadata);
             commandLine.Append($" --reference {kmerFasta.WrapWithShellQuote()}");
