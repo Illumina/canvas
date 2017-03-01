@@ -109,7 +109,7 @@ namespace CanvasCommon
                     if (!firstSampleSegment.Chr.Equals(chromosome.Name, StringComparison.OrdinalIgnoreCase))
                         continue;
                     var referenceCopyNumbers = segments.Select(segment => ploidy?.GetReferenceCopyNumber(segment[segmentIndex]) ?? 2).ToList();
-                    var currentSegments = segments.Select(x=>x[segmentIndex]).ToList();
+                    var currentSegments = segments.Select(x => x[segmentIndex]).ToList();
                     var cnvTypes = new List<CnvType>();
                     for (int sampleIndex = 0; sampleIndex < nSamples; sampleIndex++)
                     {
@@ -126,8 +126,8 @@ namespace CanvasCommon
                         cnvType = CnvType.LossOfHeterozygosity;
                     else
                         cnvType = CnvType.ComplexCnv;
-                            
-                    WriteInfoField(writer, firstSampleSegment , cnvType, denovoQualityThreshold, isMultisample: segments.Count > 1);
+
+                    WriteInfoField(writer, firstSampleSegment, cnvType, denovoQualityThreshold, isMultisample: segments.Count > 1);
                     //  FORMAT field
                     if (segments.Count == 1)
                         WriteSingleSampleInfo(writer, firstSampleSegment);
@@ -144,7 +144,7 @@ namespace CanvasCommon
             {
                 writer.Write(":MCC");
             }
-            writer.Write("\t{1}:{2}:{3}", segment.End, Math.Round(segment.MeanCount, 0, MidpointRounding.AwayFromZero), 
+            writer.Write("\t{1}:{2}:{3}", segment.End, Math.Round(segment.MeanCount, 0, MidpointRounding.AwayFromZero),
                 segment.BinCount, segment.CopyNumber);
             if (segment.MajorChromosomeCount.HasValue)
             {
@@ -177,7 +177,6 @@ namespace CanvasCommon
         /// <returns></returns>
         private static void WriteInfoField(BgzipOrStreamWriter writer, CanvasSegment segment, CnvType cnvType, int? denovoQualityThreshold, bool isMultisample)
         {
-
             // From vcf 4.1 spec:
             //     If any of the ALT alleles is a symbolic allele (an angle-bracketed ID String “<ID>”) then the padding base is required and POS denotes the 
             //     coordinate of the base preceding the polymorphism.
@@ -185,12 +184,12 @@ namespace CanvasCommon
             int position = (alternateAllele.StartsWith("<") && alternateAllele.EndsWith(">"))
                 ? segment.Begin
                 : segment.Begin + 1;
-
             writer.Write($"{segment.Chr}\t{position}\tCanvas:{cnvType.ToVcfId()}:{segment.Chr}:{segment.Begin + 1}-{segment.End}\t");
             string qScore = "";
-            qScore = isMultisample ? "." : "${ segment.QScore, F2}";
-            writer.Write($"N\t{alternateAllele}\t{qScore}\t{segment.Filter}\t", alternateAllele, segment.QScore, segment.Filter);
+            qScore = isMultisample ? "." : string.Format("${ segment.QScore, F2}");
 
+            //writer.Write($"N\t{alternateAllele}\t{qScore}\t{segment.Filter}\t", alternateAllele, segment.QScore, segment.Filter);
+            writer.Write($"N\t{alternateAllele}\t{qScore}\t{segment.Filter}\t");
             if (cnvType != CnvType.Reference)
                 writer.Write($"SVTYPE={cnvType.ToSvType()};");
 
@@ -199,7 +198,6 @@ namespace CanvasCommon
 
             if (denovoQualityThreshold.HasValue & segment.DQScore.HasValue & segment.DQScore >= denovoQualityThreshold)
                 writer.Write($"dq{denovoQualityThreshold};");
-
             writer.Write($"END={segment.End}");
 
             if (cnvType != CnvType.Reference)
@@ -207,7 +205,6 @@ namespace CanvasCommon
 
             if (segment.StartConfidenceInterval != null)
                 writer.Write($";CIPOS={segment.StartConfidenceInterval.Item1},{segment.StartConfidenceInterval.Item2}");
-
             if (segment.EndConfidenceInterval != null)
                 writer.Write($";CIEND={segment.EndConfidenceInterval.Item1},{segment.EndConfidenceInterval.Item2}");
         }
@@ -219,9 +216,9 @@ namespace CanvasCommon
         {
             using (BgzipOrStreamWriter writer = new BgzipOrStreamWriter(outVcfPath))
             {
-                var genome = WriteVcfHeader(segments, diploidCoverage, wholeGenomeFastaDirectory, new List<string> {sampleName},
+                var genome = WriteVcfHeader(segments, diploidCoverage, wholeGenomeFastaDirectory, new List<string> { sampleName },
                     extraHeaders, qualityThreshold, writer, denovoQualityThreshold);
-                WriteVariants(new List<List<CanvasSegment>> {segments.ToList()}, ploidy, genome, writer, denovoQualityThreshold);
+                WriteVariants(new List<List<CanvasSegment>> { segments.ToList() }, ploidy, genome, writer, denovoQualityThreshold);
             }
         }
         public static void WriteMultiSampleSegments(string outVcfPath, List<List<CanvasSegment>> segments, List<double?> diploidCoverage,
