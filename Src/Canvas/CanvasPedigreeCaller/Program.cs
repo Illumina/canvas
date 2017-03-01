@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using NDesk.Options;
 using Newtonsoft.Json;
 using System.Linq;
 using Illumina.Common;

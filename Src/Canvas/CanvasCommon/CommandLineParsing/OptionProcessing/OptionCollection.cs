@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using CanvasCommon.CommandLineParsing.CoreOptionTypes;
-using NDesk.Options;
+using Illumina.Common;
 
 namespace CanvasCommon.CommandLineParsing.OptionProcessing
 {
