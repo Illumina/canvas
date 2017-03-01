@@ -3,7 +3,7 @@ using CanvasCommon.CommandLineParsing.OptionProcessing;
 
 namespace Canvas.CommandLineParsing
 {
-    public class SmallPedigreeModeParser : ModeParser
+    internal class SmallPedigreeModeParser : ModeParser
     {
         private static readonly CommonOptionsParser CommonOptionsParser = new CommonOptionsParser();
         private static readonly SmallPedigreeOptionsParser SmallPedigreeOptionsParser = new SmallPedigreeOptionsParser();

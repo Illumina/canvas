@@ -35,12 +35,13 @@ namespace Canvas.CommandLineParsing
 
     internal class SomaticEnrichmentOptionsParser : Option<SomaticEnrichmentOptions>
     {
+        public static string ControlPloidyBedOptionName = $"control-{SingleSampleCommonOptionsParser.PloidyBedOptionName}";
         private static readonly FileOption Bam = FileOption.CreateRequired("tumor sample .bam file", "b", "bam");
         private static readonly FileOption Manifest = FileOption.CreateRequired("Nextera manifest file", "manifest");
         private static readonly MultiValueOption<IFileLocation> ControlBams = new MultiValueOption<IFileLocation>(FileOption.Create("Bam file of an unmatched control sample", "control-bam"));
         private static readonly FileOption ControlBinned = FileOption.Create("Canvas .binned file containing precomputed control bin data to use for normalization", "control-binned");
         private static readonly ValueOption<uint?> ControlBinSize = ValueOption<uint?>.Create("bin size for control .binned file", "control-bin-size");
-        private static readonly FileOption ControlPloidyBed = FileOption.Create(".bed file containing regions of known ploidy for the control .binned file", "control-ploidy-bed");
+        private static readonly FileOption ControlPloidyBed = FileOption.Create(".bed file containing regions of known ploidy for the control .binned file", ControlPloidyBedOptionName);
 
         public override OptionCollection<SomaticEnrichmentOptions> GetOptions()
         {

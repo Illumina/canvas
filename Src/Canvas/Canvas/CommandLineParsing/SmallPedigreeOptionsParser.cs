@@ -13,10 +13,11 @@ namespace Canvas.CommandLineParsing
         public const string ProbandOptionName = "proband";
         public const string MotherOptionName = "mother";
         public const string FatherOptionName = "father";
+        public const string PloidyVcfOptionName = "ploidy-vcf";
         private static readonly MultiValueOption<IFileLocation> Bams = new MultiValueOption<IFileLocation>(GermlineWgsModeParser.Bam);
-        private static readonly FileOption PloidyVcf = FileOption.Create("multisample .vcf file containing regions of known ploidy. Copy number calls matching the known ploidy in these regions will be considered non-variant", "ploidy-bed");
+        private static readonly FileOption PloidyVcf = FileOption.Create("multisample .vcf file containing regions of known ploidy. Copy number calls matching the known ploidy in these regions will be considered non-variant", PloidyVcfOptionName);
         private static readonly FileOption PopulationBAlleleSites = SingleSampleCommonOptionsParser.PopulationBAlleleSites;
-        private static readonly FileOption SampleBAlleleSites = FileOption.CreateRequired("multisample .vcf file containing SNV b-allele sites (only sites with PASS in the filter column will be used)", "b-allele-vcf");
+        private static readonly FileOption SampleBAlleleSites = FileOption.CreateRequired("multisample .vcf file containing SNV b-allele sites (only sites with PASS in the filter column will be used)", SingleSampleCommonOptionsParser.SampleBAlleleVcfOptionName);
         private static readonly FileOption CommonCnvsBed = FileOption.Create(".bed file containing regions of known common CNVs", "common-cnvs-bed");
         private static readonly MultiValueOption<string> Proband = new MultiValueOption<string>(StringOption.Create("Proband sample name", ProbandOptionName));
         private static readonly StringOption Mother = StringOption.Create("Mother sample name", MotherOptionName);
