@@ -123,8 +123,13 @@
   <ItemGroup>
     <Compile Include="CanvasCallset.cs" />
     <Compile Include="CanvasRunner.cs" />
+    <Compile Include="CommandLineParsing\SampleType.cs" />
+    <Compile Include="CommandLineParsing\SampleTypeExtensions.cs" />
     <Compile Include="CommandLineParsing\SingleSampleCommonOptionsParser.cs" />
     <Compile Include="CommandLineParsing\SmallPedigreeModeParser.cs" />
+    <Compile Include="CommandLineParsing\SmallPedigreeOptions.cs" />
+    <Compile Include="CommandLineParsing\SmallPedigreeOptionsParser.cs" />
+    <Compile Include="CommandLineParsing\SmallPedigreeSampleOptions.cs" />
     <Compile Include="CommandLineParsing\TumorNormalEnrichmentModeParser.cs" />
     <Compile Include="CommandLineParsing\TumorNormalWgsModeParser.cs" />
     <Compile Include="SmallPedigree\SmallPedigreeCallset.cs" />
