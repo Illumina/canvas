@@ -36,7 +36,11 @@ namespace CanvasPedigreeCaller
             string referenceFolder = null;
             var sampleNames = new List<string>();
             bool needHelp = false;
-            string qualityScoreConfigPath = Path.Combine(Utilities.GetAssemblyFolder(typeof(Program)), "QualityScoreParameters.json");
+            int? qScoreThreshold = null;
+            int? dqScoreThreshold = null;
+            string parameterconfigPath = Path.Combine(Utilities.GetAssemblyFolder(typeof(Program)), "PedigreeCallerParameters.json");
+
+            var caller = new CanvasPedigreeCaller();
 
             var p = new OptionSet()
             {
@@ -48,7 +52,9 @@ namespace CanvasPedigreeCaller
                 { "f|pedigree=",      "relationship withoin pedigree (parents/proband)",                                                v => pedigreeFile = v },
                 { "p|ploidyBed=",     "bed file specifying reference ploidy (e.g. for sex chromosomes) (optional)",                     v => ploidyBedPath = v },
                 { "h|help",           "show this message and exit",                                                                     v => needHelp = v != null },
-                { "s|qscoreconfig=", $"parameter configuration path (default {qualityScoreConfigPath})",                                v => qualityScoreConfigPath = v },
+                { "q|qscore=",        $"quality filter threshold (default {caller.QualityFilterThreshold})",                            v => qScoreThreshold = int.Parse(v) },
+                { "d|dqscore=",       $"de novo quality filter threshold (default {caller.DeNovoQualityFilterThreshold})",              v => dqScoreThreshold = int.Parse(v) },
+                { "c|config=",        $"parameter configuration path (default {parameterconfigPath})", v => parameterconfigPath = v}
             };
 
             var extraArgs = p.Parse(args);
@@ -70,8 +76,7 @@ namespace CanvasPedigreeCaller
                 ShowHelp(p);
                 return 0;
             }
-
-
+            
             foreach (string segmentFile in segmentFiles)
             {
                 if (File.Exists(segmentFile)) continue;
@@ -85,29 +90,48 @@ namespace CanvasPedigreeCaller
                 Console.WriteLine($"CanvasPedigreeCaller.exe: File {variantFrequencyFile} does not exist! Exiting.");
                 return 1;
             }
-
-
+            
             if (!File.Exists(Path.Combine(referenceFolder, "GenomeSize.xml")))
             {
                 Console.WriteLine($"CanvasPedigreeCaller.exe: File {Path.Combine(referenceFolder, "GenomeSize.xml")} does not exist! Exiting.");
                 return 1;
             }
-
-            // Set parameters:
-            // caller.germlineScoreParameters = qscoreParametersJSON;
-            // FileLocation qscoreConfigFile = new FileLocation(qualityScoreConfigPath);
-
-            var caller = new CanvasPedigreeCaller();
+            
             if (pedigreeFile.IsNullOrEmpty())
             {
                 Console.WriteLine($"CanvasPedigreeCaller.exe: pedigreeFile option is not used! Calling CNV variants without family information.");
                 return caller.CallVariants(variantFrequencyFiles, segmentFiles, outDir, ploidyBedPath, referenceFolder, sampleNames);
             }
+
+            if (qScoreThreshold.HasValue & qScoreThreshold > 0 & qScoreThreshold < 60)
+            {
+                caller.QualityFilterThreshold = qScoreThreshold.Value;
+                Console.WriteLine($"CanvasPedigreeCaller.exe: Using user-supplied quality score threshold {qScoreThreshold}.");
+            }
+
+
+            if (dqScoreThreshold.HasValue & dqScoreThreshold > 0 & dqScoreThreshold < 60)
+            {
+                caller.DeNovoQualityFilterThreshold = dqScoreThreshold.Value;
+                Console.WriteLine($"CanvasPedigreeCaller.exe: Using user-supplied de novo quality score threshold {qScoreThreshold}.");
+            }
+
+            if (!File.Exists(parameterconfigPath))
+            {
+                Console.WriteLine($"CanvasPedigreeCaller.exe: File {parameterconfigPath} does not exist! Exiting.");
+                return 1;
+            }
+
             if (!File.Exists(pedigreeFile))
             {
                 Console.WriteLine($"CanvasPedigreeCaller.exe: File {pedigreeFile} does not exist! Exiting.");
                 return 1;
             }
+
+            var parameterconfigFile = new FileLocation(parameterconfigPath);
+            caller.CallerParameters = Deserialize<PedigreeCallerParameters>(parameterconfigFile);
+
+
             return caller.CallVariantsInPedigree(variantFrequencyFiles, segmentFiles, outDir, ploidyBedPath, referenceFolder, sampleNames, pedigreeFile);
         }
 
