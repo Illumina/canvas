@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using Illumina.Common;
 using Illumina.Common.FileSystem;
-using NDesk.Options;
 
 namespace CanvasSmooth
 {
