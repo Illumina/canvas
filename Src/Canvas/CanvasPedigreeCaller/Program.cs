@@ -36,7 +36,6 @@ namespace CanvasPedigreeCaller
             string referenceFolder = null;
             var sampleNames = new List<string>();
             bool needHelp = false;
-            string truthDataPath = null;
             int? qScoreThreshold = null;
             int? dqScoreThreshold = null;
             string parameterconfigPath = Path.Combine(Utilities.GetAssemblyFolder(typeof(Program)), "PedigreeCallerParameters.json");
@@ -55,7 +54,6 @@ namespace CanvasPedigreeCaller
                 { "h|help",           "show this message and exit",                                                                     v => needHelp = v != null },
                 { "q|qscore=",        $"quality filter threshold (default {caller.QualityFilterThreshold})",                            v => qScoreThreshold = int.Parse(v) },
                 { "d|dqscore=",       $"de novo quality filter threshold (default {caller.DeNovoQualityFilterThreshold})",              v => dqScoreThreshold = int.Parse(v) },
-                { "t|truth=",         "path to vcf/bed with CNV truth data (optional)", v => truthDataPath = v},
                 { "c|config=",        $"parameter configuration path (default {parameterconfigPath})", v => parameterconfigPath = v}
             };
 
@@ -116,15 +114,6 @@ namespace CanvasPedigreeCaller
             {
                 caller.DeNovoQualityFilterThreshold = dqScoreThreshold.Value;
                 Console.WriteLine($"CanvasPedigreeCaller.exe: Using user-supplied de novo quality score threshold {qScoreThreshold}.");
-            }
-
-            if (!truthDataPath.IsNullOrEmpty())
-            {
-                if (!File.Exists(truthDataPath))
-                {
-                    Console.WriteLine($"CanvasPedigreeCaller.exe: File {truthDataPath} does not exist! Exiting.");
-                    return 1;
-                }
             }
 
             if (!File.Exists(parameterconfigPath))
