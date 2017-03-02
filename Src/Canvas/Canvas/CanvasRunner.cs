@@ -238,7 +238,7 @@ namespace Canvas
             }
 
             // derive Canvas bins
-            var bamToBinned = BamToBinned(callset.SingleSampleCallset.TempFolder, callset.SingleSampleCallset.Bam.IsPairedEnd, new List<string>() { callset.SingleSampleCallset.SampleName }, canvasReferencePath, canvasBedPath, bamPaths, commandLine, canvasBinPath, binSize, intermediateDataPathsByBamPath, executablePath);
+            var bamToBinned = BamToBinned(callset.SingleSampleCallset.SampleOutputFolder.FullName, callset.SingleSampleCallset.Bam.IsPairedEnd, new List<string>() { callset.SingleSampleCallset.SampleName }, canvasReferencePath, canvasBedPath, bamPaths, commandLine, canvasBinPath, binSize, intermediateDataPathsByBamPath, executablePath);
 
             string tumorBinnedPath = bamToBinned[callset.SingleSampleCallset.Bam.BamFile.FullName]; // binned tumor sample
             string outputPath = tumorBinnedPath;
@@ -452,7 +452,7 @@ namespace Canvas
             for (int bamIndex = 0; bamIndex < bamPaths.Count; bamIndex++)
             {
                 string bamPath = bamPaths[bamIndex];
-                string binnedPath = Path.Combine(callset.SingleSampleCallset.TempFolder, string.Format("{0}_{1}.binned", callset.SingleSampleCallset.SampleName, bamIndex));
+                string binnedPath = Path.Combine(callset.SingleSampleCallset.SampleOutputFolder.FullName, string.Format("{0}_{1}.binned", callset.SingleSampleCallset.SampleName, bamIndex));
                 bamToBinned[bamPath] = binnedPath;
 
                 commandLine.Clear();
@@ -525,7 +525,7 @@ namespace Canvas
         protected string InvokeCanvasNormalize(CanvasCallset callset, string tumorBinnedPath, Dictionary<string, string> bamToBinned,
             string ploidyBedPath)
         {
-            string ratioBinnedPath = Path.Combine(callset.SingleSampleCallset.TempFolder, string.Format("{0}.ratio.binned", callset.SingleSampleCallset.SampleName));
+            string ratioBinnedPath = Path.Combine(callset.SingleSampleCallset.SampleOutputFolder.FullName, string.Format("{0}.ratio.binned", callset.SingleSampleCallset.SampleName));
 
             string canvasNormalizePath = Path.Combine(_canvasFolder, "CanvasNormalize.exe");
             string executablePath = canvasNormalizePath;
@@ -700,7 +700,7 @@ namespace Canvas
                     job.ExecutablePath = _mono.FullName;
                 }
 
-                string outputPath = Path.Combine(callset.SingleSampleCallset.TempFolder, $"{chromosome.Name}-{callset.SingleSampleCallset.SampleName}.SNV.txt.gz");
+                string outputPath = Path.Combine(callset.SingleSampleCallset.SampleOutputFolder.FullName, $"{chromosome.Name}-{callset.SingleSampleCallset.SampleName}.SNV.txt.gz");
                 outputPaths.Add(outputPath);
                 job.CommandLine += $" {chromosome.Name} {normalVcfPath} {bamPath} {outputPath}";
                 if (!sampleName.IsNullOrEmpty())
@@ -810,7 +810,7 @@ namespace Canvas
         /// </summary>
         private async Task CallSampleInternal(CanvasCallset callset)
         {
-            Directory.CreateDirectory(callset.SingleSampleCallset.TempFolder);
+            Directory.CreateDirectory(callset.SingleSampleCallset.SampleOutputFolder.FullName);
             string canvasReferencePath = callset.AnalysisDetails.KmerFasta.FullName;
             string canvasBedPath = callset.AnalysisDetails.FilterBed.FullName;
             if (!File.Exists(canvasReferencePath))
@@ -866,7 +866,7 @@ namespace Canvas
         {
             Directory.CreateDirectory(callset.AnalysisDetails.TempFolder);
             foreach (var pedigreeSample in callset.PedigreeSample)
-                Directory.CreateDirectory(pedigreeSample.Sample.TempFolder);
+                Directory.CreateDirectory(pedigreeSample.Sample.SampleOutputFolder.FullName);
 
             string canvasReferencePath = callset.AnalysisDetails.KmerFasta.FullName;
             string canvasBedPath = callset.AnalysisDetails.FilterBed.FullName;
@@ -903,10 +903,10 @@ namespace Canvas
             var partitionedPaths = _checkpointRunner.RunCheckpoint("CanvasPartition", () => InvokeCanvasPartitionMultisample(callset, canvasCleanOutput, canvasBedPath, commonCnvsBed));
 
             // CanvasSNV
-            var canvasSnvTask = _checkpointRunner.RunCheckpointAsync("CanvasSNV", () => InvokeCanvasSnv(callset));
+            _checkpointRunner.RunCheckpoint("CanvasSNV", () => InvokeCanvasSnv(callset));
 
             // Variant calling
-            await canvasSnvTask;
+            //await canvasSnvTask;
             RunSmallPedigreeCalling(partitionedPaths, callset);
         }
 
@@ -1039,7 +1039,7 @@ namespace Canvas
                 executablePath = _mono.FullName;
             }
             commandLine.AppendFormat("-i \"{0}\" ", binnedPath);
-            var tempFolder = new DirectoryLocation(callset.SingleSampleCallset.TempFolder);
+            var tempFolder = new DirectoryLocation(callset.SingleSampleCallset.SampleOutputFolder.FullName);
             var cleanedPath = tempFolder.GetFileLocation($"{callset.SingleSampleCallset.SampleName}.cleaned");
             commandLine.AppendFormat("-o \"{0}\" ", cleanedPath);
             commandLine.AppendFormat("-g");

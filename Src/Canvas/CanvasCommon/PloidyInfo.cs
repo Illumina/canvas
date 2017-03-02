@@ -15,7 +15,7 @@ namespace CanvasCommon
         public const int UndersegmentedClusterFlag = -2;
         public string HeaderLine;
         public Dictionary<string, List<PloidyInterval>> PloidyByChromosome = new Dictionary<string, List<PloidyInterval>>();
-        
+
         /// <summary>
         /// Make sure the list of ploidy intervals for a particular chromosome in the PloidyByChromosome dictionary 
         /// can be found for either chromosome naming convention (e.g. "chrX" and "X") 
@@ -118,8 +118,12 @@ namespace CanvasCommon
                     PloidyInterval interval = new PloidyInterval(chromosome);
                     interval.Start = record.ReferencePosition;
                     interval.End = int.Parse(record.InfoFields["END"]);
-                    if (record.GenotypeColumns[sampleIndex].ContainsKey("CN"))
-                        interval.Ploidy = int.Parse(record.GenotypeColumns[sampleIndex]["CN"]);
+                    var genotypeColumn = record.GenotypeColumns[sampleIndex];
+                    if (genotypeColumn.ContainsKey("CN"))
+                    {
+                        var value = genotypeColumn["CN"];
+                        interval.Ploidy = value == "." ? 2 : int.Parse(value);
+                    }
                     else
                         throw new ArgumentException($"File '{vcfPath}' must contain one genotype CN column!");
                     ploidy.PloidyByChromosome[chromosome].Add(interval);
