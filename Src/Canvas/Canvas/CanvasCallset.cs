@@ -81,6 +81,6 @@ namespace Canvas
                 NormalBamPaths = normalBamPaths.Select(file => new Bam(file));
         }
         public bool IsEnrichment => Manifest != null;
-        internal string TempManifestPath => Path.Combine(SingleSampleCallset.TempFolder, "manifest.txt");
+        internal string TempManifestPath => Path.Combine(SingleSampleCallset.SampleOutputFolder.FullName, "manifest.txt");
     }
 }

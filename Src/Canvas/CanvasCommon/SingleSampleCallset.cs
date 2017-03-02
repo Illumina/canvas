@@ -6,13 +6,15 @@ namespace CanvasCommon
 {
     public class SingleSampleCallset
     {
-        public SingleSampleCallset(Bam bam, string sampleName, IFileLocation normalVcfPath, bool isDbSnpVcf, IDirectoryLocation outputFolder, IFileLocation outputVcfPath)
+        private readonly IDirectoryLocation _analysisOutputFolder;
+
+        public SingleSampleCallset(Bam bam, string sampleName, IFileLocation normalVcfPath, bool isDbSnpVcf, IDirectoryLocation analysisOutputFolder, IFileLocation outputVcfPath)
         {
+            _analysisOutputFolder = analysisOutputFolder;
             Bam = bam;
             SampleName = sampleName;
             NormalVcfPath = normalVcfPath;
             IsDbSnpVcf = isDbSnpVcf;
-            OutputFolder = outputFolder;
             OutputVcfPath = outputVcfPath;
         }
 
@@ -21,29 +23,27 @@ namespace CanvasCommon
         public Bam Bam { get; }
         public IFileLocation NormalVcfPath { get; }
         public bool IsDbSnpVcf { get; set; }
-        public IDirectoryLocation OutputFolder { get; }
-        private IDirectoryLocation TempDirectory => GetSampleTempFolder(OutputFolder, SampleName);
-        public string TempFolder => TempDirectory.FullName;
-        public string BinSizePath => Path.Combine(TempFolder, $"{SampleName}.binsize");
-        public string VfSummaryPath => GetVfSummaryPath(TempDirectory, SampleName).FullName;
-        public string VfSummaryBafPath => GetVfSummaryBafPath(TempDirectory, SampleName).FullName;
-        public string NormalBinnedPath => Path.Combine(TempFolder, $"{SampleName}.normal.binned");
-        public IFileLocation PartitionedPath => GetPartitionedPath(OutputFolder, SampleName);
+        public IDirectoryLocation SampleOutputFolder => GetSampleOutputFolder(_analysisOutputFolder, SampleName);
+        public string BinSizePath => Path.Combine(SampleOutputFolder.FullName, $"{SampleName}.binsize");
+        public string VfSummaryPath => GetVfSummaryPath(_analysisOutputFolder, SampleName).FullName;
+        public string VfSummaryBafPath => GetVfSummaryBafPath(_analysisOutputFolder, SampleName).FullName;
+        public string NormalBinnedPath => Path.Combine(SampleOutputFolder.FullName, $"{SampleName}.normal.binned");
+        public IFileLocation PartitionedPath => GetPartitionedPath(_analysisOutputFolder, SampleName);
 
-        public static IDirectoryLocation GetSampleTempFolder(IDirectoryLocation outputFolder, string sampleName)
+        public static IDirectoryLocation GetSampleOutputFolder(IDirectoryLocation analysisOutputFolder, string sampleName)
         {
-            return outputFolder.GetDirectoryLocation($"TempCNV_{sampleName}");
+            return analysisOutputFolder.GetDirectoryLocation($"TempCNV_{sampleName}");
         }
 
-        public static IFileLocation GetVfSummaryPath(IDirectoryLocation outputFolder, string sampleName)
+        public static IFileLocation GetVfSummaryPath(IDirectoryLocation analysisOutputFolder, string sampleName)
         {
-            var stub = GetSampleTempFolder(outputFolder, sampleName).GetFileLocation($"VFResults{sampleName}");
+            var stub = GetSampleOutputFolder(analysisOutputFolder, sampleName).GetFileLocation($"VFResults{sampleName}");
             return GetVfSummaryPathExtension(stub);
         }
 
-        public static IFileLocation GetVfSummaryBafPath(IDirectoryLocation outputFolder, string sampleName)
+        public static IFileLocation GetVfSummaryBafPath(IDirectoryLocation analysisOutputFolder, string sampleName)
         {
-            return GetVfSummaryPath(outputFolder, sampleName).AppendName(".baf");
+            return GetVfSummaryPath(analysisOutputFolder, sampleName).AppendName(".baf");
         }
 
         public static IFileLocation GetVfSummaryBafPath(IFileLocation stub)
@@ -61,9 +61,9 @@ namespace CanvasCommon
             return GetVfSummaryPathExtension(stub.AppendName(".VFResults"));
         }
 
-        public static IFileLocation GetPartitionedPath(IDirectoryLocation outputFolder, string sampleName)
+        public static IFileLocation GetPartitionedPath(IDirectoryLocation analysisOutputFolder, string sampleName)
         {
-            var stub = GetSampleTempFolder(outputFolder, sampleName).GetFileLocation(sampleName);
+            var stub = GetSampleOutputFolder(analysisOutputFolder, sampleName).GetFileLocation(sampleName);
             return GetPartitionedPath(stub);
         }
 
@@ -77,9 +77,9 @@ namespace CanvasCommon
             return stub.AppendName(".CoverageAndVariantFrequency.txt");
         }
 
-        public static IFileLocation GetCoverageAndVariantFrequencyOutput(IDirectoryLocation output, string sampleName)
+        public static IFileLocation GetCoverageAndVariantFrequencyOutput(IDirectoryLocation analysisOutputFolder, string sampleName)
         {
-            return GetCoverageAndVariantFrequencyOutput(SingleSampleCallset.GetSampleTempFolder(output, sampleName).GetFileLocation("CNV"));
+            return GetCoverageAndVariantFrequencyOutput(GetSampleOutputFolder(analysisOutputFolder, sampleName).GetFileLocation("CNV"));
         }
 
         public static string GetCoverageAndVariantFrequencyOutputPath(string outputVcfPath)

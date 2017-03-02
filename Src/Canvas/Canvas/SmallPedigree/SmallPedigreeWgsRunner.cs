@@ -25,7 +25,6 @@ namespace Canvas.SmallPedigree
         {
             CanvasRunner runner = new CanvasRunner(logger, workManager, checkpointRunner, mono, false, CanvasCoverageMode.TruncatedDynamicRange, 100, CommonOptions.CustomParams);
             var callset = GetCallset();
-            runner.CallPedigree(callset);
             var spwWorkflow = new SmallPedigreeWorkflow(runner);
             spwWorkflow.CallPedigree(callset);
         }
@@ -36,7 +35,7 @@ namespace Canvas.SmallPedigree
             foreach (var sample in SmallPedigreeOptions.Samples)
             {
                 string sampleName = sample.SampleName;
-                IDirectoryLocation outputDirectory = new DirectoryLocation(Path.Combine(CommonOptions.OutputDirectory.FullName, sampleName));
+                IDirectoryLocation outputDirectory = SingleSampleCallset.GetSampleOutputFolder(CommonOptions.OutputDirectory, sampleName);
                 Directory.CreateDirectory(outputDirectory.FullName);
                 IFileLocation outputVcfPath = outputDirectory.GetFileLocation("CNV.vcf.gz");
                 SingleSampleCallset callSet = new SingleSampleCallset(
@@ -49,9 +48,9 @@ namespace Canvas.SmallPedigree
                 callSets.Add(new PedigreeSample(callSet, sample.SampleType));
             }
             AnalysisDetails analysisDetails = new AnalysisDetails(
-                CommonOptions.OutputDirectory, 
-                CommonOptions.WholeGenomeFasta, 
-                CommonOptions.KmerFasta, 
+                CommonOptions.OutputDirectory,
+                CommonOptions.WholeGenomeFasta,
+                CommonOptions.KmerFasta,
                 CommonOptions.FilterBed,
                 SmallPedigreeOptions.MultiSamplePloidyVcf,
                 SmallPedigreeOptions.CommonCnvsBed);
