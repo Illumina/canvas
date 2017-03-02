@@ -66,7 +66,6 @@ namespace FlagUniqueKmers
             if (badChar) return null;
             string key = keyBuilder.ToString();
 
-
             // Now build key for the rev-comp:
             keyBuilder.Clear();
             currentChar = 0;
@@ -100,10 +99,11 @@ namespace FlagUniqueKmers
             }
             keyBuilder.Append((char)currentChar);
             string key2 = keyBuilder.ToString();
-            if (string.Compare(key, key2) < 0) return key;
+            if (string.Compare(key, key2, StringComparison.Ordinal) < 0) return key;
             return key2;
         }
 
+        
         private void ProcessOneChromosome(GenericRead fastaEntry, int chromosomeIndex)
         {
             BitArray nonUniqueFlags;
@@ -141,11 +141,11 @@ namespace FlagUniqueKmers
 
                 // This position isn't completed yet.  Check its kmer against the dictionary:
                 string kmer = bases.Substring(startPos, KmerLength);
-
                 string key = GetKeyForKmer(kmer);
 
                 if (key == null)
                 {
+
                     // This position isn't a valid unique 35mer, because it has an N or some other bogus character.
                     nonUniqueFlags.Set(startPos, true);
                     finishedFlags.Set(startPos, true);
@@ -154,6 +154,7 @@ namespace FlagUniqueKmers
 
                 if (Kmers.ContainsKey(key))
                 {
+
                     // This position is not unique.  Flag it as known non-unique:
                     nonUniqueFlags.Set(startPos, true);
                     finishedFlags.Set(startPos, true);
