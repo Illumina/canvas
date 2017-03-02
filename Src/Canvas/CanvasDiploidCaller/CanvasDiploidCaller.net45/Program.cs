@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using Illumina.Common.FileSystem;
 using Isas.Framework.Utilities;
-using NDesk.Options;
+using Illumina.Common;
 using Newtonsoft.Json;
 
 namespace CanvasDiploidCaller
