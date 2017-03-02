@@ -15,7 +15,7 @@ namespace FlagUniqueKmers
         List<BitArray> ChromosomeNonUniqueFlags = new List<BitArray>();
         List<BitArray> ChromosomeFinishedFlags = new List<BitArray>();
         private int PassIndex;
-        private int GenomePosition;
+        private long GenomePosition;
         private long IncompletePositions;
         StringBuilder keyBuilder = new StringBuilder();
         #endregion
