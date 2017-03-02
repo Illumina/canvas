@@ -222,14 +222,11 @@ namespace Canvas
             var intermediateDataPathsByBamPath = GetIntermediateBinnedFilesByBamPath(callset.AnalysisDetails.GenomeMetadata, callset.SingleSampleCallset.Bam.IsPairedEnd, new List<string>() { callset.SingleSampleCallset.SampleName }, callset.AnalysisDetails.TempDirectory,
                 canvasReferencePath, canvasBedPath, bamPaths, commandLine, canvasBinPath, executablePath, callset.TempManifestPath);
 
-            // get bin size (of the smallest BAM) if normal BAMs are given
-            var intermediateDataPathsByBamPathCopy = (from x in intermediateDataPathsByBamPath
-                                                      select x).ToDictionary(x => x.Key, x => x.Value.Select(y => y).ToList()); // deep dictionary copy
             int binSize = -1;
             if (bamPaths.Count > 1)
             {
                 var smallestBamPath = SmallestFile(bamPaths);
-                binSize = GetBinSize(callset, smallestBamPath, intermediateDataPathsByBamPathCopy[smallestBamPath],
+                binSize = GetBinSize(callset, smallestBamPath, intermediateDataPathsByBamPath[smallestBamPath],
                     canvasReferencePath, canvasBedPath);
             }
             else if (callset.IsEnrichment && callset.Manifest.CanvasControlAvailable)
@@ -261,22 +258,12 @@ namespace Canvas
                 executablePath = _mono.FullName;
 
             //use bam as input
-            var bamPaths = new List<IFileLocation>();
-            foreach (PedigreeSample sample in callset.PedigreeSample)
-            {
-                Bam bam = sample.Sample.Bam;
-                if (bam.BamFile.FullName == null || !File.Exists(bam.BamFile.FullName))
-                {
-                    Console.WriteLine("Input bam file not seen {0}", bam.BamFile.FullName);
-                    return null;
-                }
-                bamPaths.Add(bam.BamFile);
-            }
+            var bamPaths = callset.PedigreeSample.Select(sample=>sample.Sample.Bam.BamFile).ToList();
 
             var sampleNames = callset.PedigreeSample.Select(x => x.Sample.SampleName).ToList();
             // read bams 
             var intermediateDataPathsByBamPath = GetIntermediateBinnedFilesByBamPath(callset.AnalysisDetails.GenomeMetadata, true, sampleNames, callset.AnalysisDetails.TempDirectory,
-                canvasReferencePath, canvasBedPath, bamPaths, commandLine, canvasBinPath, executablePath, null);
+                canvasReferencePath, canvasBedPath, bamPaths, commandLine, canvasBinPath, executablePath);
 
             int binSize = -1;
             if (bamPaths.Count > 1)
@@ -290,41 +277,41 @@ namespace Canvas
             return bamToBinned.Values.ToList();
         }
 
-        private Dictionary<IFileLocation, IFileLocation> BamToBinned(IDirectoryLocation tempFolder, bool isPairedEnd, IEnumerable<string> Id, string canvasReferencePath, string canvasBedPath, List<IFileLocation> bamPaths,
-            StringBuilder commandLine, string canvasBinPath, int binSize, Dictionary<IFileLocation, List<IFileLocation>> intermediateDataPathsByBamPaths,
+        private Dictionary<IFileLocation, IFileLocation> BamToBinned(IDirectoryLocation tempFolder, bool isPairedEnd, List<string> sampleIds, string canvasReferencePath, string canvasBedPath, List<IFileLocation> bamPaths,
+            StringBuilder commandLine, string canvasBinPath, int binSize, Dictionary<IFileLocation, List<IFileLocation>> intermediateDataPathsByBam,
             string executablePath)
         {
             var bamToBinned = new Dictionary<IFileLocation, IFileLocation>();
             List<UnitOfWork> finalBinJobs = new List<UnitOfWork>();
             int bamIdx = 0;
-            foreach (var intermediateDataPathsByBamPath in intermediateDataPathsByBamPaths.Values)
+            foreach (var bamPath in bamPaths)
             {
-                var bamPath = bamPaths[bamIdx];
-                // finish up CanvasBin step by merging intermediate data and finally binning                
-                var binnedPath = tempFolder.GetFileLocation($"{Id.ToList()[bamIdx]}_{bamIdx}.binned");
+                var sampleId = sampleIds[bamIdx];
+                var intermediateDataPaths = intermediateDataPathsByBam[bamPath];
+                // finish up CanvasBin step by merging intermediate data and finally binning 
+                var binnedPath = tempFolder.GetFileLocation($"{sampleId}_{bamIdx}.binned");
                 bamToBinned[bamPath] = binnedPath;
                 commandLine.Clear();
                 if (CrossPlatform.IsThisLinux())
                 {
-                    commandLine.AppendFormat("{0} ", canvasBinPath);
+                    commandLine.Append($"{canvasBinPath} ");
                 }
-                commandLine.AppendFormat("-b \"{0}\" ", bamPath);
+                commandLine.Append($"-b {bamPath.WrapWithShellQuote()} ");
                 if (isPairedEnd) commandLine.AppendFormat("-p ");
 
-                commandLine.AppendFormat("-r \"{0}\" ", canvasReferencePath);
-                commandLine.AppendFormat("-f \"{0}\" -d {1} -o \"{2}\" ", canvasBedPath, _countsPerBin, binnedPath);
+                commandLine.Append($"-r {canvasReferencePath.WrapWithShellQuote()} ");
+                commandLine.Append($"-f {canvasBedPath.WrapWithShellQuote()} -d {_countsPerBin} -o {binnedPath.WrapWithShellQuote()} ");
                 if (binSize != -1)
                 {
-                    commandLine.AppendFormat("-z \"{0}\" ", binSize);
+                    commandLine.Append($"-z {binSize} ");
                 }
 
-                foreach (var path in intermediateDataPathsByBamPath)
+                foreach (var path in intermediateDataPaths)
                 {
-                    commandLine.AppendFormat("-i \"{0}\" ", path);
-                    Console.WriteLine("path: {0}", path);
+                    commandLine.Append($"-i {path.WrapWithShellQuote()} ");
                 }
 
-                commandLine.AppendFormat("-m {0} ", _coverageMode);
+                commandLine.Append($"-m {_coverageMode} ");
 
                 UnitOfWork finalBinJob = new UnitOfWork()
                 {
