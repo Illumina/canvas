@@ -33,7 +33,7 @@ namespace Canvas
             GenomeMetadata = new GenomeMetadata();
             GenomeMetadata.Deserialize(genomeSizeXml.FullName);
         }
-        internal string TempFolder => Path.Combine(OutputFolder.FullName, "TempCNV");
+        internal IDirectoryLocation TempDirectory => OutputFolder.GetDirectoryLocation("TempCNV");
     }
 
     public class CanvasCallset

@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using Illumina.Common;
+using Illumina.Common.FileSystem;
 
 
 namespace CanvasBin
@@ -57,7 +58,7 @@ namespace CanvasBin
 
         // File to write to.
         public string outFile = null;
-        public List<string> intermediatePaths = new List<string>();
+        public List<IFileLocation> intermediatePaths = new List<IFileLocation>();
         public bool isPairedEnd = false;
 
         // Json file with intermediate Canvas data for multi-sample workflow
@@ -85,7 +86,7 @@ namespace CanvasBin
                     { "b|bam=",           "bam file containing unique alignments", v => parameters.bamFile = v },
                     { "r|reference=",     "Canvas-ready reference fasta file", v => parameters.referenceFile = v },
                     { "c|chr=",           "for bam input, only work on this chromosome. Output intermediate binary data. Must follow-up with a single CanvasBin call passing all the intermediate binary data files (see -i option)", v => parameters.chromosome = v},
-                    { "i|infile=",        "intermediate binary data file from individual chromosome. Pass this option multiple times, once for each chromosome", v => parameters.intermediatePaths.Add(v)},
+                    { "i|infile=",        "intermediate binary data file from individual chromosome. Pass this option multiple times, once for each chromosome", v => parameters.intermediatePaths.Add(new FileLocation(v))},
                     { "f|filter=",        "bed file containing regions to ignore",            v => parameters.filterFile = v },
                     { "d|bindepth=",      "median counts desired in each bin",                v => parameters.countsPerBin = Convert.ToInt32(v) },
                     { "z|binsize=",       "bin size; optional",                               v => parameters.binSize = Convert.ToInt32(v) },
@@ -157,7 +158,7 @@ namespace CanvasBin
             else if (parameters.inJson != null && !File.Exists(parameters.inJson))
             {
                 Console.WriteLine($"CanvasBin.exe: File {parameters.inJson} does not exist! Exiting.");
-                return null;          
+                return null;
             }
 
             // Did the user supply a non-negative number?
