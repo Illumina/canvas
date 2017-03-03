@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using Canvas.CommandLineParsing;
 using Illumina.Common;
 using Illumina.Common.FileSystem;
 using Illumina.SecondaryAnalysis.VariantCalling;
@@ -109,10 +110,10 @@ namespace Canvas.Wrapper
                 if (_canvasPloidyBedCreator.GeneratePloidyBedFileFromSexChromosomeKaryotype(input.GenomeMetadata, input.GenomeMetadata.Sequences.First().FastaPath,
                     controlSexChromosomeKaryotype, controlPloidyBed.FullName, sampleSandbox.FullName))
                 {
-                    commandLine.Append($" --control-ploidy-bed {controlPloidyBed.WrapWithShellQuote()}");
+                    commandLine.Append($" --{SomaticEnrichmentOptionsParser.ControlPloidyBedOptionName} {controlPloidyBed.WrapWithShellQuote()}");
                 }
             }
-            commandLine.Append($" --population-b-allele-vcf {dbSnpVcf.WrapWithShellQuote()}");
+            commandLine.Append($" --{SingleSampleCommonOptionsParser.PopulationBAlleleVcfOptionName} {dbSnpVcf.WrapWithShellQuote()}");
             commandLine.Append($" --manifest {manifest.WrapWithShellQuote()}");
 
             if (sexChromosomeKaryotype != null)
@@ -121,7 +122,7 @@ namespace Canvas.Wrapper
                 if (_canvasPloidyBedCreator.GeneratePloidyBedFileFromSexChromosomeKaryotype(input.GenomeMetadata, input.GenomeMetadata.Sequences.First().FastaPath,
                     sexChromosomeKaryotype, ploidyBed.FullName, sampleSandbox.FullName))
                 {
-                    commandLine.Append($" --ploidy-bed {ploidyBed.WrapWithShellQuote()}");
+                    commandLine.Append($" --{SingleSampleCommonOptionsParser.PloidyBedOptionName} {ploidyBed.WrapWithShellQuote()}");
                 }
             }
 

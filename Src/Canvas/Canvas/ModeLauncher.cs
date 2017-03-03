@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using Canvas.CommandLineParsing;
+using Illumina.Common;
 using Illumina.Common.FileSystem;
 using Isas.Framework.Checkpointing;
 using Isas.Framework.DataTypes;
@@ -54,7 +55,7 @@ namespace Canvas
                     try
                     {
                         var executableProcessor = new ExecutableProcessor(new NullSampleSettings(), logger);
-                        var mono = new FileLocation(executableProcessor.GetMonoPath());
+                        var mono = CrossPlatform.IsThisLinux() ? new FileLocation(executableProcessor.GetMonoPath()) : null;
                         frameworkServices.Logger.Info($"Running Canvas {_mode} {_version}");
                         logger.Info($"Command-line arguments: {string.Join(" ", _args)}");
                         _modeRunner.Run(logger, frameworkServices.Checkpointer, frameworkServices.WorkManager, mono);

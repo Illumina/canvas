@@ -25,7 +25,6 @@ namespace Canvas.SmallPedigree
         {
             CanvasRunner runner = new CanvasRunner(logger, workManager, checkpointRunner, mono, false, CanvasCoverageMode.TruncatedDynamicRange, 100, CommonOptions.CustomParams);
             var callset = GetCallset();
-            runner.CallPedigree(callset);
             var spwWorkflow = new SmallPedigreeWorkflow(runner);
             spwWorkflow.CallPedigree(callset);
         }
@@ -33,25 +32,24 @@ namespace Canvas.SmallPedigree
         private SmallPedigreeCallset GetCallset()
         {
             var callSets = new List<PedigreeSample>();
+            var outputVcf = CommonOptions.OutputDirectory.GetFileLocation("CNV.vcf.gz");
             foreach (var sample in SmallPedigreeOptions.Samples)
             {
                 string sampleName = sample.SampleName;
-                IDirectoryLocation outputDirectory = new DirectoryLocation(Path.Combine(CommonOptions.OutputDirectory.FullName, sampleName));
-                Directory.CreateDirectory(outputDirectory.FullName);
-                IFileLocation outputVcfPath = outputDirectory.GetFileLocation("CNV.vcf.gz");
                 SingleSampleCallset callSet = new SingleSampleCallset(
                     new Bam(sample.Bam),
                     sampleName,
                     SmallPedigreeOptions.BAlleleSites,
                     SmallPedigreeOptions.IsPopulationBAlleleSites,
-                    outputDirectory,
-                    outputVcfPath);
+                    CommonOptions.OutputDirectory,
+                    outputVcf);
+                callSet.SampleOutputFolder.Create();
                 callSets.Add(new PedigreeSample(callSet, sample.SampleType));
             }
             AnalysisDetails analysisDetails = new AnalysisDetails(
-                CommonOptions.OutputDirectory, 
-                CommonOptions.WholeGenomeFasta, 
-                CommonOptions.KmerFasta, 
+                CommonOptions.OutputDirectory,
+                CommonOptions.WholeGenomeFasta,
+                CommonOptions.KmerFasta,
                 CommonOptions.FilterBed,
                 SmallPedigreeOptions.MultiSamplePloidyVcf,
                 SmallPedigreeOptions.CommonCnvsBed);

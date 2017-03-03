@@ -1,15 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using Canvas.SmallPedigree;
-using CanvasCommon.CommandLineParsing.CoreOptionTypes;
+﻿using Canvas.SmallPedigree;
 using CanvasCommon.CommandLineParsing.OptionProcessing;
-using Illumina.Common.FileSystem;
-using Isas.SequencingFiles;
 
 namespace Canvas.CommandLineParsing
 {
-    public class SmallPedigreeModeParser : ModeParser
+    internal class SmallPedigreeModeParser : ModeParser
     {
         private static readonly CommonOptionsParser CommonOptionsParser = new CommonOptionsParser();
         private static readonly SmallPedigreeOptionsParser SmallPedigreeOptionsParser = new SmallPedigreeOptionsParser();

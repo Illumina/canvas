@@ -1,4 +1,5 @@
 ﻿using System.Text;
+using Canvas.CommandLineParsing;
 using Illumina.Common;
 using Illumina.Common.FileSystem;
 using Isas.Framework.DataTypes;
@@ -59,13 +60,13 @@ namespace Canvas.Wrapper
             StringBuilder commandLine = new StringBuilder("Somatic-WGS");
             commandLine.Append(_singleSampleInputCommandLineBuilder.GetSingleSampleCommandLine(sampleId, input.TumorBam, input.GenomeMetadata, sampleSandbox));
 
-            commandLine.Append($" --sample-b-allele-vcf {input.NormalVcf.VcfFile.WrapWithShellQuote()}");
+            commandLine.Append($" --{SingleSampleCommonOptionsParser.SampleBAlleleVcfOptionName} {input.NormalVcf.VcfFile.WrapWithShellQuote()}");
 
             commandLine.Append($" --somatic-vcf {input.SomaticVcf.VcfFile.WrapWithShellQuote()}");
 
             IFileLocation ploidyBed = _canvasPloidyBedCreator.CreatePloidyBed(input.NormalVcf, input.GenomeMetadata, sampleSandbox);
             if (ploidyBed != null)
-                commandLine.Append($" --ploidy-bed {ploidyBed.WrapWithShellQuote()}");
+                commandLine.Append($" --{SingleSampleCommonOptionsParser.PloidyBedOptionName} {ploidyBed.WrapWithShellQuote()}");
 
             commandLine.Append(_singleSampleInputCommandLineBuilder.GetCustomParameters());
             commandLine = _singleSampleInputCommandLineBuilder.MergeCustomCanvasParameters(commandLine);

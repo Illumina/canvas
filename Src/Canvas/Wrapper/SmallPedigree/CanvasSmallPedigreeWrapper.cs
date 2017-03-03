@@ -45,10 +45,13 @@ namespace Canvas.Wrapper.SmallPedigree
         public StringBuilder GetMultiSampleCommandLine(SampleSet<CanvasPedigreeSample> samples, GenomeMetadata genomeMetadata, Vcf vcf, IDirectoryLocation sampleSandbox)
         {
             StringBuilder commandLine = new StringBuilder();
-            foreach (var sample in samples)
+            foreach (var sampleKvp in samples)
             {
-                commandLine.Append($" --bam {sample.Value.Bam.BamFile.WrapWithShellQuote()}");
-                commandLine.Append($" --{sample.Value.SampleType.ToString().WrapWithShellQuote()} {sample.Key.Id}");
+                var sampleId = sampleKvp.Key.Id;
+                var sample = sampleKvp.Value;
+                commandLine.Append($" --bam {sample.Bam.BamFile.WrapWithShellQuote()}");
+                if (sample.SampleType != SampleType.Other)
+                    commandLine.Append($" --{sample.SampleType.GetOptionName()} {sampleId}");
             }
             IFileLocation kmerFasta = _annotationFileProvider.GetKmerFasta(genomeMetadata);
             commandLine.Append($" --reference {kmerFasta.WrapWithShellQuote()}");
@@ -57,9 +60,6 @@ namespace Canvas.Wrapper.SmallPedigree
             IFileLocation filterBed = _annotationFileProvider.GetFilterBed(genomeMetadata);
             commandLine.Append($" --filter-bed {filterBed.WrapWithShellQuote()}");
             commandLine.Append($" --output {sampleSandbox.WrapWithShellQuote()}");
-            commandLine.Append(!_annotationFileProvider.CustomDbSnpVcf(genomeMetadata)
-                ? $" --population-b-allele-vcf {vcf.VcfFile.WrapWithShellQuote()}"
-                : $" --b-allele-vcf {vcf.VcfFile.WrapWithShellQuote()}");
             return commandLine;
         }
 
@@ -81,23 +81,21 @@ namespace Canvas.Wrapper.SmallPedigree
             var commandLine = new StringBuilder("SmallPedigree-WGS");
             commandLine.Append(GetMultiSampleCommandLine(input.Samples, input.GenomeMetadata, input.Vcf, sampleSandbox));
 
-            // use normal vcf by default (performance could be similar with dbSNP vcf though)
+            // use sample vcf by default (performance could be similar with dbSNP vcf though)
             var bAlleleVcf = input.Vcf.VcfFile;
+            var bAlleleVcfOptionName = SingleSampleCommonOptionsParser.SampleBAlleleVcfOptionName;
             if (_annotationFileProvider.CustomDbSnpVcf(input.GenomeMetadata))
             {
                 bAlleleVcf = _annotationFileProvider.GetDbSnpVcf(input.GenomeMetadata);
-                commandLine.Append($" --population-b-allele-vcf {bAlleleVcf.WrapWithShellQuote()}");
+                bAlleleVcfOptionName = SingleSampleCommonOptionsParser.PopulationBAlleleVcfOptionName;
             }
-            else
-            {
-                commandLine.Append($" --sample-b-allele-vcf {bAlleleVcf.WrapWithShellQuote()}");
-            }
+            commandLine.Append($" --{bAlleleVcfOptionName} {bAlleleVcf.WrapWithShellQuote()}");
 
             var ploidyInfos = input.Samples.SelectData(sample => sample.PloidyInfo);
 
             var ploidyVcf = _canvasPloidyVcfCreator.CreatePloidyVcf(ploidyInfos, input.GenomeMetadata, sampleSandbox);
             if (ploidyVcf != null)
-                commandLine.Append($" --ploidy-bed {ploidyVcf.VcfFile.WrapWithShellQuote()}");
+                commandLine.Append($" --{SmallPedigreeOptionsParser.PloidyVcfOptionName} {ploidyVcf.VcfFile.WrapWithShellQuote()}");
             var canvasPartitionParam = $@"--commoncnvs {_annotationFileProvider.GetCanvasAnnotationFile(input.GenomeMetadata, "commoncnvs.bed").WrapWithEscapedShellQuote()}";
 
             var moreCustomParameters = new Dictionary<string, string> { ["CanvasPartition"] = canvasPartitionParam };

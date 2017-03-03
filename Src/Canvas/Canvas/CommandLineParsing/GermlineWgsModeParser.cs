@@ -5,7 +5,7 @@ namespace Canvas.CommandLineParsing
 {
     public class GermlineWgsModeParser : ModeParser
     {
-        private static readonly FileOption Bam = FileOption.CreateRequired("germline sample .bam file", "b", "bam");
+        public static readonly FileOption Bam = FileOption.CreateRequired("sample .bam file", "b", "bam");
         private static readonly CommonOptionsParser CommonOptionsParser = new CommonOptionsParser();
         private static readonly SingleSampleCommonOptionsParser SingleSampleCommonOptionsParser = new SingleSampleCommonOptionsParser();
 

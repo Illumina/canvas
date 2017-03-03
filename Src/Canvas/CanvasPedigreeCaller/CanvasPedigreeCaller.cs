@@ -228,8 +228,8 @@ namespace CanvasPedigreeCaller
                         pedigreeMember.Segments.Where(x => x.Alleles.TotalCoverage.Count > 0)
                             .Select(x => x.Alleles.TotalCoverage.Average())
                             .ToArray()), 2);
-            pedigreeMember.MeanCoverage = pedigreeMember.Segments.Select(x => x.MedianCount).Average();
-            pedigreeMember.MaxCoverage = Convert.ToInt32(pedigreeMember.Segments.Select(x => x.MedianCount).Max() + 10);
+            pedigreeMember.MeanCoverage = pedigreeMember.Segments.Any() ? pedigreeMember.Segments.Select(x => x.MedianCount).Average() : 0;
+            pedigreeMember.MaxCoverage = pedigreeMember.Segments.Any() ? (int)(pedigreeMember.Segments.Select(x => x.MedianCount).Max() + 10) : 0;
             if (!ploidyBedPath.IsNullOrEmpty() && File.Exists(ploidyBedPath))
                 pedigreeMember.Ploidy = PloidyInfo.LoadPloidyFromVcfFile(ploidyBedPath, pedigreeMember.Name);
             return pedigreeMember;

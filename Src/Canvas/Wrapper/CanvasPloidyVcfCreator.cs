@@ -1,8 +1,6 @@
 using Illumina.Common.FileSystem;
 using Illumina.SecondaryAnalysis.VariantCalling;
 using Isas.Framework.DataTypes;
-using Isas.Framework.Logging;
-using Isas.Framework.WorkManagement;
 using Isas.SequencingFiles;
 
 namespace Canvas.Wrapper
