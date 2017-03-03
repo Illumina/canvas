@@ -4,7 +4,6 @@ using System.IO;
 using Illumina.Common;
 using Illumina.Common.FileSystem;
 using Newtonsoft.Json;
-using Illumina.Common;
 
 namespace CanvasSomaticCaller
 {

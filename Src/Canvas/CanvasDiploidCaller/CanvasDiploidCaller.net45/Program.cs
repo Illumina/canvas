@@ -4,7 +4,6 @@ using System.IO;
 using Illumina.Common;
 using Illumina.Common.FileSystem;
 using Isas.Framework.Utilities;
-using Illumina.Common;
 using Newtonsoft.Json;
 
 namespace CanvasDiploidCaller
