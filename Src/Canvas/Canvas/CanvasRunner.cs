@@ -257,7 +257,7 @@ namespace Canvas
                 executablePath = _mono.FullName;
 
             //use bam as input
-            var bamPaths = callset.PedigreeSample.Select(sample=>sample.Sample.Bam.BamFile).ToList();
+            var bamPaths = callset.PedigreeSample.Select(sample => sample.Sample.Bam.BamFile).ToList();
 
             var sampleNames = callset.PedigreeSample.Select(x => x.Sample.SampleName).ToList();
             // read bams 
@@ -888,7 +888,10 @@ namespace Canvas
 
             // Variant calling
             await canvasSnvTask;
-            RunSmallPedigreeCalling(partitionedPaths, callset);
+            _checkpointRunner.RunCheckpoint("Variant calling", () =>
+            {
+                RunSmallPedigreeCalling(partitionedPaths, callset);
+            });
         }
 
         private void NormalizeCanvasClean(List<IFileLocation> cleanedPaths, string tempFolder)
