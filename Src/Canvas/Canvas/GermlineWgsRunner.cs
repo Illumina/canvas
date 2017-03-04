@@ -2,7 +2,6 @@
 using Canvas.CommandLineParsing;
 using CanvasCommon;
 using Illumina.Common.FileSystem;
-using Illumina.SecondaryAnalysis;
 using Isas.Framework.Checkpointing;
 using Isas.Framework.Logging;
 using Isas.Framework.WorkManagement;
@@ -22,9 +21,9 @@ namespace Canvas
             SingleSampleCommonOptions = singleSampleCommonOptions;
         }
 
-        public void Run(ILogger logger, ICheckpointRunner checkpointRunner, IWorkManager workManager)
+        public void Run(ILogger logger, ICheckpointRunner checkpointRunner, IWorkManager workManager, IFileLocation mono)
         {
-            CanvasRunner runner = new CanvasRunner(logger, workManager, checkpointRunner, false, CanvasCoverageMode.TruncatedDynamicRange, 100, CommonOptions.CustomParams);
+            CanvasRunner runner = new CanvasRunner(logger, workManager, checkpointRunner, mono, false, CanvasCoverageMode.TruncatedDynamicRange, 100, CommonOptions.CustomParams);
             var callset = GetCallset();
             logger.Info($"Normal Vcf path: {callset.SingleSampleCallset.NormalVcfPath}");
             runner.CallSample(callset);

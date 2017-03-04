@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using Canvas.CommandLineParsing;
+using CanvasCommon;
 
 namespace Canvas.SmallPedigree
 {
@@ -16,6 +17,7 @@ namespace Canvas.SmallPedigree
             SampleType = sampleType;
         }
     }
+
     public class SmallPedigreeCallset
     {
         public AnalysisDetails AnalysisDetails { get; }
@@ -28,17 +30,17 @@ namespace Canvas.SmallPedigree
 
         internal IEnumerable<string> NormalBinnedPath
         {
-            get { return PedigreeSample.Select(sample => Path.Combine(sample.Sample.TempFolder, $"{sample.Sample.SampleName}.normal.binned"));  }
+            get { return PedigreeSample.Select(sample => Path.Combine(sample.Sample.SampleOutputFolder.FullName, $"{sample.Sample.SampleName}.normal.binned")); }
         }
 
         internal IEnumerable<string> BinSizePath
         {
-            get { return PedigreeSample.Select(sample => Path.Combine(sample.Sample.TempFolder, $"{sample.Sample.SampleName}.binsize")); }
+            get { return PedigreeSample.Select(sample => Path.Combine(sample.Sample.SampleOutputFolder.FullName, $"{sample.Sample.SampleName}.binsize")); }
         }
 
         internal IEnumerable<string> VfSummaryPath
         {
-            get { return PedigreeSample.Select(sample => Path.Combine(sample.Sample.TempFolder, $"VFResults{sample.Sample.SampleName}.txt.gz")); }
+            get { return PedigreeSample.Select(sample => Path.Combine(sample.Sample.SampleOutputFolder.FullName, $"VFResults{sample.Sample.SampleName}.txt.gz")); }
         }
     }
 }

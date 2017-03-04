@@ -2,8 +2,8 @@
 using System.Collections.Generic;
 using System.Linq;
 using CanvasCommon;
+using Illumina.Common;
 using Illumina.Common.FileSystem;
-using NDesk.Options;
 
 namespace CanvasNormalize
 {

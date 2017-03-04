@@ -8,6 +8,7 @@ namespace CanvasCommon
         Loss,
         LossOfHeterozygosity,
         Reference,
+        ComplexCnv,
     }
 
     public static class CnvTypeExtensions
@@ -24,6 +25,8 @@ namespace CanvasCommon
                     return "REF";
                 case CnvType.LossOfHeterozygosity:
                     return "LOH";
+                case CnvType.ComplexCnv:
+                    return "COMPLEXCNV";                   
                 default:
                     throw new ApplicationException($"Unsupported CNV type: {cnvType}");
             }
@@ -35,6 +38,7 @@ namespace CanvasCommon
             {
                 case CnvType.Gain:
                 case CnvType.Loss:
+                case CnvType.ComplexCnv:
                     return "CNV";
                 case CnvType.LossOfHeterozygosity:
                     return "LOH";
@@ -50,6 +54,7 @@ namespace CanvasCommon
                 case CnvType.Gain:
                 case CnvType.Loss:
                 case CnvType.LossOfHeterozygosity:
+                case CnvType.ComplexCnv:
                     return "<CNV>";
                 case CnvType.Reference:
                     return ".";

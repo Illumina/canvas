@@ -4,7 +4,6 @@ using CanvasCommon.CommandLineParsing.CoreOptionTypes;
 using CanvasCommon.CommandLineParsing.OptionProcessing;
 using Illumina.Common.FileSystem;
 using Ploeh.AutoFixture.Xunit2;
-using UnitTests;
 using Xunit;
 
 namespace CanvasTest.Canvas.CommandLineParsing

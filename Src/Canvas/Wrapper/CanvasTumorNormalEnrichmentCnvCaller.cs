@@ -1,10 +1,10 @@
 ﻿using System;
 using System.Text;
+using Canvas.CommandLineParsing;
 using Illumina.Common;
 using Illumina.Common.FileSystem;
 using Isas.Framework.DataTypes;
 using Isas.Framework.Logging;
-using Isas.Framework.Utilities;
 using Isas.Framework.WorkManagement;
 
 namespace Canvas.Wrapper
@@ -21,11 +21,12 @@ namespace Canvas.Wrapper
         private readonly ICanvasSingleSampleInputCommandLineBuilder _singleSampleInputCommandLineBuilder;
         private readonly CanvasEnrichmentInputCreator<CanvasTumorNormalEnrichmentInput> _enrichmentInputCreator;
         private readonly CanvasPloidyBedCreator _canvasPloidyBedCreator;
+        private readonly IFileLocation _mono;
 
         public CanvasTumorNormalEnrichmentCnvCaller(
             IWorkManager workManager,
             ILogger logger,
-            IFileLocation canvasExe,
+            IFileLocation canvasExe, IFileLocation mono,
             ICanvasAnnotationFileProvider annotationFileProvider,
             ICanvasSingleSampleInputCommandLineBuilder singleSampleInputCommandLineBuilder, CanvasEnrichmentInputCreator<CanvasTumorNormalEnrichmentInput> enrichmentInputCreator, CanvasPloidyBedCreator canvasPloidyBedCreator)
         {
@@ -36,6 +37,7 @@ namespace Canvas.Wrapper
             _singleSampleInputCommandLineBuilder = singleSampleInputCommandLineBuilder;
             _enrichmentInputCreator = enrichmentInputCreator;
             _canvasPloidyBedCreator = canvasPloidyBedCreator;
+            _mono = mono;
         }
 
         public SampleSet<CanvasOutput> Run(SampleSet<CanvasTumorNormalEnrichmentInput> inputs, IDirectoryLocation sandbox)
@@ -85,25 +87,21 @@ namespace Canvas.Wrapper
             commandLine.Append(_singleSampleInputCommandLineBuilder.GetSingleSampleCommandLine(sampleId, input.TumorBam, input.GenomeMetadata, sampleSandbox));
             commandLine.Append($" --normal-bam {input.NormalBam.BamFile.WrapWithShellQuote()}");
             commandLine.Append($" --manifest {manifest.WrapWithShellQuote()}");
-            if (isDbSnpVcf)
-            {
-                commandLine.Append($" --population-b-allele-vcf {bAlleleVcf.WrapWithShellQuote()}");
-            }
-            else
-            {
-                commandLine.Append($" --sample-b-allele-vcf {bAlleleVcf.WrapWithShellQuote()}");
-            }
+            var bAlleleVcfOptionName = isDbSnpVcf ?
+                SingleSampleCommonOptionsParser.PopulationBAlleleVcfOptionName :
+                SingleSampleCommonOptionsParser.SampleBAlleleVcfOptionName;
+            commandLine.Append($" --{bAlleleVcfOptionName} {bAlleleVcf.WrapWithShellQuote()}");
 
             commandLine.Append($" --somatic-vcf {input.SomaticVcf.VcfFile.WrapWithShellQuote()}");
 
             IFileLocation ploidyBed = _canvasPloidyBedCreator.CreatePloidyBed(input.NormalVcf, input.GenomeMetadata, sampleSandbox);
             if (ploidyBed != null)
-                commandLine.Append($" --ploidy-bed {ploidyBed.WrapWithShellQuote()}");
+                commandLine.Append($" --{SingleSampleCommonOptionsParser.PloidyBedOptionName} {ploidyBed.WrapWithShellQuote()}");
             commandLine.Append(_singleSampleInputCommandLineBuilder.GetCustomParameters());
             commandLine = _singleSampleInputCommandLineBuilder.MergeCustomCanvasParameters(commandLine);
             UnitOfWork singleSampleJob = new UnitOfWork
             {
-                ExecutablePath = CrossPlatform.IsThisLinux() ? Utilities.GetMonoPath() : _canvasExe.FullName,
+                ExecutablePath = CrossPlatform.IsThisLinux() ? _mono.FullName : _canvasExe.FullName,
                 CommandLine = CrossPlatform.IsThisLinux() ? _canvasExe + " " + commandLine : commandLine.ToString(),
                 LoggingFolder = _workManager.LoggingFolder.FullName,
                 LoggingStub = "Canvas_" + sampleId,

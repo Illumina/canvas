@@ -1,12 +1,12 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using Canvas.CommandLineParsing;
 using Illumina.Common;
 using Illumina.Common.FileSystem;
 using Illumina.SecondaryAnalysis.VariantCalling;
 using Isas.Framework.DataTypes;
 using Isas.Framework.Logging;
-using Isas.Framework.Utilities;
 using Isas.Framework.WorkManagement;
 
 namespace Canvas.Wrapper
@@ -19,12 +19,13 @@ namespace Canvas.Wrapper
         private readonly IWorkManager _workManager;
         private readonly ILogger _logger;
         private readonly IFileLocation _canvasExe;
+        private readonly IFileLocation _mono;
         private readonly ICanvasAnnotationFileProvider _annotationFileProvider;
         private readonly ICanvasSingleSampleInputCommandLineBuilder _singleSampleInputCommandLineBuilder;
         private readonly CanvasEnrichmentInputCreator<CanvasEnrichmentInput> _enrichmentInputCreator;
         private readonly CanvasPloidyBedCreator _canvasPloidyBedCreator;
 
-        public CanvasEnrichmentCnvCaller(IWorkManager workManager, ILogger logger, IFileLocation canvasExe,
+        public CanvasEnrichmentCnvCaller(IWorkManager workManager, ILogger logger, IFileLocation canvasExe, IFileLocation mono,
             ICanvasAnnotationFileProvider annotationFileProvider,
             ICanvasSingleSampleInputCommandLineBuilder singleSampleInputCommandLineBuilder,
             CanvasEnrichmentInputCreator<CanvasEnrichmentInput> enrichmentInputCreator,
@@ -33,6 +34,7 @@ namespace Canvas.Wrapper
             _workManager = workManager;
             _logger = logger;
             _canvasExe = canvasExe;
+            _mono = mono;
             _annotationFileProvider = annotationFileProvider;
             _singleSampleInputCommandLineBuilder = singleSampleInputCommandLineBuilder;
             _enrichmentInputCreator = enrichmentInputCreator;
@@ -108,10 +110,10 @@ namespace Canvas.Wrapper
                 if (_canvasPloidyBedCreator.GeneratePloidyBedFileFromSexChromosomeKaryotype(input.GenomeMetadata, input.GenomeMetadata.Sequences.First().FastaPath,
                     controlSexChromosomeKaryotype, controlPloidyBed.FullName, sampleSandbox.FullName))
                 {
-                    commandLine.Append($" --control-ploidy-bed {controlPloidyBed.WrapWithShellQuote()}");
+                    commandLine.Append($" --{SomaticEnrichmentOptionsParser.ControlPloidyBedOptionName} {controlPloidyBed.WrapWithShellQuote()}");
                 }
             }
-            commandLine.Append($" --population-b-allele-vcf {dbSnpVcf.WrapWithShellQuote()}");
+            commandLine.Append($" --{SingleSampleCommonOptionsParser.PopulationBAlleleVcfOptionName} {dbSnpVcf.WrapWithShellQuote()}");
             commandLine.Append($" --manifest {manifest.WrapWithShellQuote()}");
 
             if (sexChromosomeKaryotype != null)
@@ -120,7 +122,7 @@ namespace Canvas.Wrapper
                 if (_canvasPloidyBedCreator.GeneratePloidyBedFileFromSexChromosomeKaryotype(input.GenomeMetadata, input.GenomeMetadata.Sequences.First().FastaPath,
                     sexChromosomeKaryotype, ploidyBed.FullName, sampleSandbox.FullName))
                 {
-                    commandLine.Append($" --ploidy-bed {ploidyBed.WrapWithShellQuote()}");
+                    commandLine.Append($" --{SingleSampleCommonOptionsParser.PloidyBedOptionName} {ploidyBed.WrapWithShellQuote()}");
                 }
             }
 
@@ -133,7 +135,7 @@ namespace Canvas.Wrapper
 
             UnitOfWork singleSampleJob = new UnitOfWork()
             {
-                ExecutablePath = CrossPlatform.IsThisLinux() ? Utilities.GetMonoPath() : _canvasExe.FullName,
+                ExecutablePath = CrossPlatform.IsThisLinux() ? _mono.FullName : _canvasExe.FullName,
                 CommandLine = CrossPlatform.IsThisLinux() ? _canvasExe + " " + commandLine : commandLine.ToString(),
                 LoggingFolder = _workManager.LoggingFolder.FullName,
                 LoggingStub = "Canvas_" + sampleId,

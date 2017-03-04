@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using CanvasCommon;
 using Illumina.Common.FileSystem;
 using Isas.Framework.DataTypes;
 using Isas.Manifests.NexteraManifest;
@@ -13,14 +14,14 @@ namespace Canvas
     {
         public IDirectoryLocation OutputFolder { get; }
         public IDirectoryLocation WholeGenomeFastaFolder { get; }
-        public IFileLocation KmerFasta { get;  }
+        public IFileLocation KmerFasta { get; }
         public GenomeMetadata GenomeMetadata { get; }
         public IFileLocation FilterBed { get; }
         public IFileLocation PloidyVcf { get; }
         public IFileLocation CommonCnvsBed { get; }
 
         public AnalysisDetails(IDirectoryLocation outputFolder, IDirectoryLocation wholeGenomeFastaFolder,
-           IFileLocation kmerFasta, IFileLocation filterBed, IFileLocation ploidyVcf, IFileLocation commonCnvsBed)        
+           IFileLocation kmerFasta, IFileLocation filterBed, IFileLocation ploidyVcf, IFileLocation commonCnvsBed)
         {
             WholeGenomeFastaFolder = wholeGenomeFastaFolder;
             OutputFolder = outputFolder;
@@ -32,33 +33,7 @@ namespace Canvas
             GenomeMetadata = new GenomeMetadata();
             GenomeMetadata.Deserialize(genomeSizeXml.FullName);
         }
-        internal string TempFolder => Path.Combine(OutputFolder.FullName, "TempCNV");
-    }
-
-
-    public class SingleSampleCallset
-    {
-        public SingleSampleCallset(Bam bam, string sampleName, IFileLocation normalVcfPath, bool isDbSnpVcf, IDirectoryLocation outputFolder, IFileLocation outputVcfPath)
-        {
-            Bam = bam;
-            SampleName = sampleName;
-            NormalVcfPath = normalVcfPath;
-            IsDbSnpVcf = isDbSnpVcf;
-            OutputFolder = outputFolder;
-            OutputVcfPath = outputVcfPath;
-        }
-
-        public string SampleName { get; }
-        public IFileLocation OutputVcfPath { get; }
-        public Bam Bam { get; }
-        public IFileLocation NormalVcfPath { get; }
-        public bool IsDbSnpVcf { get; set; }
-        public IDirectoryLocation OutputFolder { get; }
-        internal string TempFolder => Path.Combine(OutputFolder.FullName, $"TempCNV_{SampleName}");
-        internal string BinSizePath => Path.Combine(TempFolder, $"{SampleName}.binsize");
-        internal string VfSummaryPath => Path.Combine(TempFolder, $"VFResults{SampleName}.txt.gz");
-        internal string VfSummaryBafPath => VfSummaryPath + ".baf";
-        internal string NormalBinnedPath => Path.Combine(TempFolder, $"{SampleName}.normal.binned");
+        internal IDirectoryLocation TempDirectory => OutputFolder.GetDirectoryLocation("TempCNV");
     }
 
     public class CanvasCallset
@@ -79,7 +54,7 @@ namespace Canvas
             NexteraManifest manifest,
             IFileLocation somaticVcfPath,
             IFileLocation outputVcfPath,
-            AnalysisDetails analysisDetails) 
+            AnalysisDetails analysisDetails)
 
         {
             SingleSampleCallset = new SingleSampleCallset(new Bam(bam), sampleName, normalVcfPath, isDbSnpVcf, analysisDetails.OutputFolder, outputVcfPath);
@@ -106,6 +81,6 @@ namespace Canvas
                 NormalBamPaths = normalBamPaths.Select(file => new Bam(file));
         }
         public bool IsEnrichment => Manifest != null;
-        internal string TempManifestPath => Path.Combine(SingleSampleCallset.TempFolder, "manifest.txt");
+        internal string TempManifestPath => Path.Combine(SingleSampleCallset.SampleOutputFolder.FullName, "manifest.txt");
     }
 }

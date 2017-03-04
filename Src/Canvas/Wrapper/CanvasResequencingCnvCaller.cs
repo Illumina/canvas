@@ -1,19 +1,14 @@
 ﻿using System.Collections.Generic;
 using System.Text;
+using Canvas.CommandLineParsing;
 using Illumina.Common;
 using Illumina.Common.FileSystem;
 using Isas.Framework.DataTypes;
 using Isas.Framework.Logging;
-using Isas.Framework.Utilities;
 using Isas.Framework.WorkManagement;
 
 namespace Canvas.Wrapper
 {
-    public interface ICanvasCnvCaller<TCanvasInput, TCanvasOutput>
-    {
-        SampleSet<TCanvasOutput> Run(SampleSet<TCanvasInput> inputs, IDirectoryLocation sandbox);
-    }
-
     /// <summary>
     /// Run Canvas to generate CNV calls:
     /// </summary>
@@ -25,11 +20,12 @@ namespace Canvas.Wrapper
         private readonly ICanvasAnnotationFileProvider _annotationFileProvider;
         private readonly ICanvasSingleSampleInputCommandLineBuilder _singleSampleInputCommandLineBuilder;
         private readonly CanvasPloidyBedCreator _canvasPloidyBedCreator;
+        private IFileLocation _mono;
 
         public CanvasResequencingCnvCaller(
             IWorkManager workManager,
             ILogger logger,
-            IFileLocation canvasExe,
+            IFileLocation canvasExe, IFileLocation mono,
             ICanvasAnnotationFileProvider annotationFileProvider,
             ICanvasSingleSampleInputCommandLineBuilder singleSampleInputCommandLineBuilder,
             CanvasPloidyBedCreator canvasPloidyBedCreator)
@@ -40,6 +36,7 @@ namespace Canvas.Wrapper
             _annotationFileProvider = annotationFileProvider;
             _singleSampleInputCommandLineBuilder = singleSampleInputCommandLineBuilder;
             _canvasPloidyBedCreator = canvasPloidyBedCreator;
+            _mono = mono;
         }
 
         public SampleSet<CanvasOutput> Run(SampleSet<CanvasResequencingInput> inputs, IDirectoryLocation sandbox)
@@ -70,21 +67,20 @@ namespace Canvas.Wrapper
             StringBuilder commandLine = new StringBuilder("Germline-WGS");
             commandLine.Append(_singleSampleInputCommandLineBuilder.GetSingleSampleCommandLine(sampleId, input.Bam, input.GenomeMetadata, sampleSandbox));
 
-            // use normal vcf by default (performance could be similar with dbSNP vcf though)
-            IFileLocation bAlleleVcf = input.Vcf.VcfFile;
+            // use sample vcf by default (performance could be similar with dbSNP vcf though)
+            var bAlleleVcf = input.Vcf.VcfFile;
+            var bAlleleVcfOptionName = SingleSampleCommonOptionsParser.SampleBAlleleVcfOptionName;
             if (_annotationFileProvider.CustomDbSnpVcf(input.GenomeMetadata))
             {
                 bAlleleVcf = _annotationFileProvider.GetDbSnpVcf(input.GenomeMetadata);
-                commandLine.Append($" --population-b-allele-vcf {bAlleleVcf.WrapWithShellQuote()}");
+                bAlleleVcfOptionName = SingleSampleCommonOptionsParser.PopulationBAlleleVcfOptionName;
             }
-            else
-            {
-                commandLine.Append($" --sample-b-allele-vcf {bAlleleVcf.WrapWithShellQuote()}");
-            }
+            commandLine.Append($" --{bAlleleVcfOptionName} {bAlleleVcf.WrapWithShellQuote()}");
+
 
             IFileLocation ploidyBed = _canvasPloidyBedCreator.CreateGermlinePloidyBed(input.Vcf, input.GenomeMetadata, sampleSandbox);
             if (ploidyBed != null)
-                commandLine.Append($" --ploidy-bed {ploidyBed.WrapWithShellQuote()}");
+                commandLine.Append($" --{SingleSampleCommonOptionsParser.PloidyBedOptionName} {ploidyBed.WrapWithShellQuote()}");
             var canvasPartitionParam = $@"--commoncnvs {_annotationFileProvider.GetCanvasAnnotationFile(input.GenomeMetadata, "commoncnvs.bed").WrapWithEscapedShellQuote()}";
             var moreCustomParameters = new Dictionary<string, string>();
             moreCustomParameters["CanvasPartition"] = canvasPartitionParam;
@@ -93,7 +89,7 @@ namespace Canvas.Wrapper
 
             UnitOfWork singleSampleJob = new UnitOfWork()
             {
-                ExecutablePath = CrossPlatform.IsThisLinux() ? Utilities.GetMonoPath() : _canvasExe.FullName,
+                ExecutablePath = CrossPlatform.IsThisLinux() ? _mono.FullName : _canvasExe.FullName,
                 CommandLine = CrossPlatform.IsThisLinux() ? _canvasExe + " " + commandLine : commandLine.ToString(),
                 LoggingFolder = _workManager.LoggingFolder.FullName,
                 LoggingStub = "Canvas_" + sampleId,

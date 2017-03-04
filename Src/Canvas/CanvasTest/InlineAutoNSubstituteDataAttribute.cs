@@ -10,7 +10,7 @@ using Ploeh.AutoFixture.Xunit2;
 using Xunit;
 using Xunit.Sdk;
 
-namespace UnitTests
+namespace CanvasTest
 {
     /// <summary>
     /// This attribute allows for combining multiple lists of complex input parameters for an xUnit [Theory] while
