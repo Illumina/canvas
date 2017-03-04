@@ -11,7 +11,6 @@ using Illumina.Common;
 using Illumina.Common.FileSystem;
 using Isas.Framework.Checkpointing;
 using Isas.Framework.Checkpointing.Legacy;
-using Isas.Framework.DataTypes;
 using Isas.Framework.Logging;
 using Isas.Framework.WorkManagement;
 using Isas.Manifests.NexteraManifest;
@@ -108,7 +107,7 @@ namespace Canvas
             return smallestBamPath;
         }
 
-        private int GetBinSize(CanvasCallset callset, IFileLocation bamPath, List<IFileLocation> intermediateDataPaths,
+        private int GetBinSize(CanvasCallset callset, IFileLocation bamPath, IReadOnlyList<IFileLocation> intermediateDataPaths,
             string canvasReferencePath, string canvasBedPath)
         {
             string canvasBinPath = Path.Combine(_canvasFolder, "CanvasBin.exe");
@@ -258,7 +257,7 @@ namespace Canvas
                 executablePath = _mono.FullName;
 
             //use bam as input
-            var bamPaths = callset.PedigreeSample.Select(sample=>sample.Sample.Bam.BamFile).ToList();
+            var bamPaths = callset.PedigreeSample.Select(sample => sample.Sample.Bam.BamFile).ToList();
 
             var sampleNames = callset.PedigreeSample.Select(x => x.Sample.SampleName).ToList();
             // read bams 
@@ -278,7 +277,7 @@ namespace Canvas
         }
 
         private Dictionary<IFileLocation, IFileLocation> BamToBinned(IDirectoryLocation tempFolder, bool isPairedEnd, List<string> sampleIds, string canvasReferencePath, string canvasBedPath, List<IFileLocation> bamPaths,
-            StringBuilder commandLine, string canvasBinPath, int binSize, Dictionary<IFileLocation, List<IFileLocation>> intermediateDataPathsByBam,
+            StringBuilder commandLine, string canvasBinPath, int binSize, Dictionary<IFileLocation, IReadOnlyList<IFileLocation>> intermediateDataPathsByBam,
             string executablePath)
         {
             var bamToBinned = new Dictionary<IFileLocation, IFileLocation>();
@@ -333,20 +332,21 @@ namespace Canvas
             return bamToBinned;
         }
 
-        private Dictionary<IFileLocation, List<IFileLocation>> GetIntermediateBinnedFilesByBamPath(GenomeMetadata genomeInfo, bool isPairedEnd,
+        private Dictionary<IFileLocation, IReadOnlyList<IFileLocation>> GetIntermediateBinnedFilesByBamPath(GenomeMetadata genomeInfo, bool isPairedEnd,
             List<string> sampleIds, IDirectoryLocation tempFolder, string canvasReferencePath, string canvasBedPath, List<IFileLocation> bamPaths,
             StringBuilder commandLine, string canvasBinPath, string executablePath, string tempManifestPath = null)
         {
             GenomeMetadata genomeMetadata = genomeInfo;
             List<UnitOfWork> binJobs = new List<UnitOfWork>();
 
-            var intermediateDataPathsByBamPath = new Dictionary<IFileLocation, List<IFileLocation>>();
+            var intermediateDataPathsByBamPath = new Dictionary<IFileLocation, IReadOnlyList<IFileLocation>>();
             for (int bamIndex = 0; bamIndex < bamPaths.Count; bamIndex++)
             {
                 var sampleId = sampleIds[bamIndex];
                 var bamPath = bamPaths[bamIndex];
 
-                intermediateDataPathsByBamPath[bamPath] = new List<IFileLocation>();
+                var intermediateDataPaths = new List<IFileLocation>();
+                intermediateDataPathsByBamPath[bamPath] = intermediateDataPaths;
                 foreach (
                     GenomeMetadata.SequenceMetadata sequenceMetadata in
                         genomeMetadata.Sequences.OrderByDescending(sequence => sequence.Length))
@@ -368,7 +368,7 @@ namespace Canvas
                     commandLine.AppendFormat("-m {0} ", _coverageMode);
 
                     var intermediateDataPath = tempFolder.GetFileLocation($"{sampleId}_{bamIndex}_{sequenceMetadata.Name}.dat");
-                    intermediateDataPathsByBamPath[bamPath].Add(intermediateDataPath);
+                    intermediateDataPaths.Add(intermediateDataPath);
                     commandLine.AppendFormat("-f \"{0}\" -d {1} -o \"{2}\" ", canvasBedPath, _countsPerBin, intermediateDataPath);
                     if (tempManifestPath != null)
                         commandLine.AppendFormat("-t \"{0}\" ", tempManifestPath);
@@ -888,7 +888,10 @@ namespace Canvas
 
             // Variant calling
             await canvasSnvTask;
-            RunSmallPedigreeCalling(partitionedPaths, callset);
+            _checkpointRunner.RunCheckpoint("Variant calling", () =>
+            {
+                RunSmallPedigreeCalling(partitionedPaths, callset);
+            });
         }
 
         private void NormalizeCanvasClean(List<IFileLocation> cleanedPaths, string tempFolder)
