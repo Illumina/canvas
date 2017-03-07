@@ -112,7 +112,7 @@ namespace CanvasPedigreeCaller
             if (dqScoreThreshold.HasValue & dqScoreThreshold > 0 & dqScoreThreshold < 60)
             {
                 caller.DeNovoQualityFilterThreshold = dqScoreThreshold.Value;
-                Console.WriteLine($"CanvasPedigreeCaller.exe: Using user-supplied de novo quality score threshold {qScoreThreshold}.");
+                Console.WriteLine($"CanvasPedigreeCaller.exe: Using user-supplied de novo quality score threshold {dqScoreThreshold}.");
             }
 
             if (!File.Exists(parameterconfigPath))

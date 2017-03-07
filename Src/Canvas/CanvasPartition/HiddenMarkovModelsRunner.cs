@@ -60,7 +60,7 @@ namespace CanvasPartition
                         Console.WriteLine($"{DateTime.Now} Launching HMM task for chromosome {chr}");
                         if (_nSamples <= 3)
                         hmm.FindMaximalLikelihood(multiSampleCoverage);
-                        List<int> bestPathViterbi = hmm.BestPathViterbi(multiSampleCoverage, startByChr, haploidMeans);
+                        List<int> bestPathViterbi = hmm.BestHsmmPathViterbi(multiSampleCoverage, haploidMeans);
                         Console.WriteLine($"{DateTime.Now} Completed HMM task for chromosome {chr}");
 
                         breakpoints.Add(0);
