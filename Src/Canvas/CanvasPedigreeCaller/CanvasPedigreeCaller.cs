@@ -26,8 +26,8 @@ namespace CanvasPedigreeCaller
             // load files
             // initialize data structures and classes
             int fileCounter = 0;
-            Dictionary<string, PedigreeMember.Kinship> kinships = ReadPedigreeFile(pedigreeFile);
-            LinkedList<PedigreeMember> pedigreeMembers = new LinkedList<PedigreeMember>();
+            var kinships = ReadPedigreeFile(pedigreeFile);
+            var pedigreeMembers = new LinkedList<PedigreeMember>();
             foreach (string sampleName in sampleNames)
             {
                 var pedigreeMember = SetPedigreeMember(variantFrequencyFiles, segmentFiles, ploidyBedPath, sampleName, fileCounter, CallerParameters.DefaultAlleleCountThreshold);
@@ -50,11 +50,11 @@ namespace CanvasPedigreeCaller
             var numberOfSegments = pedigreeMembers.First().Segments.Count;
             List<GenomicInterval> segmentIntervals = GetParallelIntevals(numberOfSegments, Environment.ProcessorCount);
 
-            List<PedigreeMember> parents = GetParents(pedigreeMembers);
-            List<PedigreeMember> offsprings = GetChildren(pedigreeMembers);
+            var parents = GetParents(pedigreeMembers);
+            var offsprings = GetChildren(pedigreeMembers);
             double[][] transitionMatrix = GetTransitionMatrix(CallerParameters.MaximumCopyNumber);
-            List<Tuple<int, int>> parentalGenotypes = GenerateParentalGenotypes(CallerParameters.MaximumCopyNumber);
-            List<List<Tuple<int, int>>> offspringsGenotypes = new List<List<Tuple<int, int>>>(Convert.ToInt32(Math.Pow(parentalGenotypes.Count, offsprings.Count)));
+            var parentalGenotypes = GenerateParentalGenotypes(CallerParameters.MaximumCopyNumber);
+            var offspringsGenotypes = new List<List<Tuple<int, int>>>(Convert.ToInt32(Math.Pow(parentalGenotypes.Count, offsprings.Count)));
             GenerateOffspringGenotypes(offspringsGenotypes, parentalGenotypes, offsprings.Count, new List<Tuple<int, int>>());
             if (offspringsGenotypes.Count > CallerParameters.MaxNumOffspringGenotypes)
             {
@@ -120,7 +120,7 @@ namespace CanvasPedigreeCaller
             // load files
             // initialize data structures and classes
             int fileCounter = 0;
-            LinkedList<PedigreeMember> pedigreeMembers = new LinkedList<PedigreeMember>();
+            var pedigreeMembers = new LinkedList<PedigreeMember>();
             foreach (string sampleName in sampleNames)
             {
                 var pedigreeMember = SetPedigreeMember(variantFrequencyFiles, segmentFiles, ploidyBedPath, sampleName, fileCounter, CallerParameters.DefaultAlleleCountThreshold);
@@ -129,7 +129,7 @@ namespace CanvasPedigreeCaller
             }
 
             var numberOfSegments = pedigreeMembers.First().Segments.Count;
-            List<GenomicInterval> segmentIntervals = GetParallelIntevals(numberOfSegments, Environment.ProcessorCount);
+            var segmentIntervals = GetParallelIntevals(numberOfSegments, Environment.ProcessorCount);
             var genotypes = GenerateGenotypeCombinations(CallerParameters.MaximumCopyNumber, CallerParameters.MaxAlleleNumber);
             var copyNumberCombinations = GenerateCopyNumberCombinations(CallerParameters.MaximumCopyNumber, CallerParameters.MaxAlleleNumber);
 
@@ -210,18 +210,17 @@ namespace CanvasPedigreeCaller
         private static PedigreeMember SetPedigreeMember(List<string> variantFrequencyFiles, List<string> segmentFiles, string ploidyBedPath,
             string sampleName, int fileCounter, int defaultAlleleCountThreshold)
         {
-            PedigreeMember pedigreeMember = new PedigreeMember
+            var pedigreeMember = new PedigreeMember
             {
                 Name = sampleName,
                 Segments = CanvasSegment.ReadSegments(segmentFiles[fileCounter])
             };
             pedigreeMember.MeanMafCoverage = CanvasIO.LoadFrequencies(variantFrequencyFiles[fileCounter],
                 pedigreeMember.Segments);
-            foreach (CanvasSegment segment in pedigreeMember.Segments)
+            foreach (var segment in pedigreeMember.Segments)
                 if (segment.Alleles.Counts.Count > defaultAlleleCountThreshold)
                     segment.Alleles.SetMedianCounts();
-            pedigreeMember.Variance =
-                Math.Pow(Utilities.StandardDeviation(pedigreeMember.Segments.Select(x => x.MedianCount).ToArray()), 2);
+            pedigreeMember.Variance = Math.Pow(Utilities.StandardDeviation(pedigreeMember.Segments.Select(x => x.MedianCount).ToArray()), 2);
             pedigreeMember.MafVariance =
                 Math.Pow(
                     Utilities.StandardDeviation(
@@ -349,7 +348,7 @@ namespace CanvasPedigreeCaller
             if (parent1Likelihood.Count != parent2Likelihood.Count)
                 throw new ArgumentException("Both parents should have the same number of CN states");
             int nCopies = CallerParameters.MaximumCopyNumber;
-            List<string> names = parents.Select(x => x.Name).Union(children.Select(x => x.Name)).ToList();
+            var names = parents.Select(x => x.Name).Union(children.Select(x => x.Name)).ToList();
             var density = new CopyNumberDistribution(nCopies, names);
 
             for (int cn1 = 0; cn1 < nCopies; cn1++)
@@ -469,7 +468,7 @@ namespace CanvasPedigreeCaller
             foreach (PedigreeMember sample in samples)
                 sample.Segments[segmentPosition].CopyNumber = defaultCn;
             int nCopies = CallerParameters.MaximumCopyNumber;
-            List<string> names = samples.Select(x => x.Name).ToList();
+            var names = samples.Select(x => x.Name).ToList();
             var totalLikelihoods = new List<double>();
             foreach (var copyNumberCombination in copyNumberCombinations)
             {
@@ -633,7 +632,7 @@ namespace CanvasPedigreeCaller
         /// <returns> </returns>
         public List<Dictionary<int, List<Tuple<int, int>>>> GenerateGenotypeCombinations(int numberOfCnStates, int maxAlleleNumber)
         {
-            Dictionary<int, List<Tuple<int, int>>> genotypes = new Dictionary<int, List<Tuple<int, int>>>();
+            var genotypes = new Dictionary<int, List<Tuple<int, int>>>();
             for (int cn = 0; cn < numberOfCnStates; cn++)
             {
                 genotypes[cn] = new List<Tuple<int, int>>();
