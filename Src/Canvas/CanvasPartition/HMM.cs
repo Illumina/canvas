@@ -26,7 +26,12 @@ namespace CanvasPartition
         public int length;
         public const double selfTransition = 0.99;
 
-
+        /// <summary>
+        /// Constructor
+        /// </summary>
+        /// <param name="data"></param>
+        /// <param name="mixturesDistribution"></param>
+        /// <param name="haploidMeans"></param>
         public HiddenMarkovModel(List<List<double>> data, List<MultivariateNegativeBinomial> mixturesDistribution, List<double> haploidMeans)
         {
             // HMM set-up
@@ -103,6 +108,13 @@ namespace CanvasPartition
             WriteEmission();
         }
 
+        /// <summary>
+        /// HMM Forward algorithm to calculate alpha 
+        /// see Rabiner, Lawrence R. "A tutorial on hidden Markov models and selected applications in speech recognition." 
+        /// Proceedings of the IEEE 77.2 (1989): 257-286.
+        /// </summary>
+        /// <param name="x"></param>
+        /// <returns></returns>
         public double Forward(List<List<double>> x)
         {
             // Initialization 
@@ -135,6 +147,15 @@ namespace CanvasPartition
             }
             return likelihood;
         }
+
+
+
+        /// <summary>
+        /// HMM Backward algorithm to calculate beta 
+        /// see Rabiner, Lawrence R. "A tutorial on hidden Markov models and selected applications in speech recognition." 
+        /// Proceedings of the IEEE 77.2 (1989): 257-286.
+        /// </summary>
+        /// <param name="x"></param>
         public void Backward(List<List<double>> x)
         {
             // Initialization 
@@ -203,6 +224,12 @@ namespace CanvasPartition
             return likelihood;
         }
 
+        /// <summary>
+        /// Expectation-Maximization algorithm for calculating HMM parameters
+        /// see Rabiner, Lawrence R. "A tutorial on hidden Markov models and selected applications in speech recognition." 
+        /// Proceedings of the IEEE 77.2 (1989): 257-286.
+        /// </summary>
+        /// <param name="x"></param>
         public void FindMaximalLikelihood(List<List<double>> x)
         {
             double likelihoodDifferenceThreshold = 0.01;
@@ -233,6 +260,9 @@ namespace CanvasPartition
         /// <summary>
         /// BestHsmmPathViterbi helper method to calculate sojourn survival function
         /// </summary>
+        /// <param name="maxStateLength"></param>
+        /// <param name="means"></param>
+        /// <returns></returns>
         public double[][] CalculateSojourn(int maxStateLength, List<int> means)
         {
             double[][] D = CanvasCommon.Utilities.MatrixCreate(maxStateLength + 1, maxStateLength + 2);
@@ -271,6 +301,9 @@ namespace CanvasPartition
         /// Guedon, Y. (2003), Estimating hidden semi-Markov chains from discrete sequences, Journal of
         /// Computational and Graphical Statistics, Volume 12, Number 3, page 604-639 - 2003
         /// </summary>
+        /// <param name="x"></param>
+        /// <param name="haploidMeans"></param>
+        /// <returns></returns>
         public List<int> BestHsmmPathViterbi(List<List<double>> x, List<double> haploidMeans)
         {
             // Initialization 
@@ -288,8 +321,8 @@ namespace CanvasPartition
                 alpha[j][0] = this._stateProbabilities[j];
             }
 
-            var maxStateLength = 110;
-            var sojournMeans = new List<int>{10,10,100,50,50};
+            var maxStateLength = 90;
+            var sojournMeans = new List<int>{10, 10, 80, 50, 50};
             var stateDurationProbability = GetStateDurationProbability(sojournMeans, maxStateLength);
             var sojournLastState = CalculateSojourn(maxStateLength, sojournMeans);
 
@@ -309,7 +342,7 @@ namespace CanvasPartition
                     emissionSequence = 0;
                     firstState = true;
 
-                    for (int stateDuration = 1; stateDuration < Math.Min(maxStateLength, t); stateDuration++)
+                    for (int stateDuration = 1; stateDuration < Math.Min(maxStateLength, t); stateDuration=+2)
                     {
                         firstI = true;
                         for (int i = 0; i < nStates; i++)
@@ -399,11 +432,21 @@ namespace CanvasPartition
                 T -= bestStateDuration[alternativeBestState][T];
             }
             finalStates.Reverse();
-
+            OutlierMask(finalStates);
+            SmallSegmentsMask(finalStates);
+            OversegmentationMask(finalStates);
             return finalStates;
         }
 
-
+        /// <summary>
+        /// Standard Viterbi algorithm for finding the best path through the sequence 
+        /// see Rabiner, Lawrence R. "A tutorial on hidden Markov models and selected applications in speech recognition." 
+        /// Proceedings of the IEEE 77.2 (1989): 257-286.
+        /// </summary>
+        /// <param name="x"></param>
+        /// <param name="start"></param>
+        /// <param name="haploidMeans"></param>
+        /// <returns></returns>
         public List<int> BestPathViterbi(List<List<double>> x, uint[] start, List<double> haploidMeans)
         {
             // Initialization 
