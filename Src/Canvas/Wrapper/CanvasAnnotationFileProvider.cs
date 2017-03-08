@@ -49,7 +49,7 @@ namespace Canvas.Wrapper
 
         public IFileLocation GetKmerFasta(GenomeMetadata genome)
         {
-            return GetCanvasAnnotationFile(genome, "kmer.fa");
+            return GetCanvasAnnotationFile(genome, "kmerv2.fa");
         }
 
         public IFileLocation GetFilterBed(GenomeMetadata genome)
