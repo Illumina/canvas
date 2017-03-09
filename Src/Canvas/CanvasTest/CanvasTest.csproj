@@ -137,37 +137,33 @@
     <Compile Include="TestUtilities.cs" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\CanvasBin\CanvasBin.csproj">
+    <ProjectReference Include="..\CanvasBin\CanvasBin.net45\CanvasBin.net45.csproj">
       <Project>{4fe7dc26-bb44-4a6e-b02b-785328c41260}</Project>
-      <Name>CanvasBin</Name>
+      <Name>CanvasBin.net45</Name>
     </ProjectReference>
     <ProjectReference Include="..\CanvasClean\CanvasClean.csproj">
       <Project>{3ea57084-d8fd-4978-8cf9-0ef97cfa47d0}</Project>
       <Name>CanvasClean</Name>
     </ProjectReference>
-    <ProjectReference Include="..\CanvasCommon\CanvasCommon.csproj">
+    <ProjectReference Include="..\CanvasCommon\CanvasCommon.net45\CanvasCommon.net45.csproj">
       <Project>{ec8755f1-74bd-4a1f-9b82-5133d2f6a93b}</Project>
-      <Name>CanvasCommon</Name>
+      <Name>CanvasCommon.net45</Name>
     </ProjectReference>
-    <ProjectReference Include="..\CanvasDiploidCaller\CanvasDiploidCaller.csproj">
-      <Project>{ffd9d459-c697-4e50-9e61-0b192a064211}</Project>
-      <Name>CanvasDiploidCaller</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\CanvasPartition\CanvasPartition.csproj">
+    <ProjectReference Include="..\CanvasPartition\CanvasPartition.net45\CanvasPartition.net45.csproj">
       <Project>{a1660795-cd4a-4fbc-9bf6-df2a420aa3ca}</Project>
-      <Name>CanvasPartition</Name>
+      <Name>CanvasPartition.net45</Name>
     </ProjectReference>
     <ProjectReference Include="..\CanvasSNV\CanvasSNV.csproj">
       <Project>{4dc19472-77f6-4482-b5be-8d15760f89f7}</Project>
       <Name>CanvasSNV</Name>
     </ProjectReference>
-    <ProjectReference Include="..\CanvasSomaticCaller\CanvasSomaticCaller.csproj">
+    <ProjectReference Include="..\CanvasSomaticCaller\CanvasSomaticCaller.net45\CanvasSomaticCaller.net45.csproj">
       <Project>{a08c4a1e-133e-4339-89e4-54651d37baf0}</Project>
-      <Name>CanvasSomaticCaller</Name>
+      <Name>CanvasSomaticCaller.net45</Name>
     </ProjectReference>
-    <ProjectReference Include="..\Canvas\Canvas.csproj">
+    <ProjectReference Include="..\Canvas\Canvas.net45\Canvas.net45.csproj">
       <Project>{f7eb30ca-eb4a-4e80-a067-0d9498a9f5b6}</Project>
-      <Name>Canvas</Name>
+      <Name>Canvas.net45</Name>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>

@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using CanvasCommon;
-using static CanvasCommon.DistibutionUtilities;
+using static CanvasCommon.DistributionUtilities;
 
 namespace CanvasPedigreeCaller
 {
@@ -33,8 +33,8 @@ namespace CanvasPedigreeCaller
             {
                 for (int gt2 = 0; gt2 < numCnStates; gt2++)
                 {
-                    var gt1Probabilities = DistibutionUtilities.NegativeBinomialWrapper(haploidMafMean * gt1, mafVariance, maxValue);
-                    var gt2Probabilities = DistibutionUtilities.NegativeBinomialWrapper(haploidMafMean * gt2, mafVariance, maxValue);
+                    var gt1Probabilities = DistributionUtilities.NegativeBinomialWrapper(haploidMafMean * gt1, mafVariance, maxValue);
+                    var gt2Probabilities = DistributionUtilities.NegativeBinomialWrapper(haploidMafMean * gt2, mafVariance, maxValue);
                     _alleleDistribution[gt1][gt2] = new Tuple<List<double>, List<double>>(gt1Probabilities, gt2Probabilities);
                 }
             }

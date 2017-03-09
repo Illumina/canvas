@@ -119,9 +119,9 @@
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\CanvasCommon\CanvasCommon.csproj">
+    <ProjectReference Include="..\CanvasCommon\CanvasCommon.net45\CanvasCommon.net45.csproj">
       <Project>{ec8755f1-74bd-4a1f-9b82-5133d2f6a93b}</Project>
-      <Name>CanvasCommon</Name>
+      <Name>CanvasCommon.net45</Name>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

@@ -184,7 +184,7 @@ namespace CanvasClean
                     normalizer.Normalize();
                     break;
                 default:
-                    throw new ApplicationException("Unsupported Canvas GC normalization mode: " + mode.ToString());
+                    throw new Illumina.Common.IlluminaException("Unsupported Canvas GC normalization mode: " + mode.ToString());
             }
         }
 

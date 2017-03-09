@@ -40,12 +40,12 @@ namespace CanvasClean
         {
             if (bandwidth <= 0 || bandwidth > 1)
             {
-                throw new ApplicationException(string.Format("bandwidth must be in the interval (0, 1], but got {0}", bandwidth));
+                throw new Illumina.Common.IlluminaException(string.Format("bandwidth must be in the interval (0, 1], but got {0}", bandwidth));
             }
             this.bandwidth = bandwidth;
             if (robustnessIters < 0)
             {
-                throw new ApplicationException(string.Format("the number of robustness iterations must be non-negative, but got {0}", robustnessIters));
+                throw new Illumina.Common.IlluminaException(string.Format("the number of robustness iterations must be non-negative, but got {0}", robustnessIters));
             }
             this.robustnessIters = robustnessIters;
         }
@@ -87,7 +87,7 @@ namespace CanvasClean
         {
             if (xvals.Length != yvals.Length)
             {
-                throw new ApplicationException(string.Format("Loess expects the abscissa and ordinate arrays to be of the same Size, but got {0} abscisssae and {1} ordinatae", xvals.Length, yvals.Length));
+                throw new Illumina.Common.IlluminaException(string.Format("Loess expects the abscissa and ordinate arrays to be of the same Size, but got {0} abscisssae and {1} ordinatae", xvals.Length, yvals.Length));
             }
 
             int n = xvals.Length;
@@ -105,7 +105,7 @@ namespace CanvasClean
             int leastBandwithInPoints = 1 + polynomialDegree;
             if (bandwidthInPoints < leastBandwithInPoints)
             {
-                throw new ApplicationException(string.Format(
+                throw new Illumina.Common.IlluminaException(string.Format(
                     "the bandwidth must be large enough to accomodate at least {0} points. There are {1} data points, and bandwidth must be at least {2} but it is only {3}",
                     leastBandwithInPoints, n, (double)leastBandwithInPoints / n, bandwidth
                 ));
@@ -332,7 +332,7 @@ namespace CanvasClean
                     string pattern = isAbscissae ?
                             "all abscissae must be finite real numbers, but {0}-th is {1}" :
                             "all ordinatae must be finite real numbers, but {0}-th is {1}";
-                    throw new ApplicationException(string.Format(pattern, i, x));
+                    throw new Illumina.Common.IlluminaException(string.Format(pattern, i, x));
                 }
             }
         }
@@ -348,7 +348,7 @@ namespace CanvasClean
             {
                 if (i >= 1 && xval[i - 1] > xval[i])
                 {
-                    throw new ApplicationException(
+                    throw new Illumina.Common.IlluminaException(
                         string.Format("the abscissae array must be sorted in an increasing order, but the {0}-th element is {1} whereas {2}-th is {3}",
                         i - 1, xval[i - 1], i, xval[i]));
                 }
@@ -435,7 +435,7 @@ namespace CanvasClean
                     }
                     if (intervalIndex >= LoessIntervals.Count && LoessIntervals[intervalIndex].IsRightOf(x))
                     {
-                        throw new ApplicationException(String.Format("Unable to find an interval for {0}.", x));
+                        throw new Illumina.Common.IlluminaException(String.Format("Unable to find an interval for {0}.", x));
                     }
                     yArr[ascendingOrder[i]] = predict(x, LoessIntervals[intervalIndex]);
                 }
@@ -447,13 +447,13 @@ namespace CanvasClean
             {
                 if (LoessIntervals == null || !LoessIntervals.Any())
                 {
-                    throw new ApplicationException("Unable to predict because no intervals are available.");
+                    throw new Illumina.Common.IlluminaException("Unable to predict because no intervals are available.");
                 }
 
                 LoessInterval interval = FindInterval(x);
                 if (interval == null)
                 {
-                    throw new ApplicationException(String.Format("Unable to find an interval for {0}.", x));
+                    throw new Illumina.Common.IlluminaException(String.Format("Unable to find an interval for {0}.", x));
                 }
 
                 return predict(x, interval);

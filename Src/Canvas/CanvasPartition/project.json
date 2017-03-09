@@ -1,0 +1,24 @@
+{
+  "version": "1.0.0-*",
+  "buildOptions": {
+    "emitEntryPoint": true,
+    "define": [ "DotNetCore" ]
+  },
+
+  "dependencies": {
+    "CanvasCommon": "1.0.0-*",
+    "Combinatorics": "1.0.0-*",
+    "Illumina.Common": "2.1.1.89",
+    "Isas.SequencingFiles": "3.10.1.184",
+    "Microsoft.NETCore.App": {
+      "type": "platform",
+      "version": "1.0.1"
+    }
+  },
+
+  "frameworks": {
+    "netcoreapp1.0": {
+      "imports": "dnxcore50"
+    }
+  }
+}

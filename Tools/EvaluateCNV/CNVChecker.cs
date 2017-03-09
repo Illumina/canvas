@@ -667,7 +667,7 @@ namespace EvaluateCNV
                         }
                         if ((truthInterval.Start >= ploidyRegion.Start && truthInterval.Start <= ploidyRegion.End) ||
                             (truthInterval.End >= ploidyRegion.Start && truthInterval.End <= ploidyRegion.End))
-                            throw new ApplicationException($"Truth interval {truthInterval} crosses reference ploidy region {ploidyRegion}. Update truth interval");
+                            throw new Illumina.Common.IlluminaException($"Truth interval {truthInterval} crosses reference ploidy region {ploidyRegion}. Update truth interval");
                     }
                 }
             }
