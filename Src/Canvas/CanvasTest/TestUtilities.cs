@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Illumina.Common;
 using Xunit;
 
 namespace CanvasTest
@@ -89,7 +90,7 @@ namespace CanvasTest
 
             double[] w = new double[5];
             for (int i = 0; i < w.Length; i++) { w[i] = 1; }
-            ApplicationException ex = Assert.Throws<ApplicationException>(() => Utilities.DotProduct(v, w));
+            IlluminaException ex = Assert.Throws<IlluminaException>(() => Utilities.DotProduct(v, w));
             Assert.Equal("Vectors must be of the same dimension to calculate dot product.", ex.Message);
         }
 
@@ -117,7 +118,7 @@ namespace CanvasTest
                 Assert.True(Math.Abs(w[i] - 1.0 / axis.Length) < 0.001);
             }
 
-            ApplicationException ex = Assert.Throws<ApplicationException>(() => Utilities.Project(u, new double[5]));
+            IlluminaException ex = Assert.Throws<IlluminaException>(() => Utilities.Project(u, new double[5]));
             Assert.Equal("Vector and the axis must be of the same dimension.", ex.Message);
         }
 
@@ -159,12 +160,12 @@ namespace CanvasTest
                 Assert.True(Math.Abs(u[i] - w[i]) < 0.001);
             }
 
-            ApplicationException ex = Assert.Throws<ApplicationException>(() => Utilities.Project(u, (IEnumerable<double[]>)null));
+            IlluminaException ex = Assert.Throws<IlluminaException>(() => Utilities.Project(u, (IEnumerable<double[]>)null));
             Assert.Equal("No axes to project onto.", ex.Message);
-            ex = Assert.Throws<ApplicationException>(() => Utilities.Project(u, new List<double[]>()));
+            ex = Assert.Throws<IlluminaException>(() => Utilities.Project(u, new List<double[]>()));
             Assert.Equal("No axes to project onto.", ex.Message);
 
-            ex = Assert.Throws<ApplicationException>(() => Utilities.Project(u, new List<double[]>() { new double[5] }));
+            ex = Assert.Throws<IlluminaException>(() => Utilities.Project(u, new List<double[]>() { new double[5] }));
             Assert.Equal("Vector and the axes must be of the same dimension.", ex.Message);
         }
 
