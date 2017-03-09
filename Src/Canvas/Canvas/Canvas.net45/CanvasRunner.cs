@@ -51,7 +51,7 @@ namespace Canvas
             _mono = mono;
             if (customParameters != null)
             {
-                _customParameters = new Dictionary<string, string>(customParameters, StringComparer.InvariantCultureIgnoreCase);
+                _customParameters = new Dictionary<string, string>(customParameters, StringComparer.OrdinalIgnoreCase);
                 UpdateCoverageMode(ref _coverageMode);
                 UpdateNormalizeMode(ref _normalizeMode);
             }
@@ -155,7 +155,8 @@ namespace Canvas
             _workManager.DoWorkSingleThread(binJob);
 
             int binSize;
-            using (StreamReader reader = new StreamReader(callset.SingleSampleCallset.BinSizePath))
+            using (FileStream stream = new FileStream(callset.SingleSampleCallset.BinSizePath, FileMode.Open, FileAccess.Read))
+            using (StreamReader reader = new StreamReader(stream))
             {
                 binSize = int.Parse(reader.ReadLine());
             }
@@ -736,12 +737,14 @@ namespace Canvas
 
         protected void ConcatenateCanvasSNVBafResults(string vfSummaryBafPath, IEnumerable<string> outputBafPaths)
         {
-            using (StreamWriter writer = new StreamWriter(vfSummaryBafPath))
+            using (FileStream outStream = new FileStream(vfSummaryBafPath, FileMode.Create, FileAccess.Write))
+            using (StreamWriter writer = new StreamWriter(outStream))
             {
                 string headers = null;
                 foreach (string outputPath in outputBafPaths)
                 {
-                    using (StreamReader reader = new StreamReader(outputPath))
+                    using (FileStream inStream = new FileStream(outputPath, FileMode.Open, FileAccess.Read))
+                    using (StreamReader reader = new StreamReader(inStream))
                     {
                         string fileLine = reader.ReadLine(); // headers
                         if (headers == null)
@@ -1173,8 +1176,8 @@ namespace Canvas
             string outFile = Path.Combine(callsets.AnalysisDetails.OutputFolder.FullName, "pedigree.ped");
             string motherSampleName = callsets.PedigreeSample.Where(x => x.SampleType == SampleType.Mother).Select(x => x.Sample.SampleName).Single();
             string fatherSampleName = callsets.PedigreeSample.Where(x => x.SampleType == SampleType.Father).Select(x => x.Sample.SampleName).Single();
-
-            using (StreamWriter writer = new StreamWriter(outFile))
+            using (FileStream stream = new FileStream(outFile, FileMode.Create, FileAccess.Write))
+            using (StreamWriter writer = new StreamWriter(stream))
             {
                 foreach (PedigreeSample callset in callsets.PedigreeSample)
                     if (callset.SampleType == SampleType.Mother || callset.SampleType == SampleType.Father)

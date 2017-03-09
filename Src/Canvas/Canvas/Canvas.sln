@@ -6,9 +6,9 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CanvasCommon.net45", "..\Ca
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CanvasClean", "..\CanvasClean\CanvasClean.csproj", "{3EA57084-D8FD-4978-8CF9-0EF97CFA47D0}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CanvasPartition", "..\CanvasPartition\CanvasPartition.csproj", "{A1660795-CD4A-4FBC-9BF6-DF2A420AA3CA}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CanvasPartition.net45", "..\CanvasPartition\CanvasPartition.net45\CanvasPartition.net45.csproj", "{A1660795-CD4A-4FBC-9BF6-DF2A420AA3CA}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CanvasBin", "..\CanvasBin\CanvasBin.csproj", "{4FE7DC26-BB44-4A6E-B02B-785328C41260}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CanvasBin.net45", "..\CanvasBin\CanvasBin.net45\CanvasBin.net45.csproj", "{4FE7DC26-BB44-4A6E-B02B-785328C41260}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CanvasNormalize", "..\CanvasNormalize\CanvasNormalize.csproj", "{2A31EE7C-45E1-447C-B05F-9B4AC8B7733E}"
 EndProject
@@ -16,7 +16,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EvaluateCNV", "..\..\..\Too
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FlagUniqueKmers.net45", "..\..\..\Tools\FlagUniqueKmers.net451\FlagUniqueKmers.net45.csproj", "{A11534D4-4C2B-4A1A-912F-5C1C03FD5851}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Canvas", "Canvas.csproj", "{F7EB30CA-EB4A-4E80-A067-0D9498A9F5B6}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Canvas.net45", "Canvas.net45\Canvas.net45.csproj", "{F7EB30CA-EB4A-4E80-A067-0D9498A9F5B6}"
 	ProjectSection(ProjectDependencies) = postProject
 		{74169E0F-DB8F-4A86-AEBE-C7DC4E15F916} = {74169E0F-DB8F-4A86-AEBE-C7DC4E15F916}
 		{A08C4A1E-133E-4339-89E4-54651D37BAF0} = {A08C4A1E-133E-4339-89E4-54651D37BAF0}
@@ -44,6 +44,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Wrapper", "..\Canvas.Wrappe
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{9E50841F-8F99-4A4C-A84B-1606360EBFD9}"
 	ProjectSection(SolutionItems) = preProject
+		Canvas.net45\Canvas.nuspec = Canvas.net45\Canvas.nuspec
+		Canvas.net45\Canvas.targets = Canvas.net45\Canvas.targets
 		NuGet.config = NuGet.config
 	EndProjectSection
 EndProject
@@ -59,7 +61,11 @@ Project("{8BB2217D-0F2D-49D1-97BC-3654ED321F3B}") = "Combinatorics", "..\Combina
 EndProject
 Project("{8BB2217D-0F2D-49D1-97BC-3654ED321F3B}") = "CanvasSomaticCaller", "..\CanvasSomaticCaller\CanvasSomaticCaller.xproj", "{35E4F059-D0DE-4F1F-A806-9713B5F6AA93}"
 EndProject
-Project("{8BB2217D-0F2D-49D1-97BC-3654ED321F3B}") = "Canvas.Wrapper", "..\Canvas.Wrapper\Canvas.Wrapper.xproj", "{DA2C7A71-6B66-460F-A9DA-215D3C6B5CCB}"
+Project("{8BB2217D-0F2D-49D1-97BC-3654ED321F3B}") = "CanvasBin", "..\CanvasBin\CanvasBin.xproj", "{CE36BF17-4827-4D75-87D1-19657E569862}"
+EndProject
+Project("{8BB2217D-0F2D-49D1-97BC-3654ED321F3B}") = "Canvas", "Canvas.xproj", "{48B9C165-4751-40BC-A2AE-522CC50A96A1}"
+EndProject
+Project("{8BB2217D-0F2D-49D1-97BC-3654ED321F3B}") = "CanvasPartition", "..\CanvasPartition\CanvasPartition.xproj", "{7842AE63-6305-466C-970F-7E218A5062A3}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -147,9 +153,18 @@ Global
 		{35E4F059-D0DE-4F1F-A806-9713B5F6AA93}.Debug|x64.Build.0 = Debug|Any CPU
 		{35E4F059-D0DE-4F1F-A806-9713B5F6AA93}.Release|x64.ActiveCfg = Release|Any CPU
 		{35E4F059-D0DE-4F1F-A806-9713B5F6AA93}.Release|x64.Build.0 = Release|Any CPU
-		{DA2C7A71-6B66-460F-A9DA-215D3C6B5CCB}.Debug|x64.ActiveCfg = Debug|Any CPU
-		{DA2C7A71-6B66-460F-A9DA-215D3C6B5CCB}.Debug|x64.Build.0 = Debug|Any CPU
-		{DA2C7A71-6B66-460F-A9DA-215D3C6B5CCB}.Release|x64.ActiveCfg = Release|Any CPU
+		{CE36BF17-4827-4D75-87D1-19657E569862}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{CE36BF17-4827-4D75-87D1-19657E569862}.Debug|x64.Build.0 = Debug|Any CPU
+		{CE36BF17-4827-4D75-87D1-19657E569862}.Release|x64.ActiveCfg = Release|Any CPU
+		{CE36BF17-4827-4D75-87D1-19657E569862}.Release|x64.Build.0 = Release|Any CPU
+		{48B9C165-4751-40BC-A2AE-522CC50A96A1}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{48B9C165-4751-40BC-A2AE-522CC50A96A1}.Debug|x64.Build.0 = Debug|Any CPU
+		{48B9C165-4751-40BC-A2AE-522CC50A96A1}.Release|x64.ActiveCfg = Release|Any CPU
+		{48B9C165-4751-40BC-A2AE-522CC50A96A1}.Release|x64.Build.0 = Release|Any CPU
+		{7842AE63-6305-466C-970F-7E218A5062A3}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{7842AE63-6305-466C-970F-7E218A5062A3}.Debug|x64.Build.0 = Debug|Any CPU
+		{7842AE63-6305-466C-970F-7E218A5062A3}.Release|x64.ActiveCfg = Release|Any CPU
+		{7842AE63-6305-466C-970F-7E218A5062A3}.Release|x64.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

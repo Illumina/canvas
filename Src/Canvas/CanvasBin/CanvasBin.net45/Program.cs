@@ -4,7 +4,6 @@ using System.IO;
 using Illumina.Common;
 using Illumina.Common.FileSystem;
 
-
 namespace CanvasBin
 {
     public class Program

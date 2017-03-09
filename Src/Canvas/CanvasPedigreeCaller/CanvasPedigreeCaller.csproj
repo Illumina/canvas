@@ -143,9 +143,9 @@
       <Project>{ec8755f1-74bd-4a1f-9b82-5133d2f6a93b}</Project>
       <Name>CanvasCommon.net45</Name>
     </ProjectReference>
-    <ProjectReference Include="..\Canvas\Canvas.csproj">
+    <ProjectReference Include="..\Canvas\Canvas.net45\Canvas.net45.csproj">
       <Project>{f7eb30ca-eb4a-4e80-a067-0d9498a9f5b6}</Project>
-      <Name>Canvas</Name>
+      <Name>Canvas.net45</Name>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>

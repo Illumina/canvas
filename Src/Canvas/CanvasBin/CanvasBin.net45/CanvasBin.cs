@@ -684,7 +684,8 @@ namespace CanvasBin
         /// <param name="tags">BitArrays of possible alignment positions.</param>
         static void ExcludeTagsOverlappingFilterFile(string filterFile, IDictionary<string, BitArray> tags)
         {
-            using (StreamReader reader = new StreamReader(filterFile))
+            using (FileStream stream = new FileStream(filterFile, FileMode.Open, FileAccess.Read))
+            using (StreamReader reader = new StreamReader(stream))
             {
                 string row;
 
@@ -1072,7 +1073,20 @@ namespace CanvasBin
                 {
                     int bitsInLastByte = kvp.Value.Length % 8;
                     byte[] bytes = new byte[kvp.Value.Length / 8 + (bitsInLastByte == 0 ? 0 : 1)];
+#if DotNetCore
+                    BitArray array = kvp.Value;
+                    int byteIndex = 0;
+                    int bytePosition = 0;
+                    for (int index = 0; index < array.Length; index++)
+                    {
+                        bytes[byteIndex] *= 2;
+                        if (array[index]) bytes[byteIndex]++;
+                        bytePosition = (bytePosition + 1) % 8;
+                        if (bytePosition == 0) byteIndex++;
+                    }
+#else
                     kvp.Value.CopyTo(bytes, 0);
+#endif
                     this.PossibleAlignments[kvp.Key] = bytes;
                     BitsInLastBytePossibleAlignments[kvp.Key] = bitsInLastByte;
                 }
