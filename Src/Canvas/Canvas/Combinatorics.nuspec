@@ -1,0 +1,19 @@
+<?xml version="1.0"?>
+<package>
+  <metadata>
+    <id>Combinatorics.Core</id>
+    <version>$version$</version>
+    <title>Combinatorics.Core</title>
+    <authors>Illumina</authors>
+    <owners>Illumina</owners>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <description>Combinatorics library for .NET core</description>
+    <copyright>Copyright 2017</copyright>
+    <tags>Canvas</tags>
+    <dependencies>
+    </dependencies>
+  </metadata>
+  <files>
+    <file src="..\Combinatorics\bin\Release\netstandard1.6\Combinatorics.dll" target="lib/dotnet" />
+  </files>
+</package>
