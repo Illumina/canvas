@@ -2,6 +2,7 @@
   "version": "1.0.0-*",
 
   "dependencies": {
+    "Canvas": "1.0.0-*",
     "CanvasCommon": "1.0.0-*",
     "ClassicBioinfoTools": "0.0.1.24",
     "Illumina.Common": "2.1.1.89",
@@ -9,11 +10,14 @@
     "Isas.Manifests": "2.11.0.33",
     "Isas.Ploidy": "1.0.2.27",
     "Isas.SequencingFiles": "3.10.1.184",
-    "NETStandard.Library": "1.6.0"
+    "Microsoft.NETCore.App": {
+      "type": "platform",
+      "version": "1.0.1"
+    }
   },
 
   "frameworks": {
-    "netstandard1.6": {
+    "netcoreapp1.0": {
       "imports": "dnxcore50"
     }
   }

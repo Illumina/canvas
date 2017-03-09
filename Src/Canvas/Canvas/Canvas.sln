@@ -44,7 +44,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Wrapper", "..\Canvas.Wrappe
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{9E50841F-8F99-4A4C-A84B-1606360EBFD9}"
 	ProjectSection(SolutionItems) = preProject
-		Canvas.net45\Canvas.nuspec = Canvas.net45\Canvas.nuspec
+		Canvas.nuspec = Canvas.nuspec
 		Canvas.net45\Canvas.targets = Canvas.net45\Canvas.targets
 		NuGet.config = NuGet.config
 	EndProjectSection
@@ -66,6 +66,8 @@ EndProject
 Project("{8BB2217D-0F2D-49D1-97BC-3654ED321F3B}") = "Canvas", "Canvas.xproj", "{48B9C165-4751-40BC-A2AE-522CC50A96A1}"
 EndProject
 Project("{8BB2217D-0F2D-49D1-97BC-3654ED321F3B}") = "CanvasPartition", "..\CanvasPartition\CanvasPartition.xproj", "{7842AE63-6305-466C-970F-7E218A5062A3}"
+EndProject
+Project("{8BB2217D-0F2D-49D1-97BC-3654ED321F3B}") = "Canvas.Wrapper", "..\Canvas.Wrapper\Canvas.Wrapper.xproj", "{DA2C7A71-6B66-460F-A9DA-215D3C6B5CCB}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -165,6 +167,10 @@ Global
 		{7842AE63-6305-466C-970F-7E218A5062A3}.Debug|x64.Build.0 = Debug|Any CPU
 		{7842AE63-6305-466C-970F-7E218A5062A3}.Release|x64.ActiveCfg = Release|Any CPU
 		{7842AE63-6305-466C-970F-7E218A5062A3}.Release|x64.Build.0 = Release|Any CPU
+		{DA2C7A71-6B66-460F-A9DA-215D3C6B5CCB}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{DA2C7A71-6B66-460F-A9DA-215D3C6B5CCB}.Debug|x64.Build.0 = Debug|Any CPU
+		{DA2C7A71-6B66-460F-A9DA-215D3C6B5CCB}.Release|x64.ActiveCfg = Release|Any CPU
+		{DA2C7A71-6B66-460F-A9DA-215D3C6B5CCB}.Release|x64.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
