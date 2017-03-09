@@ -59,7 +59,7 @@ namespace CanvasPartition
                         Console.WriteLine($"{DateTime.Now} Launching HMM task for chromosome {chr}");
                         if (_nSamples <= 3)
                             hmm.FindMaximalLikelihood(multiSampleCoverage);
-                        var bestPathViterbi = hmm.BestHsmmPathViterbi(multiSampleCoverage, haploidMeans);
+                        var bestPathViterbi = hmm.BestPathViterbi(multiSampleCoverage, startByChr, haploidMeans);
                         Console.WriteLine($"{DateTime.Now} Completed HMM task for chromosome {chr}");
 
                         breakpoints.Add(0);
@@ -102,8 +102,7 @@ namespace CanvasPartition
             var truncatedBreakpointsForward = breakpointsForward.Except(expandedReverseBreakpoints);
             var breakpointsMerged = truncatedBreakpointsForward.Union(breakpointsReverse).ToList();
             breakpointsMerged.Sort();
-            var breakpointsMergeFiltered = new List<int>(breakpointsMerged.Count);
-            breakpointsMergeFiltered.Add(breakpointsMerged.First());
+            var breakpointsMergeFiltered = new List<int>(breakpointsMerged.Count) {breakpointsMerged.First()};
             for (int i = 1; i < breakpointsMerged.Count; i++)
             {
                 if (breakpointsMerged[i]!= breakpointsMerged[i-1]+1)

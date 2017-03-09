@@ -48,7 +48,7 @@ namespace CanvasPedigreeCaller
             }
 
             var numberOfSegments = pedigreeMembers.First().Segments.Count;
-            List<GenomicInterval> segmentIntervals = GetParallelIntevals(numberOfSegments, Environment.ProcessorCount);
+            var segmentIntervals = GetParallelIntervals(numberOfSegments, Environment.ProcessorCount);
 
             var parents = GetParents(pedigreeMembers);
             var offsprings = GetChildren(pedigreeMembers);
@@ -83,10 +83,12 @@ namespace CanvasPedigreeCaller
                         if (segmentIndex >= interval.Start && segmentIndex <= interval.End)
                         {
                             var alleleCounts = pedigreeMembers.Select(x => x.Segments[segmentIndex].Alleles.Counts.Count);
+                            var zeroCoverage = pedigreeMembers.Select(x => x.Segments[segmentIndex].MedianCount == 0);
                             var enumerable = alleleCounts as int[] ?? alleleCounts.ToArray();
                             var alleleDensity = enumerable.Average() / pedigreeMembers.First().Segments[segmentIndex].Length;
                             var useCnLikelihood = enumerable.Select(x => x > CallerParameters.DefaultAlleleCountThreshold).Any(c => c == false) &&
-                                alleleDensity < CallerParameters.DefaultAlleleDensityThreshold && enumerable.Average() < CallerParameters.DefaultPerSegmentAlleleMaxCounts;
+                                                  alleleDensity < CallerParameters.DefaultAlleleDensityThreshold && 
+                                                  enumerable.Average() < CallerParameters.DefaultPerSegmentAlleleMaxCounts || zeroCoverage.Any(c => c == true);
                             var copyNumberLikelihoods = useCnLikelihood ?
                             MaximalCnLikelihoodWithPedigreeInfo(parents, offsprings, segmentIndex, transitionMatrix, offspringsGenotypes) :
                             MaximalGtLikelihoodWithPedigreeInfo(parents, offsprings, segmentIndex, parentalGenotypes, offspringsGenotypes);
@@ -129,7 +131,7 @@ namespace CanvasPedigreeCaller
             }
 
             var numberOfSegments = pedigreeMembers.First().Segments.Count;
-            var segmentIntervals = GetParallelIntevals(numberOfSegments, Environment.ProcessorCount);
+            var segmentIntervals = GetParallelIntervals(numberOfSegments, Environment.ProcessorCount);
             var genotypes = GenerateGenotypeCombinations(CallerParameters.MaximumCopyNumber, CallerParameters.MaxAlleleNumber);
             var copyNumberCombinations = GenerateCopyNumberCombinations(CallerParameters.MaximumCopyNumber, CallerParameters.MaxAlleleNumber);
 
@@ -142,7 +144,7 @@ namespace CanvasPedigreeCaller
                 segmentIntervals,
                 new ParallelOptions
                 {
-                    MaxDegreeOfParallelism = Environment.ProcessorCount,
+                    MaxDegreeOfParallelism = 1,
                     TaskScheduler = TaskScheduler.Default
                 },
                 interval =>
@@ -443,7 +445,7 @@ namespace CanvasPedigreeCaller
                             counter = 0;
                             foreach (PedigreeMember child in children)
                             {
-                                child.Segments[segmentPosition].CopyNumber = parent2GtStates.Item1 + offspringGtStates[counter].Item2;
+                                child.Segments[segmentPosition].CopyNumber = offspringGtStates[counter].Item1 + offspringGtStates[counter].Item2;
                                 child.Segments[segmentPosition].MajorChromosomeCount = Math.Max(offspringGtStates[counter].Item1, offspringGtStates[counter].Item2);
                                 counter++;
                             }
@@ -680,19 +682,21 @@ namespace CanvasPedigreeCaller
             }
         }
 
-        private List<GenomicInterval> GetParallelIntevals(int nSegments, int nCores)
+        private List<GenomicInterval> GetParallelIntervals(int nSegments, int nCores)
         {
-            var intevals = new List<GenomicInterval>();
+            var intervals = new List<GenomicInterval>();
+            //intervals.Add(new GenomicInterval(17231, 34515));
+
             int step = nSegments / nCores;
-            intevals.Add(new GenomicInterval(0, step));
+            intervals.Add(new GenomicInterval(0, step));
             int cumSum = step + 1;
             while (cumSum + step + 1 < nSegments - 1)
             {
-                intevals.Add(new GenomicInterval(cumSum, cumSum + step));
+                intervals.Add(new GenomicInterval(cumSum, cumSum + step));
                 cumSum += step + 1;
             }
-            intevals.Add(new GenomicInterval(cumSum, nSegments - 1));
-            return intevals;
+            intervals.Add(new GenomicInterval(cumSum, nSegments - 1));
+            return intervals;
         }
 
         public double GetTransitionProbability(int gt1Parent, int gt2Parent, int gt1Offspring, int gt2Offspring)

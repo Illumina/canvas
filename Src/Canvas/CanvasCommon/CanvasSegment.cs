@@ -15,8 +15,8 @@ namespace CanvasCommon
         public Tuple<int, int> MedianCounts = new Tuple<int, int>(0, 0);
         public void SetMedianCounts()
         {
-            var item1 = Utilities.Median(Counts.Select(x => x.Item1).ToList());
-            var item2 = Utilities.Median(Counts.Select(x => x.Item2).ToList());
+            var item1 = Utilities.Median(Counts.Select(x => Math.Max(x.Item1, x.Item2)).ToList());
+            var item2 = Utilities.Median(Counts.Select(x => Math.Min(x.Item1, x.Item2)).ToList());
             MedianCounts = new Tuple<int, int>(item1, item2);
         }
     }

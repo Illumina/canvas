@@ -180,8 +180,15 @@ namespace CanvasPartition
             }
         }
 
-        private void adjustTransition(double diploidTransitionProb)
+
+        /// <summary>
+        /// Rule 1: for "diploid" state transition probabilities could not be less than diploidTransitionProb
+        /// Rule 2: transition between loss (1-2) and gain (3-4) states is set to gainlossTransitionProb 
+        /// </summary>
+        /// <param name="diploidTransitionProb"></param>
+        private void AdjustTransition(double diploidTransitionProb)
         {
+            var gainlossTransitionProb = (1.0 - diploidTransitionProb) /(nStates * nStates);
             if (_transition[2][2] < diploidTransitionProb)
             {
                 _transition[2][2] = diploidTransitionProb;
@@ -191,9 +198,11 @@ namespace CanvasPartition
                         continue;
                     _transition[2][state] = (1.0 - diploidTransitionProb) / (nStates - 1);
                 }
-
             }
-
+            _transition[0][1] = gainlossTransitionProb;
+            _transition[1][0] = gainlossTransitionProb;
+            _transition[3][4] = gainlossTransitionProb;
+            _transition[4][3] = gainlossTransitionProb;
         }
 
         public void MaximisationStep(List<List<double>> x)
@@ -253,7 +262,7 @@ namespace CanvasPartition
             var genomeSize = Math.Pow(30, 9);
             var nonDiploidBases = 2000 * 10000;
             var diploidTransitionProb = (genomeSize - nonDiploidBases) / genomeSize;
-            adjustTransition(diploidTransitionProb);
+            AdjustTransition(diploidTransitionProb);
             WriteEmission();
         }
 
@@ -265,7 +274,7 @@ namespace CanvasPartition
         /// <returns></returns>
         public double[][] CalculateSojourn(int maxStateLength, List<int> means)
         {
-            double[][] D = CanvasCommon.Utilities.MatrixCreate(maxStateLength + 1, maxStateLength + 2);
+            double[][] sojourn = CanvasCommon.Utilities.MatrixCreate(maxStateLength + 1, maxStateLength + 2);
             // Store D
             for (int j = 0; j < nStates; j++)
             {
@@ -274,11 +283,11 @@ namespace CanvasPartition
                     double x = 0;
                     for (int v = u; v < maxStateLength + 2; v++)
                         x += Math.Log(Poisson.PMF(means[j], v));
-                    D[j][u] = x;
+                    sojourn[j][u] = x;
                 }
-                D[j][maxStateLength] = 0;
+                sojourn[j][maxStateLength] = 0;
             }
-            return D;
+            return sojourn;
         }
 
         private static List<List<double>> GetStateDurationProbability(List<int> sojournMeans, int maxStateLength)
@@ -438,22 +447,39 @@ namespace CanvasPartition
             return finalStates;
         }
 
+        public List<List<double>> MeanSmoother(List<List<double>> data)
+        {
+            List<List<double>> dataCopy = data.ConvertAll(item => new List<double>(item));
+            int halfWindow = 1;
+            double w1 = 1.0 / 3.0;
+            double w2 = 1.0 / 3.0;
+            double w3 = 1.0 / 3.0;
+
+            for (int i = halfWindow; i < dataCopy.Count-halfWindow; i++)
+                for (int j = 0; j < dataCopy[i].Count; j++)
+                    dataCopy[i][j] = data[i][j] * w1 + data[i - halfWindow][j] * w2 + data[i + halfWindow][j] * w3;
+
+            return dataCopy;
+        }
+
         /// <summary>
         /// Standard Viterbi algorithm for finding the best path through the sequence 
         /// see Rabiner, Lawrence R. "A tutorial on hidden Markov models and selected applications in speech recognition." 
         /// Proceedings of the IEEE 77.2 (1989): 257-286.
         /// </summary>
-        /// <param name="x"></param>
+        /// <param name="depthList"></param>
         /// <param name="start"></param>
         /// <param name="haploidMeans"></param>
         /// <returns></returns>
-        public List<int> BestPathViterbi(List<List<double>> x, uint[] start, List<double> haploidMeans)
+        public List<int> BestPathViterbi(List<List<double>> depthList, uint[] start, List<double> haploidMeans)
         {
+            var x = MeanSmoother(depthList);
+            
             // Initialization 
-            var length = x.Count;
-            double[][] bestScore = CanvasCommon.Utilities.MatrixCreate(length + 1, nStates);
-            int[][] bestStateSequence = new int[length + 1][];
-            for (int i = 0; i < length; ++i)
+            var size = x.Count;
+            double[][] bestScore = CanvasCommon.Utilities.MatrixCreate(size + 1, nStates);
+            int[][] bestStateSequence = new int[size + 1][];
+            for (int i = 0; i < size; ++i)
                 bestStateSequence[i] = new int[nStates];
 
             for (int j = 0; j < nStates; j++)
@@ -463,7 +489,7 @@ namespace CanvasPartition
             }
 
             // Induction 
-            for (int t = 1; t < length - 1; t++)
+            for (int t = 1; t < size - 1; t++)
             {
 
                 for (int j = 0; j < nStates; j++)
@@ -484,14 +510,14 @@ namespace CanvasPartition
                 }
             }
 
-            var backtrack = length - 1;
+            var backtrack = size - 1;
             int bestState = 0;
-            List<int> bestStates = new List<int>(length + 1);
+            var bestStates = new List<int>(size + 1);
             var max1 = Double.MinValue;
             for (int i = 0; i < nStates; i++)
             {
 
-                var tmpMax = bestScore[length][i];
+                var tmpMax = bestScore[size][i];
                 if (tmpMax > max1)
                 {
                     bestState = i;
@@ -508,10 +534,6 @@ namespace CanvasPartition
             }
 
             bestStates.Reverse();
-            OutlierMask(bestStates);
-            SmallSegmentsMask(bestStates);
-            OversegmentationMask(bestStates);
-
             return bestStates;
         }
 
@@ -523,7 +545,6 @@ namespace CanvasPartition
                     bestStates[k - 1] == bestStates[k + 1] && bestStates[k] != bestStates[k - 1])
                     bestStates[k] = bestStates[k - 1];
             }
-
         }
 
         public void SmallSegmentsMask(List<int> bestStates)
