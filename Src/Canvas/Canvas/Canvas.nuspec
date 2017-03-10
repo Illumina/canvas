@@ -25,9 +25,11 @@
     <file src="..\Canvas.Wrapper\Wrapper\bin\x64\Release\Canvas.Wrapper.XML" target="lib\net451" />
     <file src="..\Canvas.Wrapper\Wrapper\bin\x64\Release\Canvas.exe" target="lib\net451" />
     <file src="..\Canvas.Wrapper\Wrapper\bin\x64\Release\CanvasCommon.dll" target="lib\net451" />
-
+   <!--
+   Commenting out .NET core for now:
     <file src="..\Canvas.Wrapper\bin\Release\netcoreapp1.0\Canvas.Wrapper.dll" target="lib/dotnet" />
     <file src="bin\Release\netcoreapp1.0\Canvas.dll" target="lib/dotnet" />
+    -->
 
   </files>
 </package>
