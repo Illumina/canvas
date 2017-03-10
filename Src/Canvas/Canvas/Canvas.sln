@@ -48,6 +48,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		Canvas.net45\Canvas.targets = Canvas.net45\Canvas.targets
 		CanvasBin.nuspec = CanvasBin.nuspec
 		CanvasCommon.nuspec = CanvasCommon.nuspec
+		CanvasWithoutWrapper.nuspec = CanvasWithoutWrapper.nuspec
 		Combinatorics.nuspec = Combinatorics.nuspec
 		NuGet.config = NuGet.config
 	EndProjectSection
@@ -165,6 +166,7 @@ Global
 		{48B9C165-4751-40BC-A2AE-522CC50A96A1}.Debug|x64.ActiveCfg = Debug|Any CPU
 		{48B9C165-4751-40BC-A2AE-522CC50A96A1}.Debug|x64.Build.0 = Debug|Any CPU
 		{48B9C165-4751-40BC-A2AE-522CC50A96A1}.Release|x64.ActiveCfg = Release|Any CPU
+		{48B9C165-4751-40BC-A2AE-522CC50A96A1}.Release|x64.Build.0 = Release|Any CPU
 		{7842AE63-6305-466C-970F-7E218A5062A3}.Debug|x64.ActiveCfg = Debug|Any CPU
 		{7842AE63-6305-466C-970F-7E218A5062A3}.Debug|x64.Build.0 = Debug|Any CPU
 		{7842AE63-6305-466C-970F-7E218A5062A3}.Release|x64.ActiveCfg = Release|Any CPU
