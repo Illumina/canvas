@@ -38,7 +38,7 @@ namespace EvaluateCNV
         public static void ShowHelp(EvaluateCnvOptionsParser optionsParser)
         {
             Console.WriteLine("EvaluateCNV {0}",
-                    System.Reflection.Assembly.GetExecutingAssembly().GetName().Version);
+                    System.Reflection.Assembly.GetEntryAssembly().GetName().Version);
             Console.WriteLine("For more info see: http://confluence.illumina.com/display/BIOINFO/EvaluateCNV");
             Console.WriteLine();
             Console.WriteLine("Usage info:");
