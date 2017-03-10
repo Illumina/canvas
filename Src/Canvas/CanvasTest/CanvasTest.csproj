@@ -141,9 +141,9 @@
       <Project>{4fe7dc26-bb44-4a6e-b02b-785328c41260}</Project>
       <Name>CanvasBin.net45</Name>
     </ProjectReference>
-    <ProjectReference Include="..\CanvasClean\CanvasClean.net45\CanvasClean.csproj">
+    <ProjectReference Include="..\CanvasClean\CanvasClean.net45\CanvasClean.net45.csproj">
       <Project>{3ea57084-d8fd-4978-8cf9-0ef97cfa47d0}</Project>
-      <Name>CanvasClean</Name>
+      <Name>CanvasClean.net45</Name>
     </ProjectReference>
     <ProjectReference Include="..\CanvasCommon\CanvasCommon.net45\CanvasCommon.net45.csproj">
       <Project>{ec8755f1-74bd-4a1f-9b82-5133d2f6a93b}</Project>
@@ -153,9 +153,9 @@
       <Project>{a1660795-cd4a-4fbc-9bf6-df2a420aa3ca}</Project>
       <Name>CanvasPartition.net45</Name>
     </ProjectReference>
-    <ProjectReference Include="..\CanvasSNV\CanvasSNV.csproj">
+    <ProjectReference Include="..\CanvasSNV\CanvasSNV.net45\CanvasSNV.net45.csproj">
       <Project>{4dc19472-77f6-4482-b5be-8d15760f89f7}</Project>
-      <Name>CanvasSNV</Name>
+      <Name>CanvasSNV.net45</Name>
     </ProjectReference>
     <ProjectReference Include="..\CanvasSomaticCaller\CanvasSomaticCaller.net45\CanvasSomaticCaller.net45.csproj">
       <Project>{a08c4a1e-133e-4339-89e4-54651d37baf0}</Project>
