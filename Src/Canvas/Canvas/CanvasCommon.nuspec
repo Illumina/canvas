@@ -1,0 +1,19 @@
+<?xml version="1.0"?>
+<package>
+  <metadata>
+    <id>CanvasCommon.Core</id>
+    <version>$version$</version>
+    <title>CanvasCommon.Core</title>
+    <authors>Illumina</authors>
+    <owners>Illumina</owners>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <description>CanvasCommon for .NET core</description>
+    <copyright>Copyright 2017</copyright>
+    <tags>Canvas</tags>
+    <dependencies>
+    </dependencies>
+  </metadata>
+  <files>
+    <file src="..\CanvasCommon\bin\Release\netstandard1.6\CanvasCommon.dll" target="lib/dotnet" />
+  </files>
+</package>

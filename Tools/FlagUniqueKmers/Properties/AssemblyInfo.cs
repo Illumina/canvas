@@ -9,7 +9,7 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("Illumina")]
 [assembly: AssemblyProduct("FlagUniqueKmers")]
-[assembly: AssemblyCopyright("Copyright © Illumina 2014")]
+[assembly: AssemblyCopyright("Copyright © Illumina 2017")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 
