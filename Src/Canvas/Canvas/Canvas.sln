@@ -4,13 +4,13 @@ VisualStudioVersion = 14.0.25420.1
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CanvasCommon.net45", "..\CanvasCommon\CanvasCommon.net45\CanvasCommon.net45.csproj", "{EC8755F1-74BD-4A1F-9B82-5133D2F6A93B}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CanvasClean", "..\CanvasClean\CanvasClean.net45\CanvasClean.csproj", "{3EA57084-D8FD-4978-8CF9-0EF97CFA47D0}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CanvasClean.net45", "..\CanvasClean\CanvasClean.net45\CanvasClean.net45.csproj", "{3EA57084-D8FD-4978-8CF9-0EF97CFA47D0}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CanvasPartition.net45", "..\CanvasPartition\CanvasPartition.net45\CanvasPartition.net45.csproj", "{A1660795-CD4A-4FBC-9BF6-DF2A420AA3CA}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CanvasBin.net45", "..\CanvasBin\CanvasBin.net45\CanvasBin.net45.csproj", "{4FE7DC26-BB44-4A6E-B02B-785328C41260}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CanvasNormalize", "..\CanvasNormalize\CanvasNormalize.net45\CanvasNormalize.csproj", "{2A31EE7C-45E1-447C-B05F-9B4AC8B7733E}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CanvasNormalize.net45", "..\CanvasNormalize\CanvasNormalize.net45\CanvasNormalize.net45.csproj", "{2A31EE7C-45E1-447C-B05F-9B4AC8B7733E}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EvaluateCNV", "..\..\..\Tools\EvaluateCNV\EvaluateCNV.csproj", "{2467744A-CDDA-4E79-9039-F7724188937F}"
 EndProject
@@ -32,7 +32,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Canvas.net45", "Canvas.net4
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CanvasTest", "..\CanvasTest\CanvasTest.csproj", "{131A3BED-01A9-44A5-9CD1-3A06AE443341}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CanvasSNV", "..\CanvasSNV\CanvasSNV.csproj", "{4DC19472-77F6-4482-B5BE-8D15760F89F7}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CanvasSNV.net45", "..\CanvasSNV\CanvasSNV.net45\CanvasSNV.net45.csproj", "{4DC19472-77F6-4482-B5BE-8D15760F89F7}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CanvasSomaticCaller.net45", "..\CanvasSomaticCaller\CanvasSomaticCaller.net45\CanvasSomaticCaller.net45.csproj", "{A08C4A1E-133E-4339-89E4-54651D37BAF0}"
 EndProject
@@ -72,6 +72,10 @@ EndProject
 Project("{8BB2217D-0F2D-49D1-97BC-3654ED321F3B}") = "CanvasPartition", "..\CanvasPartition\CanvasPartition.xproj", "{7842AE63-6305-466C-970F-7E218A5062A3}"
 EndProject
 Project("{8BB2217D-0F2D-49D1-97BC-3654ED321F3B}") = "Canvas.Wrapper", "..\Canvas.Wrapper\Canvas.Wrapper.xproj", "{DA2C7A71-6B66-460F-A9DA-215D3C6B5CCB}"
+EndProject
+Project("{8BB2217D-0F2D-49D1-97BC-3654ED321F3B}") = "CanvasSNV", "..\CanvasSNV\CanvasSNV.xproj", "{DFBCB487-DE6B-49CF-BC1C-8DD8CDADAFEA}"
+EndProject
+Project("{8BB2217D-0F2D-49D1-97BC-3654ED321F3B}") = "CanvasNormalize", "..\CanvasNormalize\CanvasNormalize.xproj", "{C65A5CD8-62E7-494A-966D-5BB6731F9C2F}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -175,6 +179,14 @@ Global
 		{DA2C7A71-6B66-460F-A9DA-215D3C6B5CCB}.Debug|x64.Build.0 = Debug|Any CPU
 		{DA2C7A71-6B66-460F-A9DA-215D3C6B5CCB}.Release|x64.ActiveCfg = Release|Any CPU
 		{DA2C7A71-6B66-460F-A9DA-215D3C6B5CCB}.Release|x64.Build.0 = Release|Any CPU
+		{DFBCB487-DE6B-49CF-BC1C-8DD8CDADAFEA}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{DFBCB487-DE6B-49CF-BC1C-8DD8CDADAFEA}.Debug|x64.Build.0 = Debug|Any CPU
+		{DFBCB487-DE6B-49CF-BC1C-8DD8CDADAFEA}.Release|x64.ActiveCfg = Release|Any CPU
+		{DFBCB487-DE6B-49CF-BC1C-8DD8CDADAFEA}.Release|x64.Build.0 = Release|Any CPU
+		{C65A5CD8-62E7-494A-966D-5BB6731F9C2F}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{C65A5CD8-62E7-494A-966D-5BB6731F9C2F}.Debug|x64.Build.0 = Debug|Any CPU
+		{C65A5CD8-62E7-494A-966D-5BB6731F9C2F}.Release|x64.ActiveCfg = Release|Any CPU
+		{C65A5CD8-62E7-494A-966D-5BB6731F9C2F}.Release|x64.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

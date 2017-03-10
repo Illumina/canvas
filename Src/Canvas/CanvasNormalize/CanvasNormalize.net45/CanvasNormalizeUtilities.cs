@@ -57,7 +57,8 @@ namespace CanvasNormalize
             using (var eFragment = fragmentCounts.GetEnumerator())
             using (var eReference = referenceCounts.GetEnumerator())
             using (var eRatio = ratios.GetEnumerator())
-            using (StreamWriter writer = new StreamWriter(outputFile.FullName))
+            using (FileStream stream = new FileStream(outputFile.FullName, FileMode.Create, FileAccess.Write))
+            using (StreamWriter writer = new StreamWriter(stream))
             {
                 writer.WriteLine(CSVWriter.GetLine("Fragment Count", "Reference Count", "Chromosome",
                     "Start", "End", "Unsmoothed Log Ratio"));

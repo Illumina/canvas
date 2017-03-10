@@ -23,7 +23,8 @@ namespace CanvasSNV
             // Load our "oracle" of known copy numbers:
             this.KnownCN = new Dictionary<string, List<CNInterval>>();
             int count = 0;
-            using (StreamReader reader = new StreamReader(oracleVCFPath))
+            using (FileStream stream = new FileStream(oracleVCFPath, FileMode.Open, FileAccess.Read))
+            using (StreamReader reader = new StreamReader(stream))
             {
                 while (true)
                 {
@@ -79,7 +80,8 @@ namespace CanvasSNV
             {
                 string fileName = Path.GetFileName(filePath);
                 if (!fileName.EndsWith("results.txt")) continue;
-                using (StreamReader reader = new StreamReader(filePath))
+                using (FileStream stream = new FileStream(filePath, FileMode.Open, FileAccess.Read))
+                using (StreamReader reader = new StreamReader(stream))
                 {
                     while (true)
                     {
@@ -127,7 +129,8 @@ namespace CanvasSNV
             {
                 string fileName = Path.GetFileName(filePath);
                 if (!fileName.EndsWith("results.txt")) continue;
-                using (StreamReader reader = new StreamReader(filePath))
+                using (FileStream stream = new FileStream(filePath, FileMode.Open, FileAccess.Read))
+                using (StreamReader reader = new StreamReader(stream))
                 {
                     while (true)
                     {
@@ -158,7 +161,8 @@ namespace CanvasSNV
                     }
                 }
             }
-            using (StreamWriter writer = new StreamWriter(outputPath))
+            using (FileStream stream = new FileStream(outputPath, FileMode.Create, FileAccess.Write))
+            using (StreamWriter writer = new StreamWriter(stream))
             {
                 // Report variant frequency stats for each region:
                 foreach (string chromosome in KnownCN.Keys)
@@ -218,7 +222,8 @@ namespace CanvasSNV
 
             // Summarize results:
             Console.WriteLine(">>> Summarize results to {0}", outputPath);
-            using (StreamWriter writer = new StreamWriter(outputPath))
+            using (FileStream stream = new FileStream(outputPath, FileMode.Create, FileAccess.Write))
+            using (StreamWriter writer = new StreamWriter(stream))
             {
                 writer.NewLine = "\n";
                 writer.WriteLine("#Bin\tCN0\tCN1\tCN2\tCN3\tCN4\tCN5\tCN6\tCN7\tCN8\tCN9\t");
