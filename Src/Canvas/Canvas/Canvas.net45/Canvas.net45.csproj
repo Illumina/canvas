@@ -67,7 +67,7 @@
     <Optimize>false</Optimize>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|x64'">
-    <OutputPath>..\x64\Release\</OutputPath>
+    <OutputPath>..\..\x64\Release\</OutputPath>
     <DefineConstants>TRACE</DefineConstants>
     <Optimize>true</Optimize>
     <DebugType>pdbonly</DebugType>
@@ -85,16 +85,16 @@
       <HintPath>packages\Isas.Framework.5.3.0.94\lib\net451\Isas.Framework.dll</HintPath>
       <Private>True</Private>
     </Reference>
-    <Reference Include="Isas.Manifests.AmpliconManifest, Version=2.11.0.33, Culture=neutral, processorArchitecture=AMD64">
-      <HintPath>packages\Isas.Manifests.2.11.0.33\lib\net451\Isas.Manifests.AmpliconManifest.dll</HintPath>
+    <Reference Include="Isas.Manifests.AmpliconManifest, Version=2.12.0.38, Culture=neutral, processorArchitecture=AMD64">
+      <HintPath>..\packages\Isas.Manifests.2.12.0.38\lib\net451\Isas.Manifests.AmpliconManifest.dll</HintPath>
       <Private>True</Private>
     </Reference>
-    <Reference Include="Isas.Manifests.ForenSeqManifest, Version=2.11.0.33, Culture=neutral, processorArchitecture=AMD64">
-      <HintPath>packages\Isas.Manifests.2.11.0.33\lib\net451\Isas.Manifests.ForenSeqManifest.dll</HintPath>
+    <Reference Include="Isas.Manifests.ForenSeqManifest, Version=2.12.0.38, Culture=neutral, processorArchitecture=AMD64">
+      <HintPath>..\packages\Isas.Manifests.2.12.0.38\lib\net451\Isas.Manifests.ForenSeqManifest.dll</HintPath>
       <Private>True</Private>
     </Reference>
-    <Reference Include="Isas.Manifests.NexteraManifest, Version=2.11.0.33, Culture=neutral, processorArchitecture=AMD64">
-      <HintPath>packages\Isas.Manifests.2.11.0.33\lib\net451\Isas.Manifests.NexteraManifest.dll</HintPath>
+    <Reference Include="Isas.Manifests.NexteraManifest, Version=2.12.0.38, Culture=neutral, processorArchitecture=AMD64">
+      <HintPath>..\packages\Isas.Manifests.2.12.0.38\lib\net451\Isas.Manifests.NexteraManifest.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="Isas.SequencingFiles, Version=3.10.1.184, Culture=neutral, processorArchitecture=AMD64">
