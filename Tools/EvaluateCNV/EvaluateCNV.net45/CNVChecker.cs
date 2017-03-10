@@ -96,7 +96,8 @@ namespace EvaluateCNV
             int count = 0;
             long totalBases = 0;
             Dictionary<string, List<CNInterval>> bedIntervals = new Dictionary<string, List<CNInterval>>();
-            using (StreamReader reader = new StreamReader(oracleBedPath))
+            using (FileStream stream = new FileStream(oracleBedPath, FileMode.Open, FileAccess.Read))
+            using (StreamReader reader = new StreamReader(stream))
             {
                 while (true)
                 {
@@ -356,7 +357,8 @@ namespace EvaluateCNV
         {
             if (cnIndices == null) { cnIndices = new int[] { 3 }; }
             int maxCnIndex = cnIndices.Max();
-            using (StreamReader reader = new StreamReader(bedPath))
+            using (FileStream stream = new FileStream(bedPath, FileMode.Open, FileAccess.Read))
+            using (StreamReader reader = new StreamReader(stream))
             {
                 string line;
                 string[] toks;
@@ -640,7 +642,8 @@ namespace EvaluateCNV
             }
             Console.WriteLine("TruthSet\t{0}", truthSetPath);
             Console.WriteLine("CNVCalls\t{0}", cnvCallsPath);
-            using (StreamWriter outputWriter = new StreamWriter(outputPath))
+            using (FileStream stream = new FileStream(outputPath, FileMode.Create, FileAccess.Write))
+            using (StreamWriter outputWriter = new StreamWriter(stream))
             {
                 if (Path.GetFileName(cnvCallsPath).ToLower().Contains("vcf"))
                 {

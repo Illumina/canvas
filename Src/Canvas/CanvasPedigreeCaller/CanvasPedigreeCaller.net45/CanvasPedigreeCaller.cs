@@ -708,7 +708,8 @@ namespace CanvasPedigreeCaller
         public Dictionary<string, PedigreeMember.Kinship> ReadPedigreeFile(string pedigreeFile)
         {
             Dictionary<string, PedigreeMember.Kinship> kinships = new Dictionary<string, PedigreeMember.Kinship>();
-            using (StreamReader reader = new StreamReader(pedigreeFile))
+            using (FileStream stream = new FileStream(pedigreeFile, FileMode.Open, FileAccess.Read))
+            using (StreamReader reader = new StreamReader(stream))
             {
                 string row;
                 while ((row = reader.ReadLine()) != null)
