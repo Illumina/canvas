@@ -39,7 +39,8 @@ namespace CanvasClean
                 if (bin.Count < 0 || bin.Count >= 1024) continue;
                 HistogramByGC[bin.GenomicBin.GC][(int)bin.Count]++;
             }
-            using (StreamWriter writer = new StreamWriter(filePath))
+            using (FileStream stream = new FileStream(filePath, FileMode.Create, FileAccess.Write))
+            using (StreamWriter writer = new StreamWriter(stream))
             {
                 // Header line:
                 writer.Write("#Bin\\GC");
