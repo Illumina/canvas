@@ -2,10 +2,10 @@
 using System.Collections.Generic;
 using System.IO;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-
 using CanvasBin;
 using CanvasCommon;
 using Isas.SequencingFiles;
+using Illumina.Common;
 
 namespace CanvasTest
 {
@@ -102,7 +102,7 @@ namespace CanvasTest
             {
                 binTask.DoIt();
             }
-            catch (ApplicationException e)
+            catch (IlluminaException e)
             {
                 if (e.Message.Contains("No paired alignments found"))
                     exceptionCaught = true;
@@ -126,7 +126,7 @@ namespace CanvasTest
             {
                 fragmentBinner.Bin();
             }
-            catch (ApplicationException e)
+            catch (IlluminaException e)
             {
                 if (e.Message.Contains(String.Format("Not all chromosomes in {0} are found in {1}.", parameters.predefinedBinsFile, parameters.bamFile)))
                     exceptionCaught = true;
