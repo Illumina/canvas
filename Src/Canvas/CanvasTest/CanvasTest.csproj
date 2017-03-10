@@ -141,7 +141,7 @@
       <Project>{4fe7dc26-bb44-4a6e-b02b-785328c41260}</Project>
       <Name>CanvasBin.net45</Name>
     </ProjectReference>
-    <ProjectReference Include="..\CanvasClean\CanvasClean.csproj">
+    <ProjectReference Include="..\CanvasClean\CanvasClean.net45\CanvasClean.csproj">
       <Project>{3ea57084-d8fd-4978-8cf9-0ef97cfa47d0}</Project>
       <Name>CanvasClean</Name>
     </ProjectReference>
