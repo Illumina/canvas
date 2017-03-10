@@ -14,6 +14,6 @@
     </dependencies>
   </metadata>
   <files>
-    <file src="..\Canvas\CanvasBin\bin\Release\netcoreapp1.0\CanvasBin.dll" target="lib/dotnet" />
+    <file src="..\CanvasBin\bin\Release\netcoreapp1.0\CanvasBin.dll" target="lib/dotnet" />
   </files>
 </package>
