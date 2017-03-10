@@ -3,6 +3,7 @@
 
   "dependencies": {
     "CanvasCommon.Core": "1.23.0-dev201703091753",
+    "CanvasWithoutWrapper.Core": "1.23.0-dev201703091900",
     "ClassicBioinfoTools": "0.0.1.24",
     "Illumina.Common": "2.1.1.89",
     "Isas.Framework": "5.3.0.94",

@@ -4,13 +4,13 @@ VisualStudioVersion = 14.0.25420.1
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CanvasCommon.net45", "..\CanvasCommon\CanvasCommon.net45\CanvasCommon.net45.csproj", "{EC8755F1-74BD-4A1F-9B82-5133D2F6A93B}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CanvasClean", "..\CanvasClean\CanvasClean.csproj", "{3EA57084-D8FD-4978-8CF9-0EF97CFA47D0}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CanvasClean", "..\CanvasClean\CanvasClean.net45\CanvasClean.csproj", "{3EA57084-D8FD-4978-8CF9-0EF97CFA47D0}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CanvasPartition.net45", "..\CanvasPartition\CanvasPartition.net45\CanvasPartition.net45.csproj", "{A1660795-CD4A-4FBC-9BF6-DF2A420AA3CA}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CanvasBin.net45", "..\CanvasBin\CanvasBin.net45\CanvasBin.net45.csproj", "{4FE7DC26-BB44-4A6E-B02B-785328C41260}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CanvasNormalize", "..\CanvasNormalize\CanvasNormalize.csproj", "{2A31EE7C-45E1-447C-B05F-9B4AC8B7733E}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CanvasNormalize", "..\CanvasNormalize\CanvasNormalize.net45\CanvasNormalize.csproj", "{2A31EE7C-45E1-447C-B05F-9B4AC8B7733E}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EvaluateCNV", "..\..\..\Tools\EvaluateCNV\EvaluateCNV.csproj", "{2467744A-CDDA-4E79-9039-F7724188937F}"
 EndProject
@@ -174,6 +174,7 @@ Global
 		{DA2C7A71-6B66-460F-A9DA-215D3C6B5CCB}.Debug|x64.ActiveCfg = Debug|Any CPU
 		{DA2C7A71-6B66-460F-A9DA-215D3C6B5CCB}.Debug|x64.Build.0 = Debug|Any CPU
 		{DA2C7A71-6B66-460F-A9DA-215D3C6B5CCB}.Release|x64.ActiveCfg = Release|Any CPU
+		{DA2C7A71-6B66-460F-A9DA-215D3C6B5CCB}.Release|x64.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
