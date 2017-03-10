@@ -9,7 +9,7 @@
   },
 
   "dependencies": {
-    "Combinatorics": "1.0.3.2",
+    "Combinatorics.Core": "1.23.0-dev201703091748",
     "Illumina.Common": "2.1.1.89",
     "Isas.Framework": "5.3.0.94",
     "Isas.SequencingFiles": "3.10.1.184",
