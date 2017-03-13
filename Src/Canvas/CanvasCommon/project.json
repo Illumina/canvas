@@ -9,10 +9,10 @@
   },
 
   "dependencies": {
-    "Combinatorics.Core": "1.23.0-dev201703091748",
-    "Illumina.Common": "2.1.1.89",
-    "Isas.Framework": "5.3.0.94",
-    "Isas.SequencingFiles": "3.10.1.184",
+    "Combinatorics.Core": "1.23.0.6",
+    "Illumina.Common": "2.2.0.95",
+    "Isas.Framework": "5.3.1.101",
+    "Isas.SequencingFiles": "3.10.1.186",
     "MathNet.Numerics.Core": "3.17.0",
     "NETStandard.Library": "1.6.0"
   },
