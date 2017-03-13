@@ -144,7 +144,7 @@ namespace CanvasPedigreeCaller
                 segmentIntervals,
                 new ParallelOptions
                 {
-                    MaxDegreeOfParallelism = 1,
+                    MaxDegreeOfParallelism = Environment.ProcessorCount,
                     TaskScheduler = TaskScheduler.Default
                 },
                 interval =>
