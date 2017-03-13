@@ -652,14 +652,14 @@ namespace Canvas
             foreach (PedigreeSample callset in callsets.PedigreeSample)
             {
                 var canvasCallset = new CanvasCallset(callset.Sample, callsets.AnalysisDetails, null, null, null);
-                InvokeCanvasSnv(canvasCallset, callset.Sample.SampleName);
+                InvokeCanvasSnv(canvasCallset, false, callset.Sample.SampleName);
             }
         }
 
         /// <summary>
         /// Invoke CanvasSNV.  Return null if this fails and we need to abort CNV calling for this sample.
         /// </summary>
-        protected void InvokeCanvasSnv(CanvasCallset callset, string sampleName = null)
+        protected void InvokeCanvasSnv(CanvasCallset callset, bool isSomatic = false, string sampleName = null)
         {
             List<UnitOfWork> jobList = new List<UnitOfWork>();
             List<string> outputPaths = new List<string>();
@@ -684,11 +684,13 @@ namespace Canvas
 
                 string outputPath = Path.Combine(callset.SingleSampleCallset.SampleOutputFolder.FullName, $"{chromosome.Name}-{callset.SingleSampleCallset.SampleName}.SNV.txt.gz");
                 outputPaths.Add(outputPath);
-                job.CommandLine += $" {chromosome.Name} {normalVcfPath} {bamPath} {outputPath}";
+                job.CommandLine += $" -c {chromosome.Name} -v {normalVcfPath} -b {bamPath} -o {outputPath}";
                 if (!sampleName.IsNullOrEmpty())
-                    job.CommandLine += $" {sampleName}";
+                    job.CommandLine += $" -n {sampleName}";
                 if (callset.SingleSampleCallset.IsDbSnpVcf)
-                    job.CommandLine += " true";
+                    job.CommandLine += " --isDbSnpVcf";
+                if (isSomatic)
+                    job.CommandLine += " --isSomatic";
                 if (_customParameters.ContainsKey("CanvasSNV"))
                 {
                     job.CommandLine = Isas.Framework.Settings.CommandOptionsUtilities.MergeCommandLineOptions(job.CommandLine, _customParameters["CanvasSNV"], true);
@@ -805,7 +807,17 @@ namespace Canvas
             }
 
             // CanvasSNV
-            var canvasSnvTask = _checkpointRunner.RunCheckpointAsync("CanvasSNV", () => InvokeCanvasSnv(callset));
+            var canvasSnvTask = _checkpointRunner.RunCheckpointAsync("CanvasSNV", () =>
+            {
+                if (_isSomatic)
+                {
+                    InvokeCanvasSnv(callset, isSomatic:true);
+                }
+                else
+                {
+                    InvokeCanvasSnv(callset);
+                }
+            });
 
             // Prepare ploidy file:
             string ploidyBedPath = callset.AnalysisDetails.PloidyVcf?.FullName;
