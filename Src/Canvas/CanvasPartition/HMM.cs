@@ -6,12 +6,12 @@ using System.Threading.Tasks;
 
 namespace CanvasPartition
 {
-
+ 
     public class HiddenMarkovModel
     {
         // hidden variable parameters
         private readonly MixtureDistibution _emission;
-        private readonly List<List<double>> _variances;
+        private readonly List<List<double>> _variances ;
         private readonly double[][] _transition;
         private readonly double[] _stateProbabilities;
         // alpha-beta algorithm
@@ -68,7 +68,7 @@ namespace CanvasPartition
             _emission.WriteMeans();
             Console.WriteLine("Transitions");
             for (int state = 0; state < nStates; state++)
-                Console.WriteLine($"Transition for state {state} = {_transition[state][state]}");
+                Console.WriteLine($"Transitin for state {state} = {_transition[state][state]}");
         }
 
         public void UpdateTransition()
@@ -126,7 +126,7 @@ namespace CanvasPartition
                 {
                     for (int j = 0; j < nStates; j++)
                     {
-                        _alpha[t + 1][j] = _alpha[t + 1][j] / scaler;
+                        _alpha[t + 1][j] = _alpha[t + 1][j]/scaler;
                     }
                 }
                 else
@@ -168,10 +168,10 @@ namespace CanvasPartition
                 {
                     if (state == 2)
                         continue;
-                    _transition[2][state] = (1.0 - diploidTransitionProb) / (nStates - 1);
+                    _transition[2][state] = (1.0 - diploidTransitionProb)/(nStates - 1);
                 }
 
-            }
+        }
 
         }
 
@@ -224,8 +224,8 @@ namespace CanvasPartition
             }
 
             var genomeSize = Math.Pow(30, 9);
-            var nonDiploidBases = 2000 * 10000;
-            var diploidTransitionProb = (genomeSize - nonDiploidBases) / genomeSize;
+            var nonDiploidBases = 2000*10000;
+            var diploidTransitionProb = (genomeSize - nonDiploidBases)/genomeSize;
             adjustTransition(diploidTransitionProb);
             WriteEmission();
         }
@@ -233,7 +233,7 @@ namespace CanvasPartition
         /// <summary>
         /// BestHsmmPathViterbi helper method to calculate sojourn survival function
         /// </summary>
-        public double[][] CalculateSojourn(int maxStateLength, List<int> means)
+        public double[][] CalcStoreD(int maxStateLength, List<int> means)
         {
             double[][] D = CanvasCommon.Utilities.MatrixCreate(maxStateLength + 1, maxStateLength + 2);
             // Store D
@@ -246,23 +246,9 @@ namespace CanvasPartition
                         x += Math.Log(Poisson.PMF(means[j], v));
                     D[j][u] = x;
                 }
-                D[j][maxStateLength] = 0;
+                    D[j][maxStateLength] = 0;
             }
             return D;
-        }
-
-        private static List<List<double>> GetStateDurationProbability(List<int> sojournMeans, int maxStateLength)
-        {
-            var stateDurationProbability = new List<List<double>>(sojournMeans.Count);
-            var stateCounter = 0;
-            foreach (var sojournMean in sojournMeans)
-            {
-                stateDurationProbability.Add(new List<double>(maxStateLength));
-                for (var stateDuration = 0; stateDuration < maxStateLength; stateDuration++)
-                    stateDurationProbability[stateCounter].Add(Math.Log(Poisson.PMF(sojournMean, stateDuration)));
-                stateCounter++;
-            }
-            return stateDurationProbability;
         }
 
 
@@ -271,35 +257,37 @@ namespace CanvasPartition
         /// Guedon, Y. (2003), Estimating hidden semi-Markov chains from discrete sequences, Journal of
         /// Computational and Graphical Statistics, Volume 12, Number 3, page 604-639 - 2003
         /// </summary>
-        public List<int> BestHsmmPathViterbi(List<List<double>> x, List<double> haploidMeans)
+        public List<int> BestHsmmPathViterbi(List<List<double>> x)
         {
             // Initialization 
             var length = x.Count;
-            var alpha = CanvasCommon.Utilities.MatrixCreate(nStates, length + 1);
-            var bestStateDuration = new int[nStates][];
-            var bestStateIndex = new int[nStates][];
+            double[][] bestScore = CanvasCommon.Utilities.MatrixCreate(nStates, length + 1);
+            int[][] maxU = new int[nStates][];
+            int[][] maxI = new int[nStates][];
             for (int i = 0; i < nStates; ++i)
             {
-                bestStateIndex[i] = new int[length];
-                bestStateDuration[i] = new int[length];
+                maxI[i] = new int[length];
+                maxU[i] = new int[length];
             }
             for (int j = 0; j < nStates; j++)
             {
-                alpha[j][0] = this._stateProbabilities[j];
+                bestScore[j][0] = this._stateProbabilities[j];
             }
 
-            var maxStateLength = 110;
-            var sojournMeans = new List<int>{10,10,100,50,50};
-            var stateDurationProbability = GetStateDurationProbability(sojournMeans, maxStateLength);
-            var sojournLastState = CalculateSojourn(maxStateLength, sojournMeans);
+            int maxStateLength = 100;
+            int cneq2Length = 50;
+            int cnnq2Length = 10;
 
+            List<int> means = new List<int>(nStates);
+            for (int i = 0; i < nStates; i++)
+                means.Add(i == 2 ? cneq2Length : cnnq2Length);
+
+            double[][] D = CalcStoreD(maxStateLength, means);
             double emissionSequence = 0;
             double tempEmissionSequence = 0;
-            var bestState = 0;
+            int bestState = 0;
             var firstState = true;
             var firstI = true;
-            var transition = Enumerable.Repeat(1.0, nStates).ToArray();
-
 
             // Induction 
             for (int t = 1; t < length - 1; t++)
@@ -307,100 +295,106 @@ namespace CanvasPartition
                 for (int j = 0; j < nStates; j++)
                 {
                     emissionSequence = 0;
-                    firstState = true;
+                    firstState= true;
 
-                    for (int stateDuration = 1; stateDuration < Math.Min(maxStateLength, t); stateDuration++)
+                    for (int u = 1; u < Math.Min(maxStateLength, t); u++)
                     {
                         firstI = true;
                         for (int i = 0; i < nStates; i++)
                         {
-                            if (i == j) continue;
-                            if (Math.Log(_transition[i][j]) + alpha[i][t - stateDuration] > tempEmissionSequence || firstI)
+                            if (i != j)
                             {
-                                tempEmissionSequence = Math.Log(_transition[i][j]) + alpha[i][t - stateDuration];
-                                bestState = i;
-                                firstI = false;
+                                if (Math.Log(_transition[i][j]) + bestScore[i][t - u] > tempEmissionSequence || firstI)
+                                {
+                                    tempEmissionSequence = Math.Log(_transition[i][j]) + bestScore[i][t - u];
+                                    bestState = i;
+                                    firstI = false;
+                                }
                             }
                         }
-                        if (firstState || emissionSequence + stateDurationProbability[j][stateDuration] + tempEmissionSequence > alpha[j][t])
+                        if (firstState ||
+                            (emissionSequence + Math.Log(Poisson.PMF(means[j], u)) + tempEmissionSequence >
+                             bestScore[j][t]))
                         {
-                            alpha[j][t] = emissionSequence + stateDurationProbability[j][stateDuration] + tempEmissionSequence;
-                            bestStateDuration[j][t] = stateDuration;
-                            bestStateIndex[j][t] = bestState;
+                            bestScore[j][t] = emissionSequence + Math.Log(Poisson.PMF(means[j], u)) +
+                                              tempEmissionSequence;
+                            maxU[j][t] = u;
+                            maxI[j][t] = bestState;
                             firstState = false;
                         }
-                        emissionSequence += _emission.EstimateViterbiLikelihood(x[t - stateDuration], j, haploidMeans, transition);
+                        emissionSequence += Math.Log(_emission.EstimateLikelihood(x[t - u], j));
                     }
 
                     if (t + 1 <= maxStateLength)
                     {
-                        if (firstState || emissionSequence + Math.Log(Poisson.PMF(sojournMeans[j], t + 1) * _stateProbabilities[j]) > alpha[j][t])
+                        if (firstState ||
+                            (emissionSequence + Math.Log(Poisson.PMF(means[j], t + 1) * _stateProbabilities[j]) > bestScore[j][t]))
                         {
-                            alpha[j][t] = emissionSequence + Math.Log(Poisson.PMF(sojournMeans[j], t + 1) * _stateProbabilities[j]);
-                            bestStateDuration[j][t] = -1;
-                            bestStateIndex[j][t] = -1;
+                            bestScore[j][t] = emissionSequence + Math.Log(Poisson.PMF(means[j], t + 1) * _stateProbabilities[j]);
+                            maxU[j][t] = -1;
+                            maxI[j][t] = -1;
                         }
                     }
-                    alpha[j][t] += _emission.EstimateViterbiLikelihood(x[t], j, haploidMeans, transition);
+                    bestScore[j][t] += Math.Log(_emission.EstimateLikelihood(x[t], j));
+                    }
                 }
-            }
 
 
             for (int j = 0; j < nStates; j++)
             {
                 emissionSequence = 0;
                 firstState = true;
-                for (int stateDuration = 1; stateDuration < maxStateLength - 1; stateDuration++)
+                for (int u = 1; u < length - 1; u++)
                 {
                     firstI = true;
                     for (int i = 0; i < nStates; i++)
                     {
-                        if (i == j) continue;
-                        if (Math.Log(_transition[i][j]) + alpha[i][length - 1 - stateDuration] > tempEmissionSequence || firstI)
-                        {
-                            tempEmissionSequence = Math.Log(_transition[i][j]) + alpha[i][length - 1 - stateDuration];
-                            bestState = i;
-                            firstI = false;
-                        }
+                        if (i != j)
+                            if ((Math.Log(_transition[i][j]) + bestScore[i][length - 1 - u] > tempEmissionSequence) || firstI)
+                            {
+                                tempEmissionSequence = Math.Log(_transition[i][j]) + bestScore[i][length - 1 - u];
+                                bestState = i;
+                                firstI = false;
+                            }
                     }
 
-                    if (emissionSequence + Math.Log(sojournLastState[j][Math.Min(stateDuration, maxStateLength)]) + tempEmissionSequence > alpha[j][length - 1] || firstState)
+                    if ((emissionSequence + Math.Log(D[j][Math.Min(u,maxStateLength)]) + tempEmissionSequence > bestScore[j][length - 1]) || firstState)
                     {
-                        alpha[j][length - 1] = emissionSequence + Math.Log(sojournLastState[j][Math.Min(stateDuration, maxStateLength)]) + tempEmissionSequence;
-                        bestStateDuration[j][length - 1] = stateDuration;
-                        bestStateIndex[j][length - 1] = bestState;
+                        bestScore[j][length - 1] = emissionSequence + Math.Log(D[j][Math.Min(u, maxStateLength)]) + tempEmissionSequence;
+                        maxU[j][length - 1] = u;
+                        maxI[j][length - 1] = bestState;
                         firstState = false;
                     }
-                    emissionSequence += _emission.EstimateViterbiLikelihood(x[length - 1 - stateDuration], j, haploidMeans, transition);
+                    emissionSequence += Math.Log(_emission.EstimateLikelihood(x[length - 1 - u], j));
                 }
 
-                if (emissionSequence + Math.Log(sojournLastState[j][Math.Min(length - 1, maxStateLength)] * _stateProbabilities[j]) > alpha[j][length - 1] || firstState)
+                if ((emissionSequence + Math.Log(D[j][Math.Min(length - 1, maxStateLength)] * _stateProbabilities[j]) > bestScore[j][length - 1]) || firstState)
                 {
-                    alpha[j][length - 1] = emissionSequence + Math.Log(sojournLastState[j][Math.Min(length, maxStateLength)] * _stateProbabilities[j]);
-                    bestStateDuration[j][length - 1] = -1;
-                    bestStateIndex[j][length - 1] = -1;
+                    bestScore[j][length - 1] = emissionSequence + Math.Log(D[j][Math.Min(length, maxStateLength)] * _stateProbabilities[j]);
+                    maxU[j][length - 1] = -1;
+                    maxI[j][length - 1] = -1;
                 }
-                alpha[j][length - 1] += _emission.EstimateViterbiLikelihood(x[length - 1], j, haploidMeans, transition);
+                bestScore[j][length - 1] += Math.Log(_emission.EstimateLikelihood(x[length - 1], j));
             }
 
             // backtracking 
-            List<int> finalStates = Enumerable.Repeat(2, length).ToList();
+            List<int> bestStates = Enumerable.Repeat(0, length).ToList();
 
             int T = length - 1;
-            while (bestStateIndex[bestState][T] >= 0)
+            while (maxI[bestState][T] >= 0)
             {
-                for (int i = T; i >= T - bestStateDuration[bestState][T] + 1; i--)
+                for (int i = T; i >= T - maxU[bestState][T] + 1; i--)
                 {
-                    finalStates[i] = bestState;
+                    bestStates[i] = bestState;
                 }
                 var alternativeBestState = bestState;
-                bestState = bestStateIndex[bestState][T];
+                bestState = maxI[bestState][T];
 
-                T -= bestStateDuration[alternativeBestState][T];
+                T -= maxU[alternativeBestState][T];
             }
-            finalStates.Reverse();
+            bestStates.Reverse();
 
-            return finalStates;
+            return bestStates;
         }
 
 
@@ -420,7 +414,7 @@ namespace CanvasPartition
             }
 
             // Induction 
-            for (int t = 1; t < length - 1; t++)
+            for (int t = 1;t < length - 1; t++)
             {
 
                 for (int j = 0; j < nStates; j++)
@@ -535,7 +529,7 @@ namespace CanvasPartition
                     }
                     else
                     {
-                        bestStates[k] = bestStates[k - 1];
+                        bestStates[k] = bestStates[k-1];
                         bestStateDuration[k] = bestStateDuration[k] + bestStateDuration[k - 1];
                     }
                 }

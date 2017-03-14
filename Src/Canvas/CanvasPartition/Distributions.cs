@@ -277,7 +277,7 @@ namespace CanvasPartition
                     cnState++;
                 }
                 if (Double.IsNaN(emissionLikelihood) || Double.IsInfinity(emissionLikelihood))
-                    return 0;
+                    emissionLikelihood = 0;
                 if (maxLikelyhood < emissionLikelihood)
                 {
                     bestState = currentGenotypePermutations;
