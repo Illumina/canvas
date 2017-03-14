@@ -6,10 +6,10 @@
   },
 
   "dependencies": {
-    "CanvasCommon.Core": "1.23.0.6",
+    "CanvasCommon.Core": "1.23.0.10",
     "Illumina.Common": "2.2.0.95",
     "Isas.Framework": "5.3.1.101",
-    "Isas.SequencingFiles": "3.10.1.186",
+    "Isas.SequencingFiles": "3.10.1.189",
     "Microsoft.NETCore.App": {
       "type": "platform",
       "version": "1.0.1"
