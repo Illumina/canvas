@@ -8,7 +8,7 @@
   "dependencies": {
     "CanvasCommon": "1.0.0-*",
     "Illumina.Common": "2.2.0.95",
-    "Isas.SequencingFiles": "3.10.1.189",
+    "Isas.SequencingFiles": "3.10.1.192",
     "MathNet.Numerics.Core": "3.17.0",
     "Microsoft.NETCore.App": {
       "type": "platform",

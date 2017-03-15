@@ -36,15 +36,15 @@ namespace Canvas.Wrapper
         {
             StringBuilder commandLine = new StringBuilder();
 
-            commandLine.Append($" --bam {bam.BamFile.WrapWithShellQuote()}");
-            commandLine.Append($" --sample-name {sampleId.WrapWithShellQuote()}");
+            commandLine.Append($" --bam \"{bam.BamFile}\"");
+            commandLine.Append($" --sample-name \"{sampleId}\"");
             IFileLocation kmerFasta = _annotationFileProvider.GetKmerFasta(genomeMetadata);
-            commandLine.Append($" --reference {kmerFasta.WrapWithShellQuote()}");
+            commandLine.Append($" --reference \"{kmerFasta}\"");
             IDirectoryLocation wholeGenomeFasta = new FileLocation(genomeMetadata.Sequences.First().FastaPath).Directory;
-            commandLine.Append($" --genome-folder {wholeGenomeFasta.WrapWithShellQuote()}");
+            commandLine.Append($" --genome-folder \"{wholeGenomeFasta}\"");
             IFileLocation filterBed = _annotationFileProvider.GetFilterBed(genomeMetadata);
-            commandLine.Append($" --filter-bed {filterBed.WrapWithShellQuote()}");
-            commandLine.Append($" --output {sampleSandbox.WrapWithShellQuote()}");
+            commandLine.Append($" --filter-bed \"{filterBed}\"");
+            commandLine.Append($" --output \"{sampleSandbox}\"");
 
             return commandLine;
         }

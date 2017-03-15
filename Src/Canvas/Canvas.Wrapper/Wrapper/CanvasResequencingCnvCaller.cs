@@ -20,12 +20,12 @@ namespace Canvas.Wrapper
         private readonly ICanvasAnnotationFileProvider _annotationFileProvider;
         private readonly ICanvasSingleSampleInputCommandLineBuilder _singleSampleInputCommandLineBuilder;
         private readonly CanvasPloidyBedCreator _canvasPloidyBedCreator;
-        private IFileLocation _mono;
+        private IFileLocation _runtimeExecutable;
 
         public CanvasResequencingCnvCaller(
             IWorkManager workManager,
             ILogger logger,
-            IFileLocation canvasExe, IFileLocation mono,
+            IFileLocation canvasExe, IFileLocation runtimeExecutable,
             ICanvasAnnotationFileProvider annotationFileProvider,
             ICanvasSingleSampleInputCommandLineBuilder singleSampleInputCommandLineBuilder,
             CanvasPloidyBedCreator canvasPloidyBedCreator)
@@ -36,7 +36,7 @@ namespace Canvas.Wrapper
             _annotationFileProvider = annotationFileProvider;
             _singleSampleInputCommandLineBuilder = singleSampleInputCommandLineBuilder;
             _canvasPloidyBedCreator = canvasPloidyBedCreator;
-            _mono = mono;
+            _runtimeExecutable = runtimeExecutable;
         }
 
         public SampleSet<CanvasOutput> Run(SampleSet<CanvasResequencingInput> inputs, IDirectoryLocation sandbox)
@@ -75,12 +75,12 @@ namespace Canvas.Wrapper
                 bAlleleVcf = _annotationFileProvider.GetDbSnpVcf(input.GenomeMetadata);
                 bAlleleVcfOptionName = SingleSampleCommonOptionsParser.PopulationBAlleleVcfOptionName;
             }
-            commandLine.Append($" --{bAlleleVcfOptionName} {bAlleleVcf.WrapWithShellQuote()}");
+            commandLine.Append($" --{bAlleleVcfOptionName} \"{bAlleleVcf}\"");
 
 
             IFileLocation ploidyBed = _canvasPloidyBedCreator.CreateGermlinePloidyBed(input.Vcf, input.GenomeMetadata, sampleSandbox);
             if (ploidyBed != null)
-                commandLine.Append($" --{SingleSampleCommonOptionsParser.PloidyBedOptionName} {ploidyBed.WrapWithShellQuote()}");
+                commandLine.Append($" --{SingleSampleCommonOptionsParser.PloidyBedOptionName} \"{ploidyBed}\"");
             var canvasPartitionParam = $@"--commoncnvs {_annotationFileProvider.GetCanvasAnnotationFile(input.GenomeMetadata, "commoncnvs.bed").WrapWithEscapedShellQuote()}";
             var moreCustomParameters = new Dictionary<string, string>();
             moreCustomParameters["CanvasPartition"] = canvasPartitionParam;
@@ -89,7 +89,7 @@ namespace Canvas.Wrapper
 
             UnitOfWork singleSampleJob = new UnitOfWork()
             {
-                ExecutablePath = CrossPlatform.IsThisLinux() ? _mono.FullName : _canvasExe.FullName,
+                ExecutablePath = CrossPlatform.IsThisLinux() ? _runtimeExecutable.FullName : _canvasExe.FullName,
                 CommandLine = CrossPlatform.IsThisLinux() ? _canvasExe + " " + commandLine : commandLine.ToString(),
                 LoggingFolder = _workManager.LoggingFolder.FullName,
                 LoggingStub = "Canvas_" + sampleId,

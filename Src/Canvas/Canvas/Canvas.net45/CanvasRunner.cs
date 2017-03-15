@@ -24,7 +24,6 @@ namespace Canvas
     public class CanvasRunner
     {
         #region Members
-
         private readonly string _canvasFolder;
         private readonly CanvasCoverageMode _coverageMode = CanvasCoverageMode.TruncatedDynamicRange;
         private readonly CanvasNormalizeMode _normalizeMode = CanvasNormalizeMode.WeightedAverage;
@@ -34,11 +33,10 @@ namespace Canvas
         private readonly ICheckpointRunner _checkpointRunner;
         private readonly bool _isSomatic;
         private readonly Dictionary<string, string> _customParameters = new Dictionary<string, string>();
-        private readonly IFileLocation _mono;
-
+        private readonly IFileLocation _runtimeExecutable; // Path to either mono or dotnet
         #endregion
 
-        public CanvasRunner(ILogger logger, IWorkManager workManager, ICheckpointRunner checkpointRunner, IFileLocation mono, bool isSomatic, CanvasCoverageMode coverageMode,
+        public CanvasRunner(ILogger logger, IWorkManager workManager, ICheckpointRunner checkpointRunner, IFileLocation runtimeExecutable, bool isSomatic, CanvasCoverageMode coverageMode,
             int countsPerBin, Dictionary<string, string> customParameters = null)
         {
             _logger = logger;
@@ -48,7 +46,7 @@ namespace Canvas
             _canvasFolder = Path.Combine(Isas.Framework.Utilities.Utilities.GetAssemblyFolder(typeof(CanvasRunner)));
             _coverageMode = coverageMode;
             _countsPerBin = countsPerBin;
-            _mono = mono;
+            _runtimeExecutable = runtimeExecutable;
             if (customParameters != null)
             {
                 _customParameters = new Dictionary<string, string>(customParameters, StringComparer.OrdinalIgnoreCase);
@@ -107,19 +105,38 @@ namespace Canvas
             return smallestBamPath;
         }
 
+        /// <summary>
+        /// Get the executable path, and stub command-line, for a canvas executable.
+        /// .NET core: GetExecutablePath("CanvasBin") -> /path/to/dotnet, /path/toCanvasBin.dll
+        /// .NET 4.x windows: GetExecutablePath("CanvasBin") -> /path/to/Canvas.exe, ''
+        /// .NET 4.x mono: GetExecutablePath("CanvasBin") -> /path/to/mono, /path/toCanvasBin.exe
+        /// </summary>
+        private string GetExecutablePath(string canvasExecutableStub, StringBuilder commandLineBuilder)
+        {
+#if DotNetCore
+            commandLineBuilder.Append(Path.Combine(_canvasFolder, string.Format("{0}.dll", canvasExecutableStub)));
+            commandLineBuilder.Append(" ");
+            return _runtimeExecutable.FullName;
+#else
+            if (CrossPlatform.IsThisLinux())
+            {
+                commandLineBuilder.Append(Path.Combine(_canvasFolder, string.Format("{0}.exe", canvasExecutableStub)));
+                commandLineBuilder.Append(" ");
+                return _runtimeExecutable.FullName;   
+            }
+            else
+            {
+                return Path.Combine(_canvasFolder, string.Format("{0}.exe", canvasExecutableStub));
+            }
+#endif
+        }
+
         private int GetBinSize(CanvasCallset callset, IFileLocation bamPath, IReadOnlyList<IFileLocation> intermediateDataPaths,
             string canvasReferencePath, string canvasBedPath)
         {
-            string canvasBinPath = Path.Combine(_canvasFolder, "CanvasBin.exe");
-            string executablePath = canvasBinPath;
-            if (CrossPlatform.IsThisLinux())
-                executablePath = _mono.FullName;
-
             StringBuilder commandLine = new StringBuilder();
-            if (CrossPlatform.IsThisLinux())
-            {
-                commandLine.AppendFormat("{0} ", canvasBinPath);
-            }
+            string executablePath = GetExecutablePath("CanvasBin", commandLine);
+
             commandLine.AppendFormat("-b \"{0}\" ", bamPath);
             commandLine.AppendFormat("-p "); // Paired-end input mode (Isaac or BWA output)
             commandLine.AppendFormat("-r \"{0}\" ", canvasReferencePath);
@@ -192,10 +209,7 @@ namespace Canvas
         protected IFileLocation InvokeCanvasBin35Mers(CanvasCallset callset, string canvasReferencePath, string canvasBedPath, string ploidyBedPath)
         {
             StringBuilder commandLine = new StringBuilder();
-            string canvasBinPath = Path.Combine(_canvasFolder, "CanvasBin.exe");
-            string executablePath = canvasBinPath;
-            if (CrossPlatform.IsThisLinux())
-                executablePath = _mono.FullName;
+            string executablePath = GetExecutablePath("CanvasBin", commandLine);
 
             //use bam as input
             if (callset.SingleSampleCallset.Bam == null)
@@ -220,7 +234,7 @@ namespace Canvas
 
             // read bams 
             var intermediateDataPathsByBamPath = GetIntermediateBinnedFilesByBamPath(callset.AnalysisDetails.GenomeMetadata, callset.SingleSampleCallset.Bam.IsPairedEnd, new List<string>() { callset.SingleSampleCallset.SampleName }, callset.AnalysisDetails.TempDirectory,
-                canvasReferencePath, canvasBedPath, bamPaths, commandLine, canvasBinPath, executablePath, callset.TempManifestPath);
+                canvasReferencePath, canvasBedPath, bamPaths, commandLine, callset.TempManifestPath);
 
             int binSize = -1;
             if (bamPaths.Count > 1)
@@ -235,7 +249,7 @@ namespace Canvas
             }
 
             // derive Canvas bins
-            var bamToBinned = BamToBinned(callset.SingleSampleCallset.SampleOutputFolder, callset.SingleSampleCallset.Bam.IsPairedEnd, new List<string>() { callset.SingleSampleCallset.SampleName }, canvasReferencePath, canvasBedPath, bamPaths, commandLine, canvasBinPath, binSize, intermediateDataPathsByBamPath, executablePath);
+            var bamToBinned = BamToBinned(callset.SingleSampleCallset.SampleOutputFolder, callset.SingleSampleCallset.Bam.IsPairedEnd, new List<string>() { callset.SingleSampleCallset.SampleName }, canvasReferencePath, canvasBedPath, bamPaths, commandLine, binSize, intermediateDataPathsByBamPath);
 
             var tumorBinnedPath = bamToBinned[callset.SingleSampleCallset.Bam.BamFile]; // binned tumor sample
             var outputPath = tumorBinnedPath;
@@ -252,10 +266,7 @@ namespace Canvas
         protected List<IFileLocation> InvokeCanvasBin(SmallPedigreeCallset callset, string canvasReferencePath, string canvasBedPath)
         {
             StringBuilder commandLine = new StringBuilder();
-            string canvasBinPath = Path.Combine(_canvasFolder, "CanvasBin.exe");
-            string executablePath = canvasBinPath;
-            if (CrossPlatform.IsThisLinux())
-                executablePath = _mono.FullName;
+            string executablePath = GetExecutablePath("CanvasBin", commandLine);
 
             //use bam as input
             var bamPaths = callset.PedigreeSample.Select(sample => sample.Sample.Bam.BamFile).ToList();
@@ -263,7 +274,7 @@ namespace Canvas
             var sampleNames = callset.PedigreeSample.Select(x => x.Sample.SampleName).ToList();
             // read bams 
             var intermediateDataPathsByBamPath = GetIntermediateBinnedFilesByBamPath(callset.AnalysisDetails.GenomeMetadata, true, sampleNames, callset.AnalysisDetails.TempDirectory,
-                canvasReferencePath, canvasBedPath, bamPaths, commandLine, canvasBinPath, executablePath);
+                canvasReferencePath, canvasBedPath, bamPaths, commandLine);
 
             int binSize = -1;
             if (bamPaths.Count > 1)
@@ -273,13 +284,12 @@ namespace Canvas
             }
 
             // derive Canvas bins
-            var bamToBinned = BamToBinned(callset.AnalysisDetails.TempDirectory, true, sampleNames, canvasReferencePath, canvasBedPath, bamPaths, commandLine, canvasBinPath, binSize, intermediateDataPathsByBamPath, executablePath);
+            var bamToBinned = BamToBinned(callset.AnalysisDetails.TempDirectory, true, sampleNames, canvasReferencePath, canvasBedPath, bamPaths, commandLine, binSize, intermediateDataPathsByBamPath);
             return bamToBinned.Values.ToList();
         }
 
         private Dictionary<IFileLocation, IFileLocation> BamToBinned(IDirectoryLocation tempFolder, bool isPairedEnd, List<string> sampleIds, string canvasReferencePath, string canvasBedPath, List<IFileLocation> bamPaths,
-            StringBuilder commandLine, string canvasBinPath, int binSize, Dictionary<IFileLocation, IReadOnlyList<IFileLocation>> intermediateDataPathsByBam,
-            string executablePath)
+            StringBuilder commandLine, int binSize, Dictionary<IFileLocation, IReadOnlyList<IFileLocation>> intermediateDataPathsByBam)
         {
             var bamToBinned = new Dictionary<IFileLocation, IFileLocation>();
             List<UnitOfWork> finalBinJobs = new List<UnitOfWork>();
@@ -292,15 +302,13 @@ namespace Canvas
                 var binnedPath = tempFolder.GetFileLocation($"{sampleId}_{bamIdx}.binned");
                 bamToBinned[bamPath] = binnedPath;
                 commandLine.Clear();
-                if (CrossPlatform.IsThisLinux())
-                {
-                    commandLine.Append($"{canvasBinPath} ");
-                }
-                commandLine.Append($"-b {bamPath.WrapWithShellQuote()} ");
+                string executablePath = GetExecutablePath("CanvasBin", commandLine);
+
+                commandLine.Append($"-b \"{bamPath}\" ");
                 if (isPairedEnd) commandLine.AppendFormat("-p ");
 
-                commandLine.Append($"-r {canvasReferencePath.WrapWithShellQuote()} ");
-                commandLine.Append($"-f {canvasBedPath.WrapWithShellQuote()} -d {_countsPerBin} -o {binnedPath.WrapWithShellQuote()} ");
+                commandLine.Append($"-r \"{canvasReferencePath}\" ");
+                commandLine.Append($"-f \"{canvasBedPath}\" -d {_countsPerBin} -o \"{binnedPath}\" ");
                 if (binSize != -1)
                 {
                     commandLine.Append($"-z {binSize} ");
@@ -308,7 +316,7 @@ namespace Canvas
 
                 foreach (var path in intermediateDataPaths)
                 {
-                    commandLine.Append($"-i {path.WrapWithShellQuote()} ");
+                    commandLine.Append($"-i \"{path}\" ");
                 }
 
                 commandLine.Append($"-m {_coverageMode} ");
@@ -335,7 +343,7 @@ namespace Canvas
 
         private Dictionary<IFileLocation, IReadOnlyList<IFileLocation>> GetIntermediateBinnedFilesByBamPath(GenomeMetadata genomeInfo, bool isPairedEnd,
             List<string> sampleIds, IDirectoryLocation tempFolder, string canvasReferencePath, string canvasBedPath, List<IFileLocation> bamPaths,
-            StringBuilder commandLine, string canvasBinPath, string executablePath, string tempManifestPath = null)
+            StringBuilder commandLine, string tempManifestPath = null)
         {
             GenomeMetadata genomeMetadata = genomeInfo;
             List<UnitOfWork> binJobs = new List<UnitOfWork>();
@@ -358,10 +366,8 @@ namespace Canvas
                         continue;
 
                     commandLine.Clear();
-                    if (CrossPlatform.IsThisLinux())
-                    {
-                        commandLine.AppendFormat("{0} ", canvasBinPath);
-                    }
+                    string executablePath = GetExecutablePath("CanvasBin", commandLine);
+
                     commandLine.AppendFormat("-b \"{0}\" ", bamPath);
                     if (isPairedEnd) commandLine.AppendFormat("-p ");
                     commandLine.AppendFormat("-r \"{0}\" ", canvasReferencePath);
@@ -400,10 +406,7 @@ namespace Canvas
         protected IFileLocation InvokeCanvasBinFragment(CanvasCallset callset, string canvasReferencePath, string canvasBedPath, string ploidyBedPath)
         {
             StringBuilder commandLine = new StringBuilder();
-            string canvasBinPath = Path.Combine(_canvasFolder, "CanvasBin.exe");
-            string executablePath = canvasBinPath;
-            if (CrossPlatform.IsThisLinux())
-                executablePath = _mono.FullName;
+            
 
             // require predefined bins
             string predefinedBinsPath = GetPredefinedBinsPath();
@@ -439,14 +442,12 @@ namespace Canvas
                 bamToBinned[bamPath] = binnedPath;
 
                 commandLine.Clear();
-                if (CrossPlatform.IsThisLinux())
-                {
-                    commandLine.AppendFormat("{0} ", canvasBinPath);
-                }
-                commandLine.AppendFormat(" -p -b {0} ", bamPath.WrapWithShellQuote());
-                commandLine.AppendFormat("-r {0} ", canvasReferencePath.WrapWithShellQuote());
+                string executablePath = GetExecutablePath("CanvasBin", commandLine);
+
+                commandLine.AppendFormat(" -p -b \"{0}\" ", bamPath);
+                commandLine.AppendFormat("-r \"{0}\" ", canvasReferencePath);
                 commandLine.AppendFormat("-m {0} ", _coverageMode);
-                commandLine.AppendFormat("-f {0} -o {1} ", canvasBedPath.WrapWithShellQuote(), binnedPath.WrapWithShellQuote());
+                commandLine.AppendFormat("-f \"{0}\" -o \"{1}\" ", canvasBedPath, binnedPath);
                 commandLine.AppendFormat("-n {0} ", predefinedBinsPath); // assumes that predefinedBinsPath has been properly quoted
 
                 UnitOfWork binJob = new UnitOfWork()
@@ -509,48 +510,39 @@ namespace Canvas
             string ploidyBedPath)
         {
             var ratioBinnedPath = callset.SingleSampleCallset.SampleOutputFolder.GetFileLocation($"{callset.SingleSampleCallset.SampleName}.ratio.binned");
-
-            string canvasNormalizePath = Path.Combine(_canvasFolder, "CanvasNormalize.exe");
-            string executablePath = canvasNormalizePath;
-            if (CrossPlatform.IsThisLinux())
-                executablePath = _mono.FullName;
-
             StringBuilder commandLine = new StringBuilder();
-            if (CrossPlatform.IsThisLinux())
-            {
-                commandLine.AppendFormat("{0} ", canvasNormalizePath);
-            }
+            string executablePath = GetExecutablePath("CanvasNormalize", commandLine);
 
-            commandLine.AppendFormat("-t {0} ", tumorBinnedPath.WrapWithShellQuote()); // tumor bed
+            commandLine.AppendFormat("-t \"{0}\" ", tumorBinnedPath); // tumor bed
 
             if ((callset.IsEnrichment && callset.Manifest.CanvasControlAvailable) ||
                 _normalizeMode == CanvasNormalizeMode.PCA)
             {
-                commandLine.AppendFormat("-n {0} ", callset.Manifest.CanvasControlBinnedPath.WrapWithShellQuote()); // normal bed
+                commandLine.AppendFormat("-n \"{0}\" ", callset.Manifest.CanvasControlBinnedPath); // normal bed
             }
             else
             {
                 foreach (var normalBinnedPath in callset.NormalBamPaths.Select(path => bamToBinned[path.BamFile]))
                 {
-                    commandLine.AppendFormat("-n {0} ", normalBinnedPath.WrapWithShellQuote()); // normal bed
+                    commandLine.AppendFormat("-n \"{0}\" ", normalBinnedPath); // normal bed
                 }
             }
 
-            commandLine.AppendFormat("-w {0} ", callset.SingleSampleCallset.NormalBinnedPath.WrapWithShellQuote()); // weighted average normal bed
+            commandLine.AppendFormat("-w \"{0}\" ", callset.SingleSampleCallset.NormalBinnedPath); // weighted average normal bed
 
-            commandLine.AppendFormat("-o {0} ", ratioBinnedPath.WrapWithShellQuote()); // ratio bed
+            commandLine.AppendFormat("-o \"{0}\" ", ratioBinnedPath); // ratio bed
 
             if (callset.IsEnrichment) // manifest
             {
                 if (!File.Exists(callset.TempManifestPath)) { NexteraManifestUtils.WriteNexteraManifests(callset.Manifest, callset.TempManifestPath); }
-                commandLine.AppendFormat("-f {0} ", callset.TempManifestPath.WrapWithShellQuote());
+                commandLine.AppendFormat("-f \"{0}\" ", callset.TempManifestPath);
             }
 
             commandLine.AppendFormat("-m {0} ", _normalizeMode);
 
             if (!string.IsNullOrEmpty(ploidyBedPath))
             {
-                commandLine.AppendFormat("-p {0} ", ploidyBedPath.WrapWithShellQuote());
+                commandLine.AppendFormat("-p \"{0}\" ", ploidyBedPath);
             }
 
             UnitOfWork normalizeJob = new UnitOfWork()
@@ -676,20 +668,17 @@ namespace Canvas
                     continue;
 
                 UnitOfWork job = new UnitOfWork();
-                job.ExecutablePath = Path.Combine(_canvasFolder, "CanvasSNV.exe");
-                if (CrossPlatform.IsThisLinux())
-                {
-                    job.CommandLine = job.ExecutablePath;
-                    job.ExecutablePath = _mono.FullName;
-                }
+                StringBuilder commandLine = new StringBuilder();
+                job.ExecutablePath = GetExecutablePath("CanvasSNV", commandLine);
 
                 string outputPath = Path.Combine(callset.SingleSampleCallset.SampleOutputFolder.FullName, $"{chromosome.Name}-{callset.SingleSampleCallset.SampleName}.SNV.txt.gz");
                 outputPaths.Add(outputPath);
-                job.CommandLine += $" {chromosome.Name} {normalVcfPath} {bamPath} {outputPath}";
+                commandLine.Append($" {chromosome.Name} {normalVcfPath} {bamPath} {outputPath}");
                 if (!sampleName.IsNullOrEmpty())
-                    job.CommandLine += $" {sampleName}";
+                    commandLine.Append($" {sampleName}");
                 if (callset.SingleSampleCallset.IsDbSnpVcf)
-                    job.CommandLine += " true";
+                    commandLine.Append(" true");
+                job.CommandLine = commandLine.ToString();
                 if (_customParameters.ContainsKey("CanvasSNV"))
                 {
                     job.CommandLine = Isas.Framework.Settings.CommandOptionsUtilities.MergeCommandLineOptions(job.CommandLine, _customParameters["CanvasSNV"], true);
@@ -923,12 +912,8 @@ namespace Canvas
         {
             NormalizeCanvasClean(cleanedPaths, callsets.AnalysisDetails.TempDirectory.FullName);
             StringBuilder commandLine = new StringBuilder();
-            string executablePath = Path.Combine(_canvasFolder, "CanvasPartition.exe");
-            if (CrossPlatform.IsThisLinux())
-            {
-                commandLine.AppendFormat("{0} ", executablePath);
-                executablePath = _mono.FullName;
-            }
+            string executablePath = GetExecutablePath("CanvasPartition", commandLine);
+
             foreach (IFileLocation cleanedPath in cleanedPaths)
                 commandLine.AppendFormat("-i \"{0}\" ", cleanedPath);
 
@@ -965,12 +950,8 @@ namespace Canvas
         private IFileLocation InvokeCanvasPartition(CanvasCallset callset, IFileLocation cleanedPath, string canvasBedPath)
         {
             StringBuilder commandLine = new StringBuilder();
-            string executablePath = Path.Combine(_canvasFolder, "CanvasPartition.exe");
-            if (CrossPlatform.IsThisLinux())
-            {
-                commandLine.AppendFormat("{0} ", executablePath);
-                executablePath = _mono.FullName;
-            }
+            string executablePath = GetExecutablePath("CanvasPartition", commandLine);
+
             commandLine.AppendFormat("-i \"{0}\" ", cleanedPath);
             commandLine.AppendFormat("-b \"{0}\" ", canvasBedPath);
             string partitionedPath = callset.SingleSampleCallset.PartitionedPath.FullName;
@@ -1018,13 +999,8 @@ namespace Canvas
         private CanvasCleanOutput InvokeCanvasClean(CanvasCallset callset, IFileLocation binnedPath)
         {
             StringBuilder commandLine = new StringBuilder();
-            commandLine.Length = 0;
-            string executablePath = Path.Combine(_canvasFolder, "CanvasClean.exe");
-            if (CrossPlatform.IsThisLinux())
-            {
-                commandLine.AppendFormat("{0} ", executablePath);
-                executablePath = _mono.FullName;
-            }
+            string executablePath = GetExecutablePath("CanvasClean", commandLine);
+
             commandLine.AppendFormat("-i \"{0}\" ", binnedPath);
             var tempFolder = new DirectoryLocation(callset.SingleSampleCallset.SampleOutputFolder.FullName);
             var cleanedPath = tempFolder.GetFileLocation($"{callset.SingleSampleCallset.SampleName}.cleaned");
@@ -1076,23 +1052,19 @@ namespace Canvas
             // Prepare and run CanvasSomaticCaller job:
             UnitOfWork callerJob = new UnitOfWork();
             var cnvVcfPath = callset.SingleSampleCallset.OutputVcfPath;
-            callerJob.ExecutablePath = Path.Combine(this._canvasFolder, "CanvasSomaticCaller.exe");
-            if (CrossPlatform.IsThisLinux())
-            {
-                callerJob.CommandLine = callerJob.ExecutablePath;
-                callerJob.ExecutablePath = _mono.FullName;
-            }
-            callerJob.CommandLine += $" -v {callset.SingleSampleCallset.VfSummaryPath}";
-            callerJob.CommandLine += $" -i {partitionedPath}";
-            callerJob.CommandLine += $" -o {cnvVcfPath}";
-            callerJob.CommandLine += $" -b {canvasBedPath}";
+            StringBuilder commandLine = new StringBuilder();
+            callerJob.ExecutablePath = GetExecutablePath("CanvasSomaticCaller", commandLine);
+            commandLine.Append($" -v {callset.SingleSampleCallset.VfSummaryPath}");
+            commandLine.Append($" -i {partitionedPath}");
+            commandLine.Append($" -o {cnvVcfPath}");
+            commandLine.Append($" -b {canvasBedPath}");
             if (!string.IsNullOrEmpty(ploidyBedPath))
-                callerJob.CommandLine += $" -p {ploidyBedPath}";
-            callerJob.CommandLine += $" -n {callset.SingleSampleCallset.SampleName}";
+                commandLine.Append($" -p {ploidyBedPath}");
+            commandLine.Append($" -n {callset.SingleSampleCallset.SampleName}");
             if (callset.IsEnrichment)
-                callerJob.CommandLine += " -e";
+                commandLine.Append(" -e");
             if (callset.SingleSampleCallset.IsDbSnpVcf) // a dbSNP VCF file is used in place of the normal VCF file
-                callerJob.CommandLine += " -d";
+                commandLine.Append(" -d");
             // get localSD metric:
             if (ffpePath != null)
             {
@@ -1100,7 +1072,7 @@ namespace Canvas
                 // If it's not present, just carry on:
                 if (ffpePath.Exists)
                 {
-                    callerJob.CommandLine += $" -f \"{ffpePath}\"";
+                    commandLine.Append($" -f \"{ffpePath}\"");
                 }
                 else
                 {
@@ -1109,8 +1081,9 @@ namespace Canvas
             }
 
             if (!string.IsNullOrEmpty(somaticSnvPath))
-                callerJob.CommandLine += $" -s {somaticSnvPath}";
-            callerJob.CommandLine += $" -r \"{callset.AnalysisDetails.WholeGenomeFastaFolder}\" ";
+                commandLine.Append($" -s {somaticSnvPath}");
+            commandLine.Append($" -r \"{callset.AnalysisDetails.WholeGenomeFastaFolder}\" ");
+            callerJob.CommandLine = commandLine.ToString();
             if (_customParameters.ContainsKey("CanvasSomaticCaller"))
             {
                 callerJob.CommandLine = Isas.Framework.Settings.CommandOptionsUtilities.MergeCommandLineOptions(callerJob.CommandLine, _customParameters["CanvasSomaticCaller"], true);
@@ -1129,14 +1102,9 @@ namespace Canvas
             bool haveProband = callsets.PedigreeSample.Where(x => x.SampleType == SampleType.Proband).ToList().Count > 0;
 
             // CanvasSmallPedigreeCaller:
-            StringBuilder commandLine = new StringBuilder { Length = 0 };
+            StringBuilder commandLine = new StringBuilder();
+            string executablePath = GetExecutablePath("CanvasPedigreeCaller", commandLine);
 
-            string executablePath = Path.Combine(_canvasFolder, "CanvasPedigreeCaller.exe");
-            if (CrossPlatform.IsThisLinux())
-            {
-                commandLine.AppendFormat("{0} ", executablePath);
-                executablePath = _mono.FullName;
-            }
             foreach (IFileLocation partitionedPath in partitionedPaths)
                 commandLine.AppendFormat("-i \"{0}\" ", partitionedPath);
 
@@ -1146,7 +1114,7 @@ namespace Canvas
                 commandLine.AppendFormat("-n \"{0}\" ", callset.Sample.SampleName);
             }
             var vcf = callsets.AnalysisDetails.OutputFolder.GetFileLocation("CNV.vcf.gz");
-            commandLine.Append($"-o {vcf.WrapWithShellQuote()} ");
+            commandLine.Append($"-o \"{vcf}\" ");
             commandLine.AppendFormat("-r \"{0}\" ", callsets.AnalysisDetails.WholeGenomeFastaFolder);
             if (haveProband)
             {
@@ -1196,13 +1164,8 @@ namespace Canvas
             StringBuilder commandLine = new StringBuilder();
             ////////////////////////////////////////////////////////
             // CanvasDiploidCaller:
-            commandLine.Length = 0;
-            string executablePath = Path.Combine(_canvasFolder, "CanvasDiploidCaller.exe");
-            if (CrossPlatform.IsThisLinux())
-            {
-                commandLine.AppendFormat("{0} ", executablePath);
-                executablePath = _mono.FullName;
-            }
+            string executablePath = GetExecutablePath("CanvasDiploidCaller", commandLine);
+
             commandLine.AppendFormat("-i \"{0}\" ", partitionedPath);
             commandLine.AppendFormat("-v \"{0}\" ", callset.SingleSampleCallset.VfSummaryPath);
             var cnvVcfPath = callset.SingleSampleCallset.OutputVcfPath;
