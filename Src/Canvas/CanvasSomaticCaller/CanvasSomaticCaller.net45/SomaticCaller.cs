@@ -3,9 +3,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.IO;
-using CanvasCommon;
 using Isas.SequencingFiles;
 using Isas.SequencingFiles.Vcf;
+using CanvasCommon;
 
 namespace CanvasSomaticCaller
 {

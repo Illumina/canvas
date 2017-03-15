@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-
 using CanvasCommon;
 using Illumina.Common.FileSystem;
 using Isas.Framework.DataTypes;

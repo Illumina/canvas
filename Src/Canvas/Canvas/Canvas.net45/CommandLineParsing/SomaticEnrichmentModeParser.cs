@@ -1,8 +1,8 @@
 using System.Collections.Generic;
 using System.Linq;
 using CanvasCommon.CommandLineParsing.CoreOptionTypes;
-using CanvasCommon.CommandLineParsing.OptionProcessing;
 using Illumina.Common.FileSystem;
+using CanvasCommon.CommandLineParsing.OptionProcessing;
 
 namespace Canvas.CommandLineParsing
 {

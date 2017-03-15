@@ -134,12 +134,6 @@
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\CanvasCommon\CanvasCommon.net45\CanvasCommon.net45.csproj">
-      <Project>{ec8755f1-74bd-4a1f-9b82-5133d2f6a93b}</Project>
-      <Name>CanvasCommon.net45</Name>
-    </ProjectReference>
-  </ItemGroup>
-  <ItemGroup>
     <BootstrapperPackage Include=".NETFramework,Version=v4.5">
       <Visible>False</Visible>
       <ProductName>Microsoft .NET Framework 4.5 %28x86 and x64%29</ProductName>
@@ -155,6 +149,12 @@
       <ProductName>.NET Framework 3.5 SP1</ProductName>
       <Install>false</Install>
     </BootstrapperPackage>
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\CanvasCommon\CanvasCommon.net45\CanvasCommon.net45.csproj">
+      <Project>{EC8755F1-74BD-4A1F-9B82-5133D2F6A93B}</Project>
+      <Name>CanvasCommon.net45</Name>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>

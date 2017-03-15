@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using Combinatorics.Collections;
-
 using MathNet.Numerics;
 
 namespace CanvasCommon

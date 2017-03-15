@@ -1,11 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using CanvasCommon;
 using System.IO;
 using Illumina.Common;
 using Isas.Manifests.NexteraManifest;
 using Isas.SequencingFiles;
+using CanvasCommon;
 
 namespace CanvasClean
 {
