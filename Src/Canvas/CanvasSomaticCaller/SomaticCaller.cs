@@ -1957,7 +1957,7 @@ namespace CanvasSomaticCaller
         /// </summary>
         protected void CheckNonDiploidMAFs(List<CanvasSegment> canvasSegments)
         {
-            const double diploidMAF = 0.48;
+            const double diploidMAF = 0.45;
             double minSizeMAFs = 1000; // to approximate chopiness for 100 to 500kb regions
             const int tStatisticsSizeThreshold = 20;
 
