@@ -85,18 +85,18 @@ namespace Canvas.Wrapper
 
             StringBuilder commandLine = new StringBuilder("Tumor-normal-enrichment");
             commandLine.Append(_singleSampleInputCommandLineBuilder.GetSingleSampleCommandLine(sampleId, input.TumorBam, input.GenomeMetadata, sampleSandbox));
-            commandLine.Append($" --normal-bam {input.NormalBam.BamFile.WrapWithShellQuote()}");
-            commandLine.Append($" --manifest {manifest.WrapWithShellQuote()}");
+            commandLine.Append($" --normal-bam \"{input.NormalBam.BamFile}\"");
+            commandLine.Append($" --manifest \"{manifest}\"");
             var bAlleleVcfOptionName = isDbSnpVcf ?
                 SingleSampleCommonOptionsParser.PopulationBAlleleVcfOptionName :
                 SingleSampleCommonOptionsParser.SampleBAlleleVcfOptionName;
             commandLine.Append($" --{bAlleleVcfOptionName} {bAlleleVcf.WrapWithShellQuote()}");
 
-            commandLine.Append($" --somatic-vcf {input.SomaticVcf.VcfFile.WrapWithShellQuote()}");
+            commandLine.Append($" --somatic-vcf \"{input.SomaticVcf.VcfFile}\"");
 
             IFileLocation ploidyBed = _canvasPloidyBedCreator.CreatePloidyBed(input.NormalVcf, input.GenomeMetadata, sampleSandbox);
             if (ploidyBed != null)
-                commandLine.Append($" --{SingleSampleCommonOptionsParser.PloidyBedOptionName} {ploidyBed.WrapWithShellQuote()}");
+                commandLine.Append($" --{SingleSampleCommonOptionsParser.PloidyBedOptionName} \"{ploidyBed}\"");
             commandLine.Append(_singleSampleInputCommandLineBuilder.GetCustomParameters());
             commandLine = _singleSampleInputCommandLineBuilder.MergeCustomCanvasParameters(commandLine);
             UnitOfWork singleSampleJob = new UnitOfWork

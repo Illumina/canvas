@@ -75,12 +75,12 @@ namespace Canvas.Wrapper
                 bAlleleVcf = _annotationFileProvider.GetDbSnpVcf(input.GenomeMetadata);
                 bAlleleVcfOptionName = SingleSampleCommonOptionsParser.PopulationBAlleleVcfOptionName;
             }
-            commandLine.Append($" --{bAlleleVcfOptionName} {bAlleleVcf.WrapWithShellQuote()}");
+            commandLine.Append($" --{bAlleleVcfOptionName} \"{bAlleleVcf}\"");
 
 
             IFileLocation ploidyBed = _canvasPloidyBedCreator.CreateGermlinePloidyBed(input.Vcf, input.GenomeMetadata, sampleSandbox);
             if (ploidyBed != null)
-                commandLine.Append($" --{SingleSampleCommonOptionsParser.PloidyBedOptionName} {ploidyBed.WrapWithShellQuote()}");
+                commandLine.Append($" --{SingleSampleCommonOptionsParser.PloidyBedOptionName} \"{ploidyBed}\"");
             var canvasPartitionParam = $@"--commoncnvs {_annotationFileProvider.GetCanvasAnnotationFile(input.GenomeMetadata, "commoncnvs.bed").WrapWithEscapedShellQuote()}";
             var moreCustomParameters = new Dictionary<string, string>();
             moreCustomParameters["CanvasPartition"] = canvasPartitionParam;

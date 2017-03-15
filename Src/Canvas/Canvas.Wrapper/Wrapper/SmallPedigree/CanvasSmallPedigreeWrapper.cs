@@ -49,17 +49,17 @@ namespace Canvas.Wrapper.SmallPedigree
             {
                 var sampleId = sampleKvp.Key.Id;
                 var sample = sampleKvp.Value;
-                commandLine.Append($" --bam {sample.Bam.BamFile.WrapWithShellQuote()}");
+                commandLine.Append($" --bam \"{sample.Bam.BamFile}\"");
                 if (sample.SampleType != SampleType.Other)
                     commandLine.Append($" --{sample.SampleType.GetOptionName()} {sampleId}");
             }
             IFileLocation kmerFasta = _annotationFileProvider.GetKmerFasta(genomeMetadata);
-            commandLine.Append($" --reference {kmerFasta.WrapWithShellQuote()}");
+            commandLine.Append($" --reference \"{kmerFasta}\"");
             IDirectoryLocation wholeGenomeFasta = new FileLocation(genomeMetadata.Sequences.First().FastaPath).Directory;
-            commandLine.Append($" --genome-folder {wholeGenomeFasta.WrapWithShellQuote()}");
+            commandLine.Append($" --genome-folder \"{wholeGenomeFasta}\"");
             IFileLocation filterBed = _annotationFileProvider.GetFilterBed(genomeMetadata);
-            commandLine.Append($" --filter-bed {filterBed.WrapWithShellQuote()}");
-            commandLine.Append($" --output {sampleSandbox.WrapWithShellQuote()}");
+            commandLine.Append($" --filter-bed \"{filterBed}\"");
+            commandLine.Append($" --output \"{sampleSandbox}\"");
             return commandLine;
         }
 
@@ -89,13 +89,13 @@ namespace Canvas.Wrapper.SmallPedigree
                 bAlleleVcf = _annotationFileProvider.GetDbSnpVcf(input.GenomeMetadata);
                 bAlleleVcfOptionName = SingleSampleCommonOptionsParser.PopulationBAlleleVcfOptionName;
             }
-            commandLine.Append($" --{bAlleleVcfOptionName} {bAlleleVcf.WrapWithShellQuote()}");
+            commandLine.Append($" --{bAlleleVcfOptionName} \"{bAlleleVcf}\"");
 
             var ploidyInfos = input.Samples.SelectData(sample => sample.PloidyInfo);
 
             var ploidyVcf = _canvasPloidyVcfCreator.CreatePloidyVcf(ploidyInfos, input.GenomeMetadata, sampleSandbox);
             if (ploidyVcf != null)
-                commandLine.Append($" --{SmallPedigreeOptionsParser.PloidyVcfOptionName} {ploidyVcf.VcfFile.WrapWithShellQuote()}");
+                commandLine.Append($" --{SmallPedigreeOptionsParser.PloidyVcfOptionName} \"{ploidyVcf.VcfFile}\"");
             var canvasPartitionParam = $@"--commoncnvs {_annotationFileProvider.GetCanvasAnnotationFile(input.GenomeMetadata, "commoncnvs.bed").WrapWithEscapedShellQuote()}";
 
             var moreCustomParameters = new Dictionary<string, string> { ["CanvasPartition"] = canvasPartitionParam };

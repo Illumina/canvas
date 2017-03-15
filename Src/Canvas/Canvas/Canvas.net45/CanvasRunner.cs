@@ -304,11 +304,11 @@ namespace Canvas
                 commandLine.Clear();
                 string executablePath = GetExecutablePath("CanvasBin", commandLine);
 
-                commandLine.Append($"-b {bamPath.WrapWithShellQuote()} ");
+                commandLine.Append($"-b \"{bamPath}\" ");
                 if (isPairedEnd) commandLine.AppendFormat("-p ");
 
-                commandLine.Append($"-r {canvasReferencePath.WrapWithShellQuote()} ");
-                commandLine.Append($"-f {canvasBedPath.WrapWithShellQuote()} -d {_countsPerBin} -o {binnedPath.WrapWithShellQuote()} ");
+                commandLine.Append($"-r \"{canvasReferencePath}\" ");
+                commandLine.Append($"-f \"{canvasBedPath}\" -d {_countsPerBin} -o \"{binnedPath}\" ");
                 if (binSize != -1)
                 {
                     commandLine.Append($"-z {binSize} ");
@@ -316,7 +316,7 @@ namespace Canvas
 
                 foreach (var path in intermediateDataPaths)
                 {
-                    commandLine.Append($"-i {path.WrapWithShellQuote()} ");
+                    commandLine.Append($"-i \"{path}\" ");
                 }
 
                 commandLine.Append($"-m {_coverageMode} ");
@@ -444,10 +444,10 @@ namespace Canvas
                 commandLine.Clear();
                 string executablePath = GetExecutablePath("CanvasBin", commandLine);
 
-                commandLine.AppendFormat(" -p -b {0} ", bamPath.WrapWithShellQuote());
-                commandLine.AppendFormat("-r {0} ", canvasReferencePath.WrapWithShellQuote());
+                commandLine.AppendFormat(" -p -b \"{0}\" ", bamPath);
+                commandLine.AppendFormat("-r \"{0}\" ", canvasReferencePath);
                 commandLine.AppendFormat("-m {0} ", _coverageMode);
-                commandLine.AppendFormat("-f {0} -o {1} ", canvasBedPath.WrapWithShellQuote(), binnedPath.WrapWithShellQuote());
+                commandLine.AppendFormat("-f \"{0}\" -o \"{1}\" ", canvasBedPath, binnedPath);
                 commandLine.AppendFormat("-n {0} ", predefinedBinsPath); // assumes that predefinedBinsPath has been properly quoted
 
                 UnitOfWork binJob = new UnitOfWork()
@@ -513,36 +513,36 @@ namespace Canvas
             StringBuilder commandLine = new StringBuilder();
             string executablePath = GetExecutablePath("CanvasNormalize", commandLine);
 
-            commandLine.AppendFormat("-t {0} ", tumorBinnedPath.WrapWithShellQuote()); // tumor bed
+            commandLine.AppendFormat("-t \"{0}\" ", tumorBinnedPath); // tumor bed
 
             if ((callset.IsEnrichment && callset.Manifest.CanvasControlAvailable) ||
                 _normalizeMode == CanvasNormalizeMode.PCA)
             {
-                commandLine.AppendFormat("-n {0} ", callset.Manifest.CanvasControlBinnedPath.WrapWithShellQuote()); // normal bed
+                commandLine.AppendFormat("-n \"{0}\" ", callset.Manifest.CanvasControlBinnedPath); // normal bed
             }
             else
             {
                 foreach (var normalBinnedPath in callset.NormalBamPaths.Select(path => bamToBinned[path.BamFile]))
                 {
-                    commandLine.AppendFormat("-n {0} ", normalBinnedPath.WrapWithShellQuote()); // normal bed
+                    commandLine.AppendFormat("-n \"{0}\" ", normalBinnedPath); // normal bed
                 }
             }
 
-            commandLine.AppendFormat("-w {0} ", callset.SingleSampleCallset.NormalBinnedPath.WrapWithShellQuote()); // weighted average normal bed
+            commandLine.AppendFormat("-w \"{0}\" ", callset.SingleSampleCallset.NormalBinnedPath); // weighted average normal bed
 
-            commandLine.AppendFormat("-o {0} ", ratioBinnedPath.WrapWithShellQuote()); // ratio bed
+            commandLine.AppendFormat("-o \"{0}\" ", ratioBinnedPath); // ratio bed
 
             if (callset.IsEnrichment) // manifest
             {
                 if (!File.Exists(callset.TempManifestPath)) { NexteraManifestUtils.WriteNexteraManifests(callset.Manifest, callset.TempManifestPath); }
-                commandLine.AppendFormat("-f {0} ", callset.TempManifestPath.WrapWithShellQuote());
+                commandLine.AppendFormat("-f \"{0}\" ", callset.TempManifestPath);
             }
 
             commandLine.AppendFormat("-m {0} ", _normalizeMode);
 
             if (!string.IsNullOrEmpty(ploidyBedPath))
             {
-                commandLine.AppendFormat("-p {0} ", ploidyBedPath.WrapWithShellQuote());
+                commandLine.AppendFormat("-p \"{0}\" ", ploidyBedPath);
             }
 
             UnitOfWork normalizeJob = new UnitOfWork()
@@ -1114,7 +1114,7 @@ namespace Canvas
                 commandLine.AppendFormat("-n \"{0}\" ", callset.Sample.SampleName);
             }
             var vcf = callsets.AnalysisDetails.OutputFolder.GetFileLocation("CNV.vcf.gz");
-            commandLine.Append($"-o {vcf.WrapWithShellQuote()} ");
+            commandLine.Append($"-o \"{vcf}\" ");
             commandLine.AppendFormat("-r \"{0}\" ", callsets.AnalysisDetails.WholeGenomeFastaFolder);
             if (haveProband)
             {
