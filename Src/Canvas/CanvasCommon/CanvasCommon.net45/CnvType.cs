@@ -1,5 +1,3 @@
-using System;
-
 namespace CanvasCommon
 {
     public enum CnvType
