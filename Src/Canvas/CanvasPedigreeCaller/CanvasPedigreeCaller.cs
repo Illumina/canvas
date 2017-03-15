@@ -100,21 +100,39 @@ namespace CanvasPedigreeCaller
                     Console.WriteLine($"{DateTime.Now} Finished SPW task for segment {interval.Start} - {interval.End}");
                 });
 
+            List<double?> coverage;
+            List<List<CanvasSegment>> segments;
+            var names = PostProcessData(outVcfFile, referenceFolder, pedigreeMembers, out coverage, out segments);
+
+            CanvasSegmentWriter.WriteMultiSampleSegments(outVcfFile, segments, coverage, referenceFolder, names, null, null,
+            QualityFilterThreshold, isPedigreeInfoSupplied:true, denovoQualityThreshold:DeNovoQualityFilterThreshold);
+
+            var outputFolder = new FileLocation(outVcfFile).Directory;
+            foreach (var pedigreeMember in pedigreeMembers)
+            {
+                var outputVcfPath = SingleSampleCallset.GetSingleSamplePedigreeVcfOutput(outputFolder, pedigreeMember.Name);
+                CanvasSegmentWriter.WriteSegments(outputVcfPath.FullName, pedigreeMember.Segments, pedigreeMember.MeanCoverage, referenceFolder,
+                    pedigreeMember.Name, null, null, QualityFilterThreshold, DeNovoQualityFilterThreshold);
+            }
+            return 0;
+        }
+
+        private List<string> PostProcessData(string outVcfFile, string referenceFolder, LinkedList<PedigreeMember> pedigreeMembers, out List<double?> coverage,
+            out List<List<CanvasSegment>> segments)
+        {
             MergeSegments(pedigreeMembers, CallerParameters.MinimumCallSize);
             var names = pedigreeMembers.Select(x => x.Name).ToList();
-            var coverage = pedigreeMembers.Select(x => (double?)x.MeanCoverage).ToList();
-            var segments = pedigreeMembers.Select(x => x.Segments).ToList();
+            coverage = pedigreeMembers.Select(x => (double?) x.MeanCoverage).ToList();
+            segments = pedigreeMembers.Select(x => x.Segments).ToList();
 
             var outputFolder = new FileLocation(outVcfFile).Directory;
             foreach (var member in pedigreeMembers)
             {
                 var coverageOutputPath = SingleSampleCallset.GetCoverageAndVariantFrequencyOutput(outputFolder, member.Name);
-                CanvasSegment.WriteCoveragePlotData(member.Segments, member.MeanCoverage, member.Ploidy, coverageOutputPath.FullName, referenceFolder);
+                CanvasSegment.WriteCoveragePlotData(member.Segments, member.MeanCoverage, member.Ploidy,
+                    coverageOutputPath.FullName, referenceFolder);
             }
-
-            CanvasSegmentWriter.WriteMultiSampleSegments(outVcfFile, segments, coverage, referenceFolder, names, null, null,
-            QualityFilterThreshold, DeNovoQualityFilterThreshold);
-            return 0;
+            return names;
         }
 
         internal int CallVariants(List<string> variantFrequencyFiles, List<string> segmentFiles, string outVcfFile, string ploidyBedPath, string referenceFolder, List<string> sampleNames)
@@ -170,13 +188,20 @@ namespace CanvasPedigreeCaller
                     Console.WriteLine($"{DateTime.Now} Finished SPW task for segment {interval.Start} - {interval.End}");
                 });
 
-            MergeSegments(pedigreeMembers, CallerParameters.MinimumCallSize);
-            var names = pedigreeMembers.Select(x => x.Name).ToList();
-            var coverage = pedigreeMembers.Select(x => (double?)x.MeanCoverage).ToList();
-            var segments = pedigreeMembers.Select(x => x.Segments).ToList();
+            List<double?> coverage;
+            List<List<CanvasSegment>> segments;
+            var names = PostProcessData(outVcfFile, referenceFolder, pedigreeMembers, out coverage, out segments);
 
             CanvasSegmentWriter.WriteMultiSampleSegments(outVcfFile, segments, coverage, referenceFolder, names, null, null,
-            QualityFilterThreshold, DeNovoQualityFilterThreshold);
+            QualityFilterThreshold, isPedigreeInfoSupplied: false);
+
+            var outputFolder = new FileLocation(outVcfFile).Directory;
+            foreach (var pedigreeMember in pedigreeMembers)
+            {
+                var outputVcfPath = SingleSampleCallset.GetSingleSamplePedigreeVcfOutput(outputFolder, pedigreeMember.Name);
+                CanvasSegmentWriter.WriteSegments(outputVcfPath.FullName, pedigreeMember.Segments, pedigreeMember.MeanCoverage, referenceFolder,
+                    pedigreeMember.Name, null, null, QualityFilterThreshold);
+            }
             return 0;
         }
 
