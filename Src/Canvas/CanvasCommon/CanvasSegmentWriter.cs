@@ -106,7 +106,7 @@ namespace CanvasCommon
                 for (int segmentIndex = 0; segmentIndex < segments.First().Count; segmentIndex++)
                 {                   
                     var firstSampleSegment = segments.First()[segmentIndex];
-                    if (!isPedigreeInfoSupplied && segments.Select(sample => sample[segmentIndex].Filter == "PASS").Any())
+                    if (!isPedigreeInfoSupplied && segments.Select(sample => sample[segmentIndex].Filter == "PASS").Any() && segments.Count > 1)
                         firstSampleSegment.Filter = "PASS";
                     if (!firstSampleSegment.Chr.Equals(chromosome.Name, StringComparison.OrdinalIgnoreCase))
                         continue;
