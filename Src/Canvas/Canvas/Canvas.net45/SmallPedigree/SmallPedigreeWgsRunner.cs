@@ -21,9 +21,9 @@ namespace Canvas.SmallPedigree
             CommonOptions = commonOptions;
         }
 
-        public void Run(ILogger logger, ICheckpointRunner checkpointRunner, IWorkManager workManager, IFileLocation mono)
+        public void Run(ILogger logger, ICheckpointRunner checkpointRunner, IWorkManager workManager, IFileLocation runtimeExecutable)
         {
-            CanvasRunner runner = new CanvasRunner(logger, workManager, checkpointRunner, mono, false, CanvasCoverageMode.TruncatedDynamicRange, 100, CommonOptions.CustomParams);
+            CanvasRunner runner = new CanvasRunner(logger, workManager, checkpointRunner, runtimeExecutable, false, CanvasCoverageMode.TruncatedDynamicRange, 100, CommonOptions.CustomParams);
             var callset = GetCallset();
             var spwWorkflow = new SmallPedigreeWorkflow(runner);
             spwWorkflow.CallPedigree(callset);

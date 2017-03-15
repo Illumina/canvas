@@ -21,9 +21,9 @@ namespace Canvas
             SingleSampleCommonOptions = singleSampleCommonOptions;
         }
 
-        public void Run(ILogger logger, ICheckpointRunner checkpointRunner, IWorkManager workManager, IFileLocation mono)
+        public void Run(ILogger logger, ICheckpointRunner checkpointRunner, IWorkManager workManager, IFileLocation runtimeExecutable)
         {
-            CanvasRunner runner = new CanvasRunner(logger, workManager, checkpointRunner, mono, true, CanvasCoverageMode.GCContentWeighted, 100, CommonOptions.CustomParams);
+            CanvasRunner runner = new CanvasRunner(logger, workManager, checkpointRunner, runtimeExecutable, true, CanvasCoverageMode.GCContentWeighted, 100, CommonOptions.CustomParams);
             var callset = GetCallset();
             runner.CallSample(callset);
         }

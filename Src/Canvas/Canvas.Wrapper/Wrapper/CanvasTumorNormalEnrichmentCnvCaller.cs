@@ -21,12 +21,12 @@ namespace Canvas.Wrapper
         private readonly ICanvasSingleSampleInputCommandLineBuilder _singleSampleInputCommandLineBuilder;
         private readonly CanvasEnrichmentInputCreator<CanvasTumorNormalEnrichmentInput> _enrichmentInputCreator;
         private readonly CanvasPloidyBedCreator _canvasPloidyBedCreator;
-        private readonly IFileLocation _mono;
+        private readonly IFileLocation _runtimeExecutable;
 
         public CanvasTumorNormalEnrichmentCnvCaller(
             IWorkManager workManager,
             ILogger logger,
-            IFileLocation canvasExe, IFileLocation mono,
+            IFileLocation canvasExe, IFileLocation runtimeExecutable,
             ICanvasAnnotationFileProvider annotationFileProvider,
             ICanvasSingleSampleInputCommandLineBuilder singleSampleInputCommandLineBuilder, CanvasEnrichmentInputCreator<CanvasTumorNormalEnrichmentInput> enrichmentInputCreator, CanvasPloidyBedCreator canvasPloidyBedCreator)
         {
@@ -37,7 +37,7 @@ namespace Canvas.Wrapper
             _singleSampleInputCommandLineBuilder = singleSampleInputCommandLineBuilder;
             _enrichmentInputCreator = enrichmentInputCreator;
             _canvasPloidyBedCreator = canvasPloidyBedCreator;
-            _mono = mono;
+            _runtimeExecutable = runtimeExecutable;
         }
 
         public SampleSet<CanvasOutput> Run(SampleSet<CanvasTumorNormalEnrichmentInput> inputs, IDirectoryLocation sandbox)
@@ -101,7 +101,7 @@ namespace Canvas.Wrapper
             commandLine = _singleSampleInputCommandLineBuilder.MergeCustomCanvasParameters(commandLine);
             UnitOfWork singleSampleJob = new UnitOfWork
             {
-                ExecutablePath = CrossPlatform.IsThisLinux() ? _mono.FullName : _canvasExe.FullName,
+                ExecutablePath = CrossPlatform.IsThisLinux() ? _runtimeExecutable.FullName : _canvasExe.FullName,
                 CommandLine = CrossPlatform.IsThisLinux() ? _canvasExe + " " + commandLine : commandLine.ToString(),
                 LoggingFolder = _workManager.LoggingFolder.FullName,
                 LoggingStub = "Canvas_" + sampleId,

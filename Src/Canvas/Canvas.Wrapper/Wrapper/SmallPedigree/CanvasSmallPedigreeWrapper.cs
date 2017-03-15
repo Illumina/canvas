@@ -28,7 +28,7 @@ namespace Canvas.Wrapper.SmallPedigree
         public CanvasSmallPedigreeWrapper(
             IWorkManager workManager,
             ILogger logger,
-            IFileLocation canvasExe, IFileLocation mono,
+            IFileLocation canvasExe, IFileLocation runtimeExecutable,
             ICanvasAnnotationFileProvider annotationFileProvider,
             ICanvasSingleSampleInputCommandLineBuilder singleSampleInputCommandLineBuilder,
             CanvasPloidyVcfCreator canvasPloidyVcfCreator)
@@ -39,7 +39,7 @@ namespace Canvas.Wrapper.SmallPedigree
             _annotationFileProvider = annotationFileProvider;
             _singleSampleInputCommandLineBuilder = singleSampleInputCommandLineBuilder;
             _canvasPloidyVcfCreator = canvasPloidyVcfCreator;
-            _runtimeExecutable = mono;
+            _runtimeExecutable = runtimeExecutable;
         }
 
         public StringBuilder GetMultiSampleCommandLine(SampleSet<CanvasPedigreeSample> samples, GenomeMetadata genomeMetadata, Vcf vcf, IDirectoryLocation sampleSandbox)

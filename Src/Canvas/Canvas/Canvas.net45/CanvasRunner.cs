@@ -36,7 +36,7 @@ namespace Canvas
         private readonly IFileLocation _runtimeExecutable; // Path to either mono or dotnet
         #endregion
 
-        public CanvasRunner(ILogger logger, IWorkManager workManager, ICheckpointRunner checkpointRunner, IFileLocation mono, bool isSomatic, CanvasCoverageMode coverageMode,
+        public CanvasRunner(ILogger logger, IWorkManager workManager, ICheckpointRunner checkpointRunner, IFileLocation runtimeExecutable, bool isSomatic, CanvasCoverageMode coverageMode,
             int countsPerBin, Dictionary<string, string> customParameters = null)
         {
             _logger = logger;
@@ -46,7 +46,7 @@ namespace Canvas
             _canvasFolder = Path.Combine(Isas.Framework.Utilities.Utilities.GetAssemblyFolder(typeof(CanvasRunner)));
             _coverageMode = coverageMode;
             _countsPerBin = countsPerBin;
-            _runtimeExecutable = mono;
+            _runtimeExecutable = runtimeExecutable;
             if (customParameters != null)
             {
                 _customParameters = new Dictionary<string, string>(customParameters, StringComparer.OrdinalIgnoreCase);
@@ -666,20 +666,17 @@ namespace Canvas
                     continue;
 
                 UnitOfWork job = new UnitOfWork();
-                job.ExecutablePath = Path.Combine(_canvasFolder, "CanvasSNV.exe");
-                if (CrossPlatform.IsThisLinux())
-                {
-                    job.CommandLine = job.ExecutablePath;
-                    job.ExecutablePath = _runtimeExecutable.FullName;
-                }
+                StringBuilder commandLine = new StringBuilder();
+                job.ExecutablePath = GetExecutablePath("CanvasSNV", commandLine);
 
                 string outputPath = Path.Combine(callset.SingleSampleCallset.SampleOutputFolder.FullName, $"{chromosome.Name}-{callset.SingleSampleCallset.SampleName}.SNV.txt.gz");
                 outputPaths.Add(outputPath);
-                job.CommandLine += $" {chromosome.Name} {normalVcfPath} {bamPath} {outputPath}";
+                commandLine.Append($" {chromosome.Name} {normalVcfPath} {bamPath} {outputPath}");
                 if (!sampleName.IsNullOrEmpty())
-                    job.CommandLine += $" {sampleName}";
+                    commandLine.Append($" {sampleName}");
                 if (callset.SingleSampleCallset.IsDbSnpVcf)
-                    job.CommandLine += " true";
+                    commandLine.Append(" true");
+                job.CommandLine = commandLine.ToString();
                 if (_customParameters.ContainsKey("CanvasSNV"))
                 {
                     job.CommandLine = Isas.Framework.Settings.CommandOptionsUtilities.MergeCommandLineOptions(job.CommandLine, _customParameters["CanvasSNV"], true);
@@ -1053,23 +1050,19 @@ namespace Canvas
             // Prepare and run CanvasSomaticCaller job:
             UnitOfWork callerJob = new UnitOfWork();
             var cnvVcfPath = callset.SingleSampleCallset.OutputVcfPath;
-            callerJob.ExecutablePath = Path.Combine(this._canvasFolder, "CanvasSomaticCaller.exe");
-            if (CrossPlatform.IsThisLinux())
-            {
-                callerJob.CommandLine = callerJob.ExecutablePath;
-                callerJob.ExecutablePath = _runtimeExecutable.FullName;
-            }
-            callerJob.CommandLine += $" -v {callset.SingleSampleCallset.VfSummaryPath}";
-            callerJob.CommandLine += $" -i {partitionedPath}";
-            callerJob.CommandLine += $" -o {cnvVcfPath}";
-            callerJob.CommandLine += $" -b {canvasBedPath}";
+            StringBuilder commandLine = new StringBuilder();
+            callerJob.ExecutablePath = GetExecutablePath("CanvasSomaticCaller", commandLine);
+            commandLine.Append($" -v {callset.SingleSampleCallset.VfSummaryPath}");
+            commandLine.Append($" -i {partitionedPath}");
+            commandLine.Append($" -o {cnvVcfPath}");
+            commandLine.Append($" -b {canvasBedPath}");
             if (!string.IsNullOrEmpty(ploidyBedPath))
-                callerJob.CommandLine += $" -p {ploidyBedPath}";
-            callerJob.CommandLine += $" -n {callset.SingleSampleCallset.SampleName}";
+                commandLine.Append($" -p {ploidyBedPath}");
+            commandLine.Append($" -n {callset.SingleSampleCallset.SampleName}");
             if (callset.IsEnrichment)
-                callerJob.CommandLine += " -e";
+                commandLine.Append(" -e");
             if (callset.SingleSampleCallset.IsDbSnpVcf) // a dbSNP VCF file is used in place of the normal VCF file
-                callerJob.CommandLine += " -d";
+                commandLine.Append(" -d");
             // get localSD metric:
             if (ffpePath != null)
             {
@@ -1077,7 +1070,7 @@ namespace Canvas
                 // If it's not present, just carry on:
                 if (ffpePath.Exists)
                 {
-                    callerJob.CommandLine += $" -f \"{ffpePath}\"";
+                    commandLine.Append($" -f \"{ffpePath}\"");
                 }
                 else
                 {
@@ -1086,8 +1079,9 @@ namespace Canvas
             }
 
             if (!string.IsNullOrEmpty(somaticSnvPath))
-                callerJob.CommandLine += $" -s {somaticSnvPath}";
-            callerJob.CommandLine += $" -r \"{callset.AnalysisDetails.WholeGenomeFastaFolder}\" ";
+                commandLine.Append($" -s {somaticSnvPath}");
+            commandLine.Append($" -r \"{callset.AnalysisDetails.WholeGenomeFastaFolder}\" ");
+            callerJob.CommandLine = commandLine.ToString();
             if (_customParameters.ContainsKey("CanvasSomaticCaller"))
             {
                 callerJob.CommandLine = Isas.Framework.Settings.CommandOptionsUtilities.MergeCommandLineOptions(callerJob.CommandLine, _customParameters["CanvasSomaticCaller"], true);
@@ -1106,14 +1100,9 @@ namespace Canvas
             bool haveProband = callsets.PedigreeSample.Where(x => x.SampleType == SampleType.Proband).ToList().Count > 0;
 
             // CanvasSmallPedigreeCaller:
-            StringBuilder commandLine = new StringBuilder { Length = 0 };
+            StringBuilder commandLine = new StringBuilder();
+            string executablePath = GetExecutablePath("CanvasPedigreeCaller", commandLine);
 
-            string executablePath = Path.Combine(_canvasFolder, "CanvasPedigreeCaller.exe");
-            if (CrossPlatform.IsThisLinux())
-            {
-                commandLine.AppendFormat("{0} ", executablePath);
-                executablePath = _runtimeExecutable.FullName;
-            }
             foreach (IFileLocation partitionedPath in partitionedPaths)
                 commandLine.AppendFormat("-i \"{0}\" ", partitionedPath);
 
@@ -1173,13 +1162,8 @@ namespace Canvas
             StringBuilder commandLine = new StringBuilder();
             ////////////////////////////////////////////////////////
             // CanvasDiploidCaller:
-            commandLine.Length = 0;
-            string executablePath = Path.Combine(_canvasFolder, "CanvasDiploidCaller.exe");
-            if (CrossPlatform.IsThisLinux())
-            {
-                commandLine.AppendFormat("{0} ", executablePath);
-                executablePath = _runtimeExecutable.FullName;
-            }
+            string executablePath = GetExecutablePath("CanvasDiploidCaller", commandLine);
+
             commandLine.AppendFormat("-i \"{0}\" ", partitionedPath);
             commandLine.AppendFormat("-v \"{0}\" ", callset.SingleSampleCallset.VfSummaryPath);
             var cnvVcfPath = callset.SingleSampleCallset.OutputVcfPath;
