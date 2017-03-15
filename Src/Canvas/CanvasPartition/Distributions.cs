@@ -273,10 +273,7 @@ namespace CanvasPartition
                 foreach (int cnGenotype in currentGenotypePermutations)
                 {
                     var pointCoverage = Convert.ToInt32(data[cnState]);
-                    if (cnGenotype == 0 | cnGenotype == 1)
-                        emissionLikelihood *= Math.Max(_negativeBinomialDistributions[0].Probability(cnState, pointCoverage),
-                                _negativeBinomialDistributions[1].Probability(cnState, pointCoverage));
-                    else if (cnGenotype == 3 | cnGenotype == 4)
+                    if (cnGenotype == 3 | cnGenotype == 4)
                         emissionLikelihood *= Math.Max(_negativeBinomialDistributions[3].Probability(cnState, pointCoverage),
                                 _negativeBinomialDistributions[4].Probability(cnState, pointCoverage));
                     else
