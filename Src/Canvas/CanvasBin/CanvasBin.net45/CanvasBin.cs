@@ -4,13 +4,13 @@ using System.Collections;
 using System.Diagnostics;
 using System.Collections.Generic;
 using System.Threading;
-using CanvasCommon;
 using ProtoBuf;
 using System.Linq;
 using System.Threading.Tasks;
 using Illumina.Common.FileSystem;
 using Isas.Manifests.NexteraManifest;
 using Isas.SequencingFiles;
+using CanvasCommon;
 
 namespace CanvasBin
 {

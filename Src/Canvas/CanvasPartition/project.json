@@ -6,8 +6,7 @@
   },
 
   "dependencies": {
-    "CanvasCommon.Core": "1.23.0.10",
-    "Combinatorics.Core": "1.23.0.10",
+    "CanvasCommon": "1.0.0-*",
     "Illumina.Common": "2.2.0.95",
     "Isas.SequencingFiles": "3.10.1.189",
     "MathNet.Numerics.Core": "3.17.0",

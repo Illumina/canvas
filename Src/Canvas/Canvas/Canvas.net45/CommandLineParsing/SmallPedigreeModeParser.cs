@@ -1,6 +1,5 @@
 ﻿using Canvas.SmallPedigree;
 using CanvasCommon.CommandLineParsing.OptionProcessing;
-using Illumina.Common.FileSystem;
 
 namespace Canvas.CommandLineParsing
 {

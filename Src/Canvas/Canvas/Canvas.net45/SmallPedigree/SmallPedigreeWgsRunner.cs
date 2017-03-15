@@ -1,5 +1,4 @@
 ﻿using System.Collections.Generic;
-using System.IO;
 using Canvas.CommandLineParsing;
 using CanvasCommon;
 using Illumina.Common.FileSystem;

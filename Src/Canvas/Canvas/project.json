@@ -5,8 +5,8 @@
   },
 
   "dependencies": {
-    "CanvasBin.Core": "1.23.0.10",
-    "CanvasCommon.Core": "1.23.0.10",
+    "CanvasBin": "1.0.0-*",
+    "CanvasCommon": "1.0.0-*",
     "Illumina.Common": "2.2.0.95",
     "Isas.Framework": "5.3.1.101",
     "Isas.Manifests": "2.12.0.38",

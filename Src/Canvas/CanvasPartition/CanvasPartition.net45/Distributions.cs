@@ -2,8 +2,8 @@
 using System.Collections.Generic;
 using System.Linq;
 using CanvasCommon;
-using MathNet.Numerics.Distributions;
 using Combinatorics.Collections;
+using MathNet.Numerics.Distributions;
 using MathNet.Numerics.LinearAlgebra;
 using MathNet.Numerics;
 

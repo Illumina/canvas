@@ -128,7 +128,7 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\CanvasCommon\CanvasCommon.net45\CanvasCommon.net45.csproj">
-      <Project>{ec8755f1-74bd-4a1f-9b82-5133d2f6a93b}</Project>
+      <Project>{EC8755F1-74BD-4A1F-9B82-5133D2F6A93B}</Project>
       <Name>CanvasCommon.net45</Name>
     </ProjectReference>
   </ItemGroup>
