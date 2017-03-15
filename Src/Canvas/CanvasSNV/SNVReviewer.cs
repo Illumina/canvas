@@ -116,7 +116,8 @@ namespace CanvasSNV
                         if (isSomatic)
                         {
                             string genotype = variant.GenotypeColumns[0]["GT"];
-                            if (genotype != "0/1" && genotype != "1/0") continue;                            
+                            if (genotype != "0/1" && genotype != "1/0" && genotype != "0|1" && genotype != "1|0") 
+                                continue;                            
                         }
 
                         // Also require they have a high enough quality score:

@@ -811,7 +811,7 @@ namespace Canvas
             {
                 if (_isSomatic)
                 {
-                    InvokeCanvasSnv(callset, isSomatic:true);
+                    InvokeCanvasSnv(callset, isSomatic: _isSomatic);
                 }
                 else
                 {
