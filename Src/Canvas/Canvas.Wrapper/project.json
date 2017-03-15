@@ -1,6 +1,5 @@
 {
   "version": "1.0.0-*",
-
   "dependencies": {
     "CanvasCommon.Core": "1.23.0.10",
     "CanvasWithoutWrapper.Core": "1.23.0.10",
@@ -15,10 +14,12 @@
       "version": "1.0.1"
     }
   },
-
   "frameworks": {
     "netcoreapp1.0": {
       "imports": "dnxcore50"
     }
+  },
+  "buildOptions": {
+    "define": [ "DotNetCore" ]
   }
 }

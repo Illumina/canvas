@@ -23,7 +23,7 @@ namespace Canvas.Wrapper.SmallPedigree
         private readonly ICanvasAnnotationFileProvider _annotationFileProvider;
         private readonly ICanvasSingleSampleInputCommandLineBuilder _singleSampleInputCommandLineBuilder;
         private readonly CanvasPloidyVcfCreator _canvasPloidyVcfCreator;
-        private readonly IFileLocation _mono;
+        private readonly IFileLocation _runtimeExecutable;
 
         public CanvasSmallPedigreeWrapper(
             IWorkManager workManager,
@@ -39,7 +39,7 @@ namespace Canvas.Wrapper.SmallPedigree
             _annotationFileProvider = annotationFileProvider;
             _singleSampleInputCommandLineBuilder = singleSampleInputCommandLineBuilder;
             _canvasPloidyVcfCreator = canvasPloidyVcfCreator;
-            _mono = mono;
+            _runtimeExecutable = mono;
         }
 
         public StringBuilder GetMultiSampleCommandLine(SampleSet<CanvasPedigreeSample> samples, GenomeMetadata genomeMetadata, Vcf vcf, IDirectoryLocation sampleSandbox)
@@ -108,7 +108,7 @@ namespace Canvas.Wrapper.SmallPedigree
 
             var singleSampleJob = new UnitOfWork()
             {
-                ExecutablePath = CrossPlatform.IsThisLinux() ? _mono.FullName : _canvasExe.FullName,
+                ExecutablePath = CrossPlatform.IsThisLinux() ? _runtimeExecutable.FullName : _canvasExe.FullName,
                 CommandLine = CrossPlatform.IsThisLinux() ? _canvasExe + " " + commandLine : commandLine.ToString(),
                 LoggingFolder = _workManager.LoggingFolder.FullName,
                 LoggingStub = "Canvas_" + pedigreeId,
