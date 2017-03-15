@@ -115,11 +115,13 @@ namespace Canvas
         {
 #if DotNetCore
             commandLineBuilder.Append(Path.Combine(_canvasFolder, string.Format("{0}.dll", canvasExecutableStub)));
+            commandLineBuilder.Append(" ");
             return _runtimeExecutable.FullName;
 #else
             if (CrossPlatform.IsThisLinux())
             {
                 commandLineBuilder.Append(Path.Combine(_canvasFolder, string.Format("{0}.exe", canvasExecutableStub)));
+                commandLineBuilder.Append(" ");
                 return _runtimeExecutable.FullName;   
             }
             else

@@ -37,7 +37,10 @@ namespace Canvas.Wrapper.SmallPedigree
         {
             if (!_canvasWorkerFactory.RunCnvDetection()) return new NullSmallPedigreeCheckpoint(_logger);
 
-            CanvasSmallPedigreeWrapper wrapper = new CanvasSmallPedigreeWrapper(_workManager, _logger, _canvasWorkerFactory.GetCanvasExe(), GetRuntimeExecutable(), _canvasWorkerFactory.GetAnnotationFileProvider(), _canvasWorkerFactory.GetCanvasSingleSampleInputCommandLineBuilder(_canvasWorkerFactory.GetAnnotationFileProvider()), new CanvasPloidyVcfCreator(_canvasWorkerFactory.GetPloidyCorrector()));
+            CanvasSmallPedigreeWrapper wrapper = new CanvasSmallPedigreeWrapper(_workManager, _logger, _canvasWorkerFactory.GetCanvasExe(), 
+                GetRuntimeExecutable(), _canvasWorkerFactory.GetAnnotationFileProvider(), 
+                _canvasWorkerFactory.GetCanvasSingleSampleInputCommandLineBuilder(_canvasWorkerFactory.GetAnnotationFileProvider()), 
+                new CanvasPloidyVcfCreator(_canvasWorkerFactory.GetPloidyCorrector()));
             return new SmallPedigreeCheckpoint(wrapper, Move, Load);
         }
 
