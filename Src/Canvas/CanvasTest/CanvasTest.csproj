@@ -62,16 +62,16 @@
     <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="Illumina.Common, Version=2.0.5.80, Culture=neutral, processorArchitecture=AMD64">
-      <HintPath>..\Canvas\packages\Illumina.Common.2.0.5.80\lib\net451\Illumina.Common.dll</HintPath>
+    <Reference Include="Illumina.Common, Version=2.2.0.95, Culture=neutral, processorArchitecture=AMD64">
+      <HintPath>..\Canvas\packages\Illumina.Common.2.2.0.95\lib\net451\Illumina.Common.dll</HintPath>
       <Private>True</Private>
     </Reference>
-    <Reference Include="Isas.Framework, Version=5.0.3.73, Culture=neutral, processorArchitecture=AMD64">
-      <HintPath>..\Canvas\packages\Isas.Framework.5.0.3.73\lib\net451\Isas.Framework.dll</HintPath>
+    <Reference Include="Isas.Framework, Version=5.3.2.104, Culture=neutral, processorArchitecture=AMD64">
+      <HintPath>..\Canvas\packages\Isas.Framework.5.3.2.104\lib\net451\Isas.Framework.dll</HintPath>
       <Private>True</Private>
     </Reference>
-    <Reference Include="Isas.SequencingFiles, Version=3.7.3.154, Culture=neutral, processorArchitecture=AMD64">
-      <HintPath>..\Canvas\packages\Isas.SequencingFiles.3.7.3.154\lib\net451\Isas.SequencingFiles.dll</HintPath>
+    <Reference Include="Isas.SequencingFiles, Version=3.10.1.192, Culture=neutral, processorArchitecture=AMD64">
+      <HintPath>..\Canvas\packages\Isas.SequencingFiles.3.10.1.192\lib\net451\Isas.SequencingFiles.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="Newtonsoft.Json, Version=9.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
@@ -99,6 +99,14 @@
       <Private>True</Private>
     </Reference>
     <Reference Include="System" />
+    <Reference Include="System.ComponentModel.Primitives, Version=4.1.1.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <HintPath>..\Canvas\packages\System.ComponentModel.Primitives.4.3.0\lib\net45\System.ComponentModel.Primitives.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="System.ComponentModel.TypeConverter, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <HintPath>..\Canvas\packages\System.ComponentModel.TypeConverter.4.3.0\lib\net45\System.ComponentModel.TypeConverter.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
     <Reference Include="System.Xml" />
     <Reference Include="xunit.assert, Version=2.0.0.2929, Culture=neutral, PublicKeyToken=8d05b1bb7a6fdb6c, processorArchitecture=MSIL">
       <HintPath>..\Canvas\packages\xunit.assert.2.0.0\lib\portable-net45+win+wpa81+wp80+monotouch+monoandroid+Xamarin.iOS\xunit.assert.dll</HintPath>
@@ -137,37 +145,33 @@
     <Compile Include="TestUtilities.cs" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\CanvasBin\CanvasBin.csproj">
+    <ProjectReference Include="..\CanvasBin\CanvasBin.net45\CanvasBin.net45.csproj">
       <Project>{4fe7dc26-bb44-4a6e-b02b-785328c41260}</Project>
-      <Name>CanvasBin</Name>
+      <Name>CanvasBin.net45</Name>
     </ProjectReference>
-    <ProjectReference Include="..\CanvasClean\CanvasClean.csproj">
+    <ProjectReference Include="..\CanvasClean\CanvasClean.net45\CanvasClean.net45.csproj">
       <Project>{3ea57084-d8fd-4978-8cf9-0ef97cfa47d0}</Project>
-      <Name>CanvasClean</Name>
+      <Name>CanvasClean.net45</Name>
     </ProjectReference>
-    <ProjectReference Include="..\CanvasCommon\CanvasCommon.csproj">
+    <ProjectReference Include="..\CanvasCommon\CanvasCommon.net45\CanvasCommon.net45.csproj">
       <Project>{ec8755f1-74bd-4a1f-9b82-5133d2f6a93b}</Project>
-      <Name>CanvasCommon</Name>
+      <Name>CanvasCommon.net45</Name>
     </ProjectReference>
-    <ProjectReference Include="..\CanvasDiploidCaller\CanvasDiploidCaller.csproj">
-      <Project>{ffd9d459-c697-4e50-9e61-0b192a064211}</Project>
-      <Name>CanvasDiploidCaller</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\CanvasPartition\CanvasPartition.csproj">
+    <ProjectReference Include="..\CanvasPartition\CanvasPartition.net45\CanvasPartition.net45.csproj">
       <Project>{a1660795-cd4a-4fbc-9bf6-df2a420aa3ca}</Project>
-      <Name>CanvasPartition</Name>
+      <Name>CanvasPartition.net45</Name>
     </ProjectReference>
-    <ProjectReference Include="..\CanvasSNV\CanvasSNV.csproj">
+    <ProjectReference Include="..\CanvasSNV\CanvasSNV.net45\CanvasSNV.net45.csproj">
       <Project>{4dc19472-77f6-4482-b5be-8d15760f89f7}</Project>
-      <Name>CanvasSNV</Name>
+      <Name>CanvasSNV.net45</Name>
     </ProjectReference>
-    <ProjectReference Include="..\CanvasSomaticCaller\CanvasSomaticCaller.csproj">
+    <ProjectReference Include="..\CanvasSomaticCaller\CanvasSomaticCaller.net45\CanvasSomaticCaller.net45.csproj">
       <Project>{a08c4a1e-133e-4339-89e4-54651d37baf0}</Project>
-      <Name>CanvasSomaticCaller</Name>
+      <Name>CanvasSomaticCaller.net45</Name>
     </ProjectReference>
-    <ProjectReference Include="..\Canvas\Canvas.csproj">
+    <ProjectReference Include="..\Canvas\Canvas.net45\Canvas.net45.csproj">
       <Project>{f7eb30ca-eb4a-4e80-a067-0d9498a9f5b6}</Project>
-      <Name>Canvas</Name>
+      <Name>Canvas.net45</Name>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
@@ -212,13 +216,13 @@
     </PropertyGroup>
     <Error Condition="!Exists('..\Canvas\packages\xunit.core.2.0.0\build\portable-net45+win+wpa81+wp80+monotouch+monoandroid+Xamarin.iOS\xunit.core.props')" Text="$([System.String]::Format('$(ErrorText)', '..\Canvas\packages\xunit.core.2.0.0\build\portable-net45+win+wpa81+wp80+monotouch+monoandroid+Xamarin.iOS\xunit.core.props'))" />
     <Error Condition="!Exists('..\Canvas\packages\xunit.runner.visualstudio.2.1.0\build\net20\xunit.runner.visualstudio.props')" Text="$([System.String]::Format('$(ErrorText)', '..\Canvas\packages\xunit.runner.visualstudio.2.1.0\build\net20\xunit.runner.visualstudio.props'))" />
-    <Error Condition="!Exists('..\Canvas\packages\Isas.FileCompression.3.7.3.154\build\net451\Isas.FileCompression.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\Canvas\packages\Isas.FileCompression.3.7.3.154\build\net451\Isas.FileCompression.targets'))" />
+    <Error Condition="!Exists('..\Canvas\packages\Isas.FileCompression.3.10.1.192\build\net451\Isas.FileCompression.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\Canvas\packages\Isas.FileCompression.3.10.1.192\build\net451\Isas.FileCompression.targets'))" />
   </Target>
   <PropertyGroup>
     <PostBuildEvent>
     </PostBuildEvent>
   </PropertyGroup>
-  <Import Project="..\Canvas\packages\Isas.FileCompression.3.7.3.154\build\net451\Isas.FileCompression.targets" Condition="Exists('..\Canvas\packages\Isas.FileCompression.3.7.3.154\build\net451\Isas.FileCompression.targets')" />
+  <Import Project="..\Canvas\packages\Isas.FileCompression.3.10.1.192\build\net451\Isas.FileCompression.targets" Condition="Exists('..\Canvas\packages\Isas.FileCompression.3.10.1.192\build\net451\Isas.FileCompression.targets')" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
   <Target Name="BeforeBuild">

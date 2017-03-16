@@ -1,0 +1,25 @@
+{
+  "version": "1.0.0-*",
+  "buildOptions": {
+    "copyToOutput": {
+      "mappings": {
+        "QualityScoreParameters.json": "CanvasCommon.net45/QualityScoreParameters.json",
+      }
+    }
+  },
+
+  "dependencies": {
+    "Combinatorics": "1.0.0-*",
+    "Illumina.Common": "2.2.0.95",
+    "Isas.Framework": "5.3.2.104",
+    "Isas.SequencingFiles": "3.10.1.192",
+    "MathNet.Numerics.Core": "3.17.0",
+    "NETStandard.Library": "1.6.0"
+  },
+
+  "frameworks": {
+    "netstandard1.6": {
+      "imports": "dnxcore50"
+    }
+  }
+}
