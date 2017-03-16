@@ -1967,7 +1967,8 @@ namespace CanvasSomaticCaller
         /// </summary>
         protected void CheckNonDiploidMAFs(List<CanvasSegment> canvasSegments)
         {
-            const double diploidMAF = 0.48;
+            const double diploidMAF = 0.41;
+            const double diploidMAFMean = 0.44;
             double minSizeMAFs = 1000; // to approximate chopiness for 100 to 500kb regions
             const int tStatisticsSizeThreshold = 20;
 
@@ -1985,7 +1986,7 @@ namespace CanvasSomaticCaller
                 return;
             double tTestStatistics = CanvasCommon.Utilities.tTest(nonDiploidMAFs, diploidMAF);
             Console.WriteLine($">>> CheckNonDiploidMAFs t-test statistics {tTestStatistics}");
-            if (Math.Abs(tTestStatistics) < 3.733) // for alpha = 0.001 and 15 degrees of freedom
+            if (Math.Abs(tTestStatistics) < 3.733 | nonDiploidMAFs.Average() > diploidMAFMean) // for alpha = 0.001 and 15 degrees of freedom
             {
                 this.Model.Purity = 1.0;
                 this.Model.Ploidy = 2.0;

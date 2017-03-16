@@ -23,6 +23,7 @@ namespace CanvasSNV
         protected readonly string OutputPath;
         protected readonly string SampleName;
         protected readonly bool IsDbSnpVcf;
+        private readonly bool   IsSomatic;
         List<VcfVariant> Variants;
         int[] ReferenceCounts;
         int[] VariantCounts;
@@ -31,7 +32,7 @@ namespace CanvasSNV
 
         #endregion
 
-        public SNVReviewer(string chromosome, string vcfPath, string bamPath, string outputPath, string sampleName, bool isDbSnpVcf, int minMapQ)
+        public SNVReviewer(string chromosome, string vcfPath, string bamPath, string outputPath, string sampleName, bool isDbSnpVcf, int minMapQ, bool isSomatic)
         {
             SampleName = sampleName;
             Chromosome = chromosome;
@@ -40,6 +41,7 @@ namespace CanvasSNV
             OutputPath = outputPath;
             IsDbSnpVcf = isDbSnpVcf;
             MinimumMapQ = minMapQ;
+            IsSomatic = isSomatic;
         }
 
         public int Run()
@@ -56,7 +58,7 @@ namespace CanvasSNV
                 return 1;
             }
 
-            this.LoadVariants(VcfPath);
+            this.LoadVariants(VcfPath, IsSomatic);
             ReferenceCounts = new int[Variants.Count];
             VariantCounts = new int[Variants.Count];
             this.ProcessBamFile(BamPath);
@@ -67,7 +69,7 @@ namespace CanvasSNV
         /// <summary>
         /// Step 1: Load the normal het SNVs of interest.
         /// </summary>
-        protected void LoadVariants(string vcfPath)
+        protected void LoadVariants(string vcfPath, bool isSomatic)
         {
             Console.WriteLine("{0} Loading variants of interest from {1}", DateTime.Now, vcfPath);
             this.Variants = new List<VcfVariant>();
@@ -111,8 +113,12 @@ namespace CanvasSNV
                     if (variant.GenotypeColumns != null && variant.GenotypeColumns.Any()) // not available if we use a dbSNP VCF file
                     {
                         if (!variant.GenotypeColumns[sampleIndex].ContainsKey("GT")) continue; // no genotype - we don't know if it's a het SNV.
-                        // string genotype = variant.GenotypeColumns[0]["GT"];
-                        // if (genotype != "0/1" && genotype != "1/0") continue;
+                        if (isSomatic)
+                        {
+                            string genotype = variant.GenotypeColumns[0]["GT"];
+                            if (genotype != "0/1" && genotype != "1/0" && genotype != "0|1" && genotype != "1|0") 
+                                continue;                            
+                        }
 
                         // Also require they have a high enough quality score:
                         if (variant.GenotypeColumns[sampleIndex].ContainsKey("GQX")) // Note: Allow no GQX field, in case we want to use another caller (e.g. Pisces) and not crash
