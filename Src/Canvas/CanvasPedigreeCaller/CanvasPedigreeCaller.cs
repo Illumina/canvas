@@ -112,7 +112,8 @@ namespace CanvasPedigreeCaller
             {
                 var outputVcfPath = SingleSampleCallset.GetSingleSamplePedigreeVcfOutput(outputFolder, pedigreeMember.Name);
                 CanvasSegmentWriter.WriteSegments(outputVcfPath.FullName, pedigreeMember.Segments, pedigreeMember.MeanCoverage, referenceFolder,
-                    pedigreeMember.Name, null, null, QualityFilterThreshold, DeNovoQualityFilterThreshold);
+                    pedigreeMember.Name, null, null, QualityFilterThreshold, isPedigreeInfoSupplied: true, 
+                    denovoQualityThreshold: DeNovoQualityFilterThreshold);
             }
             return 0;
         }
@@ -200,7 +201,7 @@ namespace CanvasPedigreeCaller
             {
                 var outputVcfPath = SingleSampleCallset.GetSingleSamplePedigreeVcfOutput(outputFolder, pedigreeMember.Name);
                 CanvasSegmentWriter.WriteSegments(outputVcfPath.FullName, pedigreeMember.Segments, pedigreeMember.MeanCoverage, referenceFolder,
-                    pedigreeMember.Name, null, null, QualityFilterThreshold);
+                    pedigreeMember.Name, null, null, QualityFilterThreshold, isPedigreeInfoSupplied: false);
             }
             return 0;
         }

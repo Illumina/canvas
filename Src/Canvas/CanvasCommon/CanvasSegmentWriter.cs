@@ -199,6 +199,9 @@ namespace CanvasCommon
             if (segment.IsHeterogeneous)
                 writer.Write("SUBCLONAL;");
 
+            if (segment.DQScore.HasValue)
+                writer.Write($"DQ={segment.DQScore.Value};");           
+
             if (denovoQualityThreshold.HasValue & segment.DQScore.HasValue & segment.DQScore >= denovoQualityThreshold)
                 writer.Write($"dq{denovoQualityThreshold};");
 
@@ -217,13 +220,13 @@ namespace CanvasCommon
 
         public static void WriteSegments(string outVcfPath, List<CanvasSegment> segments, double? diploidCoverage,
                 string wholeGenomeFastaDirectory, string sampleName,
-                List<string> extraHeaders, PloidyInfo ploidy, int qualityThreshold, int? denovoQualityThreshold = null)
+                List<string> extraHeaders, PloidyInfo ploidy, int qualityThreshold, bool isPedigreeInfoSupplied, int? denovoQualityThreshold = null)
         {
             using (BgzipOrStreamWriter writer = new BgzipOrStreamWriter(outVcfPath))
             {
                 var genome = WriteVcfHeader(segments, diploidCoverage, wholeGenomeFastaDirectory, new List<string> { sampleName },
                     extraHeaders, qualityThreshold, writer, denovoQualityThreshold);
-                WriteVariants(new List<List<CanvasSegment>> { segments.ToList() }, ploidy, genome, writer, false, denovoQualityThreshold);
+                WriteVariants(new List<List<CanvasSegment>> { segments.ToList() }, ploidy, genome, writer, isPedigreeInfoSupplied, denovoQualityThreshold);
             }
         }
 
