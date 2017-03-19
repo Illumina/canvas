@@ -19,21 +19,8 @@
     </dependencies>
   </metadata>
   <files>
-    <file src="..\x64\Release\*" target="build/Canvas" />
+    <file src="..\x64\CanvasCore\netcoreapp1.1\*" target="build/Canvas" />
     <file src="Canvas.targets" target="build/Canvas.targets" />
-    <file src="..\Canvas.Wrapper\Wrapper\bin\x64\Release\Canvas.Wrapper.dll" target="lib\net451" />
-    <file src="..\Canvas.Wrapper\Wrapper\bin\x64\Release\Canvas.Wrapper.XML" target="lib\net451" />
-    <file src="..\Canvas.Wrapper\Wrapper\bin\x64\Release\Canvas.exe" target="lib\net451" />
-    <file src="..\Canvas.Wrapper\Wrapper\bin\x64\Release\CanvasCommon.dll" target="lib\net451" />
-    
-    <!-- .NET core: -->
-    <file src="..\Canvas.Wrapper\bin\Release\netcoreapp1.0\Canvas.Wrapper.dll" target="lib/dotnet" />
-    <file src="bin\Release\netcoreapp1.0\Canvas.dll" target="lib/dotnet" />
-    <file src="..\CanvasBin\bin\Release\netcoreapp1.0\CanvasBin.dll" target="lib/dotnet" />
-    <file src="..\CanvasDiploidCaller\bin\Release\netcoreapp1.0\CanvasDiploidCaller.dll" target="lib/dotnet" />
-    <file src="..\CanvasSomaticCaller\bin\Release\netcoreapp1.0\CanvasSomaticCaller.dll" target="lib/dotnet" />
-    <file src="..\CanvasPartition\bin\Release\netcoreapp1.0\CanvasPartition.dll" target="lib/dotnet" />
-    <!-- TODO: Add CanvasSNV, CanvasClean, CanvasNormalize, CanvasPedigreeCaller-->
-    
+    <file src="..\Canvas.Wrapper\bin\Release\netcoreapp1.1\*" target="lib/dotnet" />
   </files>
 </package>
