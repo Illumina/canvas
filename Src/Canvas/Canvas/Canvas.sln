@@ -82,8 +82,6 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CanvasPedigreeCaller", "..\
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "EvaluateCNV", "..\..\..\Tools\EvaluateCNV\EvaluateCNV.csproj", "{A2A8ACB4-7FC9-48C7-86BC-3D71E0F777D4}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CanvasSmooth.net45", "..\CanvasSmooth\CanvasSmooth.net45\CanvasSmooth.net45.csproj", "{1EBC7EBB-99E1-4914-95DA-04C5E0E42560}"
-EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -206,10 +204,6 @@ Global
 		{A2A8ACB4-7FC9-48C7-86BC-3D71E0F777D4}.Debug|x64.Build.0 = Debug|Any CPU
 		{A2A8ACB4-7FC9-48C7-86BC-3D71E0F777D4}.Release|x64.ActiveCfg = Release|Any CPU
 		{A2A8ACB4-7FC9-48C7-86BC-3D71E0F777D4}.Release|x64.Build.0 = Release|Any CPU
-		{1EBC7EBB-99E1-4914-95DA-04C5E0E42560}.Debug|x64.ActiveCfg = Debug|x64
-		{1EBC7EBB-99E1-4914-95DA-04C5E0E42560}.Debug|x64.Build.0 = Debug|x64
-		{1EBC7EBB-99E1-4914-95DA-04C5E0E42560}.Release|x64.ActiveCfg = Release|x64
-		{1EBC7EBB-99E1-4914-95DA-04C5E0E42560}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
