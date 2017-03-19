@@ -1,1 +1,1 @@
-"C:\Program Files (x86)\Microsoft Visual Studio\2017\Professional\MSBuild\15.0\bin\msbuild.exe" /t:Publish /p:Configuration=Release Src\Canvas\Canvas\Canvas.sln
+& "C:\Program Files (x86)\Microsoft Visual Studio\2017\Professional\MSBuild\15.0\bin\msbuild.exe" /t:Publish /p:Configuration=Release Src\Canvas\Canvas\Canvas.sln
