@@ -19,11 +19,8 @@
     </dependencies>
   </metadata>
   <files>
-    <file src="..\x64\Release\*" target="build/Canvas" />
+    <file src="..\x64\CanvasCore\*" target="build/Canvas" />
     <file src="Canvas.targets" target="build/Canvas.targets" />
-    <file src="..\Canvas.Wrapper\Wrapper\bin\x64\Release\Canvas.Wrapper.dll" target="lib\net451" />
-    <file src="..\Canvas.Wrapper\Wrapper\bin\x64\Release\Canvas.Wrapper.XML" target="lib\net451" />
-    <file src="..\Canvas.Wrapper\Wrapper\bin\x64\Release\Canvas.exe" target="lib\net451" />
-    <file src="..\Canvas.Wrapper\Wrapper\bin\x64\Release\CanvasCommon.dll" target="lib\net451" />
+    <file src="..\Canvas.Wrapper\bin\Release\netcoreapp1.0\*" target="lib/dotnet" />
   </files>
 </package>
