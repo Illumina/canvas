@@ -19,7 +19,7 @@
     </dependencies>
   </metadata>
   <files>
-    <file src="..\x64\CanvasCore\netcoreapp1.1\*" target="build/Canvas" />
+    <file src="..\x64\CanvasCore\netcoreapp1.1\publish\*" target="build/Canvas" />
     <file src="Canvas.targets" target="build/Canvas.targets" />
     <file src="..\Canvas.Wrapper\bin\Release\netcoreapp1.1\*" target="lib/dotnet" />
   </files>
