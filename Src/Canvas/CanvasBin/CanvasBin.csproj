@@ -28,10 +28,10 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Illumina.Common" Version="2.2.0.95" />
-    <PackageReference Include="Isas.Framework" Version="5.3.2.104" />
-    <PackageReference Include="Isas.Manifests" Version="2.12.0.38" />
-    <PackageReference Include="Isas.SequencingFiles" Version="3.10.1.192" />
+    <PackageReference Include="Illumina.Common" Version="2.2.0.110" />
+    <PackageReference Include="Isas.Framework" Version="5.4.0.135" />
+    <PackageReference Include="Isas.Manifests" Version="2.12.0.41" />
+    <PackageReference Include="Isas.SequencingFiles" Version="3.10.1.199" />
   </ItemGroup>
 
 </Project>

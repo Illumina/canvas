@@ -22,7 +22,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Illumina.Common" Version="2.2.0.95" />
+    <PackageReference Include="Illumina.Common" Version="2.2.0.110" />
   </ItemGroup>
 
 </Project>
