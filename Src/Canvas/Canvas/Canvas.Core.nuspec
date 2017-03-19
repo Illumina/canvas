@@ -1,13 +1,13 @@
 <?xml version="1.0"?>
 <package>
   <metadata>
-    <id>Canvas</id>
+    <id>Canvas.Core</id>
     <version>$version$</version>
-    <title>Canvas</title>
+    <title>Canvas.Core</title>
     <authors>Illumina</authors>
     <owners>Illumina</owners>
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
-    <description>Canvas</description>
+    <description>Canvas .NET core</description>
     <copyright>Copyright 2017</copyright>
     <tags>Canvas</tags>
     <dependencies>
