@@ -81,7 +81,7 @@ namespace Canvas.Wrapper
             IFileLocation ploidyBed = _canvasPloidyBedCreator.CreateGermlinePloidyBed(input.Vcf, input.GenomeMetadata, sampleSandbox);
             if (ploidyBed != null)
                 commandLine.Append($" --{SingleSampleCommonOptionsParser.PloidyBedOptionName} \"{ploidyBed}\"");
-            var canvasPartitionParam = $@"--commoncnvs {_annotationFileProvider.GetCanvasAnnotationFile(input.GenomeMetadata, "commoncnvs.bed").WrapWithEscapedShellQuote()}";
+            var canvasPartitionParam = $@"--commoncnvs {_annotationFileProvider.GetCanvasAnnotationFile(input.GenomeMetadata, "commoncnvs.bed")}";
             var moreCustomParameters = new Dictionary<string, string>();
             moreCustomParameters["CanvasPartition"] = canvasPartitionParam;
             commandLine.Append(_singleSampleInputCommandLineBuilder.GetCustomParameters(moreCustomParameters));
