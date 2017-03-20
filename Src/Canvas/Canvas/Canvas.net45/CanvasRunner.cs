@@ -673,13 +673,14 @@ namespace Canvas
 
                 string outputPath = Path.Combine(callset.SingleSampleCallset.SampleOutputFolder.FullName, $"{chromosome.Name}-{callset.SingleSampleCallset.SampleName}.SNV.txt.gz");
                 outputPaths.Add(outputPath);
-                job.CommandLine += $" -c {chromosome.Name} -v {normalVcfPath} -b {bamPath} -o {outputPath}";
+                commandLine.Append($" -c {chromosome.Name} -v {normalVcfPath} -b {bamPath} -o {outputPath}");
                 if (!sampleName.IsNullOrEmpty())
-                    job.CommandLine += $" -n {sampleName}";
+                    commandLine.Append($" -n {sampleName}");
                 if (callset.SingleSampleCallset.IsDbSnpVcf)
-                    job.CommandLine += " --isDbSnpVcf";
+                    commandLine.Append(" --isDbSnpVcf");
                 if (isSomatic)
-                    job.CommandLine += " --isSomatic";
+                    commandLine.Append(" --isSomatic");
+                job.CommandLine = commandLine.ToString();
                 if (_customParameters.ContainsKey("CanvasSNV"))
                 {
                     job.CommandLine = Isas.Framework.Settings.CommandOptionsUtilities.MergeCommandLineOptions(job.CommandLine, _customParameters["CanvasSNV"], true);
