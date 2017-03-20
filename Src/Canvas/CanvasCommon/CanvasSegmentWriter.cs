@@ -199,7 +199,7 @@ namespace CanvasCommon
             if (segment.IsHeterogeneous)
                 writer.Write("SUBCLONAL;");
 
-            if (segment.DQScore.HasValue && !isMultisample)
+            if (segment.DQScore.HasValue)
                 writer.Write($"DQ={segment.DQScore.Value};");           
 
             if (denovoQualityThreshold.HasValue & segment.DQScore.HasValue & segment.DQScore >= denovoQualityThreshold)
