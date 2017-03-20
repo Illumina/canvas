@@ -63,7 +63,7 @@ namespace Canvas.Wrapper
                 if (moreCustomParameters.ContainsKey(module))
                     options = Isas.Framework.Settings.CommandOptionsUtilities.MergeCommandLineOptions(options, moreCustomParameters[module]);
                 string customParameters = module + "," + options;
-                commandLine.Append($" --custom-parameters {customParameters.WrapWithShellQuote()}");
+                commandLine.Append($" --custom-parameters \"{customParameters}\"");
             }
             return commandLine;
         }
