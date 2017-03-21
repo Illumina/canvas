@@ -137,13 +137,14 @@
     <Compile Include="CopyNumberModel.cs" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="..\PedigreeCallerParameters.json">
+      <Link>PedigreeCallerParameters.json</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
     <None Include="App.config" />
     <None Include="app.manifest" />
     <None Include="packages.config" />
     <None Include="Properties\app.manifest" />
-    <None Include="PedigreeCallerParameters.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
   </ItemGroup>
   <ItemGroup>
     <BootstrapperPackage Include=".NETFramework,Version=v4.5.2">

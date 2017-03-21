@@ -115,11 +115,12 @@
     <Compile Include="SomaticCallerParameters.cs" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="App.config" />
-    <None Include="packages.config" />
-    <None Include="SomaticCallerParameters.json">
+    <None Include="..\SomaticCallerParameters.json">
+      <Link>SomaticCallerParameters.json</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <None Include="App.config" />
+    <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
     <BootstrapperPackage Include=".NETFramework,Version=v4.5.1">
