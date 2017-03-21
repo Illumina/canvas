@@ -26,6 +26,11 @@
   <ItemGroup>
     <ProjectReference Include="..\CanvasCommon\CanvasCommon.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <None Include="SomaticCallerParameters.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Illumina.Common" Version="2.2.0.110" />
