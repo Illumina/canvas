@@ -24,8 +24,13 @@
   <ItemGroup>
     <ProjectReference Include="..\CanvasCommon\CanvasCommon.csproj" />
   </ItemGroup>
-
   <ItemGroup>
+    <None Include="PedigreeCallerParameters.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+  
     <PackageReference Include="Illumina.Common" Version="2.2.0.110" />
     <PackageReference Include="Isas.Framework" Version="5.4.0.137" />
     <PackageReference Include="Isas.SequencingFiles" Version="3.10.1.201" />
