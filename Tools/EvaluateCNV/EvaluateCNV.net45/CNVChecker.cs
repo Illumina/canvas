@@ -330,9 +330,9 @@ namespace EvaluateCNV
             {
                 if (DQscoreThreshold.HasValue)
                 {
-                    var match = reader.HeaderLines.FirstOrDefault(stringToCheck => stringToCheck.Contains("DQSCORE"));
+                    var match = reader.HeaderLines.FirstOrDefault(stringToCheck => stringToCheck.Contains("DQ"));
                     if (match == null)
-                        throw new ArgumentException($"File {vcfPath} does not contain DQscore INFO field.");
+                        throw new ArgumentException($"File {vcfPath} does not contain DQ INFO field.");
                 }
 
                 foreach (VcfVariant variant in reader.GetVariants())
@@ -343,9 +343,9 @@ namespace EvaluateCNV
                     if (includePassingOnly && variant.Filters != "PASS") continue;
                     if (DQscoreThreshold.HasValue)
                     {
-                        if (!variant.InfoFields.ContainsKey("DQSCORE") && CN != 2)
+                        if (!variant.InfoFields.ContainsKey("DQ") && CN != 2)
                             continue;
-                        if (variant.InfoFields.ContainsKey("DQSCORE") && double.Parse(variant.InfoFields["DQSCORE"]) < DQscoreThreshold.Value)
+                        if (variant.InfoFields.ContainsKey("DQ") && double.Parse(variant.InfoFields["DQ"]) < DQscoreThreshold.Value)
                             continue;
                     } 
                     yield return new CNVCall(variant.ReferenceName, variant.ReferencePosition, end, CN);
