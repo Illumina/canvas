@@ -2227,7 +2227,7 @@ namespace CanvasSomaticCaller
             {
                 AssignPloidyCalls();
                 List<CanvasSegment> sizeFilteredSegment = this.Segments.Where(segment => segment.End - segment.Begin > 5000).ToList();
-                CheckNonDiploidMAFs(sizeFilteredSegment);
+                //CheckNonDiploidMAFs(sizeFilteredSegment);
 
 
                 // Do not run heterogeneity adjustment on enrichment data
