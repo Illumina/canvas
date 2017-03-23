@@ -18,7 +18,8 @@ namespace CanvasPedigreeCaller
         public int QualityFilterThreshold { get; set; } = 7;
         public int DeNovoQualityFilterThreshold { get; set; } = 20;
         public PedigreeCallerParameters CallerParameters { get; set; }
-
+        protected double MedianCoverageThreshold = 4;
+        protected double MAFtoCoverageModelNormFactor = 0.33;
         #endregion
 
         internal int CallVariantsInPedigree(List<string> variantFrequencyFiles, List<string> segmentFiles, string outVcfFile, string ploidyBedPath, string referenceFolder, List<string> sampleNames, string pedigreeFile)
@@ -63,9 +64,9 @@ namespace CanvasPedigreeCaller
             }
 
             foreach (PedigreeMember parent in parents)
-                parent.CnModel = new CopyNumberModel(CallerParameters.MaximumCopyNumber, parent.MeanCoverage / 2.0, parent.MeanMafCoverage / 2.0, parent.Variance, parent.MafVariance, parent.MaxCoverage);
+                parent.CnModel = new CopyNumberModel(CallerParameters.MaximumCopyNumber, parent.MeanCoverage / 2.0, parent.MeanMafCoverage / 2.0, parent.MeanCoverage * 2.5, parent.MeanMafCoverage * 2.5, parent.MaxCoverage);
             foreach (PedigreeMember offspring in offsprings)
-                offspring.CnModel = new CopyNumberModel(CallerParameters.MaximumCopyNumber, offspring.MeanCoverage / 2.0, offspring.MeanMafCoverage / 2.0, offspring.Variance, offspring.MafVariance, offspring.MaxCoverage);
+                offspring.CnModel = new CopyNumberModel(CallerParameters.MaximumCopyNumber, offspring.MeanCoverage / 2.0, offspring.MeanMafCoverage / 2.0, offspring.MeanCoverage * 2.5, offspring.MeanMafCoverage * 2.5, offspring.MaxCoverage);
 
             Parallel.ForEach(
                 segmentIntervals,
@@ -82,17 +83,11 @@ namespace CanvasPedigreeCaller
                     {
                         if (segmentIndex >= interval.Start && segmentIndex <= interval.End)
                         {
-                            var alleleCounts = pedigreeMembers.Select(x => x.Segments[segmentIndex].Alleles.Counts.Count);
-                            var zeroCoverage = pedigreeMembers.Select(x => x.Segments[segmentIndex].MedianCount == 0);
-                            var enumerable = alleleCounts as int[] ?? alleleCounts.ToArray();
-                            var alleleDensity = enumerable.Average() / pedigreeMembers.First().Segments[segmentIndex].Length;
-                            var useCnLikelihood = enumerable.Select(x => x > CallerParameters.DefaultAlleleCountThreshold).Any(c => c == false) &&
-                                                  alleleDensity < CallerParameters.DefaultAlleleDensityThreshold && 
-                                                  enumerable.Average() < CallerParameters.DefaultPerSegmentAlleleMaxCounts || zeroCoverage.Any(c => c == true);
+                            var useCnLikelihood = GetUseCnLikelihood(pedigreeMembers, segmentIndex);
                             var copyNumberLikelihoods = useCnLikelihood ?
                             MaximalCnLikelihoodWithPedigreeInfo(parents, offsprings, segmentIndex, transitionMatrix, offspringsGenotypes) :
                             MaximalGtLikelihoodWithPedigreeInfo(parents, offsprings, segmentIndex, parentalGenotypes, offspringsGenotypes);
-                            EstimateQScoresWithPedigreeInfo(parents, offsprings, segmentIndex, copyNumberLikelihoods);
+                            EstimateQScoresWithPedigreeInfo(parents, offsprings, segmentIndex, copyNumberLikelihoods, useCnLikelihood);
                         }
 
                         segmentIndex++;
@@ -116,6 +111,33 @@ namespace CanvasPedigreeCaller
                     denovoQualityThreshold: DeNovoQualityFilterThreshold);
             }
             return 0;
+        }
+
+        private bool GetUseCnLikelihood(LinkedList<PedigreeMember> pedigreeMembers, int segmentIndex)
+        {
+            var copyNumberCoverageOneAndHalfNormalizer = 0.75;
+            var alleles = pedigreeMembers.Select(x => x.Segments[segmentIndex].Alleles.Counts).ToList();
+            var alleleCounts = alleles.Select(allele => allele.Count).ToList();
+            var lowAlleleCounts = alleleCounts.Select(x => x < CallerParameters.DefaultAlleleCountThreshold).Any(c => c == true);
+            var coverageCounts = pedigreeMembers.Select(x => x.Segments[segmentIndex].MedianCount).ToList();
+            var isSkewedHetHomRatio = false;
+            if (!lowAlleleCounts)
+            {
+                var minorMeanMAF = alleles.Select(allele => allele.Select(y => Math.Min(y.Item1, y.Item2)).ToList().Average());
+                var minorMedianMAF = pedigreeMembers.Select(x => x.Segments[segmentIndex].Alleles.MedianCounts.Item2);
+                var isHighCoverageCounts = pedigreeMembers.Select(x => x.MeanCoverage).Zip(coverageCounts,
+                    (meanCoverage, segmenCoverage) => segmenCoverage > meanCoverage * copyNumberCoverageOneAndHalfNormalizer);
+                var zip = minorMeanMAF.Zip(minorMedianMAF, (mn, md) => new { mn, md }).Zip(isHighCoverageCounts, (t, cov) => 
+                    new { meanMAF = t.mn, medianMAF = t.md, isHighCoverage = cov });
+                isSkewedHetHomRatio = zip.Any(sample => sample.meanMAF > sample.medianMAF && sample.medianMAF == 0 && 
+                    sample.isHighCoverage); 
+            }
+            var alleleDensity = pedigreeMembers.First().Segments[segmentIndex].Length / Math.Max(alleleCounts.Average(), 1.0);
+            var useCnLikelihood = lowAlleleCounts ||
+                alleleDensity < CallerParameters.DefaultAlleleDensityThreshold ||
+                alleleCounts.Any(x => x > CallerParameters.DefaultPerSegmentAlleleMaxCounts)  ||
+                coverageCounts.Any(coverage => coverage < MedianCoverageThreshold) || isSkewedHetHomRatio;
+            return useCnLikelihood;
         }
 
         private List<string> PostProcessData(string outVcfFile, string referenceFolder, LinkedList<PedigreeMember> pedigreeMembers, out List<double?> coverage,
@@ -174,15 +196,11 @@ namespace CanvasPedigreeCaller
                     {
                         if (segmentIndex >= interval.Start && segmentIndex <= interval.End)
                         {
-                            var alleleCounts = pedigreeMembers.Select(x => x.Segments[segmentIndex].Alleles.Counts.Count);
-                            var enumerable = alleleCounts as int[] ?? alleleCounts.ToArray();
-                            var alleleDensity = enumerable.Average() / pedigreeMembers.First().Segments[segmentIndex].Length;
-                            var useCnLikelihood = enumerable.Select(x => x > CallerParameters.DefaultAlleleCountThreshold).Any(c => c == false) &&
-                                alleleDensity < CallerParameters.DefaultAlleleDensityThreshold && enumerable.Average() < CallerParameters.DefaultPerSegmentAlleleMaxCounts;
+                            var useCnLikelihood = GetUseCnLikelihood(pedigreeMembers, segmentIndex);
                             double[][] copyNumberLikelihoods = useCnLikelihood ?
                             MaximalCnLikelihoodNoPedigreeInfo(pedigreeMembers, segmentIndex, copyNumberCombinations) :
                             MaximalGtLikelihoodNoPedigreeInfo(pedigreeMembers, segmentIndex, genotypes);
-                            EstimateQScoresNoPedigreeInfo(pedigreeMembers, segmentIndex, copyNumberLikelihoods);
+                            EstimateQScoresNoPedigreeInfo(pedigreeMembers, segmentIndex, copyNumberLikelihoods, useCnLikelihood);
                         }
                         segmentIndex++;
                     }
@@ -263,12 +281,12 @@ namespace CanvasPedigreeCaller
         }
 
         private void EstimateQScoresWithPedigreeInfo(List<PedigreeMember> parents, List<PedigreeMember> offsprings, int segmentIndex,
-            CopyNumberDistribution copyNumberLikelihoods)
+            CopyNumberDistribution copyNumberLikelihoods, bool useCnLikelihood)
         {
             var cnStates = GetCnStates(parents, offsprings, segmentIndex, CallerParameters.MaximumCopyNumber);
             var names = parents.Concat(offsprings).Select(x => x.Name).ToList();
             var probands = GetProbands(offsprings);
-            var singleSampleQualityScores = GetSingleSampleQualityScores(copyNumberLikelihoods, cnStates, names);
+            var singleSampleQualityScores = GetSingleSampleQualityScores(copyNumberLikelihoods, cnStates, names, useCnLikelihood);
 
             var parent1Index = names.IndexOf(parents.First().Name);
             var parent2Index = names.IndexOf(parents.Last().Name);
@@ -279,13 +297,14 @@ namespace CanvasPedigreeCaller
                 var remainingProbandIndex = probands.Except(proband.ToSingleItemEnumerable()).Select(x => names.IndexOf(x.Name));
 
                 if (cnStates[probandIndex] != 2 && cnStates[parent1Index] == 2 && cnStates[parent2Index] == 2 &&
-                    remainingProbandIndex.All(index => cnStates[index] == 2) && singleSampleQualityScores[probandIndex] > QualityFilterThreshold)
+                    remainingProbandIndex.All(index => cnStates[index] == 2) && singleSampleQualityScores[probandIndex] > QualityFilterThreshold &&
+                    singleSampleQualityScores[parent1Index] > QualityFilterThreshold && singleSampleQualityScores[parent2Index] > QualityFilterThreshold)
                 {
                     var deNovoQualityScore = GetConditionalDeNovoQualityScore(copyNumberLikelihoods, probandIndex,
                         cnStates[probandIndex], names[probandIndex], parent1Index, parent2Index, remainingProbandIndex.ToList());
                     if (Double.IsInfinity(deNovoQualityScore) | deNovoQualityScore > CallerParameters.MaxQscore)
                         deNovoQualityScore = CallerParameters.MaxQscore;
-                    probands.First().Segments[segmentIndex].DQScore = deNovoQualityScore;
+                    proband.Segments[segmentIndex].DQScore = deNovoQualityScore;
                 }
             }
 
@@ -299,7 +318,7 @@ namespace CanvasPedigreeCaller
             }
         }
 
-        private void EstimateQScoresNoPedigreeInfo(LinkedList<PedigreeMember> samples, int segmentIndex, double[][] copyNumberLikelihoods)
+        private void EstimateQScoresNoPedigreeInfo(LinkedList<PedigreeMember> samples, int segmentIndex, double[][] copyNumberLikelihoods, bool useCnLikelihood)
         {
             var cnStates = samples.Select(x => Math.Min(x.Segments[segmentIndex].CopyNumber, CallerParameters.MaximumCopyNumber - 1)).ToList();
             int counter = 0;
@@ -307,6 +326,8 @@ namespace CanvasPedigreeCaller
             {
                 double normalizationConstant = copyNumberLikelihoods[counter].Sum();
                 var qscore = -10.0 * Math.Log10((normalizationConstant - copyNumberLikelihoods[counter][cnStates[counter]]) / normalizationConstant);
+                if (useCnLikelihood && sample.Segments[segmentIndex].CopyNumber < 2)
+                    qscore = qscore * MAFtoCoverageModelNormFactor;
                 if (Double.IsInfinity(qscore) | qscore > CallerParameters.MaxQscore)
                     qscore = CallerParameters.MaxQscore;
                 sample.Segments[segmentIndex].QScore = qscore;
@@ -757,7 +778,7 @@ namespace CanvasPedigreeCaller
             return kinships;
         }
 
-        public List<double> GetSingleSampleQualityScores(CopyNumberDistribution density, List<int> cnStates, List<string> sampleNames)
+        public List<double> GetSingleSampleQualityScores(CopyNumberDistribution density, List<int> cnStates, List<string> sampleNames, bool useCnLikelihood)
         {
             var singleSampleQualityScores = new List<double>();
             if (density.Count != cnStates.Count)
@@ -768,6 +789,8 @@ namespace CanvasPedigreeCaller
                 var cnMarginalProbabilities = density.GetMarginalProbability(cnStates.Count, CallerParameters.MaximumCopyNumber, sampleName);
                 double normalizationConstant = cnMarginalProbabilities.Sum();
                 var qscore = -10.0 * Math.Log10((normalizationConstant - cnMarginalProbabilities[cnStates[index]]) / normalizationConstant);
+                if (useCnLikelihood && cnStates[index] < 2)
+                    qscore = qscore * MAFtoCoverageModelNormFactor;
                 if (Double.IsInfinity(qscore) | qscore > CallerParameters.MaxQscore)
                     qscore = CallerParameters.MaxQscore;
                 singleSampleQualityScores.Add(qscore);
