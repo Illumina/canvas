@@ -221,7 +221,7 @@ namespace CanvasTest.Canvas.CommandLineParsing
         {
             // arrange
             Option<CommonOptions> commonOptionsParser = new CommonOptionsParser();
-            var kmerFasta = tempDirectory.CreateFile("kmer.fa");
+            var kmerFasta = tempDirectory.CreateFile("kmerv2.fa");
             var filterBed = tempDirectory.GetFileLocation("filter.bed").Touch();
             var output = tempDirectory.CreateSubdirectory("output");
             var genome = tempDirectory.CreateSubdirectory("WholeGenomeFasta");
@@ -247,7 +247,7 @@ namespace CanvasTest.Canvas.CommandLineParsing
         {
             // arrange
             Option<CommonOptions> commonOptionsParser = new CommonOptionsParser();
-            var kmerFasta = tempDirectory.GetFileLocation("kmer.fa");
+            var kmerFasta = tempDirectory.GetFileLocation("kmerv2.fa");
             var filterBed = tempDirectory.GetFileLocation("filter.bed").Touch();
             var output = tempDirectory.CreateSubdirectory("output");
             var genome = tempDirectory.CreateSubdirectory("WholeGenomeFasta");
@@ -261,7 +261,7 @@ namespace CanvasTest.Canvas.CommandLineParsing
 
             // assert
             Assert.False(result.Success);
-            Assert.Contains("kmer.fa", result.ErrorMessage);
+            Assert.Contains("kmerv2.fa", result.ErrorMessage);
             Assert.Contains("does not exist", result.ErrorMessage);
         }
 
