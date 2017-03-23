@@ -2,7 +2,6 @@
 // Distributed under license terms of CPOL http://www.codeproject.com/info/cpol10.aspx
 using System;
 using System.Collections.Generic;
-using System.Text;
 
 namespace Combinatorics.Collections
 {

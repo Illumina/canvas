@@ -20,7 +20,7 @@ namespace Canvas
     public interface IModeRunner
     {
         CommonOptions CommonOptions { get; }
-        void Run(ILogger logger, ICheckpointRunner checkpointRunner, IWorkManager workManager, IFileLocation mono);
+        void Run(ILogger logger, ICheckpointRunner checkpointRunner, IWorkManager workManager, IFileLocation runtimeExecutable);
     }
 
     public class ModeLauncher : IModeLauncher
@@ -55,10 +55,14 @@ namespace Canvas
                     try
                     {
                         var executableProcessor = new ExecutableProcessor(new NullSampleSettings(), logger);
-                        var mono = CrossPlatform.IsThisLinux() ? new FileLocation(executableProcessor.GetMonoPath()) : null;
+#if DotNetCore
+                        var runtimeExecutable = new FileLocation(executableProcessor.GetEnvironmentExecutablePath("dotnet"));
+#else
+                        var runtimeExecutable = CrossPlatform.IsThisLinux() ? new FileLocation(executableProcessor.GetMonoPath()) : null;
+#endif
                         frameworkServices.Logger.Info($"Running Canvas {_mode} {_version}");
                         logger.Info($"Command-line arguments: {string.Join(" ", _args)}");
-                        _modeRunner.Run(logger, frameworkServices.Checkpointer, frameworkServices.WorkManager, mono);
+                        _modeRunner.Run(logger, frameworkServices.Checkpointer, frameworkServices.WorkManager, runtimeExecutable);
                         returnValue = 0;
                     }
                     catch (Exception e)

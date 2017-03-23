@@ -2,8 +2,8 @@
 using System.Collections.Generic;
 using System.Linq;
 using CanvasCommon;
-using MathNet.Numerics.Distributions;
 using Combinatorics.Collections;
+using MathNet.Numerics.Distributions;
 using MathNet.Numerics.LinearAlgebra;
 using MathNet.Numerics;
 
@@ -273,7 +273,14 @@ namespace CanvasPartition
                 foreach (int cnGenotype in currentGenotypePermutations)
                 {
                     var pointCoverage = Convert.ToInt32(data[cnState]);
-                    emissionLikelihood *= _negativeBinomialDistributions[cnGenotype].Probability(cnState, pointCoverage);
+                    if (cnGenotype == 0 | cnGenotype == 1)
+                        emissionLikelihood *= Math.Max(_negativeBinomialDistributions[0].Probability(cnState, pointCoverage),
+                                _negativeBinomialDistributions[1].Probability(cnState, pointCoverage));
+                    else if (cnGenotype == 3 | cnGenotype == 4)
+                        emissionLikelihood *= Math.Max(_negativeBinomialDistributions[3].Probability(cnState, pointCoverage),
+                                _negativeBinomialDistributions[4].Probability(cnState, pointCoverage));
+                    else
+                        emissionLikelihood *= _negativeBinomialDistributions[cnGenotype].Probability(cnState, pointCoverage);
                     cnState++;
                 }
                 if (Double.IsNaN(emissionLikelihood) || Double.IsInfinity(emissionLikelihood))

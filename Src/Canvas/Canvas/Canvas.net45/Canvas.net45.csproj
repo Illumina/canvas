@@ -77,29 +77,23 @@
     <Prefer32Bit>true</Prefer32Bit>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="Illumina.Common, Version=2.1.1.89, Culture=neutral, processorArchitecture=AMD64">
-      <HintPath>packages\Illumina.Common.2.1.1.89\lib\net451\Illumina.Common.dll</HintPath>
-      <Private>True</Private>
+    <Reference Include="Illumina.Common, Version=2.2.0.119, Culture=neutral, processorArchitecture=AMD64">
+      <HintPath>..\packages\Illumina.Common.2.2.0.119\lib\net451\Illumina.Common.dll</HintPath>
     </Reference>
-    <Reference Include="Isas.Framework, Version=5.3.0.94, Culture=neutral, processorArchitecture=AMD64">
-      <HintPath>packages\Isas.Framework.5.3.0.94\lib\net451\Isas.Framework.dll</HintPath>
-      <Private>True</Private>
+    <Reference Include="Isas.Framework, Version=5.4.0.137, Culture=neutral, processorArchitecture=AMD64">
+      <HintPath>..\packages\Isas.Framework.5.4.0.137\lib\net451\Isas.Framework.dll</HintPath>
     </Reference>
-    <Reference Include="Isas.Manifests.AmpliconManifest, Version=2.12.0.38, Culture=neutral, processorArchitecture=AMD64">
-      <HintPath>..\packages\Isas.Manifests.2.12.0.38\lib\net451\Isas.Manifests.AmpliconManifest.dll</HintPath>
-      <Private>True</Private>
+    <Reference Include="Isas.Manifests.AmpliconManifest, Version=2.12.0.41, Culture=neutral, processorArchitecture=AMD64">
+      <HintPath>..\packages\Isas.Manifests.2.12.0.41\lib\net451\Isas.Manifests.AmpliconManifest.dll</HintPath>
     </Reference>
-    <Reference Include="Isas.Manifests.ForenSeqManifest, Version=2.12.0.38, Culture=neutral, processorArchitecture=AMD64">
-      <HintPath>..\packages\Isas.Manifests.2.12.0.38\lib\net451\Isas.Manifests.ForenSeqManifest.dll</HintPath>
-      <Private>True</Private>
+    <Reference Include="Isas.Manifests.ForenSeqManifest, Version=2.12.0.41, Culture=neutral, processorArchitecture=AMD64">
+      <HintPath>..\packages\Isas.Manifests.2.12.0.41\lib\net451\Isas.Manifests.ForenSeqManifest.dll</HintPath>
     </Reference>
-    <Reference Include="Isas.Manifests.NexteraManifest, Version=2.12.0.38, Culture=neutral, processorArchitecture=AMD64">
-      <HintPath>..\packages\Isas.Manifests.2.12.0.38\lib\net451\Isas.Manifests.NexteraManifest.dll</HintPath>
-      <Private>True</Private>
+    <Reference Include="Isas.Manifests.NexteraManifest, Version=2.12.0.41, Culture=neutral, processorArchitecture=AMD64">
+      <HintPath>..\packages\Isas.Manifests.2.12.0.41\lib\net451\Isas.Manifests.NexteraManifest.dll</HintPath>
     </Reference>
-    <Reference Include="Isas.SequencingFiles, Version=3.10.1.184, Culture=neutral, processorArchitecture=AMD64">
-      <HintPath>packages\Isas.SequencingFiles.3.10.1.184\lib\net451\Isas.SequencingFiles.dll</HintPath>
-      <Private>True</Private>
+    <Reference Include="Isas.SequencingFiles, Version=3.10.3.207, Culture=neutral, processorArchitecture=AMD64">
+      <HintPath>..\packages\Isas.SequencingFiles.3.10.3.207\lib\net451\Isas.SequencingFiles.dll</HintPath>
     </Reference>
     <Reference Include="Newtonsoft.Json, Version=9.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
       <HintPath>packages\Newtonsoft.Json.9.0.1\lib\net45\Newtonsoft.Json.dll</HintPath>
@@ -149,10 +143,6 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
-    <None Include="Canvas.nuspec">
-      <SubType>Designer</SubType>
-    </None>
-    <None Include="Canvas.targets" />
     <None Include="packages.config">
       <SubType>Designer</SubType>
     </None>
@@ -163,7 +153,7 @@
       <Name>CanvasBin.net45</Name>
     </ProjectReference>
     <ProjectReference Include="..\..\CanvasCommon\CanvasCommon.net45\CanvasCommon.net45.csproj">
-      <Project>{ec8755f1-74bd-4a1f-9b82-5133d2f6a93b}</Project>
+      <Project>{EC8755F1-74BD-4A1F-9B82-5133D2F6A93B}</Project>
       <Name>CanvasCommon.net45</Name>
     </ProjectReference>
     <ProjectReference Include="..\..\CanvasPartition\CanvasPartition.net45\CanvasPartition.net45.csproj">
@@ -199,10 +189,12 @@ if ERRORLEVEL 1 (
     exit /b 1
 )</PostBuildEvent>
   </PropertyGroup>
+  <Import Project="..\packages\Isas.FileCompression.3.10.3.207\build\net451\Isas.FileCompression.targets" Condition="Exists('..\packages\Isas.FileCompression.3.10.3.207\build\net451\Isas.FileCompression.targets')" />
   <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
     <PropertyGroup>
       <ErrorText>This project references NuGet package(s) that are missing on this computer. Use NuGet Package Restore to download them.  For more information, see http://go.microsoft.com/fwlink/?LinkID=322105. The missing file is {0}.</ErrorText>
     </PropertyGroup>
+    <Error Condition="!Exists('..\packages\Isas.FileCompression.3.10.3.207\build\net451\Isas.FileCompression.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\Isas.FileCompression.3.10.3.207\build\net451\Isas.FileCompression.targets'))" />
   </Target>
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

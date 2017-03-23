@@ -1,37 +1,80 @@
 ﻿using System;
+using System.IO;
+using Illumina.Common;
 
 namespace CanvasSNV
 {
     class Program
     {
-        // Arguments: chromosome, NormalVCFPath, TumorBamPath, OutputPath
-        static int Main(string[] arguments)
+        /// <summary>
+        /// Command line help message.
+        /// </summary>
+        /// <param name="p">NDesk OptionSet</param>
+        static void ShowHelp(OptionSet p)
         {
-            CanvasCommon.Utilities.LogCommandLine(arguments);
-            if (arguments.Length < 4)
+            Console.WriteLine("Usage: CanvasSNV.exe [OPTIONS]+");
+            Console.WriteLine("Parses bam file to derive allele counts.");
+            Console.WriteLine();
+            Console.WriteLine("Options:");
+            p.WriteOptionDescriptions(Console.Out);
+        }
+
+        static int Main(string[] args)
+        {
+            CanvasCommon.Utilities.LogCommandLine(args);
+            string chromosome = null; 
+            string vcfPath = null;
+            string bamPath = null;
+            string outputPath = null;
+            string sampleName = null;
+            bool isSomatic = false;
+            bool isDbSnpVcf = false; // assume vcf file comes from a small variant caller (Strelka)
+            int minMapQ = 0; // only use reads with MAPQ greater than this number
+            bool needHelp = false;
+
+            var p = new OptionSet()
             {
-                Console.WriteLine("Usage: Chromosome NormalVCFPath TumorBAMPath OutputPath [SampleName] [MinMapQ]");
+                { "c|chromosome=",     "chromosome namne",                                                                               v => chromosome = v },
+                { "v|vcfPath=",        "file containing small variants",                                                                 v => vcfPath = v },
+                { "b|bamPath=",        "bam file",                                                                                       v => bamPath = v },
+                { "o|outputPath=",     "name of output directory",                                                                       v => outputPath = v },
+                { "n|sampleName=",     "sample name for output VCF header (optional)",                                                   v => sampleName = v},
+                { "i|isDbSnpVcf=",     "flag to specify if vcf file contains dbSNP variants (optional)",                                 v => isDbSnpVcf = v != null },
+                { "q|minMapQ=",        "mapQ threshold for vcf file (optional)",                                                         v => minMapQ = int.Parse(v)},
+                { "s|isSomatic",       "flag to specify if Canvas workflow is somatic (optional)",                                       v => isSomatic = v != null },
+                { "h|help",            "show this message and exit",                                                                     v => needHelp = v != null },
+            };
+
+            var extraArgs = p.Parse(args);
+
+            if (extraArgs.Count > 0)
+            {
+                Console.WriteLine("* Error: I don't understand the argument '{0}'", extraArgs[0]);
+                needHelp = true;
+            }
+
+            if (needHelp)
+            {
+                ShowHelp(p);
+                return 0;
+            }
+
+            if (string.IsNullOrEmpty(chromosome) || string.IsNullOrEmpty(outputPath))
+            {
+                ShowHelp(p);
+                return 0;
+            }
+
+            if (!File.Exists(vcfPath))
+            {
+                Console.WriteLine($"CanvasSNV.exe: File {vcfPath} does not exist! Exiting.");
                 return 1;
             }
-            
-            string chromosome = arguments[0];
-            string vcfPath = arguments[1];
-            string bamPath = arguments[2];
-            string outputPath = arguments[3];
-            string sampleName = null;
-            if (arguments.Length == 5)
+
+            if (!File.Exists(bamPath))
             {
-                sampleName = arguments[4];
-            }
-            bool isDbSnpVcf = false; // assume vcf file comes from a small variant caller (Strelka)
-            if (arguments.Length == 6)
-            {
-                isDbSnpVcf = bool.Parse(arguments[5]);
-            }
-            int minMapQ = 0; // only use reads with MAPQ greater than this number
-            if (arguments.Length == 7)
-            {
-                minMapQ = int.Parse(arguments[6]);
+                Console.WriteLine($"CanvasSNV.exe: File {bamPath} does not exist! Exiting.");
+                return 1;
             }
 
             // Handle some special cases, if the "chromosome" is a special string:
@@ -47,7 +90,7 @@ namespace CanvasSNV
             }
 
             // Standard logic: Process one chromosome, write output to the specified file path:
-            SNVReviewer processor = new SNVReviewer(chromosome, vcfPath, bamPath, outputPath, sampleName, isDbSnpVcf, minMapQ);
+            SNVReviewer processor = new SNVReviewer(chromosome, vcfPath, bamPath, outputPath, sampleName, isDbSnpVcf, minMapQ, isSomatic);
             return processor.Run();
         }
 

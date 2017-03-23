@@ -1,7 +1,16 @@
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 14
-VisualStudioVersion = 14.0.25420.1
+# Visual Studio 15
+VisualStudioVersion = 15.0.26228.9
 MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{9E50841F-8F99-4A4C-A84B-1606360EBFD9}"
+	ProjectSection(SolutionItems) = preProject
+		Canvas.nuspec = Canvas.nuspec
+		Canvas.targets = Canvas.targets
+		..\..\..\Tools\global.json = ..\..\..\Tools\global.json
+		NuGet.config = NuGet.config
+		..\..\..\version.txt = ..\..\..\version.txt
+	EndProjectSection
+EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CanvasCommon.net45", "..\CanvasCommon\CanvasCommon.net45\CanvasCommon.net45.csproj", "{EC8755F1-74BD-4A1F-9B82-5133D2F6A93B}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CanvasClean.net45", "..\CanvasClean\CanvasClean.net45\CanvasClean.net45.csproj", "{3EA57084-D8FD-4978-8CF9-0EF97CFA47D0}"
@@ -36,52 +45,43 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CanvasSNV.net45", "..\Canva
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CanvasSomaticCaller.net45", "..\CanvasSomaticCaller\CanvasSomaticCaller.net45\CanvasSomaticCaller.net45.csproj", "{A08C4A1E-133E-4339-89E4-54651D37BAF0}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CanvasSmooth", "..\CanvasSmooth\CanvasSmooth.csproj", "{74169E0F-DB8F-4A86-AEBE-C7DC4E15F916}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CanvasSmooth.net45", "..\CanvasSmooth\CanvasSmooth.net45\CanvasSmooth.net45.csproj", "{74169E0F-DB8F-4A86-AEBE-C7DC4E15F916}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CanvasPedigreeCaller.net45", "..\CanvasPedigreeCaller\CanvasPedigreeCaller.net45\CanvasPedigreeCaller.net45.csproj", "{3FDC28D1-F5D6-444A-AB84-85F6F3D3812C}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Wrapper", "..\Canvas.Wrapper\Wrapper\Wrapper.csproj", "{D1C9E06E-A648-40F2-A059-EC8B644F554B}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{9E50841F-8F99-4A4C-A84B-1606360EBFD9}"
-	ProjectSection(SolutionItems) = preProject
-		Canvas.nuspec = Canvas.nuspec
-		Canvas.net45\Canvas.targets = Canvas.net45\Canvas.targets
-		CanvasBin.nuspec = CanvasBin.nuspec
-		CanvasCommon.nuspec = CanvasCommon.nuspec
-		CanvasWithoutWrapper.nuspec = CanvasWithoutWrapper.nuspec
-		Combinatorics.nuspec = Combinatorics.nuspec
-		NuGet.config = NuGet.config
-	EndProjectSection
-EndProject
-Project("{8BB2217D-0F2D-49D1-97BC-3654ED321F3B}") = "FlagUniqueKmers", "..\..\..\Tools\FlagUniqueKmers\FlagUniqueKmers.xproj", "{976838FB-E881-4DF6-8DE0-272392382979}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "FlagUniqueKmers", "..\..\..\Tools\FlagUniqueKmers\FlagUniqueKmers.csproj", "{976838FB-E881-4DF6-8DE0-272392382979}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CanvasDiploidCaller.net45", "..\CanvasDiploidCaller\CanvasDiploidCaller.net45\CanvasDiploidCaller.net45.csproj", "{FFD9D459-C697-4E50-9E61-0B192A064211}"
 EndProject
-Project("{8BB2217D-0F2D-49D1-97BC-3654ED321F3B}") = "CanvasDiploidCaller", "..\CanvasDiploidCaller\CanvasDiploidCaller.xproj", "{D128F0FE-EC58-4CED-B8B1-E77FFD6845D8}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CanvasDiploidCaller", "..\CanvasDiploidCaller\CanvasDiploidCaller.csproj", "{D128F0FE-EC58-4CED-B8B1-E77FFD6845D8}"
 EndProject
-Project("{8BB2217D-0F2D-49D1-97BC-3654ED321F3B}") = "CanvasCommon", "..\CanvasCommon\CanvasCommon.xproj", "{FEBA6659-C876-4C0A-BDB5-F41B35AB710F}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CanvasCommon", "..\CanvasCommon\CanvasCommon.csproj", "{FEBA6659-C876-4C0A-BDB5-F41B35AB710F}"
 EndProject
-Project("{8BB2217D-0F2D-49D1-97BC-3654ED321F3B}") = "Combinatorics", "..\Combinatorics\Combinatorics.xproj", "{A3F6394B-0943-4409-A9C1-700B8A72F887}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Combinatorics", "..\Combinatorics\Combinatorics.csproj", "{A3F6394B-0943-4409-A9C1-700B8A72F887}"
 EndProject
-Project("{8BB2217D-0F2D-49D1-97BC-3654ED321F3B}") = "CanvasSomaticCaller", "..\CanvasSomaticCaller\CanvasSomaticCaller.xproj", "{35E4F059-D0DE-4F1F-A806-9713B5F6AA93}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CanvasSomaticCaller", "..\CanvasSomaticCaller\CanvasSomaticCaller.csproj", "{35E4F059-D0DE-4F1F-A806-9713B5F6AA93}"
 EndProject
-Project("{8BB2217D-0F2D-49D1-97BC-3654ED321F3B}") = "CanvasBin", "..\CanvasBin\CanvasBin.xproj", "{CE36BF17-4827-4D75-87D1-19657E569862}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CanvasBin", "..\CanvasBin\CanvasBin.csproj", "{CE36BF17-4827-4D75-87D1-19657E569862}"
 EndProject
-Project("{8BB2217D-0F2D-49D1-97BC-3654ED321F3B}") = "Canvas", "Canvas.xproj", "{48B9C165-4751-40BC-A2AE-522CC50A96A1}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Canvas", "Canvas.csproj", "{48B9C165-4751-40BC-A2AE-522CC50A96A1}"
 EndProject
-Project("{8BB2217D-0F2D-49D1-97BC-3654ED321F3B}") = "CanvasPartition", "..\CanvasPartition\CanvasPartition.xproj", "{7842AE63-6305-466C-970F-7E218A5062A3}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CanvasPartition", "..\CanvasPartition\CanvasPartition.csproj", "{7842AE63-6305-466C-970F-7E218A5062A3}"
 EndProject
-Project("{8BB2217D-0F2D-49D1-97BC-3654ED321F3B}") = "Canvas.Wrapper", "..\Canvas.Wrapper\Canvas.Wrapper.xproj", "{DA2C7A71-6B66-460F-A9DA-215D3C6B5CCB}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Canvas.Wrapper", "..\Canvas.Wrapper\Canvas.Wrapper.csproj", "{DA2C7A71-6B66-460F-A9DA-215D3C6B5CCB}"
 EndProject
-Project("{8BB2217D-0F2D-49D1-97BC-3654ED321F3B}") = "CanvasSNV", "..\CanvasSNV\CanvasSNV.xproj", "{DFBCB487-DE6B-49CF-BC1C-8DD8CDADAFEA}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CanvasSNV", "..\CanvasSNV\CanvasSNV.csproj", "{DFBCB487-DE6B-49CF-BC1C-8DD8CDADAFEA}"
 EndProject
-Project("{8BB2217D-0F2D-49D1-97BC-3654ED321F3B}") = "CanvasNormalize", "..\CanvasNormalize\CanvasNormalize.xproj", "{C65A5CD8-62E7-494A-966D-5BB6731F9C2F}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CanvasNormalize", "..\CanvasNormalize\CanvasNormalize.csproj", "{C65A5CD8-62E7-494A-966D-5BB6731F9C2F}"
 EndProject
-Project("{8BB2217D-0F2D-49D1-97BC-3654ED321F3B}") = "CanvasClean", "..\CanvasClean\CanvasClean.xproj", "{B108BCD7-645E-4826-A333-CBED547E8744}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CanvasClean", "..\CanvasClean\CanvasClean.csproj", "{B108BCD7-645E-4826-A333-CBED547E8744}"
 EndProject
-Project("{8BB2217D-0F2D-49D1-97BC-3654ED321F3B}") = "CanvasPedigreeCaller", "..\CanvasPedigreeCaller\CanvasPedigreeCaller.xproj", "{D6BC0B03-CB6B-4CE1-A3A5-A75957DE2033}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CanvasPedigreeCaller", "..\CanvasPedigreeCaller\CanvasPedigreeCaller.csproj", "{D6BC0B03-CB6B-4CE1-A3A5-A75957DE2033}"
 EndProject
-Project("{8BB2217D-0F2D-49D1-97BC-3654ED321F3B}") = "EvaluateCNV", "..\..\..\Tools\EvaluateCNV\EvaluateCNV.xproj", "{A2A8ACB4-7FC9-48C7-86BC-3D71E0F777D4}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "EvaluateCNV", "..\..\..\Tools\EvaluateCNV\EvaluateCNV.csproj", "{A2A8ACB4-7FC9-48C7-86BC-3D71E0F777D4}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CanvasSmooth", "..\CanvasSmooth\CanvasSmooth.csproj", "{09ACB774-90C8-4F30-9688-B0DDA37C9725}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -133,10 +133,10 @@ Global
 		{A08C4A1E-133E-4339-89E4-54651D37BAF0}.Debug|x64.Build.0 = Debug|x64
 		{A08C4A1E-133E-4339-89E4-54651D37BAF0}.Release|x64.ActiveCfg = Release|x64
 		{A08C4A1E-133E-4339-89E4-54651D37BAF0}.Release|x64.Build.0 = Release|x64
-		{74169E0F-DB8F-4A86-AEBE-C7DC4E15F916}.Debug|x64.ActiveCfg = Debug|x64
-		{74169E0F-DB8F-4A86-AEBE-C7DC4E15F916}.Debug|x64.Build.0 = Debug|x64
-		{74169E0F-DB8F-4A86-AEBE-C7DC4E15F916}.Release|x64.ActiveCfg = Release|x64
-		{74169E0F-DB8F-4A86-AEBE-C7DC4E15F916}.Release|x64.Build.0 = Release|x64
+		{74169E0F-DB8F-4A86-AEBE-C7DC4E15F916}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{74169E0F-DB8F-4A86-AEBE-C7DC4E15F916}.Debug|x64.Build.0 = Debug|Any CPU
+		{74169E0F-DB8F-4A86-AEBE-C7DC4E15F916}.Release|x64.ActiveCfg = Release|Any CPU
+		{74169E0F-DB8F-4A86-AEBE-C7DC4E15F916}.Release|x64.Build.0 = Release|Any CPU
 		{3FDC28D1-F5D6-444A-AB84-85F6F3D3812C}.Debug|x64.ActiveCfg = Debug|Any CPU
 		{3FDC28D1-F5D6-444A-AB84-85F6F3D3812C}.Debug|x64.Build.0 = Debug|Any CPU
 		{3FDC28D1-F5D6-444A-AB84-85F6F3D3812C}.Release|x64.ActiveCfg = Release|x64
@@ -205,6 +205,10 @@ Global
 		{A2A8ACB4-7FC9-48C7-86BC-3D71E0F777D4}.Debug|x64.Build.0 = Debug|Any CPU
 		{A2A8ACB4-7FC9-48C7-86BC-3D71E0F777D4}.Release|x64.ActiveCfg = Release|Any CPU
 		{A2A8ACB4-7FC9-48C7-86BC-3D71E0F777D4}.Release|x64.Build.0 = Release|Any CPU
+		{09ACB774-90C8-4F30-9688-B0DDA37C9725}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{09ACB774-90C8-4F30-9688-B0DDA37C9725}.Debug|x64.Build.0 = Debug|Any CPU
+		{09ACB774-90C8-4F30-9688-B0DDA37C9725}.Release|x64.ActiveCfg = Release|Any CPU
+		{09ACB774-90C8-4F30-9688-B0DDA37C9725}.Release|x64.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -87,17 +87,14 @@
       <HintPath>..\..\Canvas\packages\Combinatorics.1.0.3.2\lib\net40\Combinatorics.dll</HintPath>
       <Private>True</Private>
     </Reference>
-    <Reference Include="Illumina.Common, Version=2.1.1.89, Culture=neutral, processorArchitecture=AMD64">
-      <HintPath>..\..\Canvas\packages\Illumina.Common.2.1.1.89\lib\net451\Illumina.Common.dll</HintPath>
-      <Private>True</Private>
+    <Reference Include="Illumina.Common, Version=2.2.0.119, Culture=neutral, processorArchitecture=AMD64">
+      <HintPath>..\..\Canvas\packages\Illumina.Common.2.2.0.119\lib\net451\Illumina.Common.dll</HintPath>
     </Reference>
-    <Reference Include="Isas.Framework, Version=5.3.0.94, Culture=neutral, processorArchitecture=AMD64">
-      <HintPath>..\..\Canvas\packages\Isas.Framework.5.3.0.94\lib\net451\Isas.Framework.dll</HintPath>
-      <Private>True</Private>
+    <Reference Include="Isas.Framework, Version=5.4.0.137, Culture=neutral, processorArchitecture=AMD64">
+      <HintPath>..\..\Canvas\packages\Isas.Framework.5.4.0.137\lib\net451\Isas.Framework.dll</HintPath>
     </Reference>
-    <Reference Include="Isas.SequencingFiles, Version=3.10.1.184, Culture=neutral, processorArchitecture=AMD64">
-      <HintPath>..\..\Canvas\packages\Isas.SequencingFiles.3.10.1.184\lib\net451\Isas.SequencingFiles.dll</HintPath>
-      <Private>True</Private>
+    <Reference Include="Isas.SequencingFiles, Version=3.10.3.207, Culture=neutral, processorArchitecture=AMD64">
+      <HintPath>..\..\Canvas\packages\Isas.SequencingFiles.3.10.3.207\lib\net451\Isas.SequencingFiles.dll</HintPath>
     </Reference>
     <Reference Include="MathNet.Numerics, Version=3.17.0.0, Culture=neutral, processorArchitecture=MSIL">
       <HintPath>..\..\Canvas\packages\MathNet.Numerics.3.17.0\lib\net40\MathNet.Numerics.dll</HintPath>
@@ -113,6 +110,14 @@
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.ComponentModel.Composition" />
+    <Reference Include="System.ComponentModel.Primitives, Version=4.1.1.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <HintPath>..\..\Canvas\packages\System.ComponentModel.Primitives.4.3.0\lib\net45\System.ComponentModel.Primitives.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="System.ComponentModel.TypeConverter, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <HintPath>..\..\Canvas\packages\System.ComponentModel.TypeConverter.4.3.0\lib\net45\System.ComponentModel.TypeConverter.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
     <Reference Include="System.Core" />
     <Reference Include="System.Runtime.Serialization" />
     <Reference Include="System.Xml.Linq" />
@@ -132,23 +137,14 @@
     <Compile Include="CopyNumberModel.cs" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="..\PedigreeCallerParameters.json">
+      <Link>PedigreeCallerParameters.json</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
     <None Include="App.config" />
     <None Include="app.manifest" />
     <None Include="packages.config" />
     <None Include="Properties\app.manifest" />
-    <None Include="PedigreeCallerParameters.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\..\CanvasCommon\CanvasCommon.net45\CanvasCommon.net45.csproj">
-      <Project>{ec8755f1-74bd-4a1f-9b82-5133d2f6a93b}</Project>
-      <Name>CanvasCommon.net45</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\..\Canvas\Canvas.net45\Canvas.net45.csproj">
-      <Project>{f7eb30ca-eb4a-4e80-a067-0d9498a9f5b6}</Project>
-      <Name>Canvas.net45</Name>
-    </ProjectReference>
   </ItemGroup>
   <ItemGroup>
     <BootstrapperPackage Include=".NETFramework,Version=v4.5.2">
@@ -162,14 +158,20 @@
       <Install>false</Install>
     </BootstrapperPackage>
   </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\CanvasCommon\CanvasCommon.net45\CanvasCommon.net45.csproj">
+      <Project>{ec8755f1-74bd-4a1f-9b82-5133d2f6a93b}</Project>
+      <Name>CanvasCommon.net45</Name>
+    </ProjectReference>
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <Import Project="..\..\Canvas\packages\Isas.FileCompression.3.10.3.207\build\net451\Isas.FileCompression.targets" Condition="Exists('..\..\Canvas\packages\Isas.FileCompression.3.10.3.207\build\net451\Isas.FileCompression.targets')" />
   <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
     <PropertyGroup>
       <ErrorText>This project references NuGet package(s) that are missing on this computer. Use NuGet Package Restore to download them.  For more information, see http://go.microsoft.com/fwlink/?LinkID=322105. The missing file is {0}.</ErrorText>
     </PropertyGroup>
-    <Error Condition="!Exists('..\..\Canvas\packages\Isas.FileCompression.3.10.1.184\build\net451\Isas.FileCompression.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\..\Canvas\packages\Isas.FileCompression.3.10.1.184\build\net451\Isas.FileCompression.targets'))" />
+    <Error Condition="!Exists('..\..\Canvas\packages\Isas.FileCompression.3.10.3.207\build\net451\Isas.FileCompression.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\..\Canvas\packages\Isas.FileCompression.3.10.3.207\build\net451\Isas.FileCompression.targets'))" />
   </Target>
-  <Import Project="..\..\Canvas\packages\Isas.FileCompression.3.10.1.184\build\net451\Isas.FileCompression.targets" Condition="Exists('..\..\Canvas\packages\Isas.FileCompression.3.10.1.184\build\net451\Isas.FileCompression.targets')" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
   <Target Name="BeforeBuild">

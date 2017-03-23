@@ -59,27 +59,32 @@
     <Prefer32Bit>true</Prefer32Bit>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="Illumina.Common, Version=2.1.1.89, Culture=neutral, processorArchitecture=AMD64">
-      <HintPath>..\..\Src\Canvas\Canvas\packages\Illumina.Common.2.1.1.89\lib\net451\Illumina.Common.dll</HintPath>
-      <Private>True</Private>
+    <Reference Include="Illumina.Common, Version=2.2.0.119, Culture=neutral, processorArchitecture=AMD64">
+      <HintPath>..\..\..\Src\Canvas\Canvas\packages\Illumina.Common.2.2.0.119\lib\net451\Illumina.Common.dll</HintPath>
     </Reference>
-    <Reference Include="Isas.Framework, Version=5.3.0.94, Culture=neutral, processorArchitecture=AMD64">
-      <HintPath>..\..\Src\Canvas\Canvas\packages\Isas.Framework.5.3.0.94\lib\net451\Isas.Framework.dll</HintPath>
-      <Private>True</Private>
+    <Reference Include="Isas.Framework, Version=5.4.0.137, Culture=neutral, processorArchitecture=AMD64">
+      <HintPath>..\..\..\Src\Canvas\Canvas\packages\Isas.Framework.5.4.0.137\lib\net451\Isas.Framework.dll</HintPath>
     </Reference>
-    <Reference Include="Isas.SequencingFiles, Version=3.10.1.184, Culture=neutral, processorArchitecture=AMD64">
-      <HintPath>..\..\Src\Canvas\Canvas\packages\Isas.SequencingFiles.3.10.1.184\lib\net451\Isas.SequencingFiles.dll</HintPath>
-      <Private>True</Private>
+    <Reference Include="Isas.SequencingFiles, Version=3.10.3.207, Culture=neutral, processorArchitecture=AMD64">
+      <HintPath>..\..\..\Src\Canvas\Canvas\packages\Isas.SequencingFiles.3.10.3.207\lib\net451\Isas.SequencingFiles.dll</HintPath>
     </Reference>
     <Reference Include="Newtonsoft.Json, Version=9.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
-      <HintPath>..\..\Src\Canvas\Canvas\packages\Newtonsoft.Json.9.0.1\lib\net45\Newtonsoft.Json.dll</HintPath>
+      <HintPath>..\..\..\Src\Canvas\Canvas\packages\Newtonsoft.Json.9.0.1\lib\net45\Newtonsoft.Json.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="protobuf-net, Version=2.1.0.0, Culture=neutral, PublicKeyToken=257b51d87d2e4d67, processorArchitecture=MSIL">
-      <HintPath>..\..\Src\Canvas\Canvas\packages\protobuf-net.2.1.0\lib\net451\protobuf-net.dll</HintPath>
+      <HintPath>..\..\..\Src\Canvas\Canvas\packages\protobuf-net.2.1.0\lib\net451\protobuf-net.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="System" />
+    <Reference Include="System.ComponentModel.Primitives, Version=4.1.1.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <HintPath>..\..\..\Src\Canvas\Canvas\packages\System.ComponentModel.Primitives.4.3.0\lib\net45\System.ComponentModel.Primitives.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="System.ComponentModel.TypeConverter, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <HintPath>..\..\..\Src\Canvas\Canvas\packages\System.ComponentModel.TypeConverter.4.3.0\lib\net45\System.ComponentModel.TypeConverter.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
     <Reference Include="System.Core" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
@@ -98,7 +103,7 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\..\Src\Canvas\CanvasCommon\CanvasCommon.net45\CanvasCommon.net45.csproj">
-      <Project>{ec8755f1-74bd-4a1f-9b82-5133d2f6a93b}</Project>
+      <Project>{EC8755F1-74BD-4A1F-9B82-5133D2F6A93B}</Project>
       <Name>CanvasCommon.net45</Name>
     </ProjectReference>
   </ItemGroup>
@@ -107,10 +112,12 @@
     <PostBuildEvent>
     </PostBuildEvent>
   </PropertyGroup>
+  <Import Project="..\..\..\Src\Canvas\Canvas\packages\Isas.FileCompression.3.10.3.207\build\net451\Isas.FileCompression.targets" Condition="Exists('..\..\..\Src\Canvas\Canvas\packages\Isas.FileCompression.3.10.3.207\build\net451\Isas.FileCompression.targets')" />
   <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
     <PropertyGroup>
       <ErrorText>This project references NuGet package(s) that are missing on this computer. Use NuGet Package Restore to download them.  For more information, see http://go.microsoft.com/fwlink/?LinkID=322105. The missing file is {0}.</ErrorText>
     </PropertyGroup>
+    <Error Condition="!Exists('..\..\..\Src\Canvas\Canvas\packages\Isas.FileCompression.3.10.3.207\build\net451\Isas.FileCompression.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\..\..\Src\Canvas\Canvas\packages\Isas.FileCompression.3.10.3.207\build\net451\Isas.FileCompression.targets'))" />
   </Target>
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

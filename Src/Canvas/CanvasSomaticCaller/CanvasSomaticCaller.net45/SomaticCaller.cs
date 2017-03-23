@@ -3,9 +3,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.IO;
-using CanvasCommon;
 using Isas.SequencingFiles;
 using Isas.SequencingFiles.Vcf;
+using CanvasCommon;
 
 namespace CanvasSomaticCaller
 {
@@ -412,7 +412,7 @@ namespace CanvasSomaticCaller
                     Console.WriteLine("IsTrainingMode activated. Not calling any CNVs. Reason: {0}", e.Message);
                     Segments.Clear();
                     CanvasSegmentWriter.WriteSegments(outputVCFPath, this.Segments, Model.DiploidCoverage, referenceFolder, name, ExtraHeaders,
-                    this.ReferencePloidy, QualityFilterThreshold);
+                    this.ReferencePloidy, QualityFilterThreshold, isPedigreeInfoSupplied:false);
                     Environment.Exit(0);
                 }
                 else
@@ -464,7 +464,8 @@ namespace CanvasSomaticCaller
             ExtraHeaders.Add($"##EstimatedChromosomeCount={this.EstimateChromosomeCount():F2}");
 
             // Write out results.  Note that model may be null here, in training mode, if we hit an UncallableDataException:
-            CanvasSegmentWriter.WriteSegments(outputVCFPath, this.Segments, Model?.DiploidCoverage, referenceFolder, name, ExtraHeaders, this.ReferencePloidy, QualityFilterThreshold);
+            CanvasSegmentWriter.WriteSegments(outputVCFPath, this.Segments, Model?.DiploidCoverage, referenceFolder, name, ExtraHeaders, 
+                this.ReferencePloidy, QualityFilterThreshold, isPedigreeInfoSupplied: false);
 
             return 0;
         }
@@ -1967,7 +1968,8 @@ namespace CanvasSomaticCaller
         /// </summary>
         protected void CheckNonDiploidMAFs(List<CanvasSegment> canvasSegments)
         {
-            const double diploidMAF = 0.48;
+            const double diploidMAF = 0.41;
+            const double diploidMAFMean = 0.44;
             double minSizeMAFs = 1000; // to approximate chopiness for 100 to 500kb regions
             const int tStatisticsSizeThreshold = 20;
 
@@ -1985,7 +1987,7 @@ namespace CanvasSomaticCaller
                 return;
             double tTestStatistics = CanvasCommon.Utilities.tTest(nonDiploidMAFs, diploidMAF);
             Console.WriteLine($">>> CheckNonDiploidMAFs t-test statistics {tTestStatistics}");
-            if (Math.Abs(tTestStatistics) < 3.733) // for alpha = 0.001 and 15 degrees of freedom
+            if (Math.Abs(tTestStatistics) < 3.733 | nonDiploidMAFs.Average() > diploidMAFMean) // for alpha = 0.001 and 15 degrees of freedom
             {
                 this.Model.Purity = 1.0;
                 this.Model.Ploidy = 2.0;

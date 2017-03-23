@@ -37,16 +37,25 @@ namespace Canvas.Wrapper
             _dbSnpVcfProcessor = dbSnpVcfProcessor;
             _detectCnvDefault = detectCnvDefault;
         }
+        private IFileLocation GetRuntimeExecutable()
+        {
+#if DotNetCore
+            return new FileLocation(_executableProcessor.GetEnvironmentExecutablePath("dotnet"));
+#else
+            return new FileLocation(_executableProcessor.GetMonoPath());
+#endif
+
+        }
 
         public ICanvasWorker<CanvasEnrichmentInput, CanvasEnrichmentOutput> GetCanvasEnrichmentWorker()
         {
-            var mono = new FileLocation(_executableProcessor.GetMonoPath());
+            var runtimeExecutable = GetRuntimeExecutable();
             var annotationProvider = GetAnnotationFileProvider();
             var canvasCnvCaller = new CanvasEnrichmentCnvCaller(
                 _workManager,
                 _logger,
                 GetCanvasExe(),
-                mono,
+                runtimeExecutable,
                 annotationProvider,
                 GetCanvasSingleSampleInputCommandLineBuilderWithSomaticQualityThreshold(annotationProvider),
                 new CanvasEnrichmentInputCreator<CanvasEnrichmentInput>(),
@@ -66,12 +75,12 @@ namespace Canvas.Wrapper
             }
 
             var annotationProvider = GetAnnotationFileProvider();
-            var mono = new FileLocation(_executableProcessor.GetMonoPath());
+            var runtimeExecutable = GetRuntimeExecutable();
             var canvasCnvCaller = new CanvasResequencingCnvCaller(
                 _workManager,
                 _logger,
                 GetCanvasExe(),
-                mono,
+                runtimeExecutable,
                 annotationProvider,
                 GetCanvasSingleSampleInputCommandLineBuilder(annotationProvider),
                 GetCanvasPloidyBedCreator());
@@ -86,12 +95,12 @@ namespace Canvas.Wrapper
         public ICanvasWorker<CanvasTumorNormalWgsInput, CanvasOutput> GetCanvasTumorNormalWorker()
         {
             var annotationProvider = GetAnnotationFileProvider();
-            var mono = new FileLocation(_executableProcessor.GetMonoPath());
+            var runtimeExecutable = GetRuntimeExecutable();
             var canvasCnvCaller = new CanvasTumorNormalWgsCnvCaller(
                 _workManager,
                 _logger,
                 GetCanvasExe(),
-                mono,
+                runtimeExecutable,
                 annotationProvider,
                 GetCanvasSingleSampleInputCommandLineBuilderWithSomaticQualityThreshold(annotationProvider),
                 GetCanvasPloidyBedCreator());
@@ -101,12 +110,12 @@ namespace Canvas.Wrapper
         public ICanvasWorker<CanvasTumorNormalEnrichmentInput, CanvasOutput> GetCanvasTumorNormalEnrichmentWorker()
         {
             var annotationProvider = GetAnnotationFileProvider();
-            var mono = new FileLocation(_executableProcessor.GetMonoPath());
+            var runtimeExecutable = GetRuntimeExecutable();
             var canvasCnvCaller = new CanvasTumorNormalEnrichmentCnvCaller(
                 _workManager,
                 _logger,
                 GetCanvasExe(),
-                mono,
+                runtimeExecutable,
                 annotationProvider,
                 GetCanvasSingleSampleInputCommandLineBuilderWithSomaticQualityThreshold(annotationProvider),
                 new CanvasEnrichmentInputCreator<CanvasTumorNormalEnrichmentInput>(),

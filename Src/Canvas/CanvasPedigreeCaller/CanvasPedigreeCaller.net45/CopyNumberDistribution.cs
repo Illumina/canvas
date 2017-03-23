@@ -36,7 +36,7 @@ namespace CanvasPedigreeCaller
         public void SetJointProbability(double probability, int[] indices, bool skipIndex = false)
         {
             _probability.SetValue(probability, indices);
-            if (!skipIndex && !Indices.Exists(x=>x[0]==indices[0] && x[1] == indices[1] && x[2] == indices[2]) && probability > 0)
+            if (!skipIndex && !Indices.Exists(index => index.SequenceEqual(indices)) && probability > 0)
                 Indices.Add(indices);
         }
 

@@ -98,14 +98,16 @@ namespace CanvasCommon
         /// Outputs the copy number calls to a text file.
         /// </summary>
         private static void WriteVariants(IReadOnlyCollection<List<CanvasSegment>> segments, PloidyInfo ploidy, GenomeMetadata genome,
-            BgzipOrStreamWriter writer, int? denovoQualityThreshold = null)
+            BgzipOrStreamWriter writer, bool isPedigreeInfoSupplied = true, int? denovoQualityThreshold = null)
         {
             var nSamples = segments.Count;
             foreach (GenomeMetadata.SequenceMetadata chromosome in genome.Sequences)
             {
                 for (int segmentIndex = 0; segmentIndex < segments.First().Count; segmentIndex++)
-                {
+                {                   
                     var firstSampleSegment = segments.First()[segmentIndex];
+                    if (!isPedigreeInfoSupplied && segments.Select(sample => sample[segmentIndex].Filter == "PASS").Any() && segments.Count > 1)
+                        firstSampleSegment.Filter = "PASS";
                     if (!firstSampleSegment.Chr.Equals(chromosome.Name, StringComparison.OrdinalIgnoreCase))
                         continue;
                     var referenceCopyNumbers = segments.Select(segment => ploidy?.GetReferenceCopyNumber(segment[segmentIndex]) ?? 2).ToList();
@@ -195,6 +197,9 @@ namespace CanvasCommon
             if (segment.IsHeterogeneous)
                 writer.Write("SUBCLONAL;");
 
+            if (segment.DQScore.HasValue && !isMultisample)
+                writer.Write($"DQ={segment.DQScore.Value};");           
+
             if (denovoQualityThreshold.HasValue & segment.DQScore.HasValue & segment.DQScore >= denovoQualityThreshold)
                 writer.Write($"dq{denovoQualityThreshold};");
             writer.Write($"END={segment.End}");
@@ -211,24 +216,25 @@ namespace CanvasCommon
 
         public static void WriteSegments(string outVcfPath, List<CanvasSegment> segments, double? diploidCoverage,
                 string wholeGenomeFastaDirectory, string sampleName,
-                List<string> extraHeaders, PloidyInfo ploidy, int qualityThreshold, int? denovoQualityThreshold = null)
+                List<string> extraHeaders, PloidyInfo ploidy, int qualityThreshold, bool isPedigreeInfoSupplied, int? denovoQualityThreshold = null)
         {
             using (BgzipOrStreamWriter writer = new BgzipOrStreamWriter(outVcfPath))
             {
                 var genome = WriteVcfHeader(segments, diploidCoverage, wholeGenomeFastaDirectory, new List<string> { sampleName },
                     extraHeaders, qualityThreshold, writer, denovoQualityThreshold);
-                WriteVariants(new List<List<CanvasSegment>> { segments.ToList() }, ploidy, genome, writer, denovoQualityThreshold);
+                WriteVariants(new List<List<CanvasSegment>> { segments.ToList() }, ploidy, genome, writer, isPedigreeInfoSupplied, denovoQualityThreshold);
             }
         }
+
         public static void WriteMultiSampleSegments(string outVcfPath, List<List<CanvasSegment>> segments, List<double?> diploidCoverage,
-            string wholeGenomeFastaDirectory, List<string> sampleNames,
-            List<string> extraHeaders, PloidyInfo ploidy, int qualityThreshold, int? denovoQualityThreshold = null)
+        string wholeGenomeFastaDirectory, List<string> sampleNames, List<string> extraHeaders, PloidyInfo ploidy, int qualityThreshold,
+        bool isPedigreeInfoSupplied = true, int ? denovoQualityThreshold = null)
         {
             using (BgzipOrStreamWriter writer = new BgzipOrStreamWriter(outVcfPath))
             {
                 var genome = WriteVcfHeader(segments.First(), GetMean(diploidCoverage), wholeGenomeFastaDirectory, sampleNames,
                     extraHeaders, qualityThreshold, writer, denovoQualityThreshold);
-                WriteVariants(segments, ploidy, genome, writer, denovoQualityThreshold);
+                WriteVariants(segments, ploidy, genome, writer, isPedigreeInfoSupplied, denovoQualityThreshold);
             }
         }
 

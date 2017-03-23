@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using CanvasCommon;
 using Isas.SequencingFiles;
+using CanvasCommon;
 
 namespace CanvasPartition
 {
