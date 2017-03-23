@@ -290,6 +290,20 @@ namespace CanvasPartition
             return sojourn;
         }
 
+        private static List<List<double>> GetStateDurationProbability(List<int> sojournMeans, int maxStateLength)
+        {
+            var stateDurationProbability = new List<List<double>>(sojournMeans.Count);
+            var stateCounter = 0;
+            foreach (var sojournMean in sojournMeans)
+            {
+                stateDurationProbability.Add(new List<double>(maxStateLength));
+                for (var stateDuration = 0; stateDuration < maxStateLength; stateDuration++)
+                    stateDurationProbability[stateCounter].Add(Math.Log(Poisson.PMF(sojournMean, stateDuration)));
+                stateCounter++;
+            }
+            return stateDurationProbability;
+        }
+
 
         /// <summary>
         /// HSMM Viterbi implementtion based on:
