@@ -449,7 +449,7 @@ namespace CanvasPartition
 
         public List<List<double>> MeanSmoother(List<List<double>> data)
         {
-            List<List<double>> dataCopy = data.ConvertAll(item => new List<double>(item));
+            List<List<double>> dataCopy = data.Select(item => new List<double>(item)).ToList();
             int halfWindow = 1;
             double w1 = 1.0 / 3.0;
             double w2 = 1.0 / 3.0;
