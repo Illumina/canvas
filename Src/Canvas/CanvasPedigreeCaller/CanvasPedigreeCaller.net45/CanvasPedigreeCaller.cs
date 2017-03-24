@@ -99,7 +99,7 @@ namespace CanvasPedigreeCaller
             List<List<CanvasSegment>> segments;
             var names = PostProcessData(outVcfFile, referenceFolder, pedigreeMembers, out coverage, out segments);
 
-            CanvasSegmentWriter.WriteMultiSampleSegments(outVcfFile, segments, coverage, referenceFolder, names, null, null,
+            CanvasSegmentWriter.WriteMultiSampleSegments(outVcfFile, segments, coverage, referenceFolder, names, null, pedigreeMember.Ploidy,
             QualityFilterThreshold, isPedigreeInfoSupplied:true, denovoQualityThreshold:DeNovoQualityFilterThreshold);
 
             var outputFolder = new FileLocation(outVcfFile).Directory;
