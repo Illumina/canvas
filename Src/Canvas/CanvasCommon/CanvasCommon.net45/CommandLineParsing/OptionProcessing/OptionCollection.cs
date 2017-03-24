@@ -9,7 +9,7 @@ namespace CanvasCommon.CommandLineParsing.OptionProcessing
 {
     public class OptionData
     {
-        public List<string> Data { get; } = new List<string>();
+        public List<List<string>> Data { get; } = new List<List<string>>();
     }
     public interface IOptionCollection
     {
@@ -65,7 +65,11 @@ namespace CanvasCommon.CommandLineParsing.OptionProcessing
             OptionSet options = new OptionSet();
             foreach (var option in GetLeafs())
             {
-                OptionData result = AddOption(option, options);
+                OptionData result;
+                if (option is PositionalOptionInfo)
+                    result = AddOption((PositionalOptionInfo)option, options);
+                else
+                    result = AddOption(option, options);
                 optionResults.Add(option, result);
             }
             return options;
@@ -90,6 +94,8 @@ namespace CanvasCommon.CommandLineParsing.OptionProcessing
                         results.Add(option.Key, GetParseResult((OptionInfo<string>)baseOption, optionData));
                     else if (baseOption is OptionInfo<List<string>>)
                         results.Add(option.Key, GetParseResult((OptionInfo<List<string>>)baseOption, optionData));
+                    else if (baseOption is OptionInfo<List<List<string>>>)
+                        results.Add(option.Key, GetParseResult((OptionInfo<List<List<string>>>)baseOption, optionData));
                     continue;
                 }
                 IResultCollection resultCollection = option.Value.ParseInternal(optionResults);
@@ -109,7 +115,7 @@ namespace CanvasCommon.CommandLineParsing.OptionProcessing
 
         private static IParsingResult GetParseResult(OptionInfo<string> optionInfo, OptionData optionData)
         {
-            ParsingResult<string> result = ParsingResult<string>.SuccessfulResult(optionData.Data.FirstOrDefault());
+            ParsingResult<string> result = ParsingResult<string>.SuccessfulResult(optionData.Data.FirstOrDefault()?.FirstOrDefault());
             if (optionData.Data.Count > 1)
                 result = ParsingResult<string>.FailedResult($"Error: {optionInfo.Name} can only be specified once");
             return optionInfo.Parse(new SuccessfulResultCollection(optionInfo, result));
@@ -117,15 +123,28 @@ namespace CanvasCommon.CommandLineParsing.OptionProcessing
 
         private static IParsingResult GetParseResult(OptionInfo<List<string>> multiOptionInfo, OptionData optionData)
         {
-            return multiOptionInfo.Parse(new SuccessfulResultCollection(multiOptionInfo, ParsingResult<List<string>>.SuccessfulResult(optionData.Data)));
+            return multiOptionInfo.Parse(new SuccessfulResultCollection(multiOptionInfo, ParsingResult<List<string>>.SuccessfulResult(optionData.Data.Select(list=>list.FirstOrDefault()).ToList())));
+        }
+
+        private static IParsingResult GetParseResult(OptionInfo<List<List<string>>> positionalInfo, OptionData optionData)
+        {
+            return positionalInfo.Parse(new SuccessfulResultCollection(positionalInfo, ParsingResult<List<List<string>>>.SuccessfulResult(optionData.Data)));
         }
 
         private OptionData AddOption(IOptionInfo info, OptionSet set)
         {
             OptionData s = new OptionData();
-            set.Add(info.GetPrototype(), info.Description, v => s.Data.Add(v));
+            set.Add(info.GetPrototype(), info.Description, v => s.Data.Add(v.ToSingleItemEnumerable().ToList()));
             return s;
         }
+
+        private OptionData AddOption(PositionalOptionInfo info, OptionSet set)
+        {
+            OptionData s = new OptionData();
+            set.Add(info.GetPrototype(), info.Description, info.MaxNumValues, v => s.Data.Add(v.ToList()));
+            return s;
+        }
+
 
         private IEnumerable<IOptionInfo> GetLeafs()
         {

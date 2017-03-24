@@ -113,10 +113,10 @@
     <Compile Include="CommandLineParsing\CoreOptionTypes\ExclusiveFileOption.cs" />
     <Compile Include="CommandLineParsing\CoreOptionTypes\FileOption.cs" />
     <Compile Include="CommandLineParsing\CoreOptionTypes\FlagOption.cs" />
-    <Compile Include="CommandLineParsing\CoreOptionTypes\MultipleValueOptionInfo.cs" />
     <Compile Include="CommandLineParsing\CoreOptionTypes\MultiValueOption.cs" />
     <Compile Include="CommandLineParsing\CoreOptionTypes\Option.cs" />
     <Compile Include="CommandLineParsing\CoreOptionTypes\OptionInfo.cs" />
+    <Compile Include="CommandLineParsing\CoreOptionTypes\PositionalOption.cs" />
     <Compile Include="CommandLineParsing\CoreOptionTypes\RequiredMultiOptionInfo.cs" />
     <Compile Include="CommandLineParsing\CoreOptionTypes\RequiredValueOptionInfo.cs" />
     <Compile Include="CommandLineParsing\CoreOptionTypes\StringOption.cs" />

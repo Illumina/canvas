@@ -1,4 +1,5 @@
-﻿using System.IO;
+﻿using System;
+using System.IO;
 using Canvas.CommandLineParsing;
 using CanvasCommon.CommandLineParsing.CoreOptionTypes;
 using CanvasCommon.CommandLineParsing.OptionProcessing;
@@ -182,6 +183,125 @@ namespace CanvasTest.Canvas.CommandLineParsing
             Assert.True(result.Success);
             Assert.Equal(inputArgument1, result.Result[0]);
             Assert.Equal(inputArgument2, result.Result[1]);
+        }
+
+        [Fact]
+        public void ParsePositionalOption_WithMultipleStringInputArguments_ReturnsMultipleStrings()
+        {
+            // arrange
+            string inputArgument1 = "input";
+            string inputArgument2 = "input2";
+            string inputArgument3 = "input3";
+            Func<string, string, string, ParsingResult<Tuple<string, string, string>>> parse = (value1, value2, value3) => ParsingResult<Tuple<string, string, string>>.SuccessfulResult(Tuple.Create(value1, value2, value3));
+            var option1 = StringOption.CreateRequired("value1 option", "value1");
+            var option2 = StringOption.CreateRequired("value2 option", "value2");
+            var option3 = StringOption.CreateRequired("value3 option", "value2");
+            var multiStringOption = new PositionalOption<string, string, string, Tuple<string, string, string>>(parse, true, option1, option2, option3, "positional-option");
+            string[] stringInputArgument =
+            {
+                "--positional-option", inputArgument1, inputArgument2, inputArgument3
+            };
+
+            // act
+            var result = multiStringOption.Parse(stringInputArgument);
+
+            // assert
+            Assert.True(result.Success);
+            Assert.Equal(inputArgument1, result.Result[0].Item1);
+            Assert.Equal(inputArgument2, result.Result[0].Item2);
+            Assert.Equal(inputArgument3, result.Result[0].Item3);
+        }
+
+        [Fact]
+        public void ParsePositionalOption_WithDefaultInputArguments_ReturnsMultipleStrings()
+        {
+            // arrange
+            string inputArgument1 = "input";
+            string inputArgument2 = "input2";
+            Func<string, string, string, ParsingResult<Tuple<string, string, string>>> parse = (value1, value2, value3) => ParsingResult<Tuple<string, string, string>>.SuccessfulResult(Tuple.Create(value1, value2, value3));
+            var option1 = StringOption.CreateRequired("value1 option", "value1");
+            var option2 = StringOption.CreateRequired("value2 option", "value2");
+            var option3 = StringOption.Create("value3 option", "value2");
+            var multiStringOption = new PositionalOption<string, string, string, Tuple<string, string, string>>(parse, true, option1, option2, option3, "positional-option");
+            string[] stringInputArgument =
+            {
+                "--positional-option", inputArgument1, inputArgument2
+            };
+
+            // act
+            var result = multiStringOption.Parse(stringInputArgument);
+
+            // assert
+            Assert.True(result.Success);
+            Assert.Equal(inputArgument1, result.Result[0].Item1);
+            Assert.Equal(inputArgument2, result.Result[0].Item2);
+            Assert.Equal(null, result.Result[0].Item3);
+        }
+
+        [Fact]
+        public void ParsePositionalOption_WithMissingInputArguments_ReturnsFailedResult()
+        {
+            // arrange
+            string inputArgument1 = "input";
+            string inputArgument2 = "input2";
+            Func<string, string, string, ParsingResult<Tuple<string, string, string>>> parse = (value1, value2, value3) => ParsingResult<Tuple<string, string, string>>.SuccessfulResult(Tuple.Create(value1, value2, value3));
+            var option1 = StringOption.CreateRequired("value1 option", "value1");
+            var option2 = StringOption.CreateRequired("value2 option", "value2");
+            var option3 = StringOption.Create("value3 option", "value2");
+            var multiStringOption = new PositionalOption<string, string, string, Tuple<string, string, string>>(parse, true, option1, option2, option3, "positional-option");
+            string[] stringInputArgument =
+            {
+                "--positional-option", inputArgument1
+            };
+
+            // act
+            var result = multiStringOption.Parse(stringInputArgument);
+
+            // assert
+            Assert.False(result.Success);
+        }
+
+        [Fact]
+        public void ParseRequiredPositionalOption_WithNoInputArguments_ReturnsFailedResult()
+        {
+            Func<string, string, string, ParsingResult<Tuple<string, string, string>>> parse = (value1, value2, value3) => ParsingResult<Tuple<string, string, string>>.SuccessfulResult(Tuple.Create(value1, value2, value3));
+            var option1 = StringOption.Create("value1 option", "value1");
+            var option2 = StringOption.Create("value2 option", "value2");
+            var option3 = StringOption.Create("value3 option", "value2");
+            var multiStringOption = new PositionalOption<string, string, string, Tuple<string, string, string>>(parse, true, option1, option2, option3, "positional-option");
+            string[] stringInputArgument =
+            {
+            };
+
+            // act
+            var result = multiStringOption.Parse(stringInputArgument);
+
+            // assert
+            Assert.False(result.Success);
+        }
+
+        [Fact]
+        public void ParsePositionalOption_WithTooManyInputArguments_ReturnsFailedResult()
+        {
+            Func<string, string, string, ParsingResult<Tuple<string, string, string>>> parse = (value1, value2, value3) => ParsingResult<Tuple<string, string, string>>.SuccessfulResult(Tuple.Create(value1, value2, value3));
+            var option1 = StringOption.Create("value1 option", "value1");
+            var option2 = StringOption.Create("value2 option", "value2");
+            var option3 = StringOption.Create("value3 option", "value2");
+            var multiStringOption = new PositionalOption<string, string, string, Tuple<string, string, string>>(parse, true, option1, option2, option3, "positional-option");
+            OptionCollection<Tuple<Tuple<string, string, string>, string>> collection = new OptionCollection<Tuple<Tuple<string, string, string>, string>>();
+            collection.Add(multiStringOption);
+            collection.Add(option1);
+            string[] stringInputArgument =
+            {
+                "--positional-option", "1", "2", "3", "4", "--value1", "value"
+            };
+
+            // act
+            var result = collection.Parse(stringInputArgument);
+
+            // assert
+            ParsingResult<Tuple<Tuple<string, string, string>, string>> failedResult;
+            Assert.False(result.Validate(out failedResult));
         }
 
         [Fact]
