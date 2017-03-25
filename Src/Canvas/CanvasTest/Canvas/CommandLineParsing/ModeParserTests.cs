@@ -594,16 +594,36 @@ namespace CanvasTest.Canvas.CommandLineParsing
             var bamPath = dataFolder.GetFileLocation("Tiny_COLO829BL_S1.bam");
             string[] stringInputArgument =
             {
-                $"--{SmallPedigreeOptionsParser.Bams.Info.Name}", bamPath.FullName
+                $"--{SmallPedigreeOptionsParser.Bams.Info.Name}", bamPath.FullName, $"--{SmallPedigreeOptionsParser.Bams.Info.Name}", bamPath.FullName, "father", "sampleID"
             };
 
             var result = SmallPedigreeOptionsParser.Bams.Parse(stringInputArgument);
             Assert.True(result.Success);
 
-            var sampleResult = result.Result.Single();
+            var sampleResult = result.Result.First();
             Assert.Equal(bamPath, sampleResult.Bam);
             Assert.Equal(SampleType.Other, sampleResult.SampleType);
             Assert.Equal("COLO829BL", sampleResult.SampleName);
+
+            sampleResult = result.Result[1];
+            Assert.Equal(bamPath, sampleResult.Bam);
+            Assert.Equal(SampleType.Father, sampleResult.SampleType);
+            Assert.Equal("sampleID", sampleResult.SampleName);
+        }
+
+        [Fact]
+        public void ParsePedigreeSample_ReturnsSuccessfulResultWithDefaultValues()
+        {
+            string assemblyFolder = Isas.Framework.Utilities.Utilities.GetAssemblyFolder(typeof(ModeParserTests));
+            var dataFolder = new DirectoryLocation(assemblyFolder).GetDirectoryLocation("Data");
+            var bamPath = dataFolder.GetFileLocation("Tiny_COLO829BL_S1.bam");
+            string[] stringInputArgument =
+            {
+                $"--{SmallPedigreeOptionsParser.Bams.Info.Name}", bamPath.FullName, "--sample-b-allele-vcf", bamPath.FullName
+            };
+
+            var result = new SmallPedigreeOptionsParser().Parse(stringInputArgument);
+            Assert.True(result.Success);
         }
     }
 }

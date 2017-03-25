@@ -25,7 +25,7 @@ namespace Canvas.CommandLineParsing
                 GermlineWgsModeParser.Bam.Info.Names.ToArray());
         private static readonly FileOption PloidyVcf = FileOption.Create("multisample .vcf file containing regions of known ploidy. Copy number calls matching the known ploidy in these regions will be considered non-variant", PloidyVcfOptionName);
         private static readonly FileOption PopulationBAlleleSites = SingleSampleCommonOptionsParser.PopulationBAlleleSites;
-        private static readonly FileOption SampleBAlleleSites = FileOption.CreateRequired("multisample .vcf file containing SNV b-allele sites (only sites with PASS in the filter column will be used)", SingleSampleCommonOptionsParser.SampleBAlleleVcfOptionName);
+        private static readonly FileOption SampleBAlleleSites = FileOption.Create("multisample .vcf file containing SNV b-allele sites (only sites with PASS in the filter column will be used)", SingleSampleCommonOptionsParser.SampleBAlleleVcfOptionName);
         private static readonly FileOption CommonCnvsBed = FileOption.Create(".bed file containing regions of known common CNVs", "common-cnvs-bed");
         private static readonly ExclusiveFileOption BAlleleSites = ExclusiveFileOption.CreateRequired(SampleBAlleleSites, PopulationBAlleleSites);
         
@@ -76,8 +76,8 @@ namespace Canvas.CommandLineParsing
             if (HasMoreThanOne(bams, CommandLineParsing.SampleType.Mother, out failedResult) ||
                 HasMoreThanOne(bams, CommandLineParsing.SampleType.Father, out failedResult) ||
                 HasMoreThanOne(bams, CommandLineParsing.SampleType.Proband, out failedResult))
-                return false;
-            return true;
+                return true;
+            return false;
         }
 
         private bool HasMoreThanOne(List<SmallPedigreeSampleOptions> bams, SampleType sampleType, out ParsingResult<SmallPedigreeOptions> failedResult)
