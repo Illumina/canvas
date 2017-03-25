@@ -1,5 +1,6 @@
 using System;
 using CanvasCommon.CommandLineParsing.OptionProcessing;
+using System.Reflection;
 
 namespace CanvasCommon.CommandLineParsing.CoreOptionTypes
 {
@@ -39,13 +40,21 @@ namespace CanvasCommon.CommandLineParsing.CoreOptionTypes
             if (value == null) return ParsingResult<T>.SuccessfulResult(_defaultValue);
             try
             {
-                T parsedValue = (T)Convert.ChangeType(value, GetUnderlyingType(typeof(T)));
+                T parsedValue = ConvertInternal(value);
                 return ParsingResult<T>.SuccessfulResult(parsedValue);
             }
             catch (Exception)
             {
                 return ParsingResult<T>.FailedResult($"Error parsing {Info.Name} option: failed to convert {value} to {typeof(T)}");
             }
+        }
+
+        private static T ConvertInternal(string value)
+        {
+            if (typeof(T).GetTypeInfo().IsEnum)
+                return (T)Enum.Parse(typeof(T), value, true);
+
+            return (T)Convert.ChangeType(value, GetUnderlyingType(typeof(T)));
         }
 
         private static Type GetUnderlyingType(Type type)

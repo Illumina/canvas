@@ -6,6 +6,7 @@ using CanvasCommon.CommandLineParsing.OptionProcessing;
 using Illumina.Common.FileSystem;
 using Ploeh.AutoFixture.Xunit2;
 using Xunit;
+using System.Linq;
 
 namespace CanvasTest.Canvas.CommandLineParsing
 {
@@ -569,6 +570,40 @@ namespace CanvasTest.Canvas.CommandLineParsing
 
             // assert
             Assert.False(parsedResult.HasValue);
+        }
+
+        [Fact]
+        public void ParseSampleType_ReturnsSuccessfulResult()
+        {
+            string[] stringInputArgument =
+            {
+                $"--{SmallPedigreeOptionsParser.SampleType.Info.Name}", "mother"
+            };
+
+            var result = SmallPedigreeOptionsParser.SampleType.Parse(stringInputArgument);
+
+            Assert.True(result.Success);
+            Assert.Equal(SampleType.Mother, result.Result);
+        }
+
+        [Fact]
+        public void ParseBam_ReturnsSuccessfulResultWithDefaultValues()
+        {
+            string assemblyFolder = Isas.Framework.Utilities.Utilities.GetAssemblyFolder(typeof(ModeParserTests));
+            var dataFolder = new DirectoryLocation(assemblyFolder).GetDirectoryLocation("Data");
+            var bamPath = dataFolder.GetFileLocation("Tiny_COLO829BL_S1.bam");
+            string[] stringInputArgument =
+            {
+                $"--{SmallPedigreeOptionsParser.Bams.Info.Name}", bamPath.FullName
+            };
+
+            var result = SmallPedigreeOptionsParser.Bams.Parse(stringInputArgument);
+            Assert.True(result.Success);
+
+            var sampleResult = result.Result.Single();
+            Assert.Equal(bamPath, sampleResult.Bam);
+            Assert.Equal(SampleType.Other, sampleResult.SampleType);
+            Assert.Equal("COLO829BL", sampleResult.SampleName);
         }
     }
 }

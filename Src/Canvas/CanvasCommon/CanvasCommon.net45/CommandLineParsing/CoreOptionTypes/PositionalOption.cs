@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using CanvasCommon.CommandLineParsing.OptionProcessing;
 using Illumina.Common;
+using System.Linq;
 
 namespace CanvasCommon.CommandLineParsing.CoreOptionTypes
 {
@@ -50,7 +51,7 @@ namespace CanvasCommon.CommandLineParsing.CoreOptionTypes
             string value = valueIndex < values.Count ? values[valueIndex] : null;
 
             if (option1.Info is RequiredValueOptionInfo && value == null)
-                return ParsingResult<T>.FailedResult($"{option1.Info} is a required positional argument for option {Info.Name}");
+                return ParsingResult<T>.FailedResult($"{option1.Info.Name} is a required positional argument for option {Info.Name}");
             return option1.Parse(value);
         }
 
@@ -77,18 +78,20 @@ namespace CanvasCommon.CommandLineParsing.CoreOptionTypes
 
         private static string GetDescription(bool required, params IOptionInfo[] optionsInfos)
         {
-            var names = "";
-            foreach (var option in optionsInfos)
+            var names = string.Join(" ", optionsInfos.Select(info =>
             {
-                if (names.Length == 0) names += " ";
-                names += $"[{option.Name}]";
-            }
+                if (info is RequiredValueOptionInfo)
+                    return info.Name;
+                return $"[{info.Name}]";
+            }));
+
             var descriptions = "";
             foreach (var option in optionsInfos)
             {
                 if (descriptions.Length == 0) descriptions += " ";
                 descriptions += $"{option.Name}: {option.Description}\n\n";
             }
+            names += " Option can be specified multiple times.";
             if (required)
                 names += " (required)";
             return names + "\n\n" + descriptions.Trim();
