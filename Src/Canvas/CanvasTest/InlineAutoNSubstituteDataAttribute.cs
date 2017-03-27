@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using ILMNcommon.Common;
+using Illumina.Common;
 using Ploeh.AutoFixture;
 using Ploeh.AutoFixture.AutoNSubstitute;
 using Ploeh.AutoFixture.Kernel;
@@ -10,7 +10,7 @@ using Ploeh.AutoFixture.Xunit2;
 using Xunit;
 using Xunit.Sdk;
 
-namespace UnitTests
+namespace CanvasTest
 {
     /// <summary>
     /// This attribute allows for combining multiple lists of complex input parameters for an xUnit [Theory] while

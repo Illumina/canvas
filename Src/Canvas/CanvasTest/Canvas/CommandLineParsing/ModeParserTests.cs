@@ -1,10 +1,9 @@
 ﻿using System.IO;
 using Canvas.CommandLineParsing;
-using Canvas.CommandLineParsing.CoreOptionTypes;
-using Canvas.CommandLineParsing.OptionProcessing;
-using Isas.Shared;
+using CanvasCommon.CommandLineParsing.CoreOptionTypes;
+using CanvasCommon.CommandLineParsing.OptionProcessing;
+using Illumina.Common.FileSystem;
 using Ploeh.AutoFixture.Xunit2;
-using UnitTests;
 using Xunit;
 
 namespace CanvasTest.Canvas.CommandLineParsing
@@ -222,14 +221,13 @@ namespace CanvasTest.Canvas.CommandLineParsing
         {
             // arrange
             Option<CommonOptions> commonOptionsParser = new CommonOptionsParser();
-            var kmerFasta = tempDirectory.CreateFile("kmer.fa");
-            var bAlleleVcf = tempDirectory.GetFileLocation("ballele.vcf").Touch();
+            var kmerFasta = tempDirectory.CreateFile("kmerv2.fa");
             var filterBed = tempDirectory.GetFileLocation("filter.bed").Touch();
             var output = tempDirectory.CreateSubdirectory("output");
             var genome = tempDirectory.CreateSubdirectory("WholeGenomeFasta");
             string[] stringInputArgument =
             {
-                "-r", kmerFasta.ToString(), "-o", output.ToString(), "-g", genome.ToString(), "--b-allele-vcf", bAlleleVcf.ToString(), "--filter-bed", filterBed.ToString(), "--sample-name", "SampleName"
+                "-r", kmerFasta.ToString(), "-o", output.ToString(), "-g", genome.ToString(), "--filter-bed", filterBed.ToString()
             };
 
             // act
@@ -249,14 +247,13 @@ namespace CanvasTest.Canvas.CommandLineParsing
         {
             // arrange
             Option<CommonOptions> commonOptionsParser = new CommonOptionsParser();
-            var kmerFasta = tempDirectory.GetFileLocation("kmer.fa");
-            var bAlleleVcf = tempDirectory.GetFileLocation("ballele.vcf").Touch();
+            var kmerFasta = tempDirectory.GetFileLocation("kmerv2.fa");
             var filterBed = tempDirectory.GetFileLocation("filter.bed").Touch();
             var output = tempDirectory.CreateSubdirectory("output");
             var genome = tempDirectory.CreateSubdirectory("WholeGenomeFasta");
             string[] stringInputArgument =
             {
-                "-r", kmerFasta.ToString(), "-o", output.ToString(), "-g", genome.ToString(), "--b-allele-vcf", bAlleleVcf.ToString(), "--filter-bed", filterBed.ToString(), "--sample-name", "SampleName"
+                "-r", kmerFasta.ToString(), "-o", output.ToString(), "-g", genome.ToString(), "--filter-bed", filterBed.ToString()
             };
 
             // act
@@ -264,7 +261,7 @@ namespace CanvasTest.Canvas.CommandLineParsing
 
             // assert
             Assert.False(result.Success);
-            Assert.Contains("kmer.fa", result.ErrorMessage);
+            Assert.Contains("kmerv2.fa", result.ErrorMessage);
             Assert.Contains("does not exist", result.ErrorMessage);
         }
 
@@ -313,6 +310,73 @@ namespace CanvasTest.Canvas.CommandLineParsing
 
         [Theory]
         [AutoData]
+        public void ParseExclusiveOption_WithOnlyOneOption_ReturnsOneValue(TemporaryDirectoryFixture tempDirectory)
+        {
+            FileOption option1 = FileOption.CreateRequired("file1 option", "file1");
+            FileOption option2 = FileOption.CreateRequired("file2 option", "file2");
+            // arrange
+            ExclusiveFileOption multiFileOption = ExclusiveFileOption.CreateRequired(option1, option2);
+            var file1 = tempDirectory.CreateFile("file1");
+            string[] args =
+            {
+                "--file1", file1.ToString()
+            };
+
+            // act
+            var result = multiFileOption.Parse(args);
+
+            // assert
+            Assert.Equal("", result.ErrorMessage);
+            Assert.True(result.Success);
+            Assert.Equal(file1, result.Result.Result);
+            Assert.Equal(option1, result.Result.MatchedOption);
+        }
+
+        [Theory]
+        [AutoData]
+        public void ParseExclusiveOption_WithOnlyTwoOption_ReturnsFailedParseResult(TemporaryDirectoryFixture tempDirectory)
+        {
+            FileOption option1 = FileOption.CreateRequired("file1 option", "file1");
+            FileOption option2 = FileOption.CreateRequired("file2 option", "file2");
+            // arrange
+            ExclusiveFileOption multiFileOption = ExclusiveFileOption.CreateRequired(option1, option2);
+            var file1 = tempDirectory.CreateFile("file1");
+            string[] args =
+            {
+                "--file1", file1.ToString(), "--file2", file1.ToString()
+            };
+
+            // act
+            var result = multiFileOption.Parse(args);
+
+            // assert
+            Assert.Contains("not both", result.ErrorMessage);
+            Assert.False(result.Success);
+        }
+
+        [Theory]
+        [AutoData]
+        public void ParseRequiredExclusiveOption_WithNeitherOptionSpecified_ReturnsFailedParseResult(TemporaryDirectoryFixture tempDirectory)
+        {
+            FileOption option1 = FileOption.CreateRequired("file1 option", "file1");
+            FileOption option2 = FileOption.CreateRequired("file2 option", "file2");
+            // arrange
+            ExclusiveFileOption multiFileOption = ExclusiveFileOption.CreateRequired(option1, option2);
+            string[] args =
+            {
+
+            };
+
+            // act
+            var result = multiFileOption.Parse(args);
+
+            // assert
+            Assert.Contains("must be specified", result.ErrorMessage);
+            Assert.False(result.Success);
+        }
+
+        [Theory]
+        [AutoData]
         public void ParseDictionaryOption_WithMultipleKeyValueArguments_ReturnsDictionary(TemporaryDirectoryFixture tempDirectory)
         {
             // arrange
@@ -355,6 +419,36 @@ namespace CanvasTest.Canvas.CommandLineParsing
             Assert.False(result.Success);
             Assert.Contains("Error", result.ErrorMessage);
             Assert.Contains("format", result.ErrorMessage);
+        }
+
+        [Fact]
+        public void ParseValueOption_ReturnsSuccessfulResult()
+        {
+            // arrange
+            uint inputArgument = 100;
+            ValueOption<uint> valueOption = ValueOption<uint>.Create("value option", "value");
+            string[] stringInputArgument =
+            {
+                "--value", inputArgument.ToString()
+            };
+            // act
+            uint parsedResult = valueOption.Parse(stringInputArgument).Result;
+
+            // assert
+            Assert.Equal(inputArgument, parsedResult);
+        }
+
+        [Fact]
+        public void ParseNullableValueOption_ReturnsSuccessfulResult()
+        {
+            // arrange
+            ValueOption<uint?> valueOption = ValueOption<uint?>.Create("value option", "value");
+
+            // act
+            uint? parsedResult = valueOption.Parse("").Result;
+
+            // assert
+            Assert.False(parsedResult.HasValue);
         }
     }
 }
