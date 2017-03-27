@@ -58,12 +58,12 @@ $Canvas.exe --help
 Canvas Canvas 1.25.0.49+master Copyright © Illumina 2017-03-23
 Usage: Canvas.exe [MODE] [OPTIONS]+  
 Available modes:  
-        Germline-WGS - CNV calling of a germline sample from whole genome sequencing data
-        Somatic-Enrichment - CNV calling of a somatic sample from targeted sequencing data
-        Somatic-WGS - CNV calling of a somatic sample from whole genome sequencing data
-        Tumor-normal-enrichment - CNV calling of a tumor/normal pair from targeted sequencing data
-        SmallPedigree-WGS - CNV calling of a small pedigree from whole genome sequencing data
-        
+- Germline-WGS - CNV calling of a germline sample from whole genome sequencing data
+- Somatic-Enrichment - CNV calling of a somatic sample from targeted sequencing data
+- Somatic-WGS - CNV calling of a somatic sample from whole genome sequencing data
+- Tumor-normal-enrichment - CNV calling of a tumor/normal pair from targeted sequencing data
+- SmallPedigree-WGS - CNV calling of a small pedigree from whole genome sequencing data
+       
 Options:  
   -h, --help                 show this message and exit  
   -v, --version              print version and exit  
