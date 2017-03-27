@@ -98,7 +98,36 @@ sudo apt-get install mono-runtime
 sudo apt-get install mono-complete
 ```
 
-## DEMO (Tumor-normal-enrichment data)
+## DEMO (SmallPedigree-WGS workflow) / DRAFT
+Here we provide an example on how to run Canvas SPW (Small Pedigree Workflow) on a simulated trio and then using EvaluateCNV (under Tools) to estimate performance metrics. This demo will work with the Canvas release v1.25 and above.
+
+#### Data and binaries
+1. Install .Net Core https://www.microsoft.com/net/core#linuxubuntu and download Canvas binary
+2. Add BaseSpace project https://basespace.illumina.com/s/DcPnOqHmtPNB with simulation bams to your account (you might need to register first). 
+3. Install BaseMount and load the canvas-spw project 
+```sudo bash -c "$(curl -L https://basemount.basespace.illumina.com/install/)"
+mkdir /tmp/BaseSpace
+basemount --scopes="Create Global, Browse Global, Create Projects, Read Global" /tmp/BaseSpace
+cd /tmp/BaseSpace
+```
+4. This should show the following folders under canvas-spw/AppResults 
+```
+- bams = simulated trio bams
+- canvasdata = hg19 genome reference files for running Canvas (can also be downloaded from https://illumina.box.com/CanvasPublic)
+- snvvcf = SNV vcf files to accompany bams
+- simdata = bed files with simulated inherited and de novo variants
+```
+
+#### Running Canvas
+1. Issue the following command (output directory - /tmp/gHapMixDemo)
+```
+sudo dotnet /ihart/Canvasv1.25/Canvas.dll SmallPedigree-WGS -b /tmp/BaseSpace/Projects/canvas-spw/AppResults/bams/Files/father.bam --bam=/tmp/BaseSpace/Projects/canvas-spw/AppResults/bams/Files/mother.bam --bam=/tmp/BaseSpace/Projects/canvas-spw/AppResults/bams/Files/child1.bam --mother=mother --father=father --proband=child1 -r /tmp/BaseSpace/Projects/canvas-spw/AppResults/canvasdata/Files/kmer.fa -g /tmp/BaseSpace/Projects/canvas-spw/AppResults/canvasdata/Files -f /tmp/BaseSpace/Projects/canvas-spw/AppResults/snvvcf/Files/Pedigree.vcf.gz --sample-b-allele-vcf /tmp/BaseSpace/Projects/canvas-spw/AppResults/canvasdata/Files/filter13.bed -o /tmp/gHapMixDemo
+```
+2. The run on instance should take around 1.1 hours. Results are available as VCF file that can be loaded into IGV or other visualization tools. 
+
+#### Running EvaluateCNV
+
+## DEMO (Tumor-normal-enrichment workflow)
 This demo will run Canvas on exome data for HCC2218 breast carcinoma cell lines and compare results with previously curated ground truth set. The demo presumes mono runtime and that binary files were installed to WORKDIR/canvas/canvas-1.3.4_x64/. 
 
 #### Data 
