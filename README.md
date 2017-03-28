@@ -100,7 +100,7 @@ sudo apt-get install mono-complete
 ```
 
 ## DEMO (SmallPedigree-WGS workflow) 
-Here we provide an example on how to run Canvas SPW (Small Pedigree Workflow) on a simulated trio and then using EvaluateCNV (under Tools) to estimate performance metrics. This demo will work with the Canvas release v1.25 and above. Amazon c4.2xlarge instance was used to create this demo.
+Here we provide an example on how to run Canvas SPW (Small Pedigree Workflow) on a simulated trio (bam files of 60x coverage) and then using EvaluateCNV (under Tools) to estimate performance metrics. This demo will work with the Canvas release v1.25 and above. Amazon c4.2xlarge instance was used to create this demo.
 
 #### Data and binaries
 1. Install .Net Core https://www.microsoft.com/net/core#linuxubuntu and download Canvas binary (CanvasDIR)
@@ -114,9 +114,9 @@ cd /tmp/BaseSpace
 ```
 4. This should show the following folders under canvas-spw/AppResults 
 ```
-- bams = simulated trio bams
+- bams = simulated trio bams of 60x coverage aligned with iSAAC
 - canvasdata = hg19 genome reference files for running Canvas (can also be downloaded from https://illumina.box.com/CanvasPublic)
-- snvvcf = SNV vcf files to accompany bams
+- snvvcf = SNV vcf files to accompany bams (join germline CNV calls using Strelka2 https://github.com/Illumina/strelka)
 - simdata = bed files with simulated inherited and de novo variants
 ```
 
@@ -126,7 +126,7 @@ cd /tmp/BaseSpace
 ```
 dotnet /CanvasDIR/Canvas.dll SmallPedigree-WGS -b /tmp/BaseSpace/Projects/canvas-spw/AppResults/bams/Files/father.bam --bam=/tmp/BaseSpace/Projects/canvas-spw/AppResults/bams/Files/mother.bam --bam=/tmp/BaseSpace/Projects/canvas-spw/AppResults/bams/Files/child1.bam --mother=mother --father=father --proband=child1 -r /tmp/BaseSpace/Projects/canvas-spw/AppResults/canvasdata/Files/kmer.fa -g /tmp/BaseSpace/Projects/canvas-spw/AppResults/canvasdata/Files -f /tmp/BaseSpace/Projects/canvas-spw/AppResults/snvvcf/Files/Pedigree.vcf.gz --sample-b-allele-vcf /tmp/BaseSpace/Projects/canvas-spw/AppResults/canvasdata/Files/filter13.bed -o /tmp/gHapMixDemo
 ```
-3. The runtime will depend on the number of available CPUs and whereas bam files were copied to a local drive. The run on a bare Amazon c4.2xlarge instance (8 CPUs and 15G RAM) took #. Results are available as VCF files: either a multi-sample VCF under gHapMixDemo or single-sample equivalents under gHapMixDemo/TempCNV folders. Here we will use EvaluateCNV tool supplied with Canvas distribution to calculate various performance metrics for inherited and de novo CNVs.
+3. The runtime will depend on the number of available CPUs and whereas bam files were copied to a local drive. The run on a bare Amazon c4.2xlarge instance (8 CPUs and 15G RAM) with network I/O took 04h34m. Results are available as VCF files: either a multi-sample VCF under gHapMixDemo or single-sample equivalents under gHapMixDemo/TempCNV folders. Here we will use EvaluateCNV tool supplied with Canvas distribution to calculate various performance metrics for inherited and de novo CNVs.
 
 #### Running EvaluateCNV
 1. First, we can run EvaluateCNV to produce recall and precision metrics for inherited Canvas CNV calls using truth variant files. 
