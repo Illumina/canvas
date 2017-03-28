@@ -77,8 +77,8 @@ The easiest way to install Canvas is to use the latest pre-copiled binaries from
 To install .Net Core follow the instructions at https://www.microsoft.com/net/core#linuxubuntu
 ### Mono
 Exact installation of mono environment depends on OS, below is an installation example for Ubuntu:
+#### Compiling mono from source
 ```
-Compiling mono from source
 mkdir mono-4.0.2_source
 wget http://download.mono-project.com/sources/mono/mono-4.0.2.5.tar.bz2
 tar xf mono-4.0.2.5.tar.bz2
@@ -92,20 +92,22 @@ sudo apt-get install gettext
 sudo apt-get install automake
 sudo apt-get install libtool
 ./autogen.sh --prefix=/home/ubuntu/mono-4.0.2 --with-large-heap=yes --enable-parallel-mark --with-sgen=yes
-
-Installing binaries (make sure mono-4.0.2 is installed)
+```
+#### Installing binaries
+```
 sudo apt-get install mono-runtime
 sudo apt-get install mono-complete
 ```
 
 ## DEMO (SmallPedigree-WGS workflow) / DRAFT
-Here we provide an example on how to run Canvas SPW (Small Pedigree Workflow) on a simulated trio and then using EvaluateCNV (under Tools) to estimate performance metrics. This demo will work with the Canvas release v1.25 and above.
+Here we provide an example on how to run Canvas SPW (Small Pedigree Workflow) on a simulated trio and then using EvaluateCNV (under Tools) to estimate performance metrics. This demo will work with the Canvas release v1.25 and above. Amazon c4.2xlarge instance was used to create this demo.
 
 #### Data and binaries
 1. Install .Net Core https://www.microsoft.com/net/core#linuxubuntu and download Canvas binary
 2. Add BaseSpace project https://basespace.illumina.com/s/DcPnOqHmtPNB with simulation bams to your account (you might need to register first). 
 3. Install BaseMount and load the canvas-spw project 
-```sudo bash -c "$(curl -L https://basemount.basespace.illumina.com/install/)"
+```
+sudo bash -c "$(curl -L https://basemount.basespace.illumina.com/install/)"
 mkdir /tmp/BaseSpace
 basemount --scopes="Create Global, Browse Global, Create Projects, Read Global" /tmp/BaseSpace
 cd /tmp/BaseSpace
@@ -119,11 +121,12 @@ cd /tmp/BaseSpace
 ```
 
 #### Running Canvas
-1. Issue the following command (output directory - /tmp/gHapMixDemo)
+1. In this example we are accessing files through basemount (Canvas should be run as user rather than sudo root). Files could also be copied to a local drive and run from there.
+2. Issue the following command (output directory - /tmp/gHapMixDemo)
 ```
-sudo dotnet /ihart/Canvasv1.25/Canvas.dll SmallPedigree-WGS -b /tmp/BaseSpace/Projects/canvas-spw/AppResults/bams/Files/father.bam --bam=/tmp/BaseSpace/Projects/canvas-spw/AppResults/bams/Files/mother.bam --bam=/tmp/BaseSpace/Projects/canvas-spw/AppResults/bams/Files/child1.bam --mother=mother --father=father --proband=child1 -r /tmp/BaseSpace/Projects/canvas-spw/AppResults/canvasdata/Files/kmer.fa -g /tmp/BaseSpace/Projects/canvas-spw/AppResults/canvasdata/Files -f /tmp/BaseSpace/Projects/canvas-spw/AppResults/snvvcf/Files/Pedigree.vcf.gz --sample-b-allele-vcf /tmp/BaseSpace/Projects/canvas-spw/AppResults/canvasdata/Files/filter13.bed -o /tmp/gHapMixDemo
+dotnet /ihart/Canvasv1.25/Canvas.dll SmallPedigree-WGS -b /tmp/BaseSpace/Projects/canvas-spw/AppResults/bams/Files/father.bam --bam=/tmp/BaseSpace/Projects/canvas-spw/AppResults/bams/Files/mother.bam --bam=/tmp/BaseSpace/Projects/canvas-spw/AppResults/bams/Files/child1.bam --mother=mother --father=father --proband=child1 -r /tmp/BaseSpace/Projects/canvas-spw/AppResults/canvasdata/Files/kmer.fa -g /tmp/BaseSpace/Projects/canvas-spw/AppResults/canvasdata/Files -f /tmp/BaseSpace/Projects/canvas-spw/AppResults/snvvcf/Files/Pedigree.vcf.gz --sample-b-allele-vcf /tmp/BaseSpace/Projects/canvas-spw/AppResults/canvasdata/Files/filter13.bed -o /tmp/gHapMixDemo
 ```
-2. The run on instance should take around 1.1 hours. Results are available as VCF file that can be loaded into IGV or other visualization tools. 
+3. The runtime will depend on the number of available CPUs and whereas bam files were copied to a local drive. The run on a bare Amazon c4.2xlarge instance (8 CPUs and 15G RAM) took #. Results are available as VCF file that can be loaded into IGV or other visualization tools. Here we will use EvaluateCNV tool supplied with Canvas distribution to calculate various performance metrics for inherited and de novo CNVs.
 
 #### Running EvaluateCNV
 
