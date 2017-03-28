@@ -116,7 +116,7 @@ cd /tmp/BaseSpace
 ```
 - bams = simulated trio bams of 60x coverage aligned with iSAAC
 - canvasdata = hg19 genome reference files for running Canvas (can also be downloaded from https://illumina.box.com/CanvasPublic)
-- snvvcf = SNV vcf files to accompany bams (join germline CNV calls using Strelka2 https://github.com/Illumina/strelka)
+- snvvcf = SNV vcf files to accompany bams (joint germline CNV calls using Strelka2 https://github.com/Illumina/strelka)
 - simdata = bed files with simulated inherited and de novo variants
 ```
 
