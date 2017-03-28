@@ -26,8 +26,7 @@ Build instructions
 ------------------
 
 ### Binaries:
-It is recommended to start from one of the [binary distributions on the Canvas releases page] [releases] if a suitable version is available.  
-
+It is recommended to start from one of the [binary distributions on the Canvas releases page] [releases] if a suitable version is available.  Executables can be run either under .Net Core or mono. .Net Core environment is recommended as it provides higher speed and lower RAM usage.
 [releases]:https://github.com/Illumina/canvas/releases
 
 ### Source code organization:
@@ -54,7 +53,7 @@ Run instructions
 
 Canvas can be run on a variety of sequencing inputs. See the help information from the Canvas.exe command line executable for the supported workflows and required input files:
 
-$Canvas.exe --help  
+$Canvas.exe --help  (or Canvas.dll --help under .Net Core)
 Canvas Canvas 1.25.0.49+master Copyright © Illumina 2017-03-23
 Usage: Canvas.exe [MODE] [OPTIONS]+  
 Available modes:  
