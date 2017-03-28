@@ -5,7 +5,7 @@ Canvas is a tool for calling copy number variants (CNVs) from human DNA sequenci
 
 Canvas is used as the copy number caller in the Isaac Whole Genome Sequencing workflow in BaseSpace (https://basespace.illumina.com), and in HiSeq Analysis Software (HAS) (http://support.illumina.com/sequencing/sequencing_software/hiseq-analysis-software.html).  
 
-Canvas is written in C# and runs either under a recent version of Mono (e.g. 3.10.0), .NET 4.5.1 and .Net Core 1.1.
+Canvas is written in C# and runs either under a recent version of Mono (e.g. 3.10.0), .NET 4.5.1 and .NET Core 1.1.
 
 For more information about Canvas and the algorithms it uses see the [software design document] [SDD].
 
@@ -26,7 +26,7 @@ Build instructions
 ------------------
 
 ### Binaries:
-It is recommended to start from one of the [binary distributions on the Canvas releases page] [releases] if a suitable version is available.  Executables can be run either under .Net Core or mono. .Net Core environment is recommended as it provides higher speed and lower RAM usage.
+It is recommended to start from one of the [binary distributions on the Canvas releases page] [releases] if a suitable version is available.  Executables can be run either under .NET Core or mono. .NET Core environment is recommended as it provides higher speed and lower RAM usage.
 [releases]:https://github.com/Illumina/canvas/releases
 
 ### Source code organization:
@@ -53,7 +53,7 @@ Run instructions
 
 Canvas can be run on a variety of sequencing inputs. See the help information from the Canvas.exe command line executable for the supported workflows and required input files:
 
-$Canvas.exe --help  (or Canvas.dll --help under .Net Core)
+$Canvas.exe --help  (or Canvas.dll --help under .NET Core)
 Canvas Canvas 1.25.0.49+master Copyright © Illumina 2017-03-23
 Usage: Canvas.exe [MODE] [OPTIONS]+  
 Available modes:  
@@ -73,7 +73,7 @@ The required input files for Human reference genome builds GRCh37, hg19, and GRC
 ## Installation
 The easiest way to install Canvas is to use the latest pre-copiled binaries from [releases]:https://github.com/Illumina/canvas/releases (just download and uncopress). 
 ### .Net Core 
-To install .Net Core follow the instructions at https://www.microsoft.com/net/core#linuxubuntu
+To install .NET Core follow the instructions at https://www.microsoft.com/net/core#linuxubuntu
 ### Mono
 Exact installation of mono environment depends on OS, below is an installation example for Ubuntu:
 #### Compiling mono from source
