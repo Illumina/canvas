@@ -102,7 +102,7 @@ sudo apt-get install mono-complete
 Here we provide an example on how to run Canvas SPW (Small Pedigree Workflow) on a simulated trio and then using EvaluateCNV (under Tools) to estimate performance metrics. This demo will work with the Canvas release v1.25 and above. Amazon c4.2xlarge instance was used to create this demo.
 
 #### Data and binaries
-1. Install .Net Core https://www.microsoft.com/net/core#linuxubuntu and download Canvas binary
+1. Install .Net Core https://www.microsoft.com/net/core#linuxubuntu and download Canvas binary (CanvasDIR)
 2. Add BaseSpace project https://basespace.illumina.com/s/DcPnOqHmtPNB with simulation bams to your account (you might need to register first). 
 3. Install BaseMount and load the canvas-spw project 
 ```
@@ -123,11 +123,27 @@ cd /tmp/BaseSpace
 1. In this example we are accessing files through basemount (Canvas should be run as user rather than sudo root). Files could also be copied to a local drive and run from there.
 2. Issue the following command (output directory - /tmp/gHapMixDemo)
 ```
-dotnet /ihart/Canvasv1.25/Canvas.dll SmallPedigree-WGS -b /tmp/BaseSpace/Projects/canvas-spw/AppResults/bams/Files/father.bam --bam=/tmp/BaseSpace/Projects/canvas-spw/AppResults/bams/Files/mother.bam --bam=/tmp/BaseSpace/Projects/canvas-spw/AppResults/bams/Files/child1.bam --mother=mother --father=father --proband=child1 -r /tmp/BaseSpace/Projects/canvas-spw/AppResults/canvasdata/Files/kmer.fa -g /tmp/BaseSpace/Projects/canvas-spw/AppResults/canvasdata/Files -f /tmp/BaseSpace/Projects/canvas-spw/AppResults/snvvcf/Files/Pedigree.vcf.gz --sample-b-allele-vcf /tmp/BaseSpace/Projects/canvas-spw/AppResults/canvasdata/Files/filter13.bed -o /tmp/gHapMixDemo
+dotnet /CanvasDIR/Canvas.dll SmallPedigree-WGS -b /tmp/BaseSpace/Projects/canvas-spw/AppResults/bams/Files/father.bam --bam=/tmp/BaseSpace/Projects/canvas-spw/AppResults/bams/Files/mother.bam --bam=/tmp/BaseSpace/Projects/canvas-spw/AppResults/bams/Files/child1.bam --mother=mother --father=father --proband=child1 -r /tmp/BaseSpace/Projects/canvas-spw/AppResults/canvasdata/Files/kmer.fa -g /tmp/BaseSpace/Projects/canvas-spw/AppResults/canvasdata/Files -f /tmp/BaseSpace/Projects/canvas-spw/AppResults/snvvcf/Files/Pedigree.vcf.gz --sample-b-allele-vcf /tmp/BaseSpace/Projects/canvas-spw/AppResults/canvasdata/Files/filter13.bed -o /tmp/gHapMixDemo
 ```
-3. The runtime will depend on the number of available CPUs and whereas bam files were copied to a local drive. The run on a bare Amazon c4.2xlarge instance (8 CPUs and 15G RAM) took #. Results are available as VCF file that can be loaded into IGV or other visualization tools. Here we will use EvaluateCNV tool supplied with Canvas distribution to calculate various performance metrics for inherited and de novo CNVs.
+3. The runtime will depend on the number of available CPUs and whereas bam files were copied to a local drive. The run on a bare Amazon c4.2xlarge instance (8 CPUs and 15G RAM) took #. Results are available as VCF files: either a multi-sample VCF under gHapMixDemo or single-sample equivalents under gHapMixDemo/TempCNV folders. Here we will use EvaluateCNV tool supplied with Canvas distribution to calculate various performance metrics for inherited and de novo CNVs.
 
 #### Running EvaluateCNV
+1. First, we can run EvaluateCNV to produce recall and precision metrics for inherited Canvas CNV calls using truth variant files. 
+```
+zcat /tmp/gHapMixDemo/TempCNV_child1/CNV.vcf.gz | grep -v ":REF:" > /tmp/gHapMixDemo/TempCNV_child1/CNV.vcf (remove REF calls)
+/CanvasDIR/Tools/EvaluateCNV/EvaluateCNV.dll /ihart/BaseSpace/Projects/CanvasSPW/AppResults/simdata/Files/child1_truth.bed /tmp/gHapMixDemo/TempCNV_child1/CNV.vcf /CanvasDIR/Tools/EvaluateCNV/generic.cnaqc.excluded_regions.bed inheritedCNVs.txt 
+```
+This gives us for PASS variants: 
+Recall  97.46
+Precision       93.85
+
+2. Next, we run a similar command but using the de novo variant truth file and a -q 20 argument to extract variants with DQ20.
+```
+/CanvasDIR/Tools/EvaluateCNV/EvaluateCNV.dll /ihart/BaseSpace/Projects/CanvasSPW/AppResults/simdata/Files/child1_truth.bed /tmp/gHapMixDemo/TempCNV_child1/CNV.vcf.gz /CanvasDIR/Tools/EvaluateCNV/generic.cnaqc.excluded_regions.bed -q 20 denovoCNVs.txt  
+```
+This gives us for PASS variants:
+Recall  97.98
+Precision       96.51
 
 ## DEMO (Tumor-normal-enrichment workflow)
 This demo will run Canvas on exome data for HCC2218 breast carcinoma cell lines and compare results with previously curated ground truth set. The demo presumes mono runtime and that binary files were installed to WORKDIR/canvas/canvas-1.3.4_x64/. 
