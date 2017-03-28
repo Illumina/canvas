@@ -1,12 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
-
 using CanvasBin;
 using CanvasCommon;
-using Isas.Shared;
-using SequencingFiles;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Isas.SequencingFiles;
+using Illumina.Common;
 
 namespace CanvasTest
 {
@@ -19,9 +18,9 @@ namespace CanvasTest
             Dictionary<string, int> readNameToBinIndex = new Dictionary<string, int>();
             HashSet<string> samePositionReadNames = new HashSet<string>();
             long usableFragmentCount = 0;
-            List<GenomicBin> bins = new List<GenomicBin>()
+            List<SampleGenomicBin> bins = new List<SampleGenomicBin>()
             {
-                new GenomicBin("chr1", 100, 200, 50, 0)
+                new SampleGenomicBin("chr1", 100, 200, 50, 0)
             };
             int binIndexStart = 0;
 
@@ -91,11 +90,11 @@ namespace CanvasTest
         [TestMethod]
         public void TestBinSingleEndBam()
         {
-            string assemblyFolder = Isas.Shared.Utilities.GetAssemblyFolder(typeof(TestCanvasBin));
+            string assemblyFolder = Isas.Framework.Utilities.Utilities.GetAssemblyFolder(typeof(TestCanvasBin));
             string dataFolder = Path.Combine(assemblyFolder, "Data");
             string bedPath = Path.Combine(dataFolder, "bins_chrM.bed");
             string bamPath = Path.Combine(dataFolder, "single-end.bam");
-            Dictionary<string, List<GenomicBin>> bins = CanvasCommon.Utilities.LoadBedFile(bedPath, gcIndex: 3);
+            Dictionary<string, List<SampleGenomicBin>> bins = CanvasCommon.Utilities.LoadBedFile(bedPath, gcIndex: 3);
             string chrom = "chrM";
             FragmentBinner.BinTask binTask = new FragmentBinner.BinTask(null, chrom, bamPath, bins[chrom]);
             bool exceptionCaught = false;
@@ -103,7 +102,7 @@ namespace CanvasTest
             {
                 binTask.DoIt();
             }
-            catch (ApplicationException e)
+            catch (IlluminaException e)
             {
                 if (e.Message.Contains("No paired alignments found"))
                     exceptionCaught = true;
@@ -115,7 +114,7 @@ namespace CanvasTest
         public void TestAllChromsInBedAreInBam()
         {
             CanvasBinParameters parameters = new CanvasBinParameters();
-            string assemblyFolder = Isas.Shared.Utilities.GetAssemblyFolder(typeof(TestCanvasBin));
+            string assemblyFolder = Isas.Framework.Utilities.Utilities.GetAssemblyFolder(typeof(TestCanvasBin));
             string dataFolder = Path.Combine(assemblyFolder, "Data");
             parameters.predefinedBinsFile = Path.Combine(dataFolder, "bins_chrU.bed");
             parameters.bamFile = Path.Combine(dataFolder, "single-end.bam");
@@ -127,7 +126,7 @@ namespace CanvasTest
             {
                 fragmentBinner.Bin();
             }
-            catch (ApplicationException e)
+            catch (IlluminaException e)
             {
                 if (e.Message.Contains(String.Format("Not all chromosomes in {0} are found in {1}.", parameters.predefinedBinsFile, parameters.bamFile)))
                     exceptionCaught = true;

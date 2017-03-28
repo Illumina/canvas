@@ -1,8 +1,8 @@
-﻿using Isas.Shared;
-using System;
+﻿using System;
 using System.IO;
+using Illumina.Common.FileSystem;
 
-namespace UnitTests
+namespace CanvasTest
 {
     /// <summary>
     /// A fixture for testing to give you a temporary directory and cleanup when done.
