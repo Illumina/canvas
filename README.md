@@ -27,6 +27,7 @@ Build instructions
 
 ### Binaries:
 It is recommended to start from one of the [binary distributions on the Canvas releases page] [releases] if a suitable version is available.  Executables can be run either under .NET Core or mono. .NET Core environment is recommended as it provides higher speed and lower RAM usage.
+
 [releases]:https://github.com/Illumina/canvas/releases
 
 ### Source code organization:
@@ -183,6 +184,7 @@ CNV.vcf.gz files will be saved to HCC2218_v2 output directory. Depending on the 
 
 #### Inspecting results 
 Now we can test Canvas performance by using a set of previously curated HCC2218 copy number calls from whole-genome data (HCC2218Truth.vcf) and a set of repetitive or ambiguous regions (HCC2218.cnaqc.excluded_regions.bed), which are available in the TruthSets directory under https://illumina.box.com/CanvasPublic.  The evaluation is accomplished by using EvaluateCNV; the latest binary distribution for the tool can be found in [releases]:https://github.com/Illumina/canvas/releases.  
+
 EvaluateCNV usage info:
 ```
 EvaluateCNV $TruthSetPath $CNV.vcf $ExcludedRegionsBed $OutputPath  [$RegionOfInterestBed]
