@@ -132,18 +132,21 @@ dotnet /CanvasDIR/Canvas.dll SmallPedigree-WGS -b /tmp/BaseSpace/Projects/canvas
 ```
 zcat /tmp/gHapMixDemo/TempCNV_child1/CNV.vcf.gz | grep -v ":REF:" > /tmp/gHapMixDemo/TempCNV_child1/CNV.vcf (remove REF calls)
 /CanvasDIR/Tools/EvaluateCNV/EvaluateCNV.dll /ihart/BaseSpace/Projects/CanvasSPW/AppResults/simdata/Files/child1_truth.bed /tmp/gHapMixDemo/TempCNV_child1/CNV.vcf /CanvasDIR/Tools/EvaluateCNV/generic.cnaqc.excluded_regions.bed inheritedCNVs.txt 
-```
+
 This gives us for PASS variants: 
 Recall  97.46
 Precision       93.85
+```
 
 2. Next, we run a similar command but using the de novo variant truth file and a -q 20 argument to extract variants with DQ20.
 ```
 /CanvasDIR/Tools/EvaluateCNV/EvaluateCNV.dll /ihart/BaseSpace/Projects/CanvasSPW/AppResults/simdata/Files/child1_truth.bed /tmp/gHapMixDemo/TempCNV_child1/CNV.vcf.gz /CanvasDIR/Tools/EvaluateCNV/generic.cnaqc.excluded_regions.bed -q 20 denovoCNVs.txt  
-```
+
 This gives us for PASS variants:
 Recall  97.98
 Precision       96.51
+```
+
 
 ## DEMO (Tumor-normal-enrichment workflow)
 This demo will run Canvas on exome data for HCC2218 breast carcinoma cell lines and compare results with previously curated ground truth set. The demo presumes mono runtime and that binary files were installed to WORKDIR/canvas/canvas-1.3.4_x64/. 
