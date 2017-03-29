@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using Illumina.Common.FileSystem;
 using Isas.SequencingFiles;
 //using MathNet.Numerics.Statistics;
 
@@ -58,7 +59,9 @@ namespace CanvasCommon
             }
 
             GenomeMetadata genome = new GenomeMetadata();
-            genome.Deserialize(Path.Combine(wholeGenomeFastaDirectory, "GenomeSize.xml"));
+            IReferenceGenome referenceGenome = new ReferenceGenome(new DirectoryLocation(wholeGenomeFastaDirectory));
+            genome.Deserialize(referenceGenome);
+
             foreach (GenomeMetadata.SequenceMetadata chromosome in genome.Sequences)
             {
                 writer.WriteLine($"##contig=<ID={chromosome.Name},length={chromosome.Length}>");
@@ -117,17 +120,7 @@ namespace CanvasCommon
                     {
                         cnvTypes.Add(currentSegments[sampleIndex].GetCnvType(referenceCopyNumbers[sampleIndex]));
                     }
-                    CnvType cnvType;
-                    if (cnvTypes.TrueForAll(x => x == CnvType.Reference))
-                        cnvType = CnvType.Reference;
-                    else if (cnvTypes.TrueForAll(x => x == CnvType.Reference | x == CnvType.Loss))
-                        cnvType = CnvType.Loss;
-                    else if (cnvTypes.TrueForAll(x => x == CnvType.Reference | x == CnvType.Gain))
-                        cnvType = CnvType.Gain;
-                    else if (cnvTypes.TrueForAll(x => x == CnvType.Reference | x == CnvType.LossOfHeterozygosity))
-                        cnvType = CnvType.LossOfHeterozygosity;
-                    else
-                        cnvType = CnvType.ComplexCnv;
+                    var cnvType = AssignCnvType(cnvTypes);
 
                     WriteInfoField(writer, firstSampleSegment, cnvType, denovoQualityThreshold, isMultisample: segments.Count > 1);
                     //  FORMAT field
@@ -137,6 +130,44 @@ namespace CanvasCommon
                         WriteFormatField(writer, currentSegments);
                 }
             }
+        }
+
+        private static CnvType AssignCnvType(List<CnvType> cnvTypes)
+        {
+            CnvType cnvType;
+            if (cnvTypes.Count == 1)
+            {
+                switch (cnvTypes.Single())
+                {
+                    case CnvType.Reference:
+                        cnvType = CnvType.Reference;
+                        break;
+                    case CnvType.Loss:
+                        cnvType = CnvType.Loss;
+                        break;
+                    case CnvType.Gain:
+                        cnvType = CnvType.Gain;
+                        break;
+                    case CnvType.LossOfHeterozygosity:
+                        cnvType = CnvType.LossOfHeterozygosity;
+                        break;
+                    default:
+                        throw new ArgumentOutOfRangeException($"cnvType {cnvTypes.Single()} does not exist.");
+                }
+                return cnvType;
+            }
+
+            if (cnvTypes.TrueForAll(x => x == CnvType.Reference))
+                cnvType = CnvType.Reference;
+            else if (cnvTypes.TrueForAll(x => x == CnvType.Reference | x == CnvType.Loss))
+                cnvType = CnvType.Loss;
+            else if (cnvTypes.TrueForAll(x => x == CnvType.Reference | x == CnvType.Gain))
+                cnvType = CnvType.Gain;
+            else if (cnvTypes.TrueForAll(x => x == CnvType.Reference | x == CnvType.LossOfHeterozygosity))
+                cnvType = CnvType.LossOfHeterozygosity;
+            else
+                cnvType = CnvType.ComplexCnv;
+            return cnvType;
         }
 
         private static void WriteSingleSampleInfo(BgzipOrStreamWriter writer, CanvasSegment segment)
@@ -227,14 +258,14 @@ namespace CanvasCommon
         }
 
         public static void WriteMultiSampleSegments(string outVcfPath, List<List<CanvasSegment>> segments, List<double?> diploidCoverage,
-        string wholeGenomeFastaDirectory, List<string> sampleNames, List<string> extraHeaders, List<PloidyInfo> ploidy, int qualityThreshold,
+        string wholeGenomeFastaDirectory, List<string> sampleNames, List<string> extraHeaders, List<PloidyInfo> ploidies, int qualityThreshold,
         bool isPedigreeInfoSupplied = true, int ? denovoQualityThreshold = null)
         {
             using (BgzipOrStreamWriter writer = new BgzipOrStreamWriter(outVcfPath))
             {
                 var genome = WriteVcfHeader(segments.First(), GetMean(diploidCoverage), wholeGenomeFastaDirectory, sampleNames,
                     extraHeaders, qualityThreshold, writer, denovoQualityThreshold);
-                WriteVariants(segments, ploidy, genome, writer, isPedigreeInfoSupplied, denovoQualityThreshold);
+                WriteVariants(segments, ploidies, genome, writer, isPedigreeInfoSupplied, denovoQualityThreshold);
             }
         }
 
