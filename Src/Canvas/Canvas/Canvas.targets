@@ -7,7 +7,10 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
   </ItemGroup>-->
-  <Target Name="CanvasCopyTarget" AfterTargets="Build">
+  <Target Name="CanvasCopyTargetBuild" AfterTargets="Build">
     <Exec Command="robocopy /PURGE $(MSBuildThisFileDirectory)Canvas $(TargetDir)Canvas || if %ERRORLEVEL% LSS 8 exit 0"/>
+  </Target>
+  <Target Name="CanvasCopyTargetPublish" AfterTargets="Publish">
+    <Exec Command="robocopy /PURGE $(MSBuildThisFileDirectory)Canvas $(ProjectDir)$(PublishDir)Canvas || if %ERRORLEVEL% LSS 8 exit 0"/>
   </Target>
 </Project>

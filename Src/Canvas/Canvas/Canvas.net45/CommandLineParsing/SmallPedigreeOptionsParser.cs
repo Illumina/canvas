@@ -5,6 +5,7 @@ using CanvasCommon.CommandLineParsing.CoreOptionTypes;
 using CanvasCommon.CommandLineParsing.OptionProcessing;
 using Illumina.Common.FileSystem;
 using Isas.SequencingFiles;
+using Illumina.Common;
 
 namespace Canvas.CommandLineParsing
 {
@@ -14,15 +15,36 @@ namespace Canvas.CommandLineParsing
         public const string MotherOptionName = "mother";
         public const string FatherOptionName = "father";
         public const string PloidyVcfOptionName = "ploidy-vcf";
-        private static readonly MultiValueOption<IFileLocation> Bams = new MultiValueOption<IFileLocation>(GermlineWgsModeParser.Bam);
+        internal static readonly ValueOption<SampleType> SampleType = ValueOption<SampleType>.CreateWithDefault(CommandLineParsing.SampleType.Other, "Pedigree member type (either proband, mother, father or other). Default is other", "pedigree-member");
+        private static readonly StringOption SampleName = StringOption.Create("sample name. Default is SM tag in RG header of the .bam", SingleSampleCommonOptionsParser.SampleName.Info.Names.ToArray());
+        internal static readonly PositionalOption<IFileLocation, SampleType, string, SmallPedigreeSampleOptions> Bams =
+            new PositionalOption<IFileLocation, SampleType, string, SmallPedigreeSampleOptions>(Parse, true,
+                GermlineWgsModeParser.Bam,
+                SampleType,
+                SampleName,
+                GermlineWgsModeParser.Bam.Info.Names.ToArray());
         private static readonly FileOption PloidyVcf = FileOption.Create("multisample .vcf file containing regions of known ploidy. Copy number calls matching the known ploidy in these regions will be considered non-variant", PloidyVcfOptionName);
         private static readonly FileOption PopulationBAlleleSites = SingleSampleCommonOptionsParser.PopulationBAlleleSites;
-        private static readonly FileOption SampleBAlleleSites = FileOption.CreateRequired("multisample .vcf file containing SNV b-allele sites (only sites with PASS in the filter column will be used)", SingleSampleCommonOptionsParser.SampleBAlleleVcfOptionName);
+        private static readonly FileOption SampleBAlleleSites = FileOption.Create("multisample .vcf file containing SNV b-allele sites (only sites with PASS in the filter column will be used)", SingleSampleCommonOptionsParser.SampleBAlleleVcfOptionName);
         private static readonly FileOption CommonCnvsBed = FileOption.Create(".bed file containing regions of known common CNVs", "common-cnvs-bed");
-        private static readonly MultiValueOption<string> Proband = new MultiValueOption<string>(StringOption.Create("Proband sample name", ProbandOptionName));
-        private static readonly StringOption Mother = StringOption.Create("Mother sample name", MotherOptionName);
-        private static readonly StringOption Father = StringOption.Create("Father sample name", FatherOptionName);
         private static readonly ExclusiveFileOption BAlleleSites = ExclusiveFileOption.CreateRequired(SampleBAlleleSites, PopulationBAlleleSites);
+        
+        private static ParsingResult<SmallPedigreeSampleOptions> Parse(IFileLocation bam, SampleType sampleType, string sampleName)
+        {
+            if (sampleName == null)
+            {
+                Action a = () =>
+                {
+                    BamReader.WrapException(bam, reader =>
+                    {
+                        sampleName = reader.GetReadGroupSample();
+                    });
+                };
+                if (!a.Try(out Exception e))
+                    return ParsingResult<SmallPedigreeSampleOptions>.FailedResult(e.Message);
+            }
+            return ParsingResult<SmallPedigreeSampleOptions>.SuccessfulResult(new SmallPedigreeSampleOptions(sampleName, sampleType, bam));
+        }
 
         public override OptionCollection<SmallPedigreeOptions> GetOptions()
         {
@@ -31,55 +53,42 @@ namespace Canvas.CommandLineParsing
                 Bams,
                 PloidyVcf,
                 BAlleleSites,
-                CommonCnvsBed,
-                Proband,
-                Mother,
-                Father
+                CommonCnvsBed
             };
         }
 
         public override ParsingResult<SmallPedigreeOptions> Parse(SuccessfulResultCollection parseInput)
         {
             var bams = parseInput.Get(Bams);
-            var sampleNameToBam = MapSampleNameToBam(bams);
             var ploidyVcf = parseInput.Get(PloidyVcf);
             var bAlleleSites = parseInput.Get(BAlleleSites);
-            var mother = parseInput.Get(Mother);
-            var father = parseInput.Get(Father);
-            var proband = parseInput.Get(Proband);
             var commonCnvsBed = parseInput.Get(CommonCnvsBed);
 
-            List<SmallPedigreeSampleOptions> samples = new List<SmallPedigreeSampleOptions>();
-            foreach (var sample in sampleNameToBam)
-            {
-                var sampleType = GetSampleType(sample.Key, mother, father, proband);
-                samples.Add(new SmallPedigreeSampleOptions(sample.Key, sampleType, sample.Value));
-            }
-
-            return ParsingResult<SmallPedigreeOptions>.SuccessfulResult(new SmallPedigreeOptions(samples, commonCnvsBed, bAlleleSites.Result, bAlleleSites.MatchedOption.Equals(PopulationBAlleleSites), ploidyVcf));
+            ParsingResult<SmallPedigreeOptions> failedResult;
+            if (HasMoreThanOneSameSampleType(bams, out failedResult))
+                return failedResult;
+            return ParsingResult<SmallPedigreeOptions>.SuccessfulResult(new SmallPedigreeOptions(bams, commonCnvsBed, bAlleleSites.Result, bAlleleSites.MatchedOption.Equals(PopulationBAlleleSites), ploidyVcf));
         }
 
-        private SampleType GetSampleType(string sampleName, string mother, string father, List<string> probands)
+        private bool HasMoreThanOneSameSampleType(List<SmallPedigreeSampleOptions> bams, out ParsingResult<SmallPedigreeOptions> failedResult)
         {
-            var isMother = sampleName == mother;
-            var isFather = sampleName == father;
-            var isProband = probands.Any(proband => sampleName == proband);
-            if (new[] { isMother, isFather, isProband }.Where(item => item).Count() > 1)
-                throw new ArgumentException($"Sample {sampleName} can only have one sample type (mother | father | proband)");
-            if (isMother) return SampleType.Mother;
-            if (isFather) return SampleType.Father;
-            if (isProband) return SampleType.Proband;
-            return SampleType.Other;
+            failedResult = null;
+            if (HasMoreThanOne(bams, CommandLineParsing.SampleType.Mother, out failedResult) ||
+                HasMoreThanOne(bams, CommandLineParsing.SampleType.Father, out failedResult) ||
+                HasMoreThanOne(bams, CommandLineParsing.SampleType.Proband, out failedResult))
+                return true;
+            return false;
         }
 
-        private Dictionary<string, IFileLocation> MapSampleNameToBam(List<IFileLocation> bams)
+        private bool HasMoreThanOne(List<SmallPedigreeSampleOptions> bams, SampleType sampleType, out ParsingResult<SmallPedigreeOptions> failedResult)
         {
-            var map = new Dictionary<string, IFileLocation>();
-            foreach (IFileLocation bam in bams)
-            {
-                BamReader.WrapException(bam, reader => map.Add(reader.GetReadGroupSample(), bam));
-            }
-            return map;
+            failedResult = null;
+            var sameType = bams.Where(bam => bam.SampleType == sampleType);
+            if (sameType.Count() <= 1) return false;
+
+            var bamsSameType = string.Join(",", sameType.Select(bam => $"'{bam.Bam}'"));
+            failedResult = ParsingResult<SmallPedigreeOptions>.FailedResult($"Pedigree can have at most one sample of type '{sampleType}'. Samples with these bams have the same type: {bamsSameType}");
+            return true;
         }
     }
 }
