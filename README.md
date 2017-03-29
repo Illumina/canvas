@@ -100,7 +100,7 @@ sudo apt-get install mono-complete
 ```
 
 ## DEMO (SmallPedigree-WGS workflow) 
-Here we provide an example on how to run Canvas SPW (Small Pedigree Workflow) on a simulated trio (bam files of 60x coverage) and then using EvaluateCNV (under Tools) to estimate performance metrics. This demo will work with the Canvas release v1.25 and above. Amazon c4.2xlarge instance was used to create this demo. 
+Here we provide an example on how to run Canvas SPW (Small Pedigree Workflow) on a simulated trio (bam files of 60x coverage) and then using EvaluateCNV (under Tools) to estimate performance metrics. This demo will work with the *Canvas release v1.25* and above. Amazon c4.2xlarge instance was used to create this demo. 
 
 #### Data and binaries
 1. Install .Net Core https://www.microsoft.com/net/core#linuxubuntu and download Canvas binary (CanvasDIR)
