@@ -7,7 +7,7 @@ Canvas is used as the copy number caller in the Isaac Whole Genome Sequencing wo
 
 Canvas is written in C# and runs either under a recent version of Mono (e.g. 3.10.0), .NET 4.5.1 and .NET Core 1.1.
 
-For more information about Canvas and the algorithms it uses see the [software design document] [SDD].
+For more information about Canvas and the algorithms it uses see the [software design document][SDD].
 
 [SDD]:SoftwareDesignDocument.pdf
 
@@ -26,7 +26,7 @@ Build instructions
 ------------------
 
 ### Binaries:
-It is recommended to start from one of the [binary distributions on the Canvas releases page] [releases] if a suitable version is available.  Executables can be run either under .NET Core or mono. .NET Core environment is recommended as it provides higher speed and lower RAM usage.
+It is recommended to start from one of the [binary distributions on the Canvas releases page][releases] if a suitable version is available.  Executables can be run either under .NET Core or mono. .NET Core environment is recommended as it provides higher speed and lower RAM usage.
 
 [releases]:https://github.com/Illumina/canvas/releases
 
@@ -100,7 +100,7 @@ sudo apt-get install mono-complete
 ```
 
 ## DEMO (SmallPedigree-WGS workflow) 
-Here we provide an example on how to run Canvas SPW (Small Pedigree Workflow) on a simulated trio (bam files of 60x coverage) and then using EvaluateCNV (under Tools) to estimate performance metrics. This demo will work with the *Canvas release v1.25* and above. Amazon AWS m4.4xlarge instance was used to create this demo. It is recommended that the amount of RAM per core is 4G. More information on input options and output formats can be found on the [canvas wiki] [wiki] and [software design document] [SDD].
+Here we provide an example on how to run Canvas SPW (Small Pedigree Workflow) on a simulated trio (bam files of 60x coverage) and then using EvaluateCNV (under Tools) to estimate performance metrics. This demo will work with the *Canvas release v1.25* and above. Amazon AWS m4.4xlarge instance was used to create this demo. It is recommended that the amount of RAM per core is 4G. More information on input options and output formats can be found on the [canvas wiki][wiki] and [software design document][SDD].
 
 [wiki]:https://github.com/Illumina/canvas/wiki
 
