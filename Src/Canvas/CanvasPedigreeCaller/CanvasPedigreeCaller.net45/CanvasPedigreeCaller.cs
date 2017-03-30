@@ -49,7 +49,8 @@ namespace CanvasPedigreeCaller
             }
 
             var numberOfSegments = pedigreeMembers.First().Segments.Count;
-            var segmentIntervals = GetParallelIntervals(numberOfSegments, Environment.ProcessorCount);
+            var maxCoreNumber = 30;
+            var segmentIntervals = GetParallelIntervals(numberOfSegments, Math.Min(Environment.ProcessorCount, maxCoreNumber));
 
             var parents = GetParents(pedigreeMembers);
             var offsprings = GetChildren(pedigreeMembers);
@@ -70,11 +71,6 @@ namespace CanvasPedigreeCaller
 
             Parallel.ForEach(
                 segmentIntervals,
-                new ParallelOptions
-                {
-                    MaxDegreeOfParallelism = Environment.ProcessorCount,
-                    TaskScheduler = TaskScheduler.Default
-                },
                 interval =>
                 {
                     Console.WriteLine($"{DateTime.Now} Launching SPW task for segment {interval.Start} - {interval.End}");
@@ -172,7 +168,8 @@ namespace CanvasPedigreeCaller
             }
 
             var numberOfSegments = pedigreeMembers.First().Segments.Count;
-            var segmentIntervals = GetParallelIntervals(numberOfSegments, Environment.ProcessorCount);
+            var maxCoreNumber = 30;
+            var segmentIntervals = GetParallelIntervals(numberOfSegments, Math.Min(Environment.ProcessorCount, maxCoreNumber));
             var genotypes = GenerateGenotypeCombinations(CallerParameters.MaximumCopyNumber, CallerParameters.MaxAlleleNumber);
             var copyNumberCombinations = GenerateCopyNumberCombinations(CallerParameters.MaximumCopyNumber, CallerParameters.MaxAlleleNumber);
 
@@ -183,11 +180,6 @@ namespace CanvasPedigreeCaller
 
             Parallel.ForEach(
                 segmentIntervals,
-                new ParallelOptions
-                {
-                    MaxDegreeOfParallelism = Environment.ProcessorCount,
-                    TaskScheduler = TaskScheduler.Default
-                },
                 interval =>
                 {
                     Console.WriteLine($"{DateTime.Now} Launching SPW task for segment {interval.Start} - {interval.End}");
