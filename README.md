@@ -20,8 +20,10 @@ This software is provided under the terms and conditions of the GNU GENERAL PUBL
 
 You should have received a copy of the GNU GENERAL PUBLIC LICENSE Version 3 along with this program. If not, see https://github.com/illumina/licenses/.
 
-Canvas includes several third party packages provided under other open source licenses, please see [COPYRIGHT.txt] (COPYRIGHT.txt) for additional details.
+Canvas includes several third party packages provided under other open source licenses, please see [COPYRIGHT.txt](COPYRIGHT.txt) for additional details.
 
+[COPYRIGHT.txt]:COPYRIGHT.txt
+ 
 Build instructions
 ------------------
 
