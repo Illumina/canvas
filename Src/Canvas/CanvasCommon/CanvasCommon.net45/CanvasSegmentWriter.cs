@@ -164,7 +164,7 @@ namespace CanvasCommon
                 var mcc = segment.MajorChromosomeCount.HasValue ? segment.MajorChromosomeCount.ToString() : nullValue;
                 var dqscore = segment.DQScore.HasValue ? $"{segment.DQScore.Value:F2}" : nullValue;
                 var rc = Math.Round(segment.MeanCount, 0, MidpointRounding.AwayFromZero);
-                writer.Write($"\t{rc}:{segment.BinCount}:{ segment.CopyNumber}:{mcc}:{segment.QScore}:{dqscore}");
+                writer.Write($"\t{rc}:{segment.BinCount}:{ segment.CopyNumber}:{mcc}:{segment.QScore:F2}:{dqscore:F2}");
             }
             writer.WriteLine();
         }
@@ -198,10 +198,10 @@ namespace CanvasCommon
                 writer.Write("SUBCLONAL;");
 
             if (segment.DQScore.HasValue && !isMultisample)
-                writer.Write($"DQ={segment.DQScore.Value};");           
+                writer.Write($"DQ={segment.DQScore.Value:F2};");           
 
             if (denovoQualityThreshold.HasValue & segment.DQScore.HasValue & segment.DQScore >= denovoQualityThreshold)
-                writer.Write($"dq{denovoQualityThreshold};");
+                writer.Write($"dq{denovoQualityThreshold:F2};");
             writer.Write($"END={segment.End}");
 
             if (cnvType != CnvType.Reference)
