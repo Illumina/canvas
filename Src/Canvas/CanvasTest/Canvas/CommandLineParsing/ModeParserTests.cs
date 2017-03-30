@@ -42,7 +42,7 @@ namespace CanvasTest.Canvas.CommandLineParsing
             Assert.Empty(standardWriter.ToString());
         }
 
-        private static MainParser GetMainParser(GermlineWgsModeParser germlineWgsModeParser)
+        private static MainParser GetMainParser(ModeParser germlineWgsModeParser)
         {
 
             return new MainParser(Version, Copyright, germlineWgsModeParser);
@@ -625,5 +625,38 @@ namespace CanvasTest.Canvas.CommandLineParsing
             var result = new SmallPedigreeOptionsParser().Parse(stringInputArgument);
             Assert.True(result.Success);
         }
+
+        [Fact]
+        public void Parse_SpwWgsMode_ReturnsSuccess()
+        {
+            // arrange
+            var germlineWgsModeParser = new SmallPedigreeModeParser("SmallPedigree-WGS", "run spw");
+            MainParser parser = GetMainParser(germlineWgsModeParser);
+            string[] args =
+            {
+                "SmallPedigree-WGS",
+                "--bam", "/illumina/scratch/STE_DataAnalysis/repo/SmallPedigreeWorkflow/Chr15Bam/NA12877-PcrFree_S1.REF_chr15.bam", "father", "NA12877-PcrFree",
+                "--bam", "/illumina/scratch/STE_DataAnalysis/repo/SmallPedigreeWorkflow/Chr15Bam/NA12878-PcrFree_S2.REF_chr15.bam", "mother", "NA12878-PcrFree",
+                "--bam", "/illumina/scratch/STE_DataAnalysis/repo/SmallPedigreeWorkflow/Chr15Bam/NA12882-PcrFree_S3.REF_chr15.bam", "proband", "NA12882-PcrFree",
+                "--reference", "/illumina/development/Isas/Genomes/Homo_sapiens/NCBI/GRCh38Decoy/Annotation/Canvas/kmerv2.fa",
+                "--genome-folder", "/illumina/development/Isas/Genomes/Homo_sapiens/NCBI/GRCh38Decoy/Sequence/WholeGenomeFasta",
+                "--filter-bed", "/illumina/development/Isas/Genomes/Homo_sapiens/NCBI/GRCh38Decoy/Annotation/Canvas/filter13.bed",
+                "--output", "/illumina/scratch/bioinfoSD/eroller/SPW_NewCanvas/Temp_06-DetectCNV",
+                "--sample-b-allele-vcf", "/illumina/scratch/bioinfoSD/eroller/SPW_NewCanvas/Pedigree.vcf.gz",
+                "--ploidy-vcf", "/illumina/scratch/bioinfoSD/eroller/SPW_NewCanvas/Temp_06-DetectCNV/ploidy.vcf.gz",
+                "--custom-parameters", "CanvasPartition,--commoncnvs /illumina/development/Isas/Genomes/Homo_sapiens/NCBI/GRCh38Decoy/Annotation/Canvas/commoncnvs.bed"
+            };
+
+            // act
+            using (var standardWriter = new StringWriter())
+            using (var errorWriter = new StringWriter())
+            {
+                var result = parser.Parse(args, standardWriter, errorWriter);
+                // assert
+                Assert.False(result.Success);
+                Assert.Contains("does not exist", result.ErrorMessage);
+            }
+        }
+
     }
 }
