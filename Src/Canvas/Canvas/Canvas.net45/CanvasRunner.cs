@@ -1133,7 +1133,7 @@ namespace Canvas
                 string pedigreeFile = WritePedigreeFile(callsets);
                 commandLine.AppendFormat("-f \"{0}\" ", pedigreeFile);
             }
-            if (!callsets.AnalysisDetails.PloidyVcf.FullName.IsNullOrEmpty())
+            if (callsets.AnalysisDetails.PloidyVcf != null)
                 commandLine.AppendFormat("-p \"{0}\" ", callsets.AnalysisDetails.PloidyVcf);
 
             UnitOfWork callJob = new UnitOfWork()
