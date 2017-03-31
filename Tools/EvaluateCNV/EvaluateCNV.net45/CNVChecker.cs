@@ -397,6 +397,8 @@ namespace EvaluateCNV
             bool includePassingOnly, bool splitBySize)
         {
             _cnvEvaluator.ComputeAccuracy(truthSetPath, cnvCallsPath, outputPath, ploidyInfo, includePassingOnly, splitBySize);
+            if (includePassingOnly)
+                _cnvEvaluator.ComputeAccuracy(truthSetPath, cnvCallsPath, outputPath, ploidyInfo, false, splitBySize);
         }
 
         public void Evaluate(string truthSetPath, string cnvCallsPath, string excludedBed, string outputPath, EvaluateCnvOptions options)
@@ -421,11 +423,9 @@ namespace EvaluateCNV
             Console.WriteLine("TruthSet\t{0}", truthSetPath);
             Console.WriteLine("CNVCalls\t{0}", cnvCallsPath);
 
-            if (Path.GetFileName(cnvCallsPath).ToLower().Contains("vcf"))
-            {
-                ComputeAccuracy(truthSetPath, cnvCallsPath, outputPath, ploidyInfo, includePassingOnly:true, splitBySize:options.SplitBySize);
-            }
-            ComputeAccuracy(truthSetPath, cnvCallsPath, outputPath, ploidyInfo, includePassingOnly: false, splitBySize: options.SplitBySize);
+            ComputeAccuracy(truthSetPath, cnvCallsPath, outputPath, ploidyInfo,
+                includePassingOnly: Path.GetFileName(cnvCallsPath).ToLower().Contains("vcf"),
+                splitBySize: options.SplitBySize);
 
             Console.WriteLine(">>>Done - results written to {0}", outputPath);
         }

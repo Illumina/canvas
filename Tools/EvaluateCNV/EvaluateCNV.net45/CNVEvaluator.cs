@@ -12,15 +12,6 @@ namespace EvaluateCNV
         private CNVChecker _cnvChecker;
         #region Members
         static int maxCN = 10;
-        readonly long[,] BaseCount = new long[maxCN + 1, maxCN + 1];
-        readonly long[,] ROIBaseCount = new long[maxCN + 1, maxCN + 1];
-        readonly long[,] BaseCountUnder5kb = new long[maxCN + 1, maxCN + 1];
-        readonly long[,] BaseCount5kb10 = new long[maxCN + 1, maxCN + 1];
-        readonly long[,] BaseCount10kb100kb = new long[maxCN + 1, maxCN + 1];
-        readonly long[,] BaseCount100kb500 = new long[maxCN + 1, maxCN + 1];
-        readonly long[,] BaseCountOver500kb = new long[maxCN + 1, maxCN + 1];
-        int totalVariants = 0;
-        long totalVariantBases = 0;
         #endregion
 
         public CNVEvaluator(CNVChecker cnvChecker)
@@ -32,13 +23,70 @@ namespace EvaluateCNV
         {
             // Make a note of how many bases in the truth set are not *actually* considered to be known bases, using
             // the "cnaqc" exclusion set:
-            _cnvChecker.CountExcludedBasesInTruthSetIntervals();
-            if (_cnvChecker.DQscoreThreshold.HasValue && !Path.GetFileName(cnvCallsPath).ToLower().Contains("vcf"))
-                throw new ArgumentException("CNV.vcf must be in a vcf format when --dqscore option is used");
-            IEnumerable<CNVCall> calls = Path.GetFileName(cnvCallsPath).ToLower().Contains("vcf")
-                ? _cnvChecker.GetCnvCallsFromVcf(cnvCallsPath, includePassingOnly)
-                : _cnvChecker.GetCnvCallsFromBed(cnvCallsPath);
+            var baseCount = new long[maxCN + 1, maxCN + 1];
+            var roiBaseCount = new long[maxCN + 1, maxCN + 1];
+            var baseCountUnder5Kb = new long[maxCN + 1, maxCN + 1];
+            var baseCount5Kb10 = new long[maxCN + 1, maxCN + 1];
+            var baseCount10Kb100Kb = new long[maxCN + 1, maxCN + 1];
+            var baseCount100Kb500 = new long[maxCN + 1, maxCN + 1];
+            var baseCountOver500Kb = new long[maxCN + 1, maxCN + 1];
+            int totalVariants = 0;
+            long totalVariantBases = 0;
 
+            _cnvChecker.CountExcludedBasesInTruthSetIntervals();
+            if (_cnvChecker.DQscoreThreshold.HasValue && !includePassingOnly)
+                throw new ArgumentException("CNV.vcf must be in a vcf format when --dqscore option is used");
+            var calls = _cnvChecker.GetCnvCallsFromVcf(cnvCallsPath, includePassingOnly);
+
+            double medianAccuracy;
+            var meanAccuracy = CalculateMetrics(ploidyInfo, calls, baseCount, baseCountUnder5Kb, baseCount5Kb10, baseCount10Kb100Kb, 
+                baseCount100Kb500, baseCountOver500Kb, roiBaseCount, ref totalVariantBases, ref totalVariants, out medianAccuracy);
+
+            using (FileStream stream = new FileStream(Path.Combine(outputPath, "EvaluateCNV.txt"), includePassingOnly? 
+                FileMode.Create : FileMode.Append, FileAccess.Write))
+            using (StreamWriter outputWriter = new StreamWriter(stream))
+            {
+                WriteResults(truthSetPath, cnvCallsPath, outputWriter, includePassingOnly, meanAccuracy, medianAccuracy, 
+                    baseCount, roiBaseCount, totalVariants, totalVariantBases);
+            }
+
+            if (splitBySize)
+            {
+                using (FileStream stream = new FileStream(Path.Combine(outputPath, "EvaluateCNV_Under5kb.txt"), includePassingOnly ?
+                FileMode.Create : FileMode.Append, FileAccess.Write))
+                using (StreamWriter outputWriter = new StreamWriter(stream))
+                {
+                    WriteResults(truthSetPath, cnvCallsPath, outputWriter, includePassingOnly, meanAccuracy, medianAccuracy,
+                        baseCountUnder5Kb, null, totalVariants, totalVariantBases);
+                }
+                using (FileStream stream = new FileStream(Path.Combine(outputPath, "EvaluateCNV_5kb10.txt"), includePassingOnly ?
+                FileMode.Create : FileMode.Append, FileAccess.Write))
+                using (StreamWriter outputWriter = new StreamWriter(stream))
+                {
+                    WriteResults(truthSetPath, cnvCallsPath, outputWriter, includePassingOnly, meanAccuracy, medianAccuracy,
+                        baseCount5Kb10, null, totalVariants, totalVariantBases);
+                }
+                using (FileStream stream = new FileStream(Path.Combine(outputPath, "EvaluateCNV_10kb100kb.txt"), includePassingOnly ?
+                FileMode.Create : FileMode.Append, FileAccess.Write))
+                using (StreamWriter outputWriter = new StreamWriter(stream))
+                {
+                    WriteResults(truthSetPath, cnvCallsPath, outputWriter, includePassingOnly, meanAccuracy, medianAccuracy,
+                        baseCount10Kb100Kb, null, totalVariants, totalVariantBases);
+                }
+                using (FileStream stream = new FileStream(Path.Combine(outputPath, "EvaluateCNV_100kb500.txt"), includePassingOnly ?
+                FileMode.Create : FileMode.Append, FileAccess.Write))
+                using (StreamWriter outputWriter = new StreamWriter(stream))
+                {
+                    WriteResults(truthSetPath, cnvCallsPath, outputWriter, includePassingOnly, meanAccuracy, medianAccuracy,
+                        baseCount100Kb500, null, totalVariants, totalVariantBases);
+                }
+            }
+        }
+
+        private double CalculateMetrics(PloidyInfo ploidyInfo, IEnumerable<CNVCall> calls, long[,] baseCount, long[,] baseCountUnder5Kb,
+            long[,] baseCount5Kb10, long[,] baseCount10Kb100Kb, long[,] baseCount100Kb500, long[,] baseCountOver500Kb,
+            long[,] roiBaseCount, ref long totalVariantBases, ref int totalVariants, out double medianAccuracy)
+        {
             ploidyInfo.MakeChromsomeNameAgnosticWithAllChromosomes(calls.Select(call => call.Chr));
             foreach (CNVCall call in calls)
             {
@@ -95,17 +143,17 @@ namespace EvaluateCNV
 
                     int knownCN = interval.CN;
                     if (knownCN > maxCN) knownCN = maxCN;
-                    BaseCount[knownCN, CN] += overlapBases;
-                    if (totalVariantBases < 5000)
-                        BaseCountUnder5kb[knownCN, CN] += overlapBases;
-                    else if (totalVariantBases >= 5000 && totalVariantBases <10000)
-                        BaseCount5kb10[knownCN, CN] += overlapBases;
-                    else if (totalVariantBases >= 10000 && totalVariantBases < 100000)
-                        BaseCount10kb100kb[knownCN, CN] += overlapBases;
-                    else if (totalVariantBases >= 100000 && totalVariantBases < 500000)
-                        BaseCount100kb500[knownCN, CN] += overlapBases;
-                    else if (totalVariantBases >= 500000)
-                        BaseCountOver500kb[knownCN, CN] += overlapBases;
+                    baseCount[knownCN, CN] += overlapBases;
+                    if (call.Length < 5000)
+                        baseCountUnder5Kb[knownCN, CN] += overlapBases;
+                    else if (call.Length >= 5000 && call.Length < 10000)
+                        baseCount5Kb10[knownCN, CN] += overlapBases;
+                    else if (call.Length >= 10000 && call.Length < 100000)
+                        baseCount10Kb100Kb[knownCN, CN] += overlapBases;
+                    else if (call.Length >= 100000 && call.Length < 500000)
+                        baseCount100Kb500[knownCN, CN] += overlapBases;
+                    else if (call.Length >= 500000)
+                        baseCountOver500Kb[knownCN, CN] += overlapBases;
 
                     interval.BasesCovered += overlapBases;
                     if (knownCN == CN)
@@ -125,7 +173,7 @@ namespace EvaluateCNV
                             int roiOverlapEnd = Math.Min(roiInterval.End, overlapEnd);
                             if (roiOverlapStart >= roiOverlapEnd) continue;
                             int roiOverlapBases = roiOverlapEnd - roiOverlapStart;
-                            ROIBaseCount[knownCN, CN] += roiOverlapBases;
+                            roiBaseCount[knownCN, CN] += roiOverlapBases;
                         }
                     }
                 }
@@ -139,9 +187,9 @@ namespace EvaluateCNV
                 foreach (CNInterval interval in _cnvChecker.KnownCN[chr])
                 {
                     if (interval.CN == 2) continue;
-                    int baseCount = interval.Length - interval.BasesExcluded;
-                    if (baseCount <= 0) continue;
-                    double accuracy = interval.BasesCalledCorrectly / (double)baseCount;
+                    int basecount = interval.Length - interval.BasesExcluded;
+                    if (basecount <= 0) continue;
+                    double accuracy = interval.BasesCalledCorrectly / (double) basecount;
                     eventAccuracies.Add(accuracy);
                     meanAccuracy += accuracy;
                     //Console.WriteLine("{0}\t{1:F4}", interval.End - interval.Start, accuracy);
@@ -149,7 +197,7 @@ namespace EvaluateCNV
             }
             eventAccuracies.Sort();
             meanAccuracy /= Math.Max(1, eventAccuracies.Count);
-            double medianAccuracy = double.NaN;
+            medianAccuracy = double.NaN;
             if (eventAccuracies.Count > 0)
                 medianAccuracy = eventAccuracies[eventAccuracies.Count / 2];
             Console.WriteLine("Event-level accuracy mean {0:F4} median {1:F4}", meanAccuracy, medianAccuracy);
@@ -157,49 +205,17 @@ namespace EvaluateCNV
             IEnumerable<CNInterval> allIntervals = _cnvChecker.KnownCN.SelectMany(kvp => kvp.Value);
 
             // find truth interval with highest number of false negatives (hurts recall)
-            IEnumerable<CNInterval> variantIntervals = allIntervals.Where(interval => interval.CN != interval.ReferenceCopyNumber);
-            CNInterval intervalMaxFalseNegatives = variantIntervals.MaxBy(interval => interval.BasesNotCalled + interval.BasesCalledIncorrectly);
+            IEnumerable<CNInterval> variantIntervals =
+                allIntervals.Where(interval => interval.CN != interval.ReferenceCopyNumber);
+            CNInterval intervalMaxFalseNegatives =
+                variantIntervals.MaxBy(interval => interval.BasesNotCalled + interval.BasesCalledIncorrectly);
             Console.WriteLine($"Truth interval with most false negatives (hurts recall): {intervalMaxFalseNegatives}");
 
             // find truth interval with highest number of false positive (hurts precision)
             IEnumerable<CNInterval> refIntervals = allIntervals.Where(interval => interval.CN == interval.ReferenceCopyNumber);
             CNInterval intervalMaxFalsePositives = refIntervals.MaxBy(interval => interval.BasesCalledIncorrectly);
             Console.WriteLine($"Truth interval with most false positives (hurts precision): {intervalMaxFalsePositives}");
-
-            using (FileStream stream = new FileStream(Path.Combine(outputPath, "EvaluateCNV.txt"), FileMode.Create, FileAccess.Write))
-            using (StreamWriter outputWriter = new StreamWriter(stream))
-            {
-                WriteResults(truthSetPath, cnvCallsPath, outputWriter, includePassingOnly, meanAccuracy, medianAccuracy, 
-                    BaseCount, ROIBaseCount, totalVariants, totalVariantBases);
-            }
-
-            if (splitBySize)
-            {
-                using (FileStream stream = new FileStream(Path.Combine(outputPath, "EvaluateCNV_Under5kb.txt"), FileMode.Create, FileAccess.Write))
-                using (StreamWriter outputWriter = new StreamWriter(stream))
-                {
-                    WriteResults(truthSetPath, cnvCallsPath, outputWriter, includePassingOnly, meanAccuracy, medianAccuracy,
-                        BaseCountUnder5kb, null, totalVariants, totalVariantBases);
-                }
-                using (FileStream stream = new FileStream(Path.Combine(outputPath, "EvaluateCNV_5kb10.txt"), FileMode.Create, FileAccess.Write))
-                using (StreamWriter outputWriter = new StreamWriter(stream))
-                {
-                    WriteResults(truthSetPath, cnvCallsPath, outputWriter, includePassingOnly, meanAccuracy, medianAccuracy,
-                        BaseCount5kb10, null, totalVariants, totalVariantBases);
-                }
-                using (FileStream stream = new FileStream(Path.Combine(outputPath, "EvaluateCNV_10kb100kb.txt"), FileMode.Create, FileAccess.Write))
-                using (StreamWriter outputWriter = new StreamWriter(stream))
-                {
-                    WriteResults(truthSetPath, cnvCallsPath, outputWriter, includePassingOnly, meanAccuracy, medianAccuracy,
-                        BaseCount10kb100kb, null, totalVariants, totalVariantBases);
-                }
-                using (FileStream stream = new FileStream(Path.Combine(outputPath, "EvaluateCNV_100kb500.txt"), FileMode.Create, FileAccess.Write))
-                using (StreamWriter outputWriter = new StreamWriter(stream))
-                {
-                    WriteResults(truthSetPath, cnvCallsPath, outputWriter, includePassingOnly, meanAccuracy, medianAccuracy,
-                        BaseCount100kb500, null, totalVariants, totalVariantBases);
-                }
-            }
+            return meanAccuracy;
         }
 
         static void WriteResults(string truthSetPath, string cnvCallsPath, StreamWriter outputWriter, bool includePassingOnly,
