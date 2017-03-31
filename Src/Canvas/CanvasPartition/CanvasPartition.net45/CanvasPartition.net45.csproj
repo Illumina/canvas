@@ -79,8 +79,8 @@
       <HintPath>..\..\Canvas\packages\Combinatorics.1.0.3.2\lib\net40\Combinatorics.dll</HintPath>
       <Private>True</Private>
     </Reference>
-    <Reference Include="Illumina.Common, Version=2.3.1.124, Culture=neutral, processorArchitecture=AMD64">
-      <HintPath>..\..\Canvas\packages\Illumina.Common.2.3.1.124\lib\net451\Illumina.Common.dll</HintPath>
+    <Reference Include="Illumina.Common, Version=2.3.0.122, Culture=neutral, processorArchitecture=AMD64">
+      <HintPath>..\..\Canvas\packages\Illumina.Common.2.3.0.122\lib\net451\Illumina.Common.dll</HintPath>
     </Reference>
     <Reference Include="Isas.Framework, Version=5.4.0.137, Culture=neutral, processorArchitecture=AMD64">
       <HintPath>..\..\Canvas\packages\Isas.Framework.5.4.0.137\lib\net451\Isas.Framework.dll</HintPath>
@@ -88,9 +88,8 @@
     <Reference Include="Isas.SequencingFiles, Version=3.10.3.207, Culture=neutral, processorArchitecture=AMD64">
       <HintPath>..\..\Canvas\packages\Isas.SequencingFiles.3.10.3.207\lib\net451\Isas.SequencingFiles.dll</HintPath>
     </Reference>
-    <Reference Include="MathNet.Numerics, Version=3.17.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\..\Canvas\packages\MathNet.Numerics.3.17.0\lib\net40\MathNet.Numerics.dll</HintPath>
-      <Private>True</Private>
+    <Reference Include="MathNet.Numerics.Core, Version=3.17.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\..\Canvas\packages\MathNet.Numerics.Core.3.17.0\lib\net451\MathNet.Numerics.Core.dll</HintPath>
     </Reference>
     <Reference Include="Newtonsoft.Json, Version=9.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
       <HintPath>..\Canvas\packages\Newtonsoft.Json.9.0.1\lib\net45\Newtonsoft.Json.dll</HintPath>
@@ -111,6 +110,7 @@
     </Reference>
     <Reference Include="System.Core" />
     <Reference Include="System.Numerics" />
+    <Reference Include="System.Runtime.Serialization" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
     <Reference Include="Microsoft.CSharp" />

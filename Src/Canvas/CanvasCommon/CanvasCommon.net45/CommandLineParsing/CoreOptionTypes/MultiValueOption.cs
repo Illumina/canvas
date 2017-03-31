@@ -17,7 +17,7 @@ namespace CanvasCommon.CommandLineParsing.CoreOptionTypes
             }
             else
             {
-                Info = new MultipleValueOptionInfo(false, valueOption.Info);
+                Info = new ValueOptionInfo<List<string>>(false, valueOption.Info);
             }
         }
 

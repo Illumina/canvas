@@ -33,7 +33,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Illumina.Common" Version="2.3.1.124" />
+    <PackageReference Include="Illumina.Common" Version="2.3.0.122" />
     <PackageReference Include="Isas.Framework" Version="5.4.0.137" />
     <PackageReference Include="Isas.SequencingFiles" Version="3.10.3.207" />
     <PackageReference Include="MathNet.Numerics.Core" Version="3.17.0" />
