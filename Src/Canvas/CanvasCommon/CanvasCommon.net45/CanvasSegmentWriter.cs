@@ -50,7 +50,7 @@ namespace CanvasCommon
         {
             // Write the VCF header:
             writer.WriteLine("##fileformat=VCFv4.1");
-            writer.WriteLine($"##source={CanvasVersionInfo.NameString} {CanvasVersionInfo.VersionString}");
+            //writer.WriteLine($"##source={CanvasVersionInfo.NameString} {CanvasVersionInfo.VersionString}");
             writer.WriteLine($"##reference={Path.Combine(wholeGenomeFastaDirectory, "genome.fa")}");
             AddPloidyAndCoverageHeaders(writer, segments, diploidCoverage);
             foreach (string header in extraHeaders ?? new List<string>())
@@ -142,8 +142,8 @@ namespace CanvasCommon
                 cnvType = CnvType.Gain;
             else if (cnvTypes.TrueForAll(x => x == CnvType.Reference || x == CnvType.LossOfHeterozygosity))
                 cnvType = CnvType.LossOfHeterozygosity;
-            else if (cnvTypes.Count > 1)
-                throw new ArgumentOutOfRangeException($"cnvType {cnvTypes.Single()} is invalid for single sample.");
+            else if (cnvTypes.Count == 1)
+                throw new ArgumentOutOfRangeException($"cnvType {cnvTypes.First()} is invalid for single sample.");
             else
                 cnvType = CnvType.ComplexCnv;
             return cnvType;
