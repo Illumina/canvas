@@ -32,7 +32,8 @@ namespace Canvas.CommandLineParsing
             var options = new OptionCollection<IModeLauncher> { BaseOptionsParser, mode };
             var result = options.Parse(args.Skip(1));
             ParsingResult<IModeLauncher> failedResult;
-            if (!result.RemainingArgs.Any() && HandleBaseOptions(result.Get(BaseOptionsParser).Result, standardWriter, mode))
+            var baseOptions = result.Get(BaseOptionsParser);
+            if (!result.RemainingArgs.Any() && baseOptions.Success && HandleBaseOptions(baseOptions.Result, standardWriter, mode))
                 return ParsingResult<IModeLauncher>.SuccessfulResult(new NullModeLauncher());
 
             if (!result.Validate(out failedResult))
@@ -42,6 +43,7 @@ namespace Canvas.CommandLineParsing
                 ShowHelp(errorWriter, mode);
                 return failedResult;
             }
+
             var runner = result.Get(mode).Result;
             return ParsingResult<IModeLauncher>.SuccessfulResult(new ModeLauncher(runner, args, GetVersion(), mode.Name));
         }

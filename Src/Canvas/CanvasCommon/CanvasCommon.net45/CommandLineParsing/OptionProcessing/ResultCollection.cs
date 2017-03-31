@@ -26,10 +26,13 @@ namespace CanvasCommon.CommandLineParsing.OptionProcessing
         public ResultCollection(ParsingResult<TResult> failedResult)
         {
             _failedResult = failedResult;
+            RemainingArgs = Enumerable.Empty<string>();
         }
 
         public ParsingResult<T> Get<T>(Option<T> option)
         {
+            if (_failedResult != null)
+                return ParsingResult<T>.FailedResult(_failedResult.ErrorMessage);
             return (ParsingResult<T>)_results[option];
         }
 
