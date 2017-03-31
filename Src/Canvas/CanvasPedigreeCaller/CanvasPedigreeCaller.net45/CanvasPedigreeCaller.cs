@@ -98,8 +98,8 @@ namespace CanvasPedigreeCaller
             List<double?> coverage;
             List<List<CanvasSegment>> segments;
             var names = PostProcessData(outVcfFile, referenceFolder, pedigreeMembers, out coverage, out segments);
-
-            CanvasSegmentWriter.WriteMultiSampleSegments(outVcfFile, segments, coverage, referenceFolder, names, null, null,
+            var ploidies = pedigreeMembers.Select(x => x.Ploidy).ToList();
+            CanvasSegmentWriter.WriteMultiSampleSegments(outVcfFile, segments, coverage, referenceFolder, names, null, ploidies,
             QualityFilterThreshold, isPedigreeInfoSupplied:true, denovoQualityThreshold:DeNovoQualityFilterThreshold);
 
             var outputFolder = new FileLocation(outVcfFile).Directory;
@@ -107,7 +107,7 @@ namespace CanvasPedigreeCaller
             {
                 var outputVcfPath = SingleSampleCallset.GetSingleSamplePedigreeVcfOutput(outputFolder, pedigreeMember.Name);
                 CanvasSegmentWriter.WriteSegments(outputVcfPath.FullName, pedigreeMember.Segments, pedigreeMember.MeanCoverage, referenceFolder,
-                    pedigreeMember.Name, null, null, QualityFilterThreshold, isPedigreeInfoSupplied: true, 
+                    pedigreeMember.Name, null, pedigreeMember.Ploidy, QualityFilterThreshold, isPedigreeInfoSupplied: true, 
                     denovoQualityThreshold: DeNovoQualityFilterThreshold);
             }
             return 0;
@@ -176,7 +176,6 @@ namespace CanvasPedigreeCaller
             var genotypes = GenerateGenotypeCombinations(CallerParameters.MaximumCopyNumber, CallerParameters.MaxAlleleNumber);
             var copyNumberCombinations = GenerateCopyNumberCombinations(CallerParameters.MaximumCopyNumber, CallerParameters.MaxAlleleNumber);
 
-
             foreach (PedigreeMember pedigreeMember in pedigreeMembers)
                 pedigreeMember.CnModel = new CopyNumberModel(CallerParameters.MaximumCopyNumber, pedigreeMember.MeanCoverage / 2.0, pedigreeMember.MeanMafCoverage / 2.0,
                     pedigreeMember.Variance, pedigreeMember.MafVariance, pedigreeMember.MaxCoverage);
@@ -210,8 +209,9 @@ namespace CanvasPedigreeCaller
             List<double?> coverage;
             List<List<CanvasSegment>> segments;
             var names = PostProcessData(outVcfFile, referenceFolder, pedigreeMembers, out coverage, out segments);
+            var ploidies = pedigreeMembers.Select(x => x.Ploidy).ToList();
 
-            CanvasSegmentWriter.WriteMultiSampleSegments(outVcfFile, segments, coverage, referenceFolder, names, null, null,
+            CanvasSegmentWriter.WriteMultiSampleSegments(outVcfFile, segments, coverage, referenceFolder, names, null, ploidies,
             QualityFilterThreshold, isPedigreeInfoSupplied: false);
 
             var outputFolder = new FileLocation(outVcfFile).Directory;
@@ -219,11 +219,10 @@ namespace CanvasPedigreeCaller
             {
                 var outputVcfPath = SingleSampleCallset.GetSingleSamplePedigreeVcfOutput(outputFolder, pedigreeMember.Name);
                 CanvasSegmentWriter.WriteSegments(outputVcfPath.FullName, pedigreeMember.Segments, pedigreeMember.MeanCoverage, referenceFolder,
-                    pedigreeMember.Name, null, null, QualityFilterThreshold, isPedigreeInfoSupplied: false);
+                    pedigreeMember.Name, null, pedigreeMember.Ploidy, QualityFilterThreshold, isPedigreeInfoSupplied: false);
             }
             return 0;
         }
-
 
         private static void MergeSegments(LinkedList<PedigreeMember> pedigreeMembers, int minimumCallSize)
         {

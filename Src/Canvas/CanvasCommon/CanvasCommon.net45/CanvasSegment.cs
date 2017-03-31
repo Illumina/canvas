@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.IO;
 using Illumina.Common;
+using Illumina.Common.FileSystem;
 using Isas.SequencingFiles;
 
 namespace CanvasCommon
@@ -307,7 +308,8 @@ namespace CanvasCommon
 
             Dictionary<string, List<CanvasSegment>> segmentsByChromosome = GetSegmentsByChromosome(segments);
             GenomeMetadata genome = new GenomeMetadata();
-            genome.Deserialize(Path.Combine(referenceFolder, "GenomeSize.xml"));
+            IReferenceGenome referenceGenome = new ReferenceGenome(new DirectoryLocation(referenceFolder));
+            genome.Deserialize(referenceGenome);
 
             List<float> counts = new List<float>();
             List<float> MAF = new List<float>();
