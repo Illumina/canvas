@@ -59,8 +59,7 @@ namespace CanvasCommon
             }
 
             GenomeMetadata genome = new GenomeMetadata();
-            IReferenceGenome referenceGenome = new ReferenceGenome(new DirectoryLocation(wholeGenomeFastaDirectory));
-            genome.Deserialize(referenceGenome);
+            genome.Deserialize(Path.Combine(wholeGenomeFastaDirectory, "GenomeSize.xml"));
 
             foreach (GenomeMetadata.SequenceMetadata chromosome in genome.Sequences)
             {
@@ -135,36 +134,16 @@ namespace CanvasCommon
         private static CnvType AssignCnvType(List<CnvType> cnvTypes)
         {
             CnvType cnvType;
-            if (cnvTypes.Count == 1)
-            {
-                switch (cnvTypes.Single())
-                {
-                    case CnvType.Reference:
-                        cnvType = CnvType.Reference;
-                        break;
-                    case CnvType.Loss:
-                        cnvType = CnvType.Loss;
-                        break;
-                    case CnvType.Gain:
-                        cnvType = CnvType.Gain;
-                        break;
-                    case CnvType.LossOfHeterozygosity:
-                        cnvType = CnvType.LossOfHeterozygosity;
-                        break;
-                    default:
-                        throw new ArgumentOutOfRangeException($"cnvType {cnvTypes.Single()} does not exist.");
-                }
-                return cnvType;
-            }
-
             if (cnvTypes.TrueForAll(x => x == CnvType.Reference))
                 cnvType = CnvType.Reference;
-            else if (cnvTypes.TrueForAll(x => x == CnvType.Reference | x == CnvType.Loss))
+            else if (cnvTypes.TrueForAll(x => x == CnvType.Reference || x == CnvType.Loss))
                 cnvType = CnvType.Loss;
-            else if (cnvTypes.TrueForAll(x => x == CnvType.Reference | x == CnvType.Gain))
+            else if (cnvTypes.TrueForAll(x => x == CnvType.Reference || x == CnvType.Gain))
                 cnvType = CnvType.Gain;
-            else if (cnvTypes.TrueForAll(x => x == CnvType.Reference | x == CnvType.LossOfHeterozygosity))
+            else if (cnvTypes.TrueForAll(x => x == CnvType.Reference || x == CnvType.LossOfHeterozygosity))
                 cnvType = CnvType.LossOfHeterozygosity;
+            else if (cnvTypes.Count > 1)
+                throw new ArgumentOutOfRangeException($"cnvType {cnvTypes.Single()} is invalid for single sample.");
             else
                 cnvType = CnvType.ComplexCnv;
             return cnvType;
