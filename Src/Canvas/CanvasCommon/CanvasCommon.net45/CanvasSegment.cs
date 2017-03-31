@@ -308,8 +308,8 @@ namespace CanvasCommon
 
             Dictionary<string, List<CanvasSegment>> segmentsByChromosome = GetSegmentsByChromosome(segments);
             GenomeMetadata genome = new GenomeMetadata();
-            IReferenceGenome referenceGenome = new ReferenceGenome(new DirectoryLocation(referenceFolder));
-            genome.Deserialize(referenceGenome);
+            genome.Deserialize(Path.Combine(referenceFolder, "GenomeSize.xml"));
+
 
             List<float> counts = new List<float>();
             List<float> MAF = new List<float>();
