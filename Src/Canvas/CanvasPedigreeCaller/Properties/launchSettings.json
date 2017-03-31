@@ -1,8 +1,0 @@
-{
-  "profiles": {
-    "CanvasPedigreeCaller": {
-      "commandName": "Project",
-      "commandLineArgs": "-i \"\\\\ukch-prd-isi01\\tmp\\users\\sivakhno\\CanvasTest\\TestData\\SmallPedigree\\PlatinumGenomesTrio\\CanvasAnalysis\\TempCNV_NA12878\\NA12878.partitioned\" -i \"\\\\ukch-prd-isi01\\tmp\\users\\sivakhno\\CanvasTest\\TestData\\SmallPedigree\\PlatinumGenomesTrio\\CanvasAnalysis\\TempCNV_NA12877\\NA12877.partitioned\" -i \"\\\\ukch-prd-isi01\\tmp\\users\\sivakhno\\CanvasTest\\TestData\\SmallPedigree\\PlatinumGenomesTrio\\CanvasAnalysis\\TempCNV_NA12882\\NA12882.partitioned\" -v \"\\\\ukch-prd-isi01\\tmp\\users\\sivakhno\\CanvasTest\\TestData\\SmallPedigree\\PlatinumGenomesTrio\\CanvasAnalysis\\TempCNV_NA12878\\VFResultsNA12878.txt.gz\" -n \"NA12878\" -v \"\\\\ukch-prd-isi01\\tmp\\users\\sivakhno\\CanvasTest\\TestData\\SmallPedigree\\PlatinumGenomesTrio\\CanvasAnalysis\\TempCNV_NA12877\\VFResultsNA12877.txt.gz\" -n \"NA12877\" -v \"\\\\ukch-prd-isi01\\tmp\\users\\sivakhno\\CanvasTest\\TestData\\SmallPedigree\\PlatinumGenomesTrio\\CanvasAnalysis\\TempCNV_NA12882\\VFResultsNA12882.txt.gz\" -n \"NA12882\" -o '\\\\ukch-prd-isi01\\tmp\\users\\sivakhno\\CanvasTest\\TestData\\SmallPedigree\\PlatinumGenomesTrio\\CanvasAnalysis\\CNV.v2.vcf.gz' -r \"\\\\ukch-prd-isi01\\tmp\\users\\sivakhno\\Canvas\" -f \"\\\\ukch-prd-isi01\\tmp\\users\\sivakhno\\CanvasTest\\TestData\\SmallPedigree\\PlatinumGenomesTrio\\CanvasAnalysis\\pedigree.ped\" -p \"\\\\ukch-prd-isi01\\CNA\\CNV\\Germline_Canvas\\PlatinumGenomes\\MultiSamplePloidy.vcf\""
-    }
-  }
-}
