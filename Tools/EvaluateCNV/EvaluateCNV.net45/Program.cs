@@ -42,7 +42,7 @@ namespace EvaluateCNV
             Console.WriteLine("For more info see: http://confluence.illumina.com/display/BIOINFO/EvaluateCNV");
             Console.WriteLine();
             Console.WriteLine("Usage info:");
-            Console.WriteLine("EvaluateCNV $TruthSetPath $CNV.vcf $ExcludedRegionsBed $OutputPath [OPTIONS]+[$RegionOfInterestBed]");
+            Console.WriteLine("EvaluateCNV $TruthSetPath $CNV.vcf $ExcludedRegionsBed $OutputDir [OPTIONS]+[$RegionOfInterestBed]");
             Console.WriteLine("Options:");
             optionsParser.ShowHelp(Console.Out);
         }
@@ -54,6 +54,7 @@ namespace EvaluateCNV
         private static readonly ValueOption<double> HeterogeneityFraction = ValueOption<double>.CreateWithDefault(1, "HeterogeneityFraction", "het");
         private static readonly ValueOption<double?> DQscoreThreshold = ValueOption<double?>.Create("DQscore threshold", "q", "dqscore");
         private static readonly FileOption PloidyBed = FileOption.Create("Bed file specifying the regions where reference ploidy is not 2", "p", "ploidy");
+        private static readonly FlagOption SplitBySize = new FlagOption("Split by variant size", "s", "splitBySize");
         private static readonly FlagOption Help = new FlagOption("show this message and exit", "h", "help");
 
         public override OptionCollection<EvaluateCnvOptions> GetOptions()
@@ -64,6 +65,7 @@ namespace EvaluateCNV
                 HeterogeneityFraction,
                 DQscoreThreshold,
                 PloidyBed,
+                SplitBySize,
                 Help
             };
         }
@@ -74,8 +76,9 @@ namespace EvaluateCNV
             double heterogeneityFraction = parseInput.Get(HeterogeneityFraction);
             double? dqscoreThreshold = parseInput.Get(DQscoreThreshold);
             IFileLocation ploidyBed = parseInput.Get(PloidyBed);
+            bool splitBySize = parseInput.Get(SplitBySize);
             var help = parseInput.Get(Help);
-            return ParsingResult<EvaluateCnvOptions>.SuccessfulResult(new EvaluateCnvOptions(roiBed, heterogeneityFraction, dqscoreThreshold, ploidyBed, help));
+            return ParsingResult<EvaluateCnvOptions>.SuccessfulResult(new EvaluateCnvOptions(roiBed, heterogeneityFraction, dqscoreThreshold, ploidyBed, splitBySize, help));
 
         }
     }
@@ -86,14 +89,17 @@ namespace EvaluateCNV
         public double HeterogeneityFraction { get; }
         public double? DQscoreThreshold { get; }
         public IFileLocation PloidyBed { get; }
+        public bool SplitBySize { get; }
+
         public bool Help { get; }
 
-        public EvaluateCnvOptions(IFileLocation roiBed, double heterogeneityFraction, double? dqscoreThreshold, IFileLocation ploidyBed, bool help)
+        public EvaluateCnvOptions(IFileLocation roiBed, double heterogeneityFraction, double? dqscoreThreshold, IFileLocation ploidyBed, bool splitBySize, bool help)
         {
             RoiBed = roiBed;
             HeterogeneityFraction = heterogeneityFraction;
             DQscoreThreshold = dqscoreThreshold;
             PloidyBed = ploidyBed;
+            SplitBySize = splitBySize;
             Help = help;
         }
     }
