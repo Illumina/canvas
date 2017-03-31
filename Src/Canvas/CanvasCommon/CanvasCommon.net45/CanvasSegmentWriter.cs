@@ -50,7 +50,7 @@ namespace CanvasCommon
         {
             // Write the VCF header:
             writer.WriteLine("##fileformat=VCFv4.1");
-            //writer.WriteLine($"##source={CanvasVersionInfo.NameString} {CanvasVersionInfo.VersionString}");
+            writer.WriteLine($"##source={CanvasVersionInfo.NameString} {CanvasVersionInfo.VersionString}");
             writer.WriteLine($"##reference={Path.Combine(wholeGenomeFastaDirectory, "genome.fa")}");
             AddPloidyAndCoverageHeaders(writer, segments, diploidCoverage);
             foreach (string header in extraHeaders ?? new List<string>())
