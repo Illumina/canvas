@@ -47,18 +47,21 @@ namespace EvaluateCNV
         public int Start; // 0-based inclusive
         public int End; // 0-based exclusive
         public int CN;
+        public string AltAllele;
+
 
         public int Length
         {
             get { return End - Start; }
         }
 
-        public CNVCall(string chr, int start, int end, int cn)
+        public CNVCall(string chr, int start, int end, int cn, string altAllele)
         {
             Chr = chr;
             Start = start;
             End = end;
             CN = cn;
+            AltAllele = altAllele;
         }
 
         public int Overlap(PloidyInterval ploidyInterval)
@@ -349,7 +352,7 @@ namespace EvaluateCNV
                         if (variant.InfoFields.ContainsKey("DQ") && double.Parse(variant.InfoFields["DQ"]) < DQscoreThreshold.Value)
                             continue;
                     } 
-                    yield return new CNVCall(variant.ReferenceName, variant.ReferencePosition, end, CN);
+                    yield return new CNVCall(variant.ReferenceName, variant.ReferencePosition, end, CN, variant.VariantAlleles.First());
                 }
             }
         }
@@ -388,17 +391,17 @@ namespace EvaluateCNV
                         Console.WriteLine("Error: Failed to parse line: {0}", line);
                         continue;
                     }
-                    yield return new CNVCall(chr, start, end, cn);
+                    yield return new CNVCall(chr, start, end, cn, null);
                 }
             }
         }
 
         protected void ComputeAccuracy(string truthSetPath, string cnvCallsPath, string outputPath, PloidyInfo ploidyInfo, 
-            bool includePassingOnly, bool splitBySize)
+            bool includePassingOnly, EvaluateCnvOptions options)
         {
-            _cnvEvaluator.ComputeAccuracy(truthSetPath, cnvCallsPath, outputPath, ploidyInfo, includePassingOnly, splitBySize);
+            _cnvEvaluator.ComputeAccuracy(truthSetPath, cnvCallsPath, outputPath, ploidyInfo, includePassingOnly, options);
             if (includePassingOnly)
-                _cnvEvaluator.ComputeAccuracy(truthSetPath, cnvCallsPath, outputPath, ploidyInfo, false, splitBySize);
+                _cnvEvaluator.ComputeAccuracy(truthSetPath, cnvCallsPath, outputPath, ploidyInfo, false, options);
         }
 
         public void Evaluate(string truthSetPath, string cnvCallsPath, string excludedBed, string outputPath, EvaluateCnvOptions options)
@@ -423,9 +426,8 @@ namespace EvaluateCNV
             Console.WriteLine("TruthSet\t{0}", truthSetPath);
             Console.WriteLine("CNVCalls\t{0}", cnvCallsPath);
 
-            ComputeAccuracy(truthSetPath, cnvCallsPath, outputPath, ploidyInfo,
-                includePassingOnly: Path.GetFileName(cnvCallsPath).ToLower().Contains("vcf"),
-                splitBySize: options.SplitBySize);
+            var includePassingOnly = Path.GetFileName(cnvCallsPath).ToLower().Contains("vcf");
+            ComputeAccuracy(truthSetPath, cnvCallsPath, outputPath, ploidyInfo, includePassingOnly, options);
 
             Console.WriteLine(">>>Done - results written to {0}", outputPath);
         }
@@ -444,8 +446,8 @@ namespace EvaluateCNV
                             truthInterval.ReferenceCopyNumber = ploidyRegion.Ploidy;
                             break;
                         }
-                        if ((truthInterval.Start >= ploidyRegion.Start && truthInterval.Start <= ploidyRegion.End) ||
-                            (truthInterval.End >= ploidyRegion.Start && truthInterval.End <= ploidyRegion.End))
+                        if (truthInterval.Start >= ploidyRegion.Start && truthInterval.Start <= ploidyRegion.End ||
+                            truthInterval.End >= ploidyRegion.Start && truthInterval.End <= ploidyRegion.End)
                             throw new Illumina.Common.IlluminaException($"Truth interval {truthInterval} crosses reference ploidy region {ploidyRegion}. Update truth interval");
                     }
                 }

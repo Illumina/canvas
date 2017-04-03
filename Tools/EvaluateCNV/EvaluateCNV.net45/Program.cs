@@ -50,56 +50,66 @@ namespace EvaluateCNV
 
     public class EvaluateCnvOptionsParser : Option<EvaluateCnvOptions>
     {
+        private static readonly ValueOption<string> BaseFileName = ValueOption<string>.CreateWithDefault("EvaluateCNV", "Base file name (without extention)", "f");
         private static readonly FileOption RegionOfInterestBed = FileOption.Create("Bed file containing regions of interest to report on separately", "r", "roi");
         private static readonly ValueOption<double> HeterogeneityFraction = ValueOption<double>.CreateWithDefault(1, "HeterogeneityFraction", "het");
         private static readonly ValueOption<double?> DQscoreThreshold = ValueOption<double?>.Create("DQscore threshold", "q", "dqscore");
         private static readonly FileOption PloidyBed = FileOption.Create("Bed file specifying the regions where reference ploidy is not 2", "p", "ploidy");
         private static readonly FlagOption SplitBySize = new FlagOption("Split by variant size", "s", "splitBySize");
+        private static readonly FlagOption SkipDiploid = new FlagOption("Skip diploid calls", "d", "skipDiploid");
         private static readonly FlagOption Help = new FlagOption("show this message and exit", "h", "help");
 
         public override OptionCollection<EvaluateCnvOptions> GetOptions()
         {
             return new OptionCollection<EvaluateCnvOptions>
             {
+                BaseFileName,
                 RegionOfInterestBed,
                 HeterogeneityFraction,
                 DQscoreThreshold,
                 PloidyBed,
                 SplitBySize,
+                SkipDiploid,
                 Help
             };
         }
 
         public override ParsingResult<EvaluateCnvOptions> Parse(SuccessfulResultCollection parseInput)
         {
+            string baseFileName = parseInput.Get(BaseFileName);
             IFileLocation roiBed = parseInput.Get(RegionOfInterestBed);
             double heterogeneityFraction = parseInput.Get(HeterogeneityFraction);
             double? dqscoreThreshold = parseInput.Get(DQscoreThreshold);
             IFileLocation ploidyBed = parseInput.Get(PloidyBed);
             bool splitBySize = parseInput.Get(SplitBySize);
+            bool skipDiploid = parseInput.Get(SkipDiploid);
             var help = parseInput.Get(Help);
-            return ParsingResult<EvaluateCnvOptions>.SuccessfulResult(new EvaluateCnvOptions(roiBed, heterogeneityFraction, dqscoreThreshold, ploidyBed, splitBySize, help));
+            return ParsingResult<EvaluateCnvOptions>.SuccessfulResult(new EvaluateCnvOptions(baseFileName, roiBed, heterogeneityFraction, 
+                dqscoreThreshold, ploidyBed, splitBySize, skipDiploid, help));
 
         }
     }
 
     public class EvaluateCnvOptions
     {
+        public string BaseFileName { get; }
         public IFileLocation RoiBed { get; }
         public double HeterogeneityFraction { get; }
         public double? DQscoreThreshold { get; }
         public IFileLocation PloidyBed { get; }
         public bool SplitBySize { get; }
-
+        public bool SkipDiploid { get; }
         public bool Help { get; }
 
-        public EvaluateCnvOptions(IFileLocation roiBed, double heterogeneityFraction, double? dqscoreThreshold, IFileLocation ploidyBed, bool splitBySize, bool help)
+        public EvaluateCnvOptions(string baseFileName, IFileLocation roiBed, double heterogeneityFraction, double? dqscoreThreshold, IFileLocation ploidyBed, bool splitBySize, bool skipDiploid, bool help)
         {
+            BaseFileName = baseFileName;
             RoiBed = roiBed;
             HeterogeneityFraction = heterogeneityFraction;
             DQscoreThreshold = dqscoreThreshold;
             PloidyBed = ploidyBed;
             SplitBySize = splitBySize;
+            SkipDiploid = skipDiploid;
             Help = help;
         }
     }
