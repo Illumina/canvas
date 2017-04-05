@@ -12,6 +12,18 @@ using Isas.SequencingFiles;
 
 namespace CanvasPedigreeCaller
 {
+
+    internal class SegmentRange
+    {
+        public int Start { get; }
+        public int End { get; }
+
+        public SegmentRange(int start, int end)
+        {
+            Start = start;
+            End = end;
+        }
+    }
     class CanvasPedigreeCaller
     {
         #region Members
@@ -720,20 +732,20 @@ namespace CanvasPedigreeCaller
             }
         }
 
-        private List<GenomicInterval> GetParallelIntervals(int nSegments, int nCores)
+        private List<SegmentRange> GetParallelIntervals(int nSegments, int nCores)
         {
-            var intervals = new List<GenomicInterval>();
-            //intervals.Add(new GenomicInterval(17231, 34515));
+
+            var intervals = new List<SegmentRange>();
 
             int step = nSegments / nCores;
-            intervals.Add(new GenomicInterval(0, step));
+            intervals.Add(new SegmentRange(0, step));
             int cumSum = step + 1;
             while (cumSum + step + 1 < nSegments - 1)
             {
-                intervals.Add(new GenomicInterval(cumSum, cumSum + step));
+                intervals.Add(new SegmentRange(cumSum, cumSum + step));
                 cumSum += step + 1;
             }
-            intervals.Add(new GenomicInterval(cumSum, nSegments - 1));
+            intervals.Add(new SegmentRange(cumSum, nSegments - 1));
             return intervals;
         }
 
