@@ -16,7 +16,7 @@ namespace CanvasPedigreeCaller
     class CanvasPedigreeCaller
     {
         #region Members
-        public int QualityFilterThreshold { get; set; } = 7;
+        public int QualityFilterThreshold { get; set; } = 20;
         public int DeNovoQualityFilterThreshold { get; set; } = 20;
         public PedigreeCallerParameters CallerParameters { get; set; }
         protected double MedianCoverageThreshold = 4;
@@ -161,7 +161,7 @@ namespace CanvasPedigreeCaller
         {
             // load files
             // initialize data structures and classes
-            int fileCounter = 0;
+            var fileCounter = 0;
             var pedigreeMembers = new LinkedList<PedigreeMember>();
             foreach (string sampleName in sampleNames)
             {
@@ -170,8 +170,8 @@ namespace CanvasPedigreeCaller
                 fileCounter++;
             }
 
-            var numberOfSegments = pedigreeMembers.First().Segments.Count;
-            var maxCoreNumber = 30;
+            int numberOfSegments = pedigreeMembers.First().Segments.Count;
+            const int maxCoreNumber = 30;
             var segmentIntervals = GetParallelIntervals(numberOfSegments, Math.Min(Environment.ProcessorCount, maxCoreNumber));
             var genotypes = GenerateGenotypeCombinations(CallerParameters.MaximumCopyNumber);
             var copyNumberCombinations = GenerateCopyNumberCombinations(CallerParameters.MaximumCopyNumber, CallerParameters.MaxAlleleNumber);
@@ -192,8 +192,9 @@ namespace CanvasPedigreeCaller
                         {
                             var useCnLikelihood = GetUseCnLikelihood(pedigreeMembers, segmentIndex);
                             var copyNumberLikelihoods = MaximalCnLikelihoodNoPedigreeInfo(pedigreeMembers, segmentIndex, copyNumberCombinations);
-                            MaximalGtLikelihood(pedigreeMembers, segmentIndex, genotypes);
                             EstimateQScoresNoPedigreeInfo(pedigreeMembers, segmentIndex, copyNumberLikelihoods);
+                            if (!useCnLikelihood)
+                                MaximalGtLikelihoodNoPedigreeInfo(pedigreeMembers, segmentIndex, genotypes);
                         }
                         segmentIndex++;
                     }
@@ -485,7 +486,7 @@ namespace CanvasPedigreeCaller
                     if (currentLikelihood > maximalLikelihood)
                     {
                         maximalLikelihood = currentLikelihood;
-                        if (parent1CopyNumber >= 2)
+                        if (parent1CopyNumber > 2)
                         {
                             parents.First().Segments[segmentPosition].MajorChromosomeCount =
                                 Math.Max(parent1GtStates.Item1, parent1GtStates.Item2);
@@ -501,7 +502,7 @@ namespace CanvasPedigreeCaller
                             parents.First().Segments[segmentPosition].MajorChromosomeCountScore = null;
                         }
 
-                        if (parent2CopyNumber >= 2)
+                        if (parent2CopyNumber > 2)
                         {
                             parents.Last().Segments[segmentPosition].MajorChromosomeCount =
                                 Math.Max(parent2GtStates.Item1, parent2GtStates.Item2);
@@ -523,7 +524,7 @@ namespace CanvasPedigreeCaller
                             if (bestChildGtStates[counter] != null)
                             {
                                 int childCopyNumber = child.Segments[segmentPosition].CopyNumber;
-                                if (childCopyNumber >= 2)
+                                if (childCopyNumber > 2)
                                 {
                                     child.Segments[segmentPosition].MajorChromosomeCount =
                                         Math.Max(bestChildGtStates[counter].Item1, bestChildGtStates[counter].Item2);
@@ -563,10 +564,9 @@ namespace CanvasPedigreeCaller
         /// <summary>
         /// Calculates maximal likelihood for segments without SNV allele ratios. Updated CanvasSegment CopyNumber only. 
         /// </summary>
-        /// <param name="parents"></param>
-        /// <param name="children"></param>
+        /// <param name="samples"></param>
         /// <param name="segmentPosition"></param>
-        /// <param name="transitionMatrix"></param>
+        /// <param name="copyNumberCombinations"></param>
         public double[][] MaximalCnLikelihoodNoPedigreeInfo(LinkedList<PedigreeMember> samples, int segmentPosition, List<List<int>> copyNumberCombinations)
         {
             int defaultCn = 2;
@@ -619,17 +619,17 @@ namespace CanvasPedigreeCaller
         }
 
         /// <summary>
-        /// Calculates maximal likelihood for segments with SNV allele counts. Updated CanvasSegment CopyNumber and MajorChromosomeCount.
+        /// Calculates maximal likelihood for segments with SNV allele counts given CopyNumber. Updated MajorChromosomeCount.
         /// </summary>
         /// <param name="samples"></param>
         /// <param name="segmentPosition"></param>
         /// <param name="genotypes"></param>       
-        public void MaximalGtLikelihood(LinkedList<PedigreeMember> samples, int segmentPosition, Dictionary<int, List<Tuple<int, int>>> genotypes)
+        public void MaximalGtLikelihoodNoPedigreeInfo(LinkedList<PedigreeMember> samples, int segmentPosition, Dictionary<int, List<Tuple<int, int>>> genotypes)
         {
             foreach (PedigreeMember sample in samples)
             {
                 int copyNumber = sample.Segments[segmentPosition].CopyNumber;
-                if (copyNumber >= 2)
+                if (copyNumber > 2)
                 {
                     sample.Segments[segmentPosition].MajorChromosomeCount = copyNumber;
                     return;

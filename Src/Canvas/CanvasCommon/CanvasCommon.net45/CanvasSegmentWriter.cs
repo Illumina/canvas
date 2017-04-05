@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using Illumina.Common.FileSystem;
@@ -84,12 +85,12 @@ namespace CanvasCommon
             writer.WriteLine("##FORMAT=<ID=BC,Number=1,Type=Float,Description=\"Number of bins in the region\">");
             writer.WriteLine("##FORMAT=<ID=CN,Number=1,Type=Integer,Description=\"Copy number genotype for imprecise events\">");
             writer.WriteLine("##FORMAT=<ID=MCC,Number=1,Type=Integer,Description=\"Major chromosome count (equal to copy number for LOH regions)\">");
-            writer.WriteLine("##FORMAT=<ID=MCCQ,Number=1,Type=Integer,Description=\"Major chromosome count quality score\">");
+            writer.WriteLine("##FORMAT=<ID=MCCQ,Number=1,Type=Float,Description=\"Major chromosome count quality score\">");
+            writer.WriteLine("##FORMAT=<ID=QS,Number=1,Type=Float,Description=\"Phred-scaled quality score\">");
 
             if (denovoQualityThreshold.HasValue)
             {
                 writer.WriteLine("##FORMAT=<ID=DQ,Number=1,Type=Float,Description=\"De novo variants Phred-scaled quality score\">");
-                writer.WriteLine("##FORMAT=<ID=QS,Number=1,Type=Float,Description=\"Phred-scaled quality score\">");
             }
             string names = string.Join("\t", sampleNames.ToArray());
             writer.WriteLine("#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\t" + names);
@@ -167,8 +168,9 @@ namespace CanvasCommon
             foreach (var segment in segments)
             {
                 string mcc = segment.MajorChromosomeCount.HasValue ? segment.MajorChromosomeCount.ToString() : nullValue;
-                string mccq = segment.MajorChromosomeCountScore.HasValue ? $"{segment.MajorChromosomeCountScore.Value:F2}" : nullValue;
-                string dqscore = segment.DQScore.HasValue ? $"{segment.DQScore.Value:F2}" : nullValue;
+                string mccq = segment.MajorChromosomeCountScore.HasValue ? Math.Round(segment.MajorChromosomeCountScore.Value, 2, MidpointRounding.AwayFromZero).
+                    ToString(CultureInfo.InvariantCulture): nullValue;
+                string dqscore = segment.DQScore.HasValue ? $"{Math.Round(segment.DQScore.Value, 2)}" : nullValue;
                 double rc = Math.Round(segment.MeanCount, 0, MidpointRounding.AwayFromZero);
                 writer.Write($"\t{rc}:{segment.BinCount}:{ segment.CopyNumber}:{mcc}:{mccq}:{segment.QScore:F2}:{dqscore}");
             }
