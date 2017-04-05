@@ -13,12 +13,12 @@ using Isas.SequencingFiles;
 namespace CanvasPedigreeCaller
 {
 
-    internal class SegmentRange
+    internal class SegmentIndexRange
     {
         public int Start { get; }
         public int End { get; }
 
-        public SegmentRange(int start, int end)
+        public SegmentIndexRange(int start, int end)
         {
             Start = start;
             End = end;
@@ -732,20 +732,20 @@ namespace CanvasPedigreeCaller
             }
         }
 
-        private List<SegmentRange> GetParallelIntervals(int nSegments, int nCores)
+        private List<SegmentIndexRange> GetParallelIntervals(int nSegments, int nCores)
         {
 
-            var intervals = new List<SegmentRange>();
+            var intervals = new List<SegmentIndexRange>();
 
             int step = nSegments / nCores;
-            intervals.Add(new SegmentRange(0, step));
+            intervals.Add(new SegmentIndexRange(0, step));
             int cumSum = step + 1;
             while (cumSum + step + 1 < nSegments - 1)
             {
-                intervals.Add(new SegmentRange(cumSum, cumSum + step));
+                intervals.Add(new SegmentIndexRange(cumSum, cumSum + step));
                 cumSum += step + 1;
             }
-            intervals.Add(new SegmentRange(cumSum, nSegments - 1));
+            intervals.Add(new SegmentIndexRange(cumSum, nSegments - 1));
             return intervals;
         }
 
