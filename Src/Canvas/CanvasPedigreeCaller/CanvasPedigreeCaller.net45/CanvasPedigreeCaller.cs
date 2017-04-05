@@ -735,18 +735,18 @@ namespace CanvasPedigreeCaller
         private List<SegmentIndexRange> GetParallelIntervals(int nSegments, int nCores)
         {
 
-            var intervals = new List<SegmentIndexRange>();
+            var segmentIndexRanges = new List<SegmentIndexRange>();
 
             int step = nSegments / nCores;
-            intervals.Add(new SegmentIndexRange(0, step));
+            segmentIndexRanges.Add(new SegmentIndexRange(0, step));
             int cumSum = step + 1;
             while (cumSum + step + 1 < nSegments - 1)
             {
-                intervals.Add(new SegmentIndexRange(cumSum, cumSum + step));
+                segmentIndexRanges.Add(new SegmentIndexRange(cumSum, cumSum + step));
                 cumSum += step + 1;
             }
-            intervals.Add(new SegmentIndexRange(cumSum, nSegments - 1));
-            return intervals;
+            segmentIndexRanges.Add(new SegmentIndexRange(cumSum, nSegments - 1));
+            return segmentIndexRanges;
         }
 
         public double GetTransitionProbability(int gt1Parent, int gt2Parent, int gt1Offspring, int gt2Offspring)
