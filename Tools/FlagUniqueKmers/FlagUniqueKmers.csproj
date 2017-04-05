@@ -20,7 +20,7 @@
   <ItemGroup>
     <PackageReference Include="Illumina.Common" Version="2.3.1.124" />
     <PackageReference Include="Isas.Framework" Version="5.4.1.144" />
-    <PackageReference Include="Isas.SequencingFiles" Version="3.11.2.224" />
+    <PackageReference Include="Isas.SequencingFiles" Version="3.11.0.212" />
   </ItemGroup>
 
 </Project>
