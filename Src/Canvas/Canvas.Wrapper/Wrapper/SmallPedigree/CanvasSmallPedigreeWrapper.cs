@@ -49,9 +49,7 @@ namespace Canvas.Wrapper.SmallPedigree
             {
                 var sampleId = sampleKvp.Key.Id;
                 var sample = sampleKvp.Value;
-                commandLine.Append($" --bam \"{sample.Bam.BamFile}\"");
-                if (sample.SampleType != SampleType.Other)
-                    commandLine.Append($" --{sample.SampleType.GetOptionName()} {sampleId}");
+                commandLine.Append($" --bam \"{sample.Bam.BamFile}\" {sample.SampleType.GetOptionName()} {sampleId}");
             }
             IFileLocation kmerFasta = _annotationFileProvider.GetKmerFasta(genomeMetadata);
             commandLine.Append($" --reference \"{kmerFasta}\"");

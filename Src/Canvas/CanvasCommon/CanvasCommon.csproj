@@ -1,10 +1,10 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>netstandard1.6</TargetFramework>
+    <TargetFramework>netcoreapp1.1</TargetFramework>
     <AssemblyName>CanvasCommon</AssemblyName>
     <PackageId>CanvasCommon</PackageId>
-    <NetStandardImplicitPackageVersion>1.6.0</NetStandardImplicitPackageVersion>
+    <RuntimeFrameworkVersion>1.1.0</RuntimeFrameworkVersion>
     <PackageTargetFallback>$(PackageTargetFallback);dnxcore50</PackageTargetFallback>
     <GenerateAssemblyTitleAttribute>false</GenerateAssemblyTitleAttribute>
     <GenerateAssemblyDescriptionAttribute>false</GenerateAssemblyDescriptionAttribute>
@@ -15,6 +15,10 @@
     <GenerateAssemblyInformationalVersionAttribute>false</GenerateAssemblyInformationalVersionAttribute>
     <GenerateAssemblyCompanyAttribute>false</GenerateAssemblyCompanyAttribute>
     <GenerateAssemblyCopyrightAttribute>false</GenerateAssemblyCopyrightAttribute>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+    <Optimize>False</Optimize>
   </PropertyGroup>
 
   <ItemGroup>
@@ -29,9 +33,9 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Illumina.Common" Version="2.2.0.119" />
-    <PackageReference Include="Isas.Framework" Version="5.4.0.137" />
-    <PackageReference Include="Isas.SequencingFiles" Version="3.10.3.207" />
+    <PackageReference Include="Illumina.Common" Version="2.3.1.139" />
+    <PackageReference Include="Isas.Framework" Version="5.4.1.144" />
+    <PackageReference Include="Isas.SequencingFiles" Version="3.11.4.232" />
     <PackageReference Include="MathNet.Numerics.Core" Version="3.17.0" />
   </ItemGroup>
 
