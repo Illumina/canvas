@@ -78,11 +78,12 @@ namespace EvaluateCNV
             {
                 foreach (var baseCounter in sizeAwareBaseCounters)
                 {
-                    var fileName = $"{options.BaseFileName}_{Math.Round(baseCounter.MinSize.Value / 1000.0)}kb_" +
-                                   $"{Math.Round(baseCounter.MaxSize.Value / 1000.0)}kb.txt";
+
+                    var fileName = $"{options.BaseFileName}_{Math.Round(baseCounter.MinSize.Value / 1000.0)}kb";
+                    fileName += baseCounter.MaxSize.Value == int.MaxValue ? "+.txt" : $"_{Math.Round(baseCounter.MaxSize.Value / 1000.0)}kb.txt";
 
                     using (FileStream stream = new FileStream(Path.Combine(outputPath, fileName), includePassingOnly ?
-                        FileMode.Create : FileMode.Append, FileAccess.Write))
+                    FileMode.Create : FileMode.Append, FileAccess.Write))
                     using (StreamWriter outputWriter = new StreamWriter(stream))
                     {
                         WriteResults(truthSetPath, cnvCallsPath, outputWriter, includePassingOnly, meanAccuracy, medianAccuracy,
