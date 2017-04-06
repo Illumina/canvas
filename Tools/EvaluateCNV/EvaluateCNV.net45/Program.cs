@@ -50,7 +50,7 @@ namespace EvaluateCNV
 
     public class EvaluateCnvOptionsParser : Option<EvaluateCnvOptions>
     {
-        private static readonly ValueOption<string> BaseFileName = ValueOption<string>.CreateWithDefault("EvaluateCNV", "Base file name (without extension)", "f");
+        private static readonly ValueOption<string> BaseFileName = ValueOption<string>.CreateWithDefault("EvaluateCNVResults", "Base file name (without extension)", "f");
         private static readonly FileOption RegionOfInterestBed = FileOption.Create("Bed file containing regions of interest to report on separately", "r", "roi");
         private static readonly ValueOption<double> HeterogeneityFraction = ValueOption<double>.CreateWithDefault(1, "HeterogeneityFraction", "het");
         private static readonly ValueOption<double?> DQscoreThreshold = ValueOption<double?>.Create("DQscore threshold", "q", "dqscore");
