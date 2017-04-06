@@ -42,7 +42,7 @@ namespace EvaluateCNV
             Console.WriteLine("For more info see: http://confluence.illumina.com/display/BIOINFO/EvaluateCNV");
             Console.WriteLine();
             Console.WriteLine("Usage info:");
-            Console.WriteLine("EvaluateCNV $TruthSetPath $CNV.vcf $ExcludedRegionsBed $OutputPath [OPTIONS]+[$RegionOfInterestBed]");
+            Console.WriteLine("EvaluateCNV $TruthSetPath $CNV.vcf $ExcludedRegionsBed $OutputDir [OPTIONS]+[$RegionOfInterestBed]");
             Console.WriteLine("Options:");
             optionsParser.ShowHelp(Console.Out);
         }
@@ -50,19 +50,25 @@ namespace EvaluateCNV
 
     public class EvaluateCnvOptionsParser : Option<EvaluateCnvOptions>
     {
+        private static readonly ValueOption<string> BaseFileName = ValueOption<string>.CreateWithDefault("EvaluateCNV", "Base file name (without extension)", "f");
         private static readonly FileOption RegionOfInterestBed = FileOption.Create("Bed file containing regions of interest to report on separately", "r", "roi");
         private static readonly ValueOption<double> HeterogeneityFraction = ValueOption<double>.CreateWithDefault(1, "HeterogeneityFraction", "het");
         private static readonly ValueOption<double?> DQscoreThreshold = ValueOption<double?>.Create("DQscore threshold", "q", "dqscore");
         private static readonly FileOption PloidyFile = FileOption.Create("bed or vcf file specifying the regions where reference ploidy is not 2", "p", "ploidy");
+        private static readonly FlagOption SplitBySize = new FlagOption("Split by variant size", "s", "splitBySize");
+        private static readonly FlagOption SkipDiploid = new FlagOption("Skip diploid calls", "d", "skipDiploid");
         private static readonly FlagOption Help = new FlagOption("show this message and exit", "h", "help");
 
         public override OptionCollection<EvaluateCnvOptions> GetOptions()
         {
             return new OptionCollection<EvaluateCnvOptions>
             {
+                BaseFileName,
                 RegionOfInterestBed,
                 HeterogeneityFraction,
                 DQscoreThreshold,
+                SplitBySize,
+                SkipDiploid,
                 PloidyFile,
                 Help
             };
@@ -70,29 +76,39 @@ namespace EvaluateCNV
 
         public override ParsingResult<EvaluateCnvOptions> Parse(SuccessfulResultCollection parseInput)
         {
+            string baseFileName = parseInput.Get(BaseFileName);
             IFileLocation roiBed = parseInput.Get(RegionOfInterestBed);
             double heterogeneityFraction = parseInput.Get(HeterogeneityFraction);
             double? dqscoreThreshold = parseInput.Get(DQscoreThreshold);
+            bool splitBySize = parseInput.Get(SplitBySize);
+            bool skipDiploid = parseInput.Get(SkipDiploid);
             IFileLocation ploidyFile = parseInput.Get(PloidyFile);
             var help = parseInput.Get(Help);
-            return ParsingResult<EvaluateCnvOptions>.SuccessfulResult(new EvaluateCnvOptions(roiBed, heterogeneityFraction, dqscoreThreshold, ploidyFile, help));
+            return ParsingResult<EvaluateCnvOptions>.SuccessfulResult(new EvaluateCnvOptions(baseFileName, roiBed, heterogeneityFraction,
+                dqscoreThreshold, ploidyFile, splitBySize, skipDiploid, help));
 
         }
     }
 
     public class EvaluateCnvOptions
     {
+        public string BaseFileName { get; }
         public IFileLocation RoiBed { get; }
         public double HeterogeneityFraction { get; }
         public double? DQscoreThreshold { get; }
+        public bool SplitBySize { get; }
+        public bool SkipDiploid { get; }
         public IFileLocation PloidyFile { get; }
         public bool Help { get; }
 
-        public EvaluateCnvOptions(IFileLocation roiBed, double heterogeneityFraction, double? dqscoreThreshold, IFileLocation ploidyFile, bool help)
+        public EvaluateCnvOptions(string baseFileName, IFileLocation roiBed, double heterogeneityFraction, double? dqscoreThreshold, IFileLocation ploidyFile, bool splitBySize, bool skipDiploid, bool help)
         {
+            BaseFileName = baseFileName;
             RoiBed = roiBed;
             HeterogeneityFraction = heterogeneityFraction;
             DQscoreThreshold = dqscoreThreshold;
+            SplitBySize = splitBySize;
+            SkipDiploid = skipDiploid;
             PloidyFile = ploidyFile;
             Help = help;
         }
