@@ -48,7 +48,7 @@ namespace Canvas.Wrapper.SmallPedigree
         {
             var intermediateOutputs = input.Samples.SelectData((info, sample) =>
             {
-                var stub = GetStub(info.Id);
+                var stub = GetSingleSampleOutputStub(info);
                 var coverageAndVariantFrequency = SingleSampleCallset.GetCoverageAndVariantFrequencyOutput(stub);
                 var singleSampleVcf = new Vcf(SingleSampleCallset.GetSingleSamplePedigreeVcfOutput(stub));
                 if (!_canvasWorkerFactory.IncludeIntermediateResults())
@@ -60,31 +60,31 @@ namespace Canvas.Wrapper.SmallPedigree
                 return new IntermediateOutput(singleSampleVcf, coverageAndVariantFrequency, variantFrequencies, variantFrequenciesBaf, partitioned);
             });
 
-            return new CanvasSmallPedigreeOutput(new Vcf(GetCnvVcf()), intermediateOutputs);
+            return new CanvasSmallPedigreeOutput(new Vcf(GetPedigreeVcf()), intermediateOutputs);
         }
 
         private void Move(CanvasSmallPedigreeOutput source, IFileMover fileMover)
         {
-            source.CnvVcf.Move(GetCnvVcf(), fileMover.Move);
+            source.CnvVcf.Move(GetPedigreeVcf(), fileMover.Move);
             source.IntermediateOutputs.ForEach(kvp =>
             {
                 MoveIntermediateOutput(kvp.Key, kvp.Value, fileMover);
             });
         }
 
-        private IFileLocation GetCnvVcf()
+        private IFileLocation GetPedigreeVcf()
         {
             return _pedigreefileNameStub.AppendName(".CNV.vcf.gz");
         }
 
-        private IFileLocation GetStub(string sampleId)
+        private IFileLocation GetSingleSampleOutputStub(SampleInfo sampleInfo)
         {
-            return _pedigreefileNameStub.AppendName($"_{sampleId}.CNV");
+            return _pedigreefileNameStub.Directory.GetFileLocation($"{sampleInfo.Name}_S{sampleInfo.Number}.CNV");
         }
 
         private void MoveIntermediateOutput(SampleInfo info, IntermediateOutput output, IFileMover fileMover)
         {
-            var stub = GetStub(info.Id);
+            var stub = GetSingleSampleOutputStub(info);
             fileMover.Move(output.CnvVcf.VcfFile, SingleSampleCallset.GetSingleSamplePedigreeVcfOutput(stub));
             fileMover.Move(output.CoverageAndVariantFrequencies, SingleSampleCallset.GetCoverageAndVariantFrequencyOutput(stub));
             if (_canvasWorkerFactory.IncludeIntermediateResults())
