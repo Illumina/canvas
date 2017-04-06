@@ -37,9 +37,9 @@ namespace Canvas.Wrapper.SmallPedigree
         {
             if (!_canvasWorkerFactory.RunCnvDetection()) return new NullSmallPedigreeCheckpoint(_logger);
 
-            CanvasSmallPedigreeWrapper wrapper = new CanvasSmallPedigreeWrapper(_workManager, _logger, _canvasWorkerFactory.GetCanvasExe(), 
-                GetRuntimeExecutable(), _canvasWorkerFactory.GetAnnotationFileProvider(), 
-                _canvasWorkerFactory.GetCanvasSingleSampleInputCommandLineBuilder(_canvasWorkerFactory.GetAnnotationFileProvider()), 
+            CanvasSmallPedigreeWrapper wrapper = new CanvasSmallPedigreeWrapper(_workManager, _logger, _canvasWorkerFactory.GetCanvasExe(),
+                GetRuntimeExecutable(), _canvasWorkerFactory.GetAnnotationFileProvider(),
+                _canvasWorkerFactory.GetCanvasSingleSampleInputCommandLineBuilder(_canvasWorkerFactory.GetAnnotationFileProvider()),
                 new CanvasPloidyVcfCreator(_canvasWorkerFactory.GetPloidyCorrector()));
             return new SmallPedigreeCheckpoint(wrapper, Move, Load);
         }
@@ -50,13 +50,14 @@ namespace Canvas.Wrapper.SmallPedigree
             {
                 var stub = GetStub(info.Id);
                 var coverageAndVariantFrequency = SingleSampleCallset.GetCoverageAndVariantFrequencyOutput(stub);
+                var singleSampleVcf = new Vcf(SingleSampleCallset.GetSingleSamplePedigreeVcfOutput(stub));
                 if (!_canvasWorkerFactory.IncludeIntermediateResults())
-                    return new IntermediateOutput(coverageAndVariantFrequency, null, null, null);
+                    return new IntermediateOutput(singleSampleVcf, coverageAndVariantFrequency, null, null, null);
 
                 var partitioned = SingleSampleCallset.GetPartitionedPath(stub);
                 var variantFrequencies = SingleSampleCallset.GetVfSummaryPath(stub);
                 var variantFrequenciesBaf = SingleSampleCallset.GetVfSummaryPath(stub);
-                return new IntermediateOutput(coverageAndVariantFrequency, variantFrequencies, variantFrequenciesBaf, partitioned);
+                return new IntermediateOutput(singleSampleVcf, coverageAndVariantFrequency, variantFrequencies, variantFrequenciesBaf, partitioned);
             });
 
             return new CanvasSmallPedigreeOutput(new Vcf(GetCnvVcf()), intermediateOutputs);
@@ -84,6 +85,7 @@ namespace Canvas.Wrapper.SmallPedigree
         private void MoveIntermediateOutput(SampleInfo info, IntermediateOutput output, IFileMover fileMover)
         {
             var stub = GetStub(info.Id);
+            fileMover.Move(output.CnvVcf.VcfFile, SingleSampleCallset.GetSingleSamplePedigreeVcfOutput(stub));
             fileMover.Move(output.CoverageAndVariantFrequencies, SingleSampleCallset.GetCoverageAndVariantFrequencyOutput(stub));
             if (_canvasWorkerFactory.IncludeIntermediateResults())
             {
