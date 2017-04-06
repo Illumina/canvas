@@ -57,7 +57,7 @@ namespace EvaluateCNV
             long totalVariantBases = 0;
 
             _cnvChecker.CountExcludedBasesInTruthSetIntervals();
-            if (_cnvChecker.DQscoreThreshold.HasValue && !includePassingOnly)
+            if (_cnvChecker.DQscoreThreshold.HasValue && !Path.GetFileName(cnvCallsPath).ToLower().Contains("vcf"))
                 throw new ArgumentException("CNV.vcf must be in a vcf format when --dqscore option is used");
             var calls = _cnvChecker.GetCnvCallsFromVcf(cnvCallsPath, includePassingOnly);
 
@@ -65,15 +65,15 @@ namespace EvaluateCNV
             var meanAccuracy = CalculateMetrics(ploidyInfo, calls, globalBaseCounter, sizeAwareBaseCounters, roiBaseCounter,
                 options.SkipDiploid, ref totalVariantBases, ref totalVariants, out medianAccuracy);
 
-            using (var stream = new FileStream(Path.Combine(outputPath, $"{options.BaseFileName}.txt"), includePassingOnly? 
+            using (var stream = new FileStream(Path.Combine(outputPath, $"{options.BaseFileName}.txt"), includePassingOnly ?
                 FileMode.Create : FileMode.Append, FileAccess.Write))
             using (StreamWriter outputWriter = new StreamWriter(stream))
             {
-                WriteResults(truthSetPath, cnvCallsPath, outputWriter, includePassingOnly, meanAccuracy, medianAccuracy, 
+                WriteResults(truthSetPath, cnvCallsPath, outputWriter, includePassingOnly, meanAccuracy, medianAccuracy,
                     globalBaseCounter.BaseCount, roiBaseCounter.BaseCount, totalVariants, totalVariantBases);
             }
 
-       
+
             if (options.SplitBySize)
             {
                 foreach (var baseCounter in sizeAwareBaseCounters)
@@ -92,9 +92,9 @@ namespace EvaluateCNV
 
             }
         }
-            
-        private double CalculateMetrics(PloidyInfo ploidyInfo, IEnumerable<CNVCall> calls, BaseCounter globalCounter, 
-            List<BaseCounter> sizeAwareCounter, BaseCounter roiCounter, bool optionsSkipDiploid, ref long totalVariantBases, 
+
+        private double CalculateMetrics(PloidyInfo ploidyInfo, IEnumerable<CNVCall> calls, BaseCounter globalCounter,
+            List<BaseCounter> sizeAwareCounter, BaseCounter roiCounter, bool optionsSkipDiploid, ref long totalVariantBases,
             ref int totalVariants, out double medianAccuracy)
         {
             ploidyInfo.MakeChromsomeNameAgnosticWithAllChromosomes(calls.Select(call => call.Chr));
@@ -194,7 +194,7 @@ namespace EvaluateCNV
                     if (interval.CN == 2) continue;
                     int basecount = interval.Length - interval.BasesExcluded;
                     if (basecount <= 0) continue;
-                    double accuracy = interval.BasesCalledCorrectly / (double) basecount;
+                    double accuracy = interval.BasesCalledCorrectly / (double)basecount;
                     eventAccuracies.Add(accuracy);
                     meanAccuracy += accuracy;
                     //Console.WriteLine("{0}\t{1:F4}", interval.End - interval.Start, accuracy);
@@ -282,34 +282,34 @@ namespace EvaluateCNV
 
             outputWriter.WriteLine("TruthSet\t{0}", truthSetPath);
             outputWriter.WriteLine("CNVCalls\t{0}", cnvCallsPath);
-            outputWriter.WriteLine("Accuracy\t{0:F4}", 100 * totalBasesRight / (double) totalBases);
-            outputWriter.WriteLine("DirectionAccuracy\t{0:F4}", 100 * totalBasesRightDirection / (double) totalBases);
+            outputWriter.WriteLine("Accuracy\t{0:F4}", 100 * totalBasesRight / (double)totalBases);
+            outputWriter.WriteLine("DirectionAccuracy\t{0:F4}", 100 * totalBasesRightDirection / (double)totalBases);
             outputWriter.WriteLine("Recall\t{0:F4}",
-                100 * (isGainBasesCorrect + isLossBasesCorrect) / (double) (isGainBases + isLossBases));
+                100 * (isGainBasesCorrect + isLossBasesCorrect) / (double)(isGainBases + isLossBases));
             outputWriter.WriteLine("DirectionRecall\t{0:F4}",
-                100 * (isGainBasesCorrectDirection + isLossBasesCorrectDirection) / (double) (isGainBases + isLossBases));
+                100 * (isGainBasesCorrectDirection + isLossBasesCorrectDirection) / (double)(isGainBases + isLossBases));
             outputWriter.WriteLine("Precision\t{0:F4}",
-                100 * (isGainBasesCorrect + isLossBasesCorrect) / (double) (callGainBases + callLossBases));
+                100 * (isGainBasesCorrect + isLossBasesCorrect) / (double)(callGainBases + callLossBases));
             outputWriter.WriteLine("DirectionPrecision\t{0:F4}",
-                100 * (isGainBasesCorrectDirection + isLossBasesCorrectDirection) / (double) (callGainBases + callLossBases));
-            outputWriter.WriteLine("GainRecall\t{0:F4}", 100 * (isGainBasesCorrect) / (double) (isGainBases));
-            outputWriter.WriteLine("GainDirectionRecall\t{0:F4}", 100 * (isGainBasesCorrectDirection) / (double) (isGainBases));
-            outputWriter.WriteLine("GainPrecision\t{0:F4}", 100 * (isGainBasesCorrect) / (double) (callGainBases));
+                100 * (isGainBasesCorrectDirection + isLossBasesCorrectDirection) / (double)(callGainBases + callLossBases));
+            outputWriter.WriteLine("GainRecall\t{0:F4}", 100 * (isGainBasesCorrect) / (double)(isGainBases));
+            outputWriter.WriteLine("GainDirectionRecall\t{0:F4}", 100 * (isGainBasesCorrectDirection) / (double)(isGainBases));
+            outputWriter.WriteLine("GainPrecision\t{0:F4}", 100 * (isGainBasesCorrect) / (double)(callGainBases));
             outputWriter.WriteLine("GainDirectionPrecision\t{0:F4}",
-                100 * (isGainBasesCorrectDirection) / (double) (callGainBases));
-            outputWriter.WriteLine("LossRecall\t{0:F4}", 100 * (isLossBasesCorrect) / (double) (isLossBases));
-            outputWriter.WriteLine("LossDirectionRecall\t{0:F4}", 100 * (isLossBasesCorrectDirection) / (double) (isLossBases));
-            outputWriter.WriteLine("LossPrecision\t{0:F4}", 100 * (isLossBasesCorrect) / (double) (callLossBases));
+                100 * (isGainBasesCorrectDirection) / (double)(callGainBases));
+            outputWriter.WriteLine("LossRecall\t{0:F4}", 100 * (isLossBasesCorrect) / (double)(isLossBases));
+            outputWriter.WriteLine("LossDirectionRecall\t{0:F4}", 100 * (isLossBasesCorrectDirection) / (double)(isLossBases));
+            outputWriter.WriteLine("LossPrecision\t{0:F4}", 100 * (isLossBasesCorrect) / (double)(callLossBases));
             outputWriter.WriteLine("LossDirectionPrecision\t{0:F4}",
-                100 * (isLossBasesCorrectDirection) / (double) (callLossBases));
+                100 * (isLossBasesCorrectDirection) / (double)(callLossBases));
             outputWriter.WriteLine("MeanEventAccuracy\t{0:F4}", 100 * meanAccuracy);
             outputWriter.WriteLine("MedianEventAccuracy\t{0:F4}", 100 * medianAccuracy);
             outputWriter.WriteLine("VariantEventsCalled\t{0}", totalVariants);
             outputWriter.WriteLine("VariantBasesCalled\t{0}", totalVariantBases);
             if (roiBaseCount != null && ROIBases > 0)
             {
-                outputWriter.WriteLine("ROIAccuracy\t{0:F4}", 100 * ROIBasesCorrect / (double) ROIBases);
-                outputWriter.WriteLine("ROIDirectionAccuracy\t{0:F4}", 100 * ROIBasesCorrectDirection / (double) ROIBases);
+                outputWriter.WriteLine("ROIAccuracy\t{0:F4}", 100 * ROIBasesCorrect / (double)ROIBases);
+                outputWriter.WriteLine("ROIDirectionAccuracy\t{0:F4}", 100 * ROIBasesCorrectDirection / (double)ROIBases);
             }
             // to separate passing and all variant results
             outputWriter.WriteLine();

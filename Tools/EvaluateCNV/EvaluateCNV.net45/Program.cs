@@ -8,7 +8,7 @@ namespace EvaluateCNV
 {
     class Program
     {
-        static void Main(string[] args)
+        public static void Main(string[] args)
         {
             EvaluateCnvOptionsParser optionsParser = new EvaluateCnvOptionsParser();
             if (args.Length < 4)

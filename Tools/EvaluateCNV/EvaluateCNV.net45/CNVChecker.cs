@@ -352,7 +352,7 @@ namespace EvaluateCNV
                             continue;
                         if (variant.InfoFields.ContainsKey("DQ") && double.Parse(variant.InfoFields["DQ"]) < DQscoreThreshold.Value)
                             continue;
-                    } 
+                    }
                     yield return new CNVCall(variant.ReferenceName, variant.ReferencePosition, end, CN, variant.VariantAlleles.First());
                 }
             }
@@ -397,7 +397,7 @@ namespace EvaluateCNV
             }
         }
 
-        protected void ComputeAccuracy(string truthSetPath, string cnvCallsPath, string outputPath, PloidyInfo ploidyInfo, 
+        protected void ComputeAccuracy(string truthSetPath, string cnvCallsPath, string outputPath, PloidyInfo ploidyInfo,
             bool includePassingOnly, EvaluateCnvOptions options)
         {
             _cnvEvaluator.ComputeAccuracy(truthSetPath, cnvCallsPath, outputPath, ploidyInfo, includePassingOnly, options);
