@@ -6,6 +6,7 @@ using CanvasCommon;
 using Illumina.Common;
 using Isas.SequencingFiles;
 using Isas.SequencingFiles.Vcf;
+using Illumina.Common.FileSystem;
 
 namespace EvaluateCNV
 {
@@ -351,7 +352,7 @@ namespace EvaluateCNV
                             continue;
                         if (variant.InfoFields.ContainsKey("DQ") && double.Parse(variant.InfoFields["DQ"]) < DQscoreThreshold.Value)
                             continue;
-                    } 
+                    }
                     yield return new CNVCall(variant.ReferenceName, variant.ReferencePosition, end, CN, variant.VariantAlleles.First());
                 }
             }
@@ -396,7 +397,7 @@ namespace EvaluateCNV
             }
         }
 
-        protected void ComputeAccuracy(string truthSetPath, string cnvCallsPath, string outputPath, PloidyInfo ploidyInfo, 
+        protected void ComputeAccuracy(string truthSetPath, string cnvCallsPath, string outputPath, PloidyInfo ploidyInfo,
             bool includePassingOnly, EvaluateCnvOptions options)
         {
             _cnvEvaluator.ComputeAccuracy(truthSetPath, cnvCallsPath, outputPath, ploidyInfo, includePassingOnly, options);
@@ -407,7 +408,9 @@ namespace EvaluateCNV
         public void Evaluate(string truthSetPath, string cnvCallsPath, string excludedBed, string outputPath, EvaluateCnvOptions options)
         {
             double heterogeneityFraction = options.HeterogeneityFraction;
-            var ploidyInfo = PloidyInfo.LoadPloidyFromBedFile(options.PloidyBed?.FullName);
+            var cnvCallsFile = new FileLocation(cnvCallsPath);
+            var ploidyInfo = LoadPloidy(options.PloidyFile, cnvCallsFile);
+
             LoadKnownCN(truthSetPath, heterogeneityFraction);
             ploidyInfo.MakeChromsomeNameAgnosticWithAllChromosomes(KnownCN.Keys);
             SetTruthsetReferencePloidy(ploidyInfo);
@@ -430,6 +433,26 @@ namespace EvaluateCNV
             ComputeAccuracy(truthSetPath, cnvCallsPath, outputPath, ploidyInfo, includePassingOnly, options);
 
             Console.WriteLine(">>>Done - results written to {0}", outputPath);
+        }
+
+        private static PloidyInfo LoadPloidy(IFileLocation ploidyFile, IFileLocation cnvCalls)
+        {
+            if (ploidyFile == null) return new PloidyInfo();
+            if (ploidyFile.FullName.EndsWith(".vcf") || ploidyFile.FullName.EndsWith(".vcf.gz"))
+            {
+                var sampleId = GetSampleIdFromVcfHeader(cnvCalls);
+                return PloidyInfo.LoadPloidyFromVcfFile(ploidyFile.FullName, sampleId);
+            }
+
+            return PloidyInfo.LoadPloidyFromBedFile(ploidyFile.FullName);
+        }
+
+        private static string GetSampleIdFromVcfHeader(IFileLocation cnvCallsPath)
+        {
+            using (var reader = new VcfReader(cnvCallsPath.FullName))
+            {
+                return reader.Samples.Single();
+            }
         }
 
         private void SetTruthsetReferencePloidy(PloidyInfo ploidyInfo)
