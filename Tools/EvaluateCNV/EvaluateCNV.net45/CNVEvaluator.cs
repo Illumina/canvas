@@ -66,8 +66,11 @@ namespace EvaluateCNV
             foreach (var baseCounter in baseCounters)
             {
                 CalculateMetrics(ploidyInfo, calls, baseCounter, options.SkipDiploid);
-                string fileName = $"{options.BaseFileName}_{Math.Round(baseCounter.MinSize / 1000.0)}kb";
-                fileName += baseCounter.MaxSize == int.MaxValue ? "+.txt" : $"_{Math.Round(baseCounter.MaxSize / 1000.0)}kb.txt";
+                string fileName = $"{options.BaseFileName}";
+                if (options.DQscoreThreshold.HasValue)
+                    fileName += "_denovo";
+                fileName += baseCounter.MaxSize == int.MaxValue && baseCounter.MaxSize == 0 ? ".txt" :
+                    $"_{Math.Round(baseCounter.MinSize / 1000.0)}kb_{Math.Round(baseCounter.MaxSize / 1000.0)}kb.txt";
                 using (FileStream stream = new FileStream(Path.Combine(outputPath, fileName), includePassingOnly ?
                 FileMode.Create : FileMode.Append, FileAccess.Write))
                 using (StreamWriter outputWriter = new StreamWriter(stream))
