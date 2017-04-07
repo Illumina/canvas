@@ -169,7 +169,7 @@ namespace CanvasCommon
             {
                 string mcc = segment.MajorChromosomeCount.HasValue ? segment.MajorChromosomeCount.ToString() : nullValue;
                 string mccq = segment.MajorChromosomeCountScore.HasValue ? Math.Round(segment.MajorChromosomeCountScore.Value, 2, MidpointRounding.AwayFromZero).
-                    ToString(CultureInfo.InvariantCulture): nullValue;
+                    ToString(CultureInfo.InvariantCulture): "0";
                 string dqscore = segment.DQScore.HasValue ? $"{Math.Round(segment.DQScore.Value, 2)}" : nullValue;
                 double rc = Math.Round(segment.MeanCount, 0, MidpointRounding.AwayFromZero);
                 writer.Write($"\t{rc}:{segment.BinCount}:{ segment.CopyNumber}:{mcc}:{mccq}:{segment.QScore:F2}:{dqscore}");

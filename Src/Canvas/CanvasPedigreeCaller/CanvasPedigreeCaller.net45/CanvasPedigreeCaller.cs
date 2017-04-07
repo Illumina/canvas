@@ -16,7 +16,7 @@ namespace CanvasPedigreeCaller
     class CanvasPedigreeCaller
     {
         #region Members
-        public int QualityFilterThreshold { get; set; } = 20;
+        public int QualityFilterThreshold { get; set; } = 7;
         public int DeNovoQualityFilterThreshold { get; set; } = 20;
         public PedigreeCallerParameters CallerParameters { get; set; }
         protected double MedianCoverageThreshold = 4;
@@ -498,7 +498,7 @@ namespace CanvasPedigreeCaller
                         }
                         else
                         {
-                            parents.First().Segments[segmentPosition].MajorChromosomeCount = parent1CopyNumber;
+                            parents.First().Segments[segmentPosition].MajorChromosomeCount = parent1CopyNumber == 2 ? 1 : parent1CopyNumber;
                             parents.First().Segments[segmentPosition].MajorChromosomeCountScore = null;
                         }
 
@@ -514,7 +514,7 @@ namespace CanvasPedigreeCaller
                         }
                         else
                         {
-                            parents.Last().Segments[segmentPosition].MajorChromosomeCount = parent2CopyNumber;
+                            parents.Last().Segments[segmentPosition].MajorChromosomeCount = parent2CopyNumber == 2 ? 1 : parent2CopyNumber;
                             parents.Last().Segments[segmentPosition].MajorChromosomeCountScore = null;
                         }
 
@@ -535,7 +535,7 @@ namespace CanvasPedigreeCaller
                                 }
                                 else
                                 {
-                                    child.Segments[segmentPosition].MajorChromosomeCount = childCopyNumber;
+                                    child.Segments[segmentPosition].MajorChromosomeCount = childCopyNumber == 2 ? 1 : childCopyNumber;
                                     child.Segments[segmentPosition].MajorChromosomeCountScore = null;
                                 }
                             }
@@ -631,7 +631,7 @@ namespace CanvasPedigreeCaller
                 int copyNumber = sample.Segments[segmentPosition].CopyNumber;
                 if (copyNumber > 2)
                 {
-                    sample.Segments[segmentPosition].MajorChromosomeCount = copyNumber;
+                    sample.Segments[segmentPosition].MajorChromosomeCount = copyNumber == 2 ? 1 : copyNumber;
                     return;
                 }
                 var genotypeset = genotypes[copyNumber];
