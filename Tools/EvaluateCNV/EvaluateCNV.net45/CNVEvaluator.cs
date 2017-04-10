@@ -74,7 +74,7 @@ namespace EvaluateCNV
                 if (baseCounter.MinSize != 0 || baseCounter.MaxSize != int.MaxValue)
                 {
                     fileName += $"_{Math.Round(baseCounter.MinSize / 1000.0)}kb";
-                    fileName += baseCounter.MaxSize == int.MaxValue ? "+" : $"_{ Math.Round(baseCounter.MaxSize / 1000.0)}";
+                    fileName += baseCounter.MaxSize == int.MaxValue ? "+" : $"_{ Math.Round(baseCounter.MaxSize / 1000.0)}kb";
                 }
                 fileName += ".txt";
                 using (FileStream stream = new FileStream(Path.Combine(outputPath, fileName), includePassingOnly ?
