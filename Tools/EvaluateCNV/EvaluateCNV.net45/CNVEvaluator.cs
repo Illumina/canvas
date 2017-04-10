@@ -48,7 +48,7 @@ namespace EvaluateCNV
             // the "cnaqc" exclusion set:
             _cnvChecker.InitializeIntervalMetrics();
             bool regionsOfInterest = _cnvChecker.RegionsOfInterest != null;
-            var baseCounters = new List<BaseCounter> {new BaseCounter(maxCN, 0, Int32.MaxValue, regionsOfInterest)};
+            var baseCounters = new List<BaseCounter> { new BaseCounter(maxCN, 0, Int32.MaxValue, regionsOfInterest) };
             if (options.SplitBySize)
             {
                 baseCounters.Add(new BaseCounter(maxCN, 0, 4999, regionsOfInterest));
@@ -66,12 +66,17 @@ namespace EvaluateCNV
             foreach (var baseCounter in baseCounters)
             {
                 CalculateMetrics(ploidyInfo, calls, baseCounter, options.SkipDiploid);
-                var denovo = "";
-                if (options.DQscoreThreshold.HasValue)
-                    denovo += "_denovo";
                 string fileName = $"{options.BaseFileName}";
-                fileName += baseCounter.MinSize == 0 && baseCounter.MaxSize == int.MaxValue ? $"{denovo}.txt" :
-                    $"_{Math.Round(baseCounter.MinSize / 1000.0)}kb_{Math.Round(baseCounter.MaxSize / 1000.0)}{denovo}.txt";
+                if (options.DQscoreThreshold.HasValue)
+                {
+                    fileName += "_denovo";
+                }
+                if (baseCounter.MinSize != 0 || baseCounter.MaxSize != int.MaxValue)
+                {
+                    fileName += $"_{Math.Round(baseCounter.MinSize / 1000.0)}kb";
+                    fileName += baseCounter.MaxSize == int.MaxValue ? "+" : $"_{ Math.Round(baseCounter.MaxSize / 1000.0)}";
+                }
+                fileName += ".txt";
                 using (FileStream stream = new FileStream(Path.Combine(outputPath, fileName), includePassingOnly ?
                 FileMode.Create : FileMode.Append, FileAccess.Write))
                 using (StreamWriter outputWriter = new StreamWriter(stream))
@@ -197,7 +202,7 @@ namespace EvaluateCNV
                     if (interval.CN == 2) continue;
                     int basecount = interval.Length - interval.BasesExcluded;
                     if (basecount <= 0) continue;
-                    double accuracy = interval.BasesCalledCorrectly / (double) basecount;
+                    double accuracy = interval.BasesCalledCorrectly / (double)basecount;
                     eventAccuracies.Add(accuracy);
                     baseCounter.MeanAccuracy += accuracy;
                     //Console.WriteLine("{0}\t{1:F4}", interval.End - interval.Start, accuracy);
