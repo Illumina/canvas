@@ -40,6 +40,14 @@ namespace EvaluateCNV
         {
             Chromosome = chromosome;
         }
+
+        public void InitializeInterval()
+        {
+            BasesCovered = 0;
+            BasesExcluded = 0;
+            BasesCalledCorrectly = 0;
+            BasesCalledIncorrectly = 0;
+        }
     }
 
     class CNVCall
@@ -89,6 +97,7 @@ namespace EvaluateCNV
             _cnvEvaluator = new CNVEvaluator(this);
         }
         #endregion
+
 
         /// <summary>
         /// Load known CN data from a .bed file.  File lines have fields:
@@ -234,6 +243,14 @@ namespace EvaluateCNV
             LoadKnownCNVCF(oraclePath);
             SummarizeTruthSetStatistics();
         }
+
+        public void InitializeIntervalMetrics()
+        {
+            foreach (var chromosomeIntervals in this.KnownCN.Values)
+                foreach (var interval in chromosomeIntervals)
+                    interval.InitializeInterval();
+        }
+
 
         protected void SummarizeTruthSetStatistics()
         {
