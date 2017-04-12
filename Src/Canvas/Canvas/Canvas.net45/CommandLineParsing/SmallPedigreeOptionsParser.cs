@@ -11,9 +11,6 @@ namespace Canvas.CommandLineParsing
 {
     internal class SmallPedigreeOptionsParser : Option<SmallPedigreeOptions>
     {
-        public const string ProbandOptionName = "proband";
-        public const string MotherOptionName = "mother";
-        public const string FatherOptionName = "father";
         public const string PloidyVcfOptionName = "ploidy-vcf";
         internal static readonly ValueOption<SampleType> SampleType = ValueOption<SampleType>.CreateWithDefault(CommandLineParsing.SampleType.Other, "Pedigree member type (either proband, mother, father or other). Default is other", "pedigree-member");
         private static readonly StringOption SampleName = StringOption.Create("sample name. Default is SM tag in RG header of the .bam", SingleSampleCommonOptionsParser.SampleName.Info.Names.ToArray());
@@ -28,7 +25,7 @@ namespace Canvas.CommandLineParsing
         private static readonly FileOption SampleBAlleleSites = FileOption.Create("multisample .vcf file containing SNV b-allele sites (only sites with PASS in the filter column will be used)", SingleSampleCommonOptionsParser.SampleBAlleleVcfOptionName);
         private static readonly FileOption CommonCnvsBed = FileOption.Create(".bed file containing regions of known common CNVs", "common-cnvs-bed");
         private static readonly ExclusiveFileOption BAlleleSites = ExclusiveFileOption.CreateRequired(SampleBAlleleSites, PopulationBAlleleSites);
-        
+
         private static ParsingResult<SmallPedigreeSampleOptions> Parse(IFileLocation bam, SampleType sampleType, string sampleName)
         {
             if (sampleName == null)
