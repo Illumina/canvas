@@ -67,7 +67,7 @@ namespace CanvasPedigreeCaller
             return likelihood;
         }
 
-        public double GetGtLikelihoodScore(List<Tuple<int, int>> gtObservedCounts, List<Tuple<int, int>> gtModelCounts, ref int? selectedGtState, int maxCoverage)
+        public double GetGtLikelihoodScore(List<Tuple<int, int>> gtObservedCounts, List<Allele> gtModelCounts, ref int? selectedGtState, int maxCoverage)
         {
             const int maxGQscore = 60;
             var gtLikelihoods = Enumerable.Repeat(0.0, gtModelCounts.Count).ToList();
@@ -86,15 +86,15 @@ namespace CanvasPedigreeCaller
             return Double.IsNaN(gqscore) || Double.IsInfinity(gqscore) ? 0 : gqscore;
         }
 
-        public double GetCurrentGtLikelihood(int maxCoverage, List<Tuple<int, int>> gtObservedCounts, Tuple<int, int> gtModelCount)
+        public double GetCurrentGtLikelihood(int maxCoverage, List<Tuple<int, int>> gtObservedCounts, Allele gtModelCount)
         {
             double currentLikelihood = 0;
             foreach (var gtCount in gtObservedCounts)
             {
                 int rowId = Math.Min(gtCount.Item1, maxCoverage - 1);
                 int colId = Math.Min(gtCount.Item2, maxCoverage - 1);
-                currentLikelihood =+ _alleleDistribution[gtModelCount.Item1][gtModelCount.Item2].Item1[rowId] *
-                                       _alleleDistribution[gtModelCount.Item1][gtModelCount.Item2].Item2[colId];
+                currentLikelihood =+ _alleleDistribution[gtModelCount.CountsA][gtModelCount.CountsB].Item1[rowId] *
+                                       _alleleDistribution[gtModelCount.CountsA][gtModelCount.CountsB].Item2[colId];
             }
             return currentLikelihood;
         }
