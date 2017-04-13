@@ -122,7 +122,7 @@ namespace Canvas
             {
                 commandLineBuilder.Append(Path.Combine(_canvasFolder, string.Format("{0}.exe", canvasExecutableStub)));
                 commandLineBuilder.Append(" ");
-                return _runtimeExecutable.FullName;   
+                return _runtimeExecutable.FullName;
             }
             else
             {
@@ -406,7 +406,7 @@ namespace Canvas
         protected IFileLocation InvokeCanvasBinFragment(CanvasCallset callset, string canvasReferencePath, string canvasBedPath, string ploidyBedPath)
         {
             StringBuilder commandLine = new StringBuilder();
-            
+
 
             // require predefined bins
             string predefinedBinsPath = GetPredefinedBinsPath();
@@ -1155,8 +1155,8 @@ namespace Canvas
         private static string WritePedigreeFile(SmallPedigreeCallset callsets)
         {
             string outFile = Path.Combine(callsets.AnalysisDetails.OutputFolder.FullName, "pedigree.ped");
-            string motherSampleName = callsets.PedigreeSample.Where(x => x.SampleType == SampleType.Mother).Select(x => x.Sample.SampleName).Single();
-            string fatherSampleName = callsets.PedigreeSample.Where(x => x.SampleType == SampleType.Father).Select(x => x.Sample.SampleName).Single();
+            string motherSampleName = callsets.PedigreeSample.Where(x => x.SampleType == SampleType.Mother).Select(x => x.Sample.SampleName).SingleOrDefault() ?? "0";
+            string fatherSampleName = callsets.PedigreeSample.Where(x => x.SampleType == SampleType.Father).Select(x => x.Sample.SampleName).SingleOrDefault() ?? "0";
             using (FileStream stream = new FileStream(outFile, FileMode.Create, FileAccess.Write))
             using (StreamWriter writer = new StreamWriter(stream))
             {
