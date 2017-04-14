@@ -1111,7 +1111,10 @@ namespace Canvas
             if (callsets.PedigreeSample.Count != partitionedPaths.Count)
                 throw new Exception($"Number of output CanvasPartition files {partitionedPaths.Count} is not equal to the number of Canvas callsets {callsets.PedigreeSample.Count}");
 
-            bool haveProband = callsets.PedigreeSample.Where(x => x.SampleType == SampleType.Proband).ToList().Count > 0;
+            bool haveProband = callsets.PedigreeSample.Any(x => x.SampleType == SampleType.Proband);
+            bool haveMother = callsets.PedigreeSample.Any(x => x.SampleType == SampleType.Mother);
+            bool haveFather = callsets.PedigreeSample.Any(x => x.SampleType == SampleType.Father);
+            bool haveTrio = haveProband && haveMother && haveFather;
 
             // CanvasSmallPedigreeCaller:
             StringBuilder commandLine = new StringBuilder();
@@ -1128,7 +1131,7 @@ namespace Canvas
             var vcf = callsets.AnalysisDetails.OutputFolder.GetFileLocation("CNV.vcf.gz");
             commandLine.Append($"-o \"{vcf}\" ");
             commandLine.AppendFormat("-r \"{0}\" ", callsets.AnalysisDetails.WholeGenomeFastaFolder);
-            if (haveProband)
+            if (haveTrio)
             {
                 string pedigreeFile = WritePedigreeFile(callsets);
                 commandLine.AppendFormat("-f \"{0}\" ", pedigreeFile);
