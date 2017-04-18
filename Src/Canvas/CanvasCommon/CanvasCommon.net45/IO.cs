@@ -113,7 +113,7 @@ namespace CanvasCommon
             return localSDmetric;
         }
 
-        private static Dictionary<string, string> GetChromosomeAlternativeNames(IEnumerable<string> keys)
+        public static Dictionary<string, string> GetChromosomeAlternativeNames(IEnumerable<string> keys)
         {
             Dictionary<string, string> results = new Dictionary<string,string>();
             foreach (string key in keys)
