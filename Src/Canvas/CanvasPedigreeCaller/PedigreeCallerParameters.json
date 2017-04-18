@@ -2,7 +2,7 @@
         "MaximumCopyNumber" : 5,
         "MaxAlleleNumber" : 3,
         "DefaultAlleleDensityThreshold" : 300,
-        "MaxQscore" : 60.0,
+        "MaxQscore" : 100.0,
         "DefaultPerSegmentAlleleMaxCounts" : 100,
         "DefaultAlleleCountThreshold" : 4,
         "MaxNumOffspringGenotypes" : 500,
