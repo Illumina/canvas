@@ -67,7 +67,7 @@ namespace CanvasPedigreeCaller
             return likelihood;
         }
 
-        public double GetGtLikelihoodScore(List<Tuple<int, int>> gtObservedCounts, List<Allele> gtModelCounts, ref int? selectedGtState, int maxCoverage)
+        public double GetGtLikelihoodScore(List<Tuple<int, int>> gtObservedCounts, List<Genotype> gtModelCounts, ref int? selectedGtState, int maxCoverage)
         {
             const int maxGQscore = 60;
             var gtLikelihoods = Enumerable.Repeat(0.0, gtModelCounts.Count).ToList();
@@ -86,7 +86,7 @@ namespace CanvasPedigreeCaller
             return Double.IsNaN(gqscore) || Double.IsInfinity(gqscore) ? 0 : gqscore;
         }
 
-        public double GetCurrentGtLikelihood(int maxCoverage, List<Tuple<int, int>> gtObservedCounts, Allele gtModelCount)
+        public double GetCurrentGtLikelihood(int maxCoverage, List<Tuple<int, int>> gtObservedCounts, Genotype gtModelCount)
         {
             double currentLikelihood = 0;
             foreach (var gtCount in gtObservedCounts)
