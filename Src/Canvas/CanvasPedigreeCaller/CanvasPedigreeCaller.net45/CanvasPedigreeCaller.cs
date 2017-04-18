@@ -25,6 +25,19 @@ namespace CanvasPedigreeCaller
             End = end;
         }
     }
+
+    public class Genotype
+    {
+        public int CountsA { get; }
+        public int CountsB { get; }
+
+        public Genotype(int countsA, int countsB)
+        {
+            CountsA = countsA;
+            CountsB = countsB;
+        }
+    }
+
     class CanvasPedigreeCaller
     {
         #region Members
