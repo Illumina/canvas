@@ -33,7 +33,6 @@ namespace CanvasCommon
         public int? MajorChromosomeCount;
         public double QScore;
         public double? DQScore;
-        public double? MajorChromosomeCountScore;
         public double ModelDistance;
         public double RunnerUpModelDistance;
         public bool CopyNumberSwapped;

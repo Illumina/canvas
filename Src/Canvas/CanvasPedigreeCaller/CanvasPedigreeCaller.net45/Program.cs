@@ -111,14 +111,14 @@ namespace CanvasPedigreeCaller
                 return caller.CallVariants(variantFrequencyFiles, segmentFiles, outDir, ploidyBedPath, referenceFolder, sampleNames);
             }
 
-            if (qScoreThreshold.HasValue & qScoreThreshold > 0 & qScoreThreshold < caller.CallerParameters.MaxQscore)
+            if (qScoreThreshold.HasValue & qScoreThreshold > 0 & qScoreThreshold < 60)
             {
                 caller.QualityFilterThreshold = qScoreThreshold.Value;
                 Console.WriteLine($"CanvasPedigreeCaller.exe: Using user-supplied quality score threshold {qScoreThreshold}.");
             }
 
 
-            if (dqScoreThreshold.HasValue & dqScoreThreshold > 0 & dqScoreThreshold < caller.CallerParameters.MaxQscore)
+            if (dqScoreThreshold.HasValue & dqScoreThreshold > 0 & dqScoreThreshold < 60)
             {
                 caller.DeNovoQualityFilterThreshold = dqScoreThreshold.Value;
                 Console.WriteLine($"CanvasPedigreeCaller.exe: Using user-supplied de novo quality score threshold {qScoreThreshold}.");

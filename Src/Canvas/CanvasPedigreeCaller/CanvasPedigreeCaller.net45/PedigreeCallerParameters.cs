@@ -5,7 +5,7 @@ namespace CanvasPedigreeCaller
         public int MaximumCopyNumber { get; set; } = 5;
         public int MaxAlleleNumber { get; set; } = 3;
         public int DefaultAlleleDensityThreshold { get; set; } = 1000;
-        public double MaxQscore { get; set; } = 100.0;
+        public double MaxQscore { get; set; } = 60.0;
         public int DefaultPerSegmentAlleleMaxCounts { get; set; } = 100;
         public int DefaultAlleleCountThreshold { get; set; } = 4;
         public int MaxNumOffspringGenotypes { get; set; } = 500;
