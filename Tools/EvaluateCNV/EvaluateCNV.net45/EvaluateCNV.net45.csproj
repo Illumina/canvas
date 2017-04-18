@@ -62,8 +62,8 @@
     <Reference Include="Illumina.Common, Version=2.3.1.139, Culture=neutral, processorArchitecture=AMD64">
       <HintPath>..\..\..\Src\Canvas\Canvas\packages\Illumina.Common.2.3.1.139\lib\net451\Illumina.Common.dll</HintPath>
     </Reference>
-    <Reference Include="Isas.Framework, Version=5.4.1.144, Culture=neutral, processorArchitecture=AMD64">
-      <HintPath>..\..\..\Src\Canvas\Canvas\packages\Isas.Framework.5.4.1.144\lib\net451\Isas.Framework.dll</HintPath>
+    <Reference Include="Isas.Framework, Version=5.7.1.192, Culture=neutral, processorArchitecture=AMD64">
+      <HintPath>..\..\..\Src\Canvas\Canvas\packages\Isas.Framework.5.7.1.192\lib\net451\Isas.Framework.dll</HintPath>
     </Reference>
     <Reference Include="Isas.SequencingFiles, Version=3.11.4.232, Culture=neutral, processorArchitecture=AMD64">
       <HintPath>..\..\..\Src\Canvas\Canvas\packages\Isas.SequencingFiles.3.11.4.232\lib\net451\Isas.SequencingFiles.dll</HintPath>
