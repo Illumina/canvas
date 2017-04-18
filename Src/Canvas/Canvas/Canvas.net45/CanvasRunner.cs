@@ -677,7 +677,7 @@ namespace Canvas
                 if (!sampleName.IsNullOrEmpty())
                     commandLine.Append($" -n {sampleName}");
                 if (callset.SingleSampleCallset.IsDbSnpVcf)
-                    commandLine.Append(" --isDbSnpVcf 1");
+                    commandLine.Append(" --isDbSnpVcf");
                 if (isSomatic)
                     commandLine.Append(" --isSomatic");
                 job.CommandLine = commandLine.ToString();
