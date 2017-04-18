@@ -77,8 +77,8 @@
     <Prefer32Bit>true</Prefer32Bit>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="Illumina.Common, Version=2.3.1.139, Culture=neutral, processorArchitecture=AMD64">
-      <HintPath>..\packages\Illumina.Common.2.3.1.139\lib\net451\Illumina.Common.dll</HintPath>
+    <Reference Include="Illumina.Common, Version=2.8.0.171, Culture=neutral, processorArchitecture=AMD64">
+      <HintPath>..\packages\Illumina.Common.2.8.0.171\lib\net451\Illumina.Common.dll</HintPath>
     </Reference>
     <Reference Include="Isas.Framework, Version=5.7.1.192, Culture=neutral, processorArchitecture=AMD64">
       <HintPath>..\packages\Isas.Framework.5.7.1.192\lib\net451\Isas.Framework.dll</HintPath>
@@ -92,8 +92,8 @@
     <Reference Include="Isas.Manifests.NexteraManifest, Version=2.12.0.45, Culture=neutral, processorArchitecture=AMD64">
       <HintPath>..\packages\Isas.Manifests.2.12.0.45\lib\net451\Isas.Manifests.NexteraManifest.dll</HintPath>
     </Reference>
-    <Reference Include="Isas.SequencingFiles, Version=3.11.4.232, Culture=neutral, processorArchitecture=AMD64">
-      <HintPath>..\packages\Isas.SequencingFiles.3.11.4.232\lib\net451\Isas.SequencingFiles.dll</HintPath>
+    <Reference Include="Isas.SequencingFiles, Version=3.12.0.239, Culture=neutral, processorArchitecture=AMD64">
+      <HintPath>..\packages\Isas.SequencingFiles.3.12.0.239\lib\net451\Isas.SequencingFiles.dll</HintPath>
     </Reference>
     <Reference Include="Newtonsoft.Json, Version=9.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
       <HintPath>packages\Newtonsoft.Json.9.0.1\lib\net45\Newtonsoft.Json.dll</HintPath>
@@ -188,12 +188,12 @@ if ERRORLEVEL 1 (
     exit /b 1
 )</PostBuildEvent>
   </PropertyGroup>
-  <Import Project="..\packages\Isas.FileCompression.3.11.4.232\build\net451\Isas.FileCompression.targets" Condition="Exists('..\packages\Isas.FileCompression.3.11.4.232\build\net451\Isas.FileCompression.targets')" />
+  <Import Project="..\packages\Isas.FileCompression.3.12.0.239\build\net451\Isas.FileCompression.targets" Condition="Exists('..\packages\Isas.FileCompression.3.12.0.239\build\net451\Isas.FileCompression.targets')" />
   <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
     <PropertyGroup>
       <ErrorText>This project references NuGet package(s) that are missing on this computer. Use NuGet Package Restore to download them.  For more information, see http://go.microsoft.com/fwlink/?LinkID=322105. The missing file is {0}.</ErrorText>
     </PropertyGroup>
-    <Error Condition="!Exists('..\packages\Isas.FileCompression.3.11.4.232\build\net451\Isas.FileCompression.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\Isas.FileCompression.3.11.4.232\build\net451\Isas.FileCompression.targets'))" />
+    <Error Condition="!Exists('..\packages\Isas.FileCompression.3.12.0.239\build\net451\Isas.FileCompression.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\Isas.FileCompression.3.12.0.239\build\net451\Isas.FileCompression.targets'))" />
   </Target>
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
