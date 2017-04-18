@@ -122,7 +122,7 @@ namespace Canvas
             {
                 commandLineBuilder.Append(Path.Combine(_canvasFolder, string.Format("{0}.exe", canvasExecutableStub)));
                 commandLineBuilder.Append(" ");
-                return _runtimeExecutable.FullName;   
+                return _runtimeExecutable.FullName;
             }
             else
             {
@@ -406,7 +406,7 @@ namespace Canvas
         protected IFileLocation InvokeCanvasBinFragment(CanvasCallset callset, string canvasReferencePath, string canvasBedPath, string ploidyBedPath)
         {
             StringBuilder commandLine = new StringBuilder();
-            
+
 
             // require predefined bins
             string predefinedBinsPath = GetPredefinedBinsPath();
@@ -1111,7 +1111,10 @@ namespace Canvas
             if (callsets.PedigreeSample.Count != partitionedPaths.Count)
                 throw new Exception($"Number of output CanvasPartition files {partitionedPaths.Count} is not equal to the number of Canvas callsets {callsets.PedigreeSample.Count}");
 
-            bool haveProband = callsets.PedigreeSample.Where(x => x.SampleType == SampleType.Proband).ToList().Count > 0;
+            bool haveProband = callsets.PedigreeSample.Any(x => x.SampleType == SampleType.Proband);
+            bool haveMother = callsets.PedigreeSample.Any(x => x.SampleType == SampleType.Mother);
+            bool haveFather = callsets.PedigreeSample.Any(x => x.SampleType == SampleType.Father);
+            bool haveTrio = haveProband && haveMother && haveFather;
 
             // CanvasSmallPedigreeCaller:
             StringBuilder commandLine = new StringBuilder();
@@ -1128,7 +1131,7 @@ namespace Canvas
             var vcf = callsets.AnalysisDetails.OutputFolder.GetFileLocation("CNV.vcf.gz");
             commandLine.Append($"-o \"{vcf}\" ");
             commandLine.AppendFormat("-r \"{0}\" ", callsets.AnalysisDetails.WholeGenomeFastaFolder);
-            if (haveProband)
+            if (haveTrio)
             {
                 string pedigreeFile = WritePedigreeFile(callsets);
                 commandLine.AppendFormat("-f \"{0}\" ", pedigreeFile);
@@ -1155,8 +1158,8 @@ namespace Canvas
         private static string WritePedigreeFile(SmallPedigreeCallset callsets)
         {
             string outFile = Path.Combine(callsets.AnalysisDetails.OutputFolder.FullName, "pedigree.ped");
-            string motherSampleName = callsets.PedigreeSample.Where(x => x.SampleType == SampleType.Mother).Select(x => x.Sample.SampleName).Single();
-            string fatherSampleName = callsets.PedigreeSample.Where(x => x.SampleType == SampleType.Father).Select(x => x.Sample.SampleName).Single();
+            string motherSampleName = callsets.PedigreeSample.Where(x => x.SampleType == SampleType.Mother).Select(x => x.Sample.SampleName).SingleOrDefault() ?? "0";
+            string fatherSampleName = callsets.PedigreeSample.Where(x => x.SampleType == SampleType.Father).Select(x => x.Sample.SampleName).SingleOrDefault() ?? "0";
             using (FileStream stream = new FileStream(outFile, FileMode.Create, FileAccess.Write))
             using (StreamWriter writer = new StreamWriter(stream))
             {
