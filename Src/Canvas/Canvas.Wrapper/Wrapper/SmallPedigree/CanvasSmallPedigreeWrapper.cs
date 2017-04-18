@@ -49,7 +49,7 @@ namespace Canvas.Wrapper.SmallPedigree
             {
                 var sampleId = sampleKvp.Key.Id;
                 var sample = sampleKvp.Value;
-                commandLine.Append($" --bam \"{sample.Bam.BamFile}\" {sample.SampleType} {sampleId}");
+                commandLine.Append($" --bam \"{sample.Bam.BamFile}\" {sample.SampleType.GetOptionName()} {sampleId}");
             }
             IFileLocation kmerFasta = _annotationFileProvider.GetKmerFasta(genomeMetadata);
             commandLine.Append($" --reference \"{kmerFasta}\"");
@@ -112,23 +112,30 @@ namespace Canvas.Wrapper.SmallPedigree
                 LoggingStub = "Canvas_" + pedigreeId,
             };
             _workManager.DoWorkSingleThread(singleSampleJob);
-            return GetCanvasOutput(input.Samples, sampleSandbox);
+            var sampleBams = input.Samples.SelectData(sample => sample.Bam);
+            return GetCanvasOutput(sampleBams, sampleSandbox);
         }
 
-        private CanvasSmallPedigreeOutput GetCanvasOutput(SampleSet<CanvasPedigreeSample> pedigreeSamples, IDirectoryLocation sampleSandbox)
+        private CanvasSmallPedigreeOutput GetCanvasOutput(SampleSet<Bam> pedigreeBams, IDirectoryLocation sampleSandbox)
         {
-            var intermediateResults = pedigreeSamples.SelectSamples(sampleInfo =>
+            var readGroupSamples = pedigreeBams.SelectData(GetReadGroupSample);
+            var intermediateResults = readGroupSamples.SelectData(readGroupSample =>
             {
-                var sampleId = sampleInfo.Id;
-                var variantFrequencies = SingleSampleCallset.GetVfSummaryPath(sampleSandbox, sampleId);
-                var variantFrequenciesBaf = SingleSampleCallset.GetVfSummaryBafPath(sampleSandbox, sampleId);
-                var partitioned = SingleSampleCallset.GetPartitionedPath(sampleSandbox, sampleId);
-                var coverageAndVariantFrequencies = SingleSampleCallset.GetCoverageAndVariantFrequencyOutput(sampleSandbox, sampleId);
-                var singleSampleVcf = SingleSampleCallset.GetSingleSamplePedigreeVcfOutput(sampleSandbox, sampleId);
-                return new IntermediateOutput(new Vcf(singleSampleVcf), coverageAndVariantFrequencies, variantFrequencies, variantFrequenciesBaf, partitioned);
+                var variantFrequencies = SingleSampleCallset.GetVfSummaryPath(sampleSandbox, readGroupSample);
+                var variantFrequenciesBaf = SingleSampleCallset.GetVfSummaryBafPath(sampleSandbox, readGroupSample);
+                var partitioned = SingleSampleCallset.GetPartitionedPath(sampleSandbox, readGroupSample);
+                var coverageAndVariantFrequencies = SingleSampleCallset.GetCoverageAndVariantFrequencyOutput(sampleSandbox, readGroupSample);
+                return new IntermediateOutput(coverageAndVariantFrequencies, variantFrequencies, variantFrequenciesBaf, partitioned);
             });
             var cnvVcf = new Vcf(sampleSandbox.GetFileLocation("CNV.vcf.gz"));
             return new CanvasSmallPedigreeOutput(cnvVcf, intermediateResults);
+        }
+        private static string GetReadGroupSample(Bam bam)
+        {
+            using (var reader = new BamReader(bam.BamFile))
+            {
+                return reader.GetReadGroupSample();
+            }
         }
     }
 }

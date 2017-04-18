@@ -13,18 +13,18 @@ using Isas.SequencingFiles;
 
 namespace CanvasPedigreeCaller
 {
-
-    internal class SegmentIndexRange
+    public class Genotype
     {
-        public int Start { get; }
-        public int End { get; }
+        public int CountsA { get; }
+        public int CountsB { get; }
 
-        public SegmentIndexRange(int start, int end)
+        public Genotype(int countsA, int countsB)
         {
-            Start = start;
-            End = end;
+            CountsA = countsA;
+            CountsB = countsB;
         }
     }
+
     class CanvasPedigreeCaller
     {
         #region Members
@@ -739,21 +739,21 @@ namespace CanvasPedigreeCaller
             }
         }
 
-        private List<SegmentIndexRange> GetParallelIntervals(int nSegments, int nCores)
+        private List<GenomicInterval> GetParallelIntervals(int nSegments, int nCores)
         {
-
-            var segmentIndexRanges = new List<SegmentIndexRange>();
+            var intervals = new List<GenomicInterval>();
+            //intervals.Add(new GenomicInterval(17231, 34515));
 
             int step = nSegments / nCores;
-            segmentIndexRanges.Add(new SegmentIndexRange(0, step));
+            intervals.Add(new GenomicInterval(0, step));
             int cumSum = step + 1;
             while (cumSum + step + 1 < nSegments - 1)
             {
-                segmentIndexRanges.Add(new SegmentIndexRange(cumSum, cumSum + step));
+                intervals.Add(new GenomicInterval(cumSum, cumSum + step));
                 cumSum += step + 1;
             }
-            segmentIndexRanges.Add(new SegmentIndexRange(cumSum, nSegments - 1));
-            return segmentIndexRanges;
+            intervals.Add(new GenomicInterval(cumSum, nSegments - 1));
+            return intervals;
         }
 
         public double GetTransitionProbability(int gt1Parent, int gt2Parent, int gt1Offspring, int gt2Offspring)

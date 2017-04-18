@@ -37,9 +37,9 @@ namespace Canvas.Wrapper.SmallPedigree
         {
             if (!_canvasWorkerFactory.RunCnvDetection()) return new NullSmallPedigreeCheckpoint(_logger);
 
-            CanvasSmallPedigreeWrapper wrapper = new CanvasSmallPedigreeWrapper(_workManager, _logger, _canvasWorkerFactory.GetCanvasExe(),
-                GetRuntimeExecutable(), _canvasWorkerFactory.GetAnnotationFileProvider(),
-                _canvasWorkerFactory.GetCanvasSingleSampleInputCommandLineBuilder(_canvasWorkerFactory.GetAnnotationFileProvider()),
+            CanvasSmallPedigreeWrapper wrapper = new CanvasSmallPedigreeWrapper(_workManager, _logger, _canvasWorkerFactory.GetCanvasExe(), 
+                GetRuntimeExecutable(), _canvasWorkerFactory.GetAnnotationFileProvider(), 
+                _canvasWorkerFactory.GetCanvasSingleSampleInputCommandLineBuilder(_canvasWorkerFactory.GetAnnotationFileProvider()), 
                 new CanvasPloidyVcfCreator(_canvasWorkerFactory.GetPloidyCorrector()));
             return new SmallPedigreeCheckpoint(wrapper, Move, Load);
         }
@@ -48,44 +48,42 @@ namespace Canvas.Wrapper.SmallPedigree
         {
             var intermediateOutputs = input.Samples.SelectData((info, sample) =>
             {
-                var stub = GetSingleSampleOutputStub(info);
+                var stub = GetStub(info.Id);
                 var coverageAndVariantFrequency = SingleSampleCallset.GetCoverageAndVariantFrequencyOutput(stub);
-                var singleSampleVcf = new Vcf(SingleSampleCallset.GetSingleSamplePedigreeVcfOutput(stub));
                 if (!_canvasWorkerFactory.IncludeIntermediateResults())
-                    return new IntermediateOutput(singleSampleVcf, coverageAndVariantFrequency, null, null, null);
+                    return new IntermediateOutput(coverageAndVariantFrequency, null, null, null);
 
                 var partitioned = SingleSampleCallset.GetPartitionedPath(stub);
                 var variantFrequencies = SingleSampleCallset.GetVfSummaryPath(stub);
                 var variantFrequenciesBaf = SingleSampleCallset.GetVfSummaryPath(stub);
-                return new IntermediateOutput(singleSampleVcf, coverageAndVariantFrequency, variantFrequencies, variantFrequenciesBaf, partitioned);
+                return new IntermediateOutput(coverageAndVariantFrequency, variantFrequencies, variantFrequenciesBaf, partitioned);
             });
 
-            return new CanvasSmallPedigreeOutput(new Vcf(GetPedigreeVcf()), intermediateOutputs);
+            return new CanvasSmallPedigreeOutput(new Vcf(GetCnvVcf()), intermediateOutputs);
         }
 
         private void Move(CanvasSmallPedigreeOutput source, IFileMover fileMover)
         {
-            source.CnvVcf.Move(GetPedigreeVcf(), fileMover.Move);
+            source.CnvVcf.Move(GetCnvVcf(), fileMover.Move);
             source.IntermediateOutputs.ForEach(kvp =>
             {
                 MoveIntermediateOutput(kvp.Key, kvp.Value, fileMover);
             });
         }
 
-        private IFileLocation GetPedigreeVcf()
+        private IFileLocation GetCnvVcf()
         {
             return _pedigreefileNameStub.AppendName(".CNV.vcf.gz");
         }
 
-        private IFileLocation GetSingleSampleOutputStub(SampleInfo sampleInfo)
+        private IFileLocation GetStub(string sampleId)
         {
-            return _pedigreefileNameStub.Directory.GetFileLocation($"{sampleInfo.Name}_S{sampleInfo.Number}.CNV");
+            return _pedigreefileNameStub.AppendName($"_{sampleId}.CNV");
         }
 
         private void MoveIntermediateOutput(SampleInfo info, IntermediateOutput output, IFileMover fileMover)
         {
-            var stub = GetSingleSampleOutputStub(info);
-            fileMover.Move(output.CnvVcf.VcfFile, SingleSampleCallset.GetSingleSamplePedigreeVcfOutput(stub));
+            var stub = GetStub(info.Id);
             fileMover.Move(output.CoverageAndVariantFrequencies, SingleSampleCallset.GetCoverageAndVariantFrequencyOutput(stub));
             if (_canvasWorkerFactory.IncludeIntermediateResults())
             {
