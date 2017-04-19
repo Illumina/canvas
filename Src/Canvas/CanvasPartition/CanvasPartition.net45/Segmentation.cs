@@ -82,6 +82,8 @@ namespace CanvasPartition
 
         public static Segmentation.Segment[] DeriveSegments(List<int> breakpoints, int sizeScoreByChr, uint[] startByChr, uint[] endByChr)
         {
+            if (sizeScoreByChr < 1)
+                return new Segment[0];
             var startBreakpointsPos = new List<int>();
             var endBreakpointPos = new List<int>();
             var lengthSeg = new List<int>();
@@ -185,6 +187,8 @@ namespace CanvasPartition
                 foreach (string chr in StartByChr.Keys)
                 {
                     vfByChr[chr] = new List<List<double>>(StartByChr[chr].Length);
+                    for(int index = 0; index < StartByChr[chr].Length; index++)
+                        vfByChr[chr].Add(new List<double>());
                 }
                 Console.WriteLine("{0} Load variant frequencies from {1}", DateTime.Now, InputVafPath);
 
@@ -206,7 +210,7 @@ namespace CanvasPartition
                         int countRef = int.Parse(bits[4]);
                         int countAlt = int.Parse(bits[5]);
                         if (countRef + countAlt < 10) continue;
-                        double VF = Math.Max(countRef, countAlt) / (double) (countRef + countAlt);
+                        double variantFrequency = Math.Min(countRef, countAlt) / (double) (countRef + countAlt);
                         // Binary search for the segment this variant hits:
                         var start = 0;
                         int end = EndByChr[chromosome].Length - 1;
@@ -225,14 +229,20 @@ namespace CanvasPartition
                                 mid = (start + end) / 2;
                                 continue;
                             }
-                            vfByChr[chromosome][mid].Add(VF);
+                            vfByChr[chromosome][mid].Add(variantFrequency);
                             break;
                         }
                     }
                     foreach (string chr in vfByChr.Keys)
                     {
-                        VafByChr[chr] = vfByChr[chr].Where(bin => bin.Count > 1).
-                            Select((bin, index) => new CoverageToVafMapper(index, bin.Average())).ToList();
+                        VafByChr[chr] = new List<CoverageToVafMapper>();
+                        var index = 0;
+                        foreach (var bin in vfByChr[chr])
+                        {
+                            if (bin.Count < 1) continue;
+                            VafByChr[chr].Add(new CoverageToVafMapper(index, bin.Average()));
+                            index++;
+                        }
                     }
                 }
             }

@@ -48,22 +48,19 @@ namespace CanvasPartition
         /// </summary>
         public Dictionary<string, Segmentation.Segment[]> Run(Segmentation segmentationEngine)
         {
-            bool useVaf = true;
-            if (useVaf)
-            {
-                var tmpVafByChr = new Dictionary<string, double[]>();
-                var tmpVaftoCoverageIndexByChr = new Dictionary<string, int[]>();
+            var useVaf = true;
+            if (!useVaf)
+                return LaunchWavelets(segmentationEngine.CoverageByChr, segmentationEngine.StartByChr,
+                    segmentationEngine.EndByChr);
+            var tmpVafByChr = new Dictionary<string, double[]>();
+            var tmpVaftoCoverageIndexByChr = new Dictionary<string, int[]>();
 
-                foreach (string chr in segmentationEngine.VafByChr.Keys) { 
-                    tmpVafByChr[chr] = segmentationEngine.VafByChr[chr].Select(coverageToVafMapper => coverageToVafMapper.Vaf).ToArray();
-                    tmpVaftoCoverageIndexByChr[chr] = segmentationEngine.VafByChr[chr].Select(coverageToVafMapper => coverageToVafMapper.Index).ToArray();
-                }
-                return LaunchWavelets(tmpVafByChr, segmentationEngine.StartByChr,
-                    segmentationEngine.EndByChr, tmpVaftoCoverageIndexByChr);
+            foreach (string chr in segmentationEngine.VafByChr.Keys) { 
+                tmpVafByChr[chr] = segmentationEngine.VafByChr[chr].Select(coverageToVafMapper => coverageToVafMapper.Vaf).ToArray();
+                tmpVaftoCoverageIndexByChr[chr] = segmentationEngine.VafByChr[chr].Select(coverageToVafMapper => coverageToVafMapper.Index).ToArray();
             }
-
-            return LaunchWavelets(segmentationEngine.CoverageByChr, segmentationEngine.StartByChr,
-                segmentationEngine.EndByChr);
+            return LaunchWavelets(tmpVafByChr, segmentationEngine.StartByChr,
+                segmentationEngine.EndByChr, tmpVaftoCoverageIndexByChr);
         }
 
         public Dictionary<string, Segmentation.Segment[]> LaunchWavelets(Dictionary<string, double[]> coverageByChr, Dictionary<string, uint[]> startByChr, 
@@ -109,28 +106,32 @@ namespace CanvasPartition
             tasks = coverageByChr.Keys.Select(chr => new ThreadStart(() =>
             {
                 var breakpoints = new List<int>();
-                int segmentLengthByChr = coverageByChr[chr].Length;
+                // to cover cases of no SNVs present (i.e. chrY) => chromosome becomes one segment
+                int segmentLengthByChr = Math.Max(coverageByChr[chr].Length, 1);
                 if (segmentLengthByChr > _parameters.MinSize)
                 {
-                    WaveletSegmentation.HaarWavelets(coverageByChr[chr], _parameters.ThresholdLower, _parameters.ThresholdUpper, 
+                    WaveletSegmentation.HaarWavelets(coverageByChr[chr], _parameters.ThresholdLower,
+                        _parameters.ThresholdUpper,
                         breakpoints, _parameters.IsGermline, madFactor: _parameters.MadFactor);
-                }
 
 
-                if (vafToCoverageIndex[chr] != null) {
-                    if (breakpoints.Max() > vafToCoverageIndex.Count -1)
-                        throw new Exception($"breakpoint {breakpoints.Max()} is larger then the zero-based size of the " +
-                                            $"vafToCoverageIndex '{vafToCoverageIndex.Count - 1}'");
-                    breakpoints = breakpoints.Select(breakpoint => vafToCoverageIndex[chr][breakpoint]).ToList();
-                }
+                    if (vafToCoverageIndex?[chr] != null && vafToCoverageIndex[chr].Length > 0)
+                    {
+                        if (breakpoints.Max() > vafToCoverageIndex[chr].Length)
+                            throw new Exception(
+                                $"breakpoint {breakpoints.Max()} is larger then the zero-based size of the " +
+                                $"vafToCoverageIndex '{vafToCoverageIndex.Count - 1}'");
+                        breakpoints = breakpoints.Select(breakpoint => vafToCoverageIndex[chr][breakpoint]).ToList();
+                    }
 
 
-                if (_parameters.CommonCNVs != null && commonCNVintervals.ContainsKey(chr))
-                {
-                    var remappedCommonCNVintervals = Segmentation.RemapCommonRegions(commonCNVintervals[chr],
-                        startByChr[chr], endByChr[chr]);
-                    var oldbreakpoints = breakpoints;
-                    breakpoints = Segmentation.OverlapCommonRegions(oldbreakpoints, remappedCommonCNVintervals);
+                    if (_parameters.CommonCNVs != null && commonCNVintervals.ContainsKey(chr))
+                    {
+                        var remappedCommonCNVintervals = Segmentation.RemapCommonRegions(commonCNVintervals[chr],
+                            startByChr[chr], endByChr[chr]);
+                        var oldbreakpoints = breakpoints;
+                        breakpoints = Segmentation.OverlapCommonRegions(oldbreakpoints, remappedCommonCNVintervals);
+                    }
                 }
 
                 var segments = Segmentation.DeriveSegments(breakpoints, segmentLengthByChr, startByChr[chr], endByChr[chr]);
