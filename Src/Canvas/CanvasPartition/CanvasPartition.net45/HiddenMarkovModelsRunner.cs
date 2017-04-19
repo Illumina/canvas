@@ -34,7 +34,7 @@ namespace CanvasPartition
 
             var cts = new CancellationTokenSource();
             Parallel.ForEach(
-                segmentation.First().ScoreByChr.Keys,
+                segmentation.First().CoverageByChr.Keys,
                 new ParallelOptions
                 {
                     CancellationToken = cts.Token,
@@ -44,12 +44,12 @@ namespace CanvasPartition
                 chr =>
                 {
                     var breakpoints = new List<int>();
-                    int length = segmentation.First().ScoreByChr[chr].Length;
+                    int length = segmentation.First().CoverageByChr[chr].Length;
                     var startByChr = segmentation.First().StartByChr[chr];
                     var endByChr = segmentation.First().EndByChr[chr];
                     var multiSampleCoverage = new List<List<double>>(length);
                     for (int i = 0; i < length; i++)
-                        multiSampleCoverage.Add(segmentation.Select(x=>x.ScoreByChr[chr][i]).ToList());
+                        multiSampleCoverage.Add(segmentation.Select(x=>x.CoverageByChr[chr][i]).ToList());
 
                     if (length > _minSize)
                     {

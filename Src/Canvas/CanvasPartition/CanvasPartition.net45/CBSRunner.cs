@@ -60,7 +60,7 @@ namespace CanvasPartition
             Dictionary<string, double[]> finiteScoresByChr = new Dictionary<string, double[]>();
 
             List<ThreadStart> tasks = new List<ThreadStart>();
-            foreach (KeyValuePair<string, double[]> scoreByChrKVP in segmentation.ScoreByChr)
+            foreach (KeyValuePair<string, double[]> scoreByChrKVP in segmentation.CoverageByChr)
             {
                 tasks.Add(new ThreadStart(() =>
                 {
@@ -106,20 +106,20 @@ namespace CanvasPartition
             // when parallelizing we need an RNG for each chromosome to get deterministic results
             Random seedGenerator = new MersenneTwister(0);
             Dictionary<string, Random> perChromosomeRandom = new Dictionary<string, Random>();
-            foreach (string chr in segmentation.ScoreByChr.Keys)
+            foreach (string chr in segmentation.CoverageByChr.Keys)
             {
                 perChromosomeRandom[chr] = new MersenneTwister(seedGenerator.NextFullRangeInt32(), true);
             }
 
             tasks = new List<ThreadStart>();
-            foreach (string chr in segmentation.ScoreByChr.Keys)
+            foreach (string chr in segmentation.CoverageByChr.Keys)
             {
                 tasks.Add(new ThreadStart(() =>
                 {
                     int[] ina = inaByChr[chr];
                     int[] lengthSeg;
                     double[] segmentMeans;
-                    ChangePoint.ChangePoints(segmentation.ScoreByChr[chr], sbdry, out lengthSeg, out segmentMeans, perChromosomeRandom[chr],
+                    ChangePoint.ChangePoints(segmentation.CoverageByChr[chr], sbdry, out lengthSeg, out segmentMeans, perChromosomeRandom[chr],
                         dataType: "logratio", alpha: this._alpha, nPerm: nPerm,
                         pMethod: pMethod, minWidth: minWidth, kMax: kMax, nMin: nMin, trimmedSD: trimmedSD,
                         undoSplits: this._undoMethod, undoPrune: undoPrune, undoSD: undoSD, verbose: verbose);

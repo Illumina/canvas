@@ -412,7 +412,7 @@ namespace CanvasPartition
 
         private double GetEvennessScore()
         {
-            CoverageByChr.Select()
+            throw new NotImplementedException();
         }
     }
 }
