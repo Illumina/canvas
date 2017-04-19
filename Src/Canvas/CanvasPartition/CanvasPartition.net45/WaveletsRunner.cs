@@ -48,7 +48,7 @@ namespace CanvasPartition
         /// </summary>
         public Dictionary<string, Segmentation.Segment[]> Run(Segmentation segmentationEngine)
         {
-            var useVaf = true;
+            var useVaf = false;
             if (!useVaf)
                 return LaunchWavelets(segmentationEngine.CoverageByChr, segmentationEngine.StartByChr,
                     segmentationEngine.EndByChr);

@@ -821,6 +821,7 @@ namespace Canvas
             // CanvasClean:
             var canvasCleanOutput = _checkpointRunner.RunCheckpoint("CanvasClean", () => InvokeCanvasClean(callset, binnedPath));
 
+            await canvasSnvTask;
             // CanvasPartition:
             var partitionedPath = _checkpointRunner.RunCheckpoint("CanvasPartition", () => InvokeCanvasPartition(callset, canvasCleanOutput.CleanedPath, canvasBedPath));
 
@@ -830,8 +831,6 @@ namespace Canvas
                 partitionedPath = _checkpointRunner.RunCheckpoint("Intersect bins with manifest",
                     () => IntersectBinsWithTargetedRegions(callset, partitionedPath));
             }
-
-            await canvasSnvTask;
 
             // Variant calling
             _checkpointRunner.RunCheckpoint("Variant calling", () =>
@@ -963,7 +962,7 @@ namespace Canvas
         {
             StringBuilder commandLine = new StringBuilder();
             string executablePath = GetExecutablePath("CanvasPartition", commandLine);
-
+            commandLine.Append($" -v {callset.SingleSampleCallset.VfSummaryPath}");
             commandLine.AppendFormat("-i \"{0}\" ", cleanedPath);
             commandLine.AppendFormat("-b \"{0}\" ", canvasBedPath);
             string partitionedPath = callset.SingleSampleCallset.PartitionedPath.FullName;
