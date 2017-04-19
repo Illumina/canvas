@@ -962,7 +962,7 @@ namespace Canvas
         {
             StringBuilder commandLine = new StringBuilder();
             string executablePath = GetExecutablePath("CanvasPartition", commandLine);
-            commandLine.Append($" -v {callset.SingleSampleCallset.VfSummaryPath}");
+            commandLine.Append($" -v {callset.SingleSampleCallset.VfSummaryPath} ");
             commandLine.AppendFormat("-i \"{0}\" ", cleanedPath);
             commandLine.AppendFormat("-b \"{0}\" ", canvasBedPath);
             string partitionedPath = callset.SingleSampleCallset.PartitionedPath.FullName;
