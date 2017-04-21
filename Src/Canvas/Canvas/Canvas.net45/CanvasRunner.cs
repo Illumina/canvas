@@ -940,7 +940,7 @@ namespace Canvas
                 partitionedPaths.Add(partitionedPath);
                 commandLine.AppendFormat("-o \"{0}\" ", partitionedPath);
             }
-            commandLine.Append($" -r \"{callsets.AnalysisDetails.WholeGenomeFastaFolder}\" ");
+            commandLine.AppendFormat("-r \"{0}\" ", callsets.AnalysisDetails.WholeGenomeFastaFolder);
             commandLine.AppendFormat("-m HMM");
 
             UnitOfWork partitionJob = new UnitOfWork()
@@ -952,7 +952,8 @@ namespace Canvas
             };
             if (_customParameters.ContainsKey("CanvasPartition"))
             {
-                partitionJob.CommandLine = Isas.Framework.Settings.CommandOptionsUtilities.MergeCommandLineOptions(partitionJob.CommandLine, _customParameters["CanvasPartition"], true);
+                partitionJob.CommandLine = Isas.Framework.Settings.CommandOptionsUtilities.MergeCommandLineOptions
+                    (partitionJob.CommandLine, _customParameters["CanvasPartition"], true);
             }
             _workManager.DoWorkSingleThread(partitionJob);
             return partitionedPaths;

@@ -89,7 +89,8 @@ namespace CanvasPartition
                 return 1;
             }
 
-            var segmentationInputs = cleanedFiles.Zip(vafFiles, (inFile, vafFile) => new SegmentationInput(inFile, vafFile, filterBedFile, maxInterBinDistInSegment, referenceFolder)).ToList();          
+            var segmentationInputs = vafFiles.Count > 0 && vafFiles.Count == cleanedFiles.Count ? cleanedFiles.Zip(vafFiles, (inFile, vafFile) => new SegmentationInput(inFile, vafFile, filterBedFile, maxInterBinDistInSegment, referenceFolder)).ToList():
+                cleanedFiles.Select(inFile => new SegmentationInput(inFile, null, filterBedFile, maxInterBinDistInSegment, referenceFolder)).ToList();   
             SegmentationInput.GenomeSegmentationResults segmentationResults;
             switch (partitionMethod)
             {
