@@ -7,6 +7,23 @@ using Isas.SequencingFiles;
 
 namespace CanvasCommon
 {
+    public class Genotype
+    {
+        public int CountsA { get; }
+        public int CountsB { get; }
+
+        public Genotype()
+        {
+            CountsA = 0;
+            CountsB = 0;
+        }
+
+        public Genotype(int countsA, int countsB)
+        {
+            CountsA = countsA;
+            CountsB = countsB;
+        }
+    }
     public class CanvasIO
     {
         public static void WriteToTextFile(string outfile, IEnumerable<SampleGenomicBin> bins)
@@ -126,25 +143,18 @@ namespace CanvasCommon
                 {
                     results["chr" + key] = key;
                 }
-
             }
             return results;
-
         }
 
         /// <summary>
         /// Parse the outputs of CanvasSNV, and note these variant frequencies in the appropriate segment.
         /// </summary>
-        public static float LoadFrequenciesBySegment(string variantFrequencyFile, List<CanvasSegment> segments)
+        public static float LoadFrequenciesBySegment(string variantFrequencyFile, List<CanvasSegment> segments, string referenceFolder)
         {
-            
-            Console.WriteLine("{0} Load variant frequencies from {1}", DateTime.Now, variantFrequencyFile);
-            int count = 0;
             var segmentsByChromosome = CanvasSegment.GetSegmentsByChromosome(segments);
-            var alternativeNames = GetChromosomeAlternativeNames(segmentsByChromosome.Keys);
-            int totalRecords;
             var intervalsByChromosome = new Dictionary<string, List<Interval>>();
-            foreach (var chr in segmentsByChromosome.Keys)
+            foreach (string chr in segmentsByChromosome.Keys)
             {
                 intervalsByChromosome[chr] = new List<Interval>();
                 foreach (var canvasSegment in segmentsByChromosome[chr])
@@ -152,31 +162,52 @@ namespace CanvasCommon
                     intervalsByChromosome[chr].Add(new Interval(canvasSegment.Begin, canvasSegment.End));
                 }
             }
-            var alleleCountsByChromosome = ReadFrequencies(variantFrequencyFile, intervalsByChromosome, alternativeNames, 
-                out totalRecords, ref count);
+            var alleleCountsByChromosome = ReadFrequencies(variantFrequencyFile, intervalsByChromosome, 
+                referenceFolder, out float meanCoverage);
 
-            foreach (var chr in segmentsByChromosome.Keys)
+            foreach (string chr in segmentsByChromosome.Keys)
             {
                 for (int index = 0; index < segmentsByChromosome[chr].Count; index++)
                 {
-                    segmentsByChromosome[chr][index].Alleles.Frequencies.Add(countAlt / (float)(countRef + countAlt));
-                    segmentsByChromosome[chr][index].Alleles.TotalCoverage.Add(countRef + countAlt);
-                    segmentsByChromosome[chr][index].Alleles.Counts.Add(new Tuple<int, int>(countRef, countAlt));
+                    foreach (var genotype in alleleCountsByChromosome[chr][index])
+                    {
+                        segmentsByChromosome[chr][index].Alleles.Frequencies.Add(genotype.CountsB / (float)(genotype.CountsA + genotype.CountsB));
+                        segmentsByChromosome[chr][index].Alleles.TotalCoverage.Add(genotype.CountsA + genotype.CountsB);
+                        segmentsByChromosome[chr][index].Alleles.Counts.Add(new Tuple<int, int>(genotype.CountsA, genotype.CountsB));
+                    }
                 }
             }
-            float meanCoverage = 0;
-            if (totalRecords > 0)
-                meanCoverage = totalCoverage / Math.Max(1f, totalRecords);
-            Console.WriteLine("{0} Loaded a total of {1} usable variant frequencies", DateTime.Now, count);
             return meanCoverage;
         }
 
-        private static long ReadFrequencies(string variantFrequencyFile, Dictionary<string, List<Interval>> intervalByChromosome,
-            Dictionary<string, string> alternativeNames, out int totalRecords)
+        public static HashSet<string> LoadChromosomeNames(string referenceFolder)
+        {
+            GenomeMetadata genomeMetaData = new GenomeMetadata();
+            genomeMetaData.Deserialize(Path.Combine(referenceFolder, "GenomeSize.xml"));
+            var chromosomeNames = new HashSet<string>();
+            foreach (var chromosome in genomeMetaData.Sequences)
+                chromosomeNames.Add(chromosome.Name.ToLowerInvariant());
+            return chromosomeNames;
+        }
+
+        public static Dictionary<string, List<List<Genotype>>> ReadFrequencies(string variantFrequencyFile, Dictionary<string, List<Interval>> intervalByChromosome,
+            string referenceFolder, out float meanCoverage)
         {
             long totalCoverage = 0;
-            int count;
-            totalRecords = 0;
+            int count = 0;
+            long totalRecords = 0;
+            meanCoverage = 0;
+            Console.WriteLine("{0} Load variant frequencies from {1}", DateTime.Now, variantFrequencyFile);
+            var alleleCountsByChromosome = new Dictionary<string, List<List<Genotype>>>();
+            var chromosomeNames = LoadChromosomeNames(referenceFolder);
+
+            foreach (string chr in intervalByChromosome.Keys)
+            {
+                alleleCountsByChromosome[chr] = new List<List<Genotype>>();
+                for(int index = 0; index < intervalByChromosome[chr].Count; index ++)
+                    alleleCountsByChromosome[chr].Add(new List<Genotype>());
+            }
+
             using (GzipReader reader = new GzipReader(variantFrequencyFile))
             {
                 while (true)
@@ -191,20 +222,14 @@ namespace CanvasCommon
                         continue;
                     }
                     string chr = bits[0];
-                    if (!intervalByChromosome.ContainsKey(chr))
-                    {
-                        if (alternativeNames.ContainsKey(chr))
-                        {
-                            chr = alternativeNames[chr];
-                        }
-                        else continue;
-                    }
-
                     int position = int.Parse(bits[1]); // 1-based (from the input VCF to Canvas SNV)
+
+                    if (!chromosomeNames.Contains(chr.ToLowerInvariant()))
+                        throw new Exception($"Integrity check error: Variant found at unknown chromosome '{chr}' at position '{position}'");
+
                     int countRef = int.Parse(bits[4]);
                     int countAlt = int.Parse(bits[5]);
                     if (countRef + countAlt < 10) continue;
-                    float VF = countAlt / (float) (countRef + countAlt);
                     // Binary search for the segment this variant hits:
                     int start = 0;
                     int end = intervalByChromosome[chr].Count - 1;
@@ -223,7 +248,7 @@ namespace CanvasCommon
                             mid = (start + end) / 2;
                             continue;
                         }
-
+                        alleleCountsByChromosome[chr][mid].Add(new Genotype(countRef, countAlt));
                         count++;
                         totalCoverage += countRef + countAlt; // use only coverage information in segments
                         totalRecords++;
@@ -231,7 +256,10 @@ namespace CanvasCommon
                     }
                 }
             }
-            return totalCoverage;
+            if (totalRecords > 0)
+                meanCoverage = totalCoverage / Math.Max(1f, totalRecords);
+            Console.WriteLine("{0} Loaded a total of {1} usable variant frequencies", DateTime.Now, count);
+            return alleleCountsByChromosome;
         }
     }
 }

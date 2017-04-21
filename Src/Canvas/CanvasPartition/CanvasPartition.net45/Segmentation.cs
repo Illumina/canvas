@@ -6,12 +6,12 @@ using CanvasCommon;
 
 namespace CanvasPartition
 {
-    internal class CoverageToVafMapper
+    internal class VafContainingBins
     {
         public int Index { get; }
         public double Vaf { get; }
 
-        public CoverageToVafMapper(int index, double vaf)
+        public VafContainingBins(int index, double vaf)
         {
             Index = index;
             Vaf = vaf;
@@ -19,6 +19,8 @@ namespace CanvasPartition
     }
     class SegmentationInput
     {
+        public string ReferenceFolder { get; }
+
         #region Members
 
         private string InputBinPath;
@@ -28,7 +30,7 @@ namespace CanvasPartition
         public Dictionary<string, uint[]> StartByChr = new Dictionary<string, uint[]>();
         public Dictionary<string, uint[]> EndByChr = new Dictionary<string, uint[]>();
         public Dictionary<string, double[]> CoverageByChr = new Dictionary<string, double[]>();
-        public Dictionary<string, List<CoverageToVafMapper>> VafByChr = new Dictionary<string, List<CoverageToVafMapper>>();
+        public Dictionary<string, List<VafContainingBins>> VafByChr = new Dictionary<string, List<VafContainingBins>>();
 
         public string ForbiddenIntervalBedPath = null;
         public int MaxInterBinDistInSegment;
@@ -58,19 +60,19 @@ namespace CanvasPartition
         }
 
         public SegmentationInput(string inputBinPath, string inputVafPath, string forbiddenBedPath, int maxInterBinDistInSegment,
-            string dataType = "logratio")
+            string referenceFolder, string dataType = "logratio")
         {
             InputBinPath = inputBinPath;
             InputVafPath = inputVafPath;
             ForbiddenIntervalBedPath = forbiddenBedPath;
             MaxInterBinDistInSegment = maxInterBinDistInSegment;
-            ReadInputFiles();
+            ReadInputFiles(referenceFolder);
         }
 
-        private void ReadInputFiles()
+        private void ReadInputFiles(string referenceFolder)
         {
             ReadBEDInput();
-            ReadVAFInput();
+            LoadVAFInput(referenceFolder);
         }
 
         private SegmentationInput.GenomeSegmentationResults GetDummySegmentationResults()
@@ -80,14 +82,14 @@ namespace CanvasPartition
         }
 
 
-        public static SegmentationInput.Segment[] DeriveSegments(List<int> breakpoints, int sizeScoreByChr, uint[] startByChr, uint[] endByChr)
+        public static SegmentationInput.Segment[] DeriveSegments(List<int> breakpoints, int segmentsLength, uint[] startByChr, uint[] endByChr)
         {
-            if (sizeScoreByChr < 1)
+            if (segmentsLength < 1)
                 return new Segment[0];
             var startBreakpointsPos = new List<int>();
             var endBreakpointPos = new List<int>();
             var lengthSeg = new List<int>();
-            if (breakpoints.Count >= 2 && sizeScoreByChr > 10)
+            if (breakpoints.Count >= 2 && segmentsLength > 10)
             {
                 startBreakpointsPos.Add(breakpoints[0]);
                 endBreakpointPos.Add(breakpoints[1] - 1);
@@ -99,14 +101,14 @@ namespace CanvasPartition
                     lengthSeg.Add(breakpoints[i + 1] - 1 - breakpoints[i]);
                 }
                 startBreakpointsPos.Add(breakpoints[breakpoints.Count - 1]);
-                endBreakpointPos.Add(sizeScoreByChr - 1);
-                lengthSeg.Add(sizeScoreByChr - breakpoints[breakpoints.Count - 1] - 1);
+                endBreakpointPos.Add(segmentsLength - 1);
+                lengthSeg.Add(segmentsLength - breakpoints[breakpoints.Count - 1] - 1);
             }
             else
             {
                 startBreakpointsPos.Add(0);
-                endBreakpointPos.Add(sizeScoreByChr - 1);
-                lengthSeg.Add(sizeScoreByChr - 1);
+                endBreakpointPos.Add(segmentsLength - 1);
+                lengthSeg.Add(segmentsLength - 1);
             }
 
 
@@ -179,76 +181,51 @@ namespace CanvasPartition
         /// <summary>
         /// Parse the outputs of CanvasSNV, and note these variant frequencies in the appropriate segment.
         /// </summary>
-        public void ReadVAFInput()
+        public void LoadVAFInput(string referenceFolder)
         {
             try
             {
-                var vfByChr = new Dictionary<string, List<List<double>>>();
+                var vafByChr = new Dictionary<string, List<List<double>>>();
+                var intervalsByChromosome = new Dictionary<string, List<Interval>>();
+
                 foreach (string chr in StartByChr.Keys)
                 {
-                    vfByChr[chr] = new List<List<double>>(StartByChr[chr].Length);
-                    for(int index = 0; index < StartByChr[chr].Length; index++)
-                        vfByChr[chr].Add(new List<double>());
+                    vafByChr[chr] = new List<List<double>>(StartByChr[chr].Length);
+                    intervalsByChromosome[chr] = new List<Interval>();
+                    for (int index = 0; index < StartByChr[chr].Length; index++)
+                    {
+                        vafByChr[chr].Add(new List<double>());
+                        intervalsByChromosome[chr].Add(new Interval(StartByChr[chr][index], EndByChr[chr][index]));
+                    }
                 }
-                Console.WriteLine("{0} Load variant frequencies from {1}", DateTime.Now, InputVafPath);
 
-                using (var reader = new GzipReader(InputVafPath))
+                var alleleCountsByChromosome = CanvasIO.ReadFrequencies(this.InputVafPath, intervalsByChromosome, referenceFolder, out float meanCoverage);
+
+                foreach (var chr in alleleCountsByChromosome.Keys)
                 {
-                    while (true)
+                    for (int index = 0; index < alleleCountsByChromosome[chr].Count; index++)
                     {
-                        string fileLine = reader.ReadLine();
-                        if (fileLine == null) break;
-                        if (fileLine.Length == 0 || fileLine[0] == '#') continue; // Skip headers
-                        var bits = fileLine.Split('\t');
-                        if (bits.Length < 6)
-                        {
-                            Console.Error.WriteLine("* Bad line in {0}: '{1}'", InputVafPath, fileLine);
-                            continue;
-                        }
-                        string chromosome = bits[0];
-                        int position = int.Parse(bits[1]); // 1-based (from the input VCF to Canvas SNV)
-                        int countRef = int.Parse(bits[4]);
-                        int countAlt = int.Parse(bits[5]);
-                        if (countRef + countAlt < 10) continue;
-                        double variantFrequency = Math.Min(countRef, countAlt) / (double) (countRef + countAlt);
-                        // Binary search for the segment this variant hits:
-                        var start = 0;
-                        int end = EndByChr[chromosome].Length - 1;
-                        int mid = (start + end) / 2;
-                        while (start <= end)
-                        {
-                            if (EndByChr[chromosome][mid] < position)
-                            {
-                                start = mid + 1;
-                                mid = (start + end) / 2;
-                                continue;
-                            }
-                            if (StartByChr[chromosome][mid] + 1 > position)
-                            {
-                                end = mid - 1;
-                                mid = (start + end) / 2;
-                                continue;
-                            }
-                            vfByChr[chromosome][mid].Add(variantFrequency);
-                            break;
-                        }
-                    }
-                    foreach (string chr in vfByChr.Keys)
-                    {
-                        VafByChr[chr] = new List<CoverageToVafMapper>();
-                        var index = 0;
-                        foreach (var bin in vfByChr[chr])
-                        {
-                            if (bin.Count < 1) continue;
-                            VafByChr[chr].Add(new CoverageToVafMapper(index, bin.Average()));
-                            index++;
-                        }
+                        vafByChr[chr][index] = alleleCountsByChromosome[chr][index].Select(genotype =>
+                        Math.Max(genotype.CountsA, genotype.CountsB) / Convert.ToDouble(genotype.CountsA + genotype.CountsB)).ToList();
                     }
                 }
+
+                foreach (string chr in vafByChr.Keys)
+                {
+                    VafByChr[chr] = new List<VafContainingBins>();
+                    var index = 0;
+                    foreach (var bin in vafByChr[chr])
+                    {
+                        if (bin.Count < 1) continue;
+                        VafByChr[chr].Add(new VafContainingBins(index, bin.Average()));
+                        index++;
+                    }
+                }
+
             }
             catch (Exception e)
             {
-                Console.Error.WriteLine("File {0} could not be read:", this.InputBinPath);
+                Console.Error.WriteLine("File {0} could not be read:", this.InputVafPath);
                 Console.Error.WriteLine(e.Message);
                 Environment.Exit(1);
             }
@@ -296,15 +273,15 @@ namespace CanvasPartition
             {
                 if (index > length)
                     break;
-                var startSegment = RemapIndex(startByChr, endByChr, commonRegion.Start, length, ref index);
-                var endSegment = RemapIndex(startByChr, endByChr, commonRegion.Stop, length, ref index);
+                var startSegmentIndex = RemapIndex(startByChr, endByChr, commonRegion.Start, length, ref index);
+                var endSegmentIndex = RemapIndex(startByChr, endByChr, commonRegion.Stop, length, ref index);
 
-                if (!startSegment.HasValue || !endSegment.HasValue) continue;
+                if (!startSegmentIndex.HasValue || !endSegmentIndex.HasValue) continue;
 
                 var interval = new SampleGenomicBin
                 {
-                    Start = startSegment.Value,
-                    Stop = endSegment.Value
+                    Start = startSegmentIndex.Value,
+                    Stop = endSegmentIndex.Value
                 };
                 commonRegionsRemapped.Add(interval);
             }

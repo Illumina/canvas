@@ -26,6 +26,7 @@ namespace CanvasPartition
             bool needHelp = false;
             bool isGermline = false;
             string filterBedFile = null;
+            string referenceFolder = null;
             string commonCNVsbedPath = null;
             double alpha = CBSRunner.DefaultAlpha;
             double madFactor = WaveletsRunner.DefaultMadFactor;
@@ -39,6 +40,7 @@ namespace CanvasPartition
                 { "o|outfile=", "text file to output", v => outPartitionedFiles.Add(v) },
                 { "h|help", "show this message and exit", v => needHelp = v != null },
                 { "m|method=", "segmentation method (Wavelets/CBS). Default: " + partitionMethod, v => partitionMethod = (SegmentationInput.SegmentationMethod)Enum.Parse(typeof(SegmentationInput.SegmentationMethod), v) },
+                {"r|reference=", "folder that contains both genome.fa and GenomeSize.xml", v => referenceFolder = v},
                 { "a|alpha=", "alpha parameter to CBS. Default: " + alpha, v => alpha = float.Parse(v) },
                 { "s|split=", "CBS split method (None/Prune/SDUndo). Default: " + undoMethod, v => undoMethod = (SegmentSplitUndo)Enum.Parse(typeof(SegmentSplitUndo), v) },
                 { "f|madFactor=", "MAD factor to Wavelets. Default: " + madFactor, v => madFactor = float.Parse(v) },
@@ -56,7 +58,7 @@ namespace CanvasPartition
                 return 0;
             }
 
-            if (!cleanedFiles.Any() || !outPartitionedFiles.Any())
+            if (!cleanedFiles.Any() || !outPartitionedFiles.Any() || referenceFolder == null)
             {
                 ShowHelp(p);
                 return 0;
@@ -87,7 +89,7 @@ namespace CanvasPartition
                 return 1;
             }
 
-            var segmentationInputs = cleanedFiles.Zip(vafFiles, (inFile, vafFile) => new SegmentationInput(inFile, vafFile, filterBedFile, maxInterBinDistInSegment)).ToList();          
+            var segmentationInputs = cleanedFiles.Zip(vafFiles, (inFile, vafFile) => new SegmentationInput(inFile, vafFile, filterBedFile, maxInterBinDistInSegment, referenceFolder)).ToList();          
             SegmentationInput.GenomeSegmentationResults segmentationResults;
             switch (partitionMethod)
             {

@@ -26,17 +26,6 @@ namespace CanvasPedigreeCaller
         }
     }
 
-    public class Genotype
-    {
-        public int CountsA { get; }
-        public int CountsB { get; }
-
-        public Genotype(int countsA, int countsB)
-        {
-            CountsA = countsA;
-            CountsB = countsB;
-        }
-    }
 
     class CanvasPedigreeCaller
     {
@@ -282,7 +271,7 @@ namespace CanvasPedigreeCaller
                 Segments = CanvasSegment.ReadSegments(segmentFiles[fileCounter])
             };
             pedigreeMember.MeanMafCoverage = CanvasIO.LoadFrequenciesBySegment(variantFrequencyFiles[fileCounter],
-                pedigreeMember.Segments);
+                pedigreeMember.Segments, TODO);
             foreach (var segment in pedigreeMember.Segments)
                 if (segment.Alleles.Counts.Count > defaultAlleleCountThreshold)
                     segment.Alleles.SetMedianCounts();
