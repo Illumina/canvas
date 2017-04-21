@@ -50,7 +50,7 @@ namespace CanvasPartition
         /// </summary>
         public Dictionary<string, SegmentationInput.Segment[]> Run(SegmentationInput segmentationInput)
         {
-            bool useVaf = segmentationEngine.GetEvennessScore() < _parameters.EvennessScoreThreshold;
+            bool useVaf = segmentationInput.GetEvennessScore() < _parameters.EvennessScoreThreshold;
             if (!useVaf)
             {
                 var breakpoints = LaunchWavelets(segmentationInput.CoverageByChr, segmentationInput.StartByChr,
