@@ -45,7 +45,7 @@ namespace CanvasPedigreeCaller
             var pedigreeMembers = new LinkedList<PedigreeMember>();
             foreach (string sampleName in sampleNames)
             {
-                var pedigreeMember = SetPedigreeMember(variantFrequencyFiles, segmentFiles, ploidyBedPath, sampleName, fileCounter, CallerParameters.DefaultAlleleCountThreshold);
+                var pedigreeMember = SetPedigreeMember(variantFrequencyFiles, segmentFiles, ploidyBedPath, sampleName, fileCounter, CallerParameters.DefaultAlleleCountThreshold, referenceFolder);
                 pedigreeMember.Kin = kinships[pedigreeMember.Name] == PedigreeMember.Kinship.Parent ?
                     PedigreeMember.Kinship.Parent : PedigreeMember.Kinship.Offspring;
                 if (kinships[pedigreeMember.Name] == PedigreeMember.Kinship.Proband)
@@ -187,7 +187,7 @@ namespace CanvasPedigreeCaller
             var pedigreeMembers = new LinkedList<PedigreeMember>();
             foreach (string sampleName in sampleNames)
             {
-                var pedigreeMember = SetPedigreeMember(variantFrequencyFiles, segmentFiles, ploidyBedPath, sampleName, fileCounter, CallerParameters.DefaultAlleleCountThreshold);
+                var pedigreeMember = SetPedigreeMember(variantFrequencyFiles, segmentFiles, ploidyBedPath, sampleName, fileCounter, CallerParameters.DefaultAlleleCountThreshold, referenceFolder);
                 pedigreeMembers.AddLast(pedigreeMember);
                 fileCounter++;
             }
@@ -263,7 +263,7 @@ namespace CanvasPedigreeCaller
         }
 
         private static PedigreeMember SetPedigreeMember(List<string> variantFrequencyFiles, List<string> segmentFiles, string ploidyBedPath,
-            string sampleName, int fileCounter, int defaultAlleleCountThreshold)
+            string sampleName, int fileCounter, int defaultAlleleCountThreshold, string referenceFolder)
         {
             var pedigreeMember = new PedigreeMember
             {
@@ -271,7 +271,7 @@ namespace CanvasPedigreeCaller
                 Segments = CanvasSegment.ReadSegments(segmentFiles[fileCounter])
             };
             pedigreeMember.MeanMafCoverage = CanvasIO.LoadFrequenciesBySegment(variantFrequencyFiles[fileCounter],
-                pedigreeMember.Segments, TODO);
+                pedigreeMember.Segments, referenceFolder);
             foreach (var segment in pedigreeMember.Segments)
                 if (segment.Alleles.Counts.Count > defaultAlleleCountThreshold)
                     segment.Alleles.SetMedianCounts();

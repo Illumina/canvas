@@ -652,7 +652,7 @@ namespace Canvas
         /// <summary>
         /// Invoke CanvasSNV.  Return null if this fails and we need to abort CNV calling for this sample.
         /// </summary>
-        protected FileLocation InvokeCanvasSnv(CanvasCallset callset, bool isSomatic = false, string sampleName = null)
+        protected void InvokeCanvasSnv(CanvasCallset callset, bool isSomatic = false, string sampleName = null)
         {
             List<UnitOfWork> jobList = new List<UnitOfWork>();
             List<string> outputPaths = new List<string>();
@@ -699,7 +699,6 @@ namespace Canvas
             // Concatenate CanvasSNV results:
             ConcatenateCanvasSNVResults(callset.SingleSampleCallset.VfSummaryPath, outputPaths);
             ConcatenateCanvasSNVBafResults(callset.SingleSampleCallset.VfSummaryBafPath, outputPaths.Select(path => path + ".baf"));
-            return new FileLocation(callset.SingleSampleCallset.VfSummaryPath);
         }
 
         protected void ConcatenateCanvasSNVResults(string vfSummaryPath, IEnumerable<string> outputPaths)
@@ -800,7 +799,7 @@ namespace Canvas
             }
 
             // CanvasSNV
-            var canvasSnvPath = _checkpointRunner.RunCheckpointAsync("CanvasSNV", () =>
+            var canvasSnvTask = _checkpointRunner.RunCheckpointAsync("CanvasSNV", () =>
             {
                 if (_isSomatic)
                 {
@@ -822,9 +821,9 @@ namespace Canvas
             // CanvasClean:
             var canvasCleanOutput = _checkpointRunner.RunCheckpoint("CanvasClean", () => InvokeCanvasClean(callset, binnedPath));
 
-            await canvasSnvPath;
+            await canvasSnvTask;
             // CanvasPartition:
-            var partitionedPath = _checkpointRunner.RunCheckpoint("CanvasPartition", () => InvokeCanvasPartition(callset, canvasCleanOutput.CleanedPath, canvasBedPath, canvasSnvPath));
+            var partitionedPath = _checkpointRunner.RunCheckpoint("CanvasPartition", () => InvokeCanvasPartition(callset, canvasCleanOutput.CleanedPath, canvasBedPath));
 
             // Intersect bins with manifest
             if (callset.IsEnrichment)
