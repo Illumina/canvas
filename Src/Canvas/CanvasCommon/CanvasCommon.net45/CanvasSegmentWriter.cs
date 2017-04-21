@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using Illumina.Common.FileSystem;
@@ -84,10 +85,12 @@ namespace CanvasCommon
             writer.WriteLine("##FORMAT=<ID=BC,Number=1,Type=Float,Description=\"Number of bins in the region\">");
             writer.WriteLine("##FORMAT=<ID=CN,Number=1,Type=Integer,Description=\"Copy number genotype for imprecise events\">");
             writer.WriteLine("##FORMAT=<ID=MCC,Number=1,Type=Integer,Description=\"Major chromosome count (equal to copy number for LOH regions)\">");
+            writer.WriteLine("##FORMAT=<ID=MCCQ,Number=1,Type=Float,Description=\"Major chromosome count quality score\">");
+            writer.WriteLine("##FORMAT=<ID=QS,Number=1,Type=Float,Description=\"Phred-scaled quality score. If CN is reference then this is -10log10(prob(variant)) otherwise this is -10log10(prob(no variant).\">");
+
             if (denovoQualityThreshold.HasValue)
             {
                 writer.WriteLine("##FORMAT=<ID=DQ,Number=1,Type=Float,Description=\"De novo variants Phred-scaled quality score\">");
-                writer.WriteLine("##FORMAT=<ID=QS,Number=1,Type=Float,Description=\"Phred-scaled quality score\">");
             }
             string names = string.Join("\t", sampleNames.ToArray());
             writer.WriteLine("#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\t" + names);
@@ -151,30 +154,22 @@ namespace CanvasCommon
 
         private static void WriteSingleSampleInfo(BgzipOrStreamWriter writer, CanvasSegment segment)
         {
-            writer.Write("\tRC:BC:CN", segment.End);
-            if (segment.MajorChromosomeCount.HasValue)
-            {
-                writer.Write(":MCC");
-            }
-            writer.Write("\t{1}:{2}:{3}", segment.End, Math.Round(segment.MeanCount, 0, MidpointRounding.AwayFromZero),
-                segment.BinCount, segment.CopyNumber);
-            if (segment.MajorChromosomeCount.HasValue)
-            {
-                writer.Write(":{0}", segment.MajorChromosomeCount);
-            }
+            writer.Write("\tRC:BC:CN:MCC", segment.End);
+            writer.Write($"\t{segment.MeanCount}:{segment.BinCount}:{segment.CopyNumber}");
+            writer.Write(segment.MajorChromosomeCount.HasValue ? $":{segment.MajorChromosomeCount}" : ":.");
             writer.WriteLine();
         }
 
         private static void WriteFormatField(BgzipOrStreamWriter writer, List<CanvasSegment> segments)
         {
-            writer.Write("\tRC:BC:CN:MCC:QS:DQ");
+            writer.Write("\tRC:BC:CN:MCC:MCCQ:QS:DQ");
             const string nullValue = ".";
             foreach (var segment in segments)
             {
-                var mcc = segment.MajorChromosomeCount.HasValue ? segment.MajorChromosomeCount.ToString() : nullValue;
-                var dqscore = segment.DQScore.HasValue ? $"{segment.DQScore.Value:F2}" : nullValue;
-                var rc = Math.Round(segment.MeanCount, 0, MidpointRounding.AwayFromZero);
-                writer.Write($"\t{rc}:{segment.BinCount}:{ segment.CopyNumber}:{mcc}:{segment.QScore:F2}:{dqscore}");
+                string mcc = segment.MajorChromosomeCount.HasValue ? segment.MajorChromosomeCount.ToString() : nullValue;
+                string mccq = segment.MajorChromosomeCountScore.HasValue ? $"{segment.MajorChromosomeCountScore.Value:F2}": nullValue;
+                string dqscore = segment.DQScore.HasValue ? $"{segment.DQScore.Value:F2}" : nullValue;
+                writer.Write($"\t{segment.MeanCount:F2}:{segment.BinCount}:{ segment.CopyNumber}:{mcc}:{mccq}:{segment.QScore:F2}:{dqscore}");
             }
             writer.WriteLine();
         }
