@@ -940,7 +940,7 @@ namespace Canvas
                 partitionedPaths.Add(partitionedPath);
                 commandLine.AppendFormat("-o \"{0}\" ", partitionedPath);
             }
-
+            commandLine.Append($" -r \"{callsets.AnalysisDetails.WholeGenomeFastaFolder}\" ");
             commandLine.AppendFormat("-m HMM");
 
             UnitOfWork partitionJob = new UnitOfWork()
@@ -967,6 +967,7 @@ namespace Canvas
             commandLine.AppendFormat("-b \"{0}\" ", canvasBedPath);
             string partitionedPath = callset.SingleSampleCallset.PartitionedPath.FullName;
             commandLine.AppendFormat("-o \"{0}\" ", partitionedPath);
+            commandLine.Append($" -r \"{callset.AnalysisDetails.WholeGenomeFastaFolder}\" ");
             if (!_isSomatic)
                 commandLine.AppendFormat(" -g");
 

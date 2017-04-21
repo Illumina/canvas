@@ -37,7 +37,7 @@ namespace CanvasPartition
         /// <param name="undoPrune"></param>
         /// <param name="undoSD"></param>
         /// <param name="verbose"></param>
-        public Dictionary<string, Segmentation.Segment[]> Run(Segmentation segmentation, uint nPerm = 10000, string pMethod = "hybrid", int minWidth = 2, int kMax = 25,
+        public Dictionary<string, SegmentationInput.Segment[]> Run(SegmentationInput segmentation, uint nPerm = 10000, string pMethod = "hybrid", int minWidth = 2, int kMax = 25,
             uint nMin = 200, double eta = 0.05, uint[] sbdry = null, double trim = 0.025,
             double undoPrune = 0.05, double undoSD = 3, int verbose = 1)
         {
@@ -96,12 +96,12 @@ namespace CanvasPartition
             }
             if (n == 0)
             {
-                return new Dictionary<string, Segmentation.Segment[]>();
+                return new Dictionary<string, SegmentationInput.Segment[]>();
             }
 
             double trimmedSD = Math.Sqrt(ChangePoint.TrimmedVariance(finiteScoresByChr, trim: trim));
 
-            Dictionary<string, Segmentation.Segment[]> segmentByChr = new Dictionary<string, Segmentation.Segment[]>();
+            Dictionary<string, SegmentationInput.Segment[]> segmentByChr = new Dictionary<string, SegmentationInput.Segment[]>();
 
             // when parallelizing we need an RNG for each chromosome to get deterministic results
             Random seedGenerator = new MersenneTwister(0);
@@ -124,14 +124,14 @@ namespace CanvasPartition
                         pMethod: pMethod, minWidth: minWidth, kMax: kMax, nMin: nMin, trimmedSD: trimmedSD,
                         undoSplits: this._undoMethod, undoPrune: undoPrune, undoSD: undoSD, verbose: verbose);
 
-                    Segmentation.Segment[] segments = new Segmentation.Segment[lengthSeg.Length];
+                    SegmentationInput.Segment[] segments = new SegmentationInput.Segment[lengthSeg.Length];
                     int cs1 = 0, cs2 = -1; // cumulative sum
                     for (int i = 0; i < lengthSeg.Length; i++)
                     {
                         cs2 += lengthSeg[i];
                         int start = ina[cs1];
                         int end = ina[cs2];
-                        segments[i] = new Segmentation.Segment();
+                        segments[i] = new SegmentationInput.Segment();
                         segments[i].start = segmentation.StartByChr[chr][start]; // Genomic start
                         segments[i].end = segmentation.EndByChr[chr][end]; // Genomic end
                         cs1 += lengthSeg[i];

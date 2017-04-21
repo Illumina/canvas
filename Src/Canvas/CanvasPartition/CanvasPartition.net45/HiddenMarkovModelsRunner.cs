@@ -23,14 +23,14 @@ namespace CanvasPartition
             _nSamples = nSamples;
         }
 
-        public Dictionary<string, Segmentation.Segment[]> Run(List<Segmentation> segmentation) {
+        public Dictionary<string, SegmentationInput.Segment[]> Run(List<SegmentationInput> segmentation) {
             Dictionary<string, List<SampleGenomicBin>> commonCNVintervals = null;
             if (_commonCnVs != null)
             {
                 commonCNVintervals = CanvasCommon.Utilities.LoadBedFile(_commonCnVs);
                 CanvasCommon.Utilities.SortAndOverlapCheck(commonCNVintervals, _commonCnVs);
             }
-            var segmentByChr = new Dictionary<string, Segmentation.Segment[]>();
+            var segmentByChr = new Dictionary<string, SegmentationInput.Segment[]>();
 
             var cts = new CancellationTokenSource();
             Parallel.ForEach(
@@ -76,13 +76,13 @@ namespace CanvasPartition
                         {
                             if (commonCNVintervals.ContainsKey(chr))
                             {
-                                var remappedCommonCNVintervals = Segmentation.RemapCommonRegions(commonCNVintervals[chr], startByChr, endByChr);
+                                var remappedCommonCNVintervals = SegmentationInput.RemapCommonRegions(commonCNVintervals[chr], startByChr, endByChr);
                                 var oldbreakpoints = breakpoints;
-                                breakpoints = Segmentation.OverlapCommonRegions(oldbreakpoints, remappedCommonCNVintervals);
+                                breakpoints = SegmentationInput.OverlapCommonRegions(oldbreakpoints, remappedCommonCNVintervals);
                             }
                         }
 
-                        var segments = Segmentation.DeriveSegments(breakpoints, length, startByChr, endByChr);
+                        var segments = SegmentationInput.DeriveSegments(breakpoints, length, startByChr, endByChr);
 
                         lock (segmentByChr)
                         {
