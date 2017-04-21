@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using Isas.SequencingFiles;
 using CanvasCommon;
 
@@ -420,9 +422,30 @@ namespace CanvasPartition
             return newSegment;
         }
 
-        private double GetEvennessScore()
+        public double GetEvennessScore()
         {
-            throw new NotImplementedException();
-        }
+            const int windowSize = 100;
+            var evennessScores = new List<double>();
+            var tasks = CoverageByChr.Select(coverage => new ThreadStart(() =>
+            {
+                for (var index = 0; index < coverage.Value.Length - windowSize; index += windowSize)
+                {
+                    var tmp = coverage.Value.Skip(index).Take(windowSize - 1).ToList();
+                    double average = tmp.Average();
+                    double tmpEvenness = 0;
+                    for (var coverageBin = 0; coverageBin <= average; coverageBin++)
+                    {
+                        tmpEvenness += tmp.Select(bin => bin >= average).Count() / tmp.Sum();
+                    }
+                    lock (evennessScores)
+                    {
+                        if (!double.IsInfinity(tmpEvenness) && double.IsNaN(tmpEvenness))
+                            evennessScores.Add(tmpEvenness);
+                    }
+                }
+            })).ToList();
+            Parallel.ForEach(tasks, task => task.Invoke());
+            return CanvasCommon.Utilities.Median(evennessScores);
+        }   
     }
 }

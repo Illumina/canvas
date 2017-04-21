@@ -141,6 +141,8 @@ namespace CanvasCommon
             double neighborRate = 0;
             int segmentsLength = GetSegmentsForClustering(this.Segments);
             double distanceThreshold = 0;
+            var iterations = 0;
+            var maxIterations = 100000;
             while (true)
             {
                 double neighborRateTmp = 0;
@@ -165,6 +167,9 @@ namespace CanvasCommon
                     tmpHigh = distanceThreshold;
                 }
                 neighborRateTmp = 0;
+                iterations++;
+                if (iterations > maxIterations)
+                    break;
             }
             return distanceThreshold;
         }

@@ -15,6 +15,7 @@ namespace CanvasPartition
         public class WaveletsRunnerParams
         {
             public bool IsGermline { get; }
+            public double EvennessScoreThreshold { get; }
             public string CommonCNVs { get; }
             public double ThresholdLower { get; }
             public double ThresholdUpper { get; }
@@ -23,12 +24,13 @@ namespace CanvasPartition
             public int Verbose { get; }
             public bool IsSmallPedegree { get; }
 
-            public WaveletsRunnerParams(bool isGermline, string commonCNVs, double thresholdLower = 5, 
+            public WaveletsRunnerParams(bool isGermline, string commonCNVs = null, double evennessScoreThreshold = 80.00, double thresholdLower = 0, 
                 double thresholdUpper = 80, double madFactor = 2, int minSize = 10, 
                 int verbose = 1, bool isSmallPedegree = false)
             {
                 IsGermline = isGermline;
-                CommonCNVs = commonCNVs;
+                EvennessScoreThreshold = evennessScoreThreshold;
+                CommonCNVs = commonCNVs;           
                 ThresholdLower = thresholdLower;
                 ThresholdUpper = thresholdUpper;
                 MadFactor = madFactor;
@@ -48,7 +50,7 @@ namespace CanvasPartition
         /// </summary>
         public Dictionary<string, Segmentation.Segment[]> Run(Segmentation segmentationEngine)
         {
-            var useVaf = false;
+            bool useVaf = segmentationEngine.GetEvennessScore() < _parameters.EvennessScoreThreshold;
             if (!useVaf)
                 return LaunchWavelets(segmentationEngine.CoverageByChr, segmentationEngine.StartByChr,
                     segmentationEngine.EndByChr);
