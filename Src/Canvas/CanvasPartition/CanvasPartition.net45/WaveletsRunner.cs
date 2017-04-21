@@ -151,7 +151,7 @@ namespace CanvasPartition
                     breakpoints[chr] = breakpoints[chr].Select(breakpoint => vafContainingBinsByChr[chr][breakpoint]).ToList();
                 }
 
-                if (commonCNVintervals.ContainsKey(chr))
+                if (commonCNVintervals != null && commonCNVintervals.ContainsKey(chr))
                 {
                     var remappedCommonCNVintervals = SegmentationInput.RemapCommonRegions(commonCNVintervals[chr],
                         startByChr[chr], endByChr[chr]);
