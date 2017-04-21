@@ -74,7 +74,8 @@ namespace CanvasPartition
         private void ReadInputFiles(string referenceFolder)
         {
             ReadBEDInput();
-            LoadVAFInput(referenceFolder);
+            if (InputVafPath != null)
+                LoadVAFInput(referenceFolder);
         }
 
         private SegmentationInput.GenomeSegmentationResults GetDummySegmentationResults()
