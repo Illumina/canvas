@@ -135,15 +135,48 @@ namespace CanvasCommon
         /// <summary>
         /// Parse the outputs of CanvasSNV, and note these variant frequencies in the appropriate segment.
         /// </summary>
-        public static float LoadFrequencies(string variantFrequencyFile, List<CanvasSegment> segments)
+        public static float LoadFrequenciesBySegment(string variantFrequencyFile, List<CanvasSegment> segments)
         {
             
             Console.WriteLine("{0} Load variant frequencies from {1}", DateTime.Now, variantFrequencyFile);
             int count = 0;
-            Dictionary<string, List<CanvasSegment>> segmentsByChromosome = CanvasSegment.GetSegmentsByChromosome(segments);
-            Dictionary<string, string> alternativeNames = GetChromosomeAlternativeNames(segmentsByChromosome.Keys);
+            var segmentsByChromosome = CanvasSegment.GetSegmentsByChromosome(segments);
+            var alternativeNames = GetChromosomeAlternativeNames(segmentsByChromosome.Keys);
+            int totalRecords;
+            var intervalsByChromosome = new Dictionary<string, List<Interval>>();
+            foreach (var chr in segmentsByChromosome.Keys)
+            {
+                intervalsByChromosome[chr] = new List<Interval>();
+                foreach (var canvasSegment in segmentsByChromosome[chr])
+                {
+                    intervalsByChromosome[chr].Add(new Interval(canvasSegment.Begin, canvasSegment.End));
+                }
+            }
+            var alleleCountsByChromosome = ReadFrequencies(variantFrequencyFile, intervalsByChromosome, alternativeNames, 
+                out totalRecords, ref count);
+
+            foreach (var chr in segmentsByChromosome.Keys)
+            {
+                for (int index = 0; index < segmentsByChromosome[chr].Count; index++)
+                {
+                    segmentsByChromosome[chr][index].Alleles.Frequencies.Add(countAlt / (float)(countRef + countAlt));
+                    segmentsByChromosome[chr][index].Alleles.TotalCoverage.Add(countRef + countAlt);
+                    segmentsByChromosome[chr][index].Alleles.Counts.Add(new Tuple<int, int>(countRef, countAlt));
+                }
+            }
+            float meanCoverage = 0;
+            if (totalRecords > 0)
+                meanCoverage = totalCoverage / Math.Max(1f, totalRecords);
+            Console.WriteLine("{0} Loaded a total of {1} usable variant frequencies", DateTime.Now, count);
+            return meanCoverage;
+        }
+
+        private static long ReadFrequencies(string variantFrequencyFile, Dictionary<string, List<Interval>> intervalByChromosome,
+            Dictionary<string, string> alternativeNames, out int totalRecords)
+        {
             long totalCoverage = 0;
-            int totalRecords = 0;
+            int count;
+            totalRecords = 0;
             using (GzipReader reader = new GzipReader(variantFrequencyFile))
             {
                 while (true)
@@ -157,12 +190,12 @@ namespace CanvasCommon
                         Console.Error.WriteLine("* Bad line in {0}: '{1}'", variantFrequencyFile, fileLine);
                         continue;
                     }
-                    string chromosome = bits[0];
-                    if (!segmentsByChromosome.ContainsKey(chromosome))
+                    string chr = bits[0];
+                    if (!intervalByChromosome.ContainsKey(chr))
                     {
-                        if (alternativeNames.ContainsKey(chromosome))
+                        if (alternativeNames.ContainsKey(chr))
                         {
-                            chromosome = alternativeNames[chromosome];
+                            chr = alternativeNames[chr];
                         }
                         else continue;
                     }
@@ -171,29 +204,26 @@ namespace CanvasCommon
                     int countRef = int.Parse(bits[4]);
                     int countAlt = int.Parse(bits[5]);
                     if (countRef + countAlt < 10) continue;
-                    float VF = countAlt / (float)(countRef + countAlt);
+                    float VF = countAlt / (float) (countRef + countAlt);
                     // Binary search for the segment this variant hits:
-                    List<CanvasSegment> chrSegments = segmentsByChromosome[chromosome];
                     int start = 0;
-                    int end = chrSegments.Count - 1;
+                    int end = intervalByChromosome[chr].Count - 1;
                     int mid = (start + end) / 2;
                     while (start <= end)
                     {
-                        if (chrSegments[mid].End < position) // CanvasSegment.End is already 1-based
+                        if (intervalByChromosome[chr][mid].OneBasedEnd < position) // CanvasSegment.End is already 1-based
                         {
                             start = mid + 1;
                             mid = (start + end) / 2;
                             continue;
                         }
-                        if (chrSegments[mid].Begin + 1 > position) // Convert CanvasSegment.Begin to 1-based by adding 1
+                        if (intervalByChromosome[chr][mid].OneBasedStart + 1 > position) // Convert CanvasSegment.Begin to 1-based by adding 1
                         {
                             end = mid - 1;
                             mid = (start + end) / 2;
                             continue;
                         }
-                        chrSegments[mid].Alleles.Frequencies.Add(VF);
-                        chrSegments[mid].Alleles.TotalCoverage.Add(countRef + countAlt);
-                        chrSegments[mid].Alleles.Counts.Add(new Tuple<int, int>(countRef, countAlt));
+
                         count++;
                         totalCoverage += countRef + countAlt; // use only coverage information in segments
                         totalRecords++;
@@ -201,11 +231,7 @@ namespace CanvasCommon
                     }
                 }
             }
-            float meanCoverage = 0;
-            if (totalRecords > 0)
-                meanCoverage = totalCoverage / Math.Max(1f, totalRecords);
-            Console.WriteLine("{0} Loaded a total of {1} usable variant frequencies", DateTime.Now, count);
-            return meanCoverage;
+            return totalCoverage;
         }
     }
 }

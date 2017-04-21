@@ -396,7 +396,7 @@ namespace CanvasDiploidCaller
             if (!string.IsNullOrEmpty(ploidyBedPath)) ploidy = PloidyInfo.LoadPloidyFromBedFile(ploidyBedPath);
 
             // load MAF
-            this.MeanCoverage = CanvasIO.LoadFrequencies(variantFrequencyFile, this.Segments);
+            this.MeanCoverage = CanvasIO.LoadFrequenciesBySegment(variantFrequencyFile, this.Segments);
             int medianVariantCoverage = AggregateVariantCoverage(ref this.Segments);
 
 

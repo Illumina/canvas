@@ -37,7 +37,7 @@ namespace CanvasPartition
         /// <param name="undoPrune"></param>
         /// <param name="undoSD"></param>
         /// <param name="verbose"></param>
-        public Dictionary<string, Segmentation.Segment[]> Run(Segmentation segmentation, uint nPerm = 10000, string pMethod = "hybrid", int minWidth = 2, int kMax = 25,
+        public Dictionary<string, SegmentationInput.Segment[]> Run(SegmentationInput segmentation, uint nPerm = 10000, string pMethod = "hybrid", int minWidth = 2, int kMax = 25,
             uint nMin = 200, double eta = 0.05, uint[] sbdry = null, double trim = 0.025,
             double undoPrune = 0.05, double undoSD = 3, int verbose = 1)
         {

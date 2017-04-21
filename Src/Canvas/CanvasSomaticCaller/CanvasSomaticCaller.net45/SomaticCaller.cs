@@ -384,7 +384,7 @@ namespace CanvasSomaticCaller
                 this.DebugModelSegmentCoverageByCN();
             }
 
-            this.MeanCoverage = CanvasIO.LoadFrequencies(variantFrequencyFile, this.Segments);
+            this.MeanCoverage = CanvasIO.LoadFrequenciesBySegment(variantFrequencyFile, this.Segments);
             if (this.IsDbsnpVcf)
             {
                 int tmpMinimumVariantFreq = somaticCallerParameters.MinimumVariantFrequenciesForInformativeSegment;

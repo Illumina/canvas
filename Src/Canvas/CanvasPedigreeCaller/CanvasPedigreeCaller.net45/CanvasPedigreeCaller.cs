@@ -264,7 +264,7 @@ namespace CanvasPedigreeCaller
                 Name = sampleName,
                 Segments = CanvasSegment.ReadSegments(segmentFiles[fileCounter])
             };
-            pedigreeMember.MeanMafCoverage = CanvasIO.LoadFrequencies(variantFrequencyFiles[fileCounter],
+            pedigreeMember.MeanMafCoverage = CanvasIO.LoadFrequenciesBySegment(variantFrequencyFiles[fileCounter],
                 pedigreeMember.Segments);
             foreach (var segment in pedigreeMember.Segments)
                 if (segment.Alleles.Counts.Count > defaultAlleleCountThreshold)

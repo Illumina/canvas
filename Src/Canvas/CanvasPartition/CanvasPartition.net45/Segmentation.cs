@@ -17,7 +17,7 @@ namespace CanvasPartition
             Vaf = vaf;
         }
     }
-    class Segmentation
+    class SegmentationInput
     {
         #region Members
 
@@ -42,7 +42,7 @@ namespace CanvasPartition
 
         public class GenomeSegmentationResults
         {
-            public IDictionary<string, Segmentation.Segment[]> SegmentByChr;
+            public IDictionary<string, SegmentationInput.Segment[]> SegmentByChr;
 
             public GenomeSegmentationResults(IDictionary<string, Segment[]> segmentByChr)
             {
@@ -57,7 +57,7 @@ namespace CanvasPartition
             HMM
         }
 
-        public Segmentation(string inputBinPath, string inputVafPath, string forbiddenBedPath, int maxInterBinDistInSegment,
+        public SegmentationInput(string inputBinPath, string inputVafPath, string forbiddenBedPath, int maxInterBinDistInSegment,
             string dataType = "logratio")
         {
             InputBinPath = inputBinPath;
@@ -73,14 +73,14 @@ namespace CanvasPartition
             ReadVAFInput();
         }
 
-        private Segmentation.GenomeSegmentationResults GetDummySegmentationResults()
+        private SegmentationInput.GenomeSegmentationResults GetDummySegmentationResults()
         {
-            var results = new Segmentation.GenomeSegmentationResults(new Dictionary<string, Segmentation.Segment[]>());
+            var results = new SegmentationInput.GenomeSegmentationResults(new Dictionary<string, SegmentationInput.Segment[]>());
             return results;
         }
 
 
-        public static Segmentation.Segment[] DeriveSegments(List<int> breakpoints, int sizeScoreByChr, uint[] startByChr, uint[] endByChr)
+        public static SegmentationInput.Segment[] DeriveSegments(List<int> breakpoints, int sizeScoreByChr, uint[] startByChr, uint[] endByChr)
         {
             if (sizeScoreByChr < 1)
                 return new Segment[0];
@@ -110,12 +110,12 @@ namespace CanvasPartition
             }
 
 
-            var segments = new Segmentation.Segment[startBreakpointsPos.Count];
+            var segments = new SegmentationInput.Segment[startBreakpointsPos.Count];
             for (int i = 0; i < startBreakpointsPos.Count; i++)
             {
                 int start = startBreakpointsPos[i];
                 int end = endBreakpointPos[i];
-                segments[i] = new Segmentation.Segment
+                segments[i] = new SegmentationInput.Segment
                 {
                     start = startByChr[start],
                     end = endByChr[end]
