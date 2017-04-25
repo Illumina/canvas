@@ -226,7 +226,7 @@ namespace CanvasPartition
         {
             ulong n = (ulong)x.Length;
             tree.Clear();
-            List<double> branch = new List<double>();
+            var branch = new List<double>();
             branch.Add(0);
             branch.Add(0);
             branch.Add(0);
@@ -353,7 +353,7 @@ namespace CanvasPartition
             // starts; 4th component - last time point before the breakpoint of the UH vector;
             // 5th component - end point of the UH vector.
 
-            List<List<double>> tree = new List<List<double>>();
+            var tree = new List<List<double>>();
             double smooth = 0;
             FindBestUnbalancedHaarDecomposition(ratio, tree, smooth);
             // set threshold proportional to SD as and sample size as suggested in
