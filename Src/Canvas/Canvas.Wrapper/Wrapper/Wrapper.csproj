@@ -36,8 +36,8 @@
     <NoWarn>1591</NoWarn>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="ClassicBioinfoTools, Version=0.0.2.70, Culture=neutral, processorArchitecture=AMD64">
-      <HintPath>..\..\Canvas\packages\ClassicBioinfoTools.0.0.2.70\lib\net451\ClassicBioinfoTools.dll</HintPath>
+    <Reference Include="ClassicBioinfoTools, Version=0.0.0.0, Culture=neutral, processorArchitecture=AMD64">
+      <HintPath>..\..\Canvas\packages\ClassicBioinfoTools.0.0.3.73\lib\net451\ClassicBioinfoTools.dll</HintPath>
     </Reference>
     <Reference Include="Illumina.Common, Version=2.8.0.171, Culture=neutral, processorArchitecture=AMD64">
       <HintPath>..\..\Canvas\packages\Illumina.Common.2.8.0.171\lib\net451\Illumina.Common.dll</HintPath>
