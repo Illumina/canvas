@@ -94,21 +94,26 @@ namespace CanvasCommon
             return binsByChrom;
         }
 
-        // write localSD metric
-        public static void WriteLocalSDToTextFile(string outfile, double localSD) 
+        public enum CoverageMetric
         {
-            using (FileStream stream = new FileStream(outfile, FileMode.Create, FileAccess.Write))
+            localSD,
+            evenness,
+        }
+        // write localSD metric
+        public static void WriteCoverageMetricToTextFile(string outfile, double coverageMetric, CoverageMetric coverageMetricType) 
+        {
+            using (FileStream stream = new FileStream(outfile, FileMode.Append, FileAccess.Write))
             using (StreamWriter writer = new StreamWriter(stream))
             {
-                writer.Write("#localSD\t" + localSD);
+                writer.Write($"#{coverageMetricType.ToString()}\t" + coverageMetric);
                 writer.WriteLine();
             }       
         }
 
         // read localSD metric
-        public static double ReadLocalSDFromTextFile(string infile)
+        public static double ReadCoverageMetricFromTextFile(string infile, CoverageMetric coverageMetricType)
         {
-            double localSDmetric = -1.0;
+            double coverageMetric = -1.0;
             using (FileStream stream = new FileStream(infile, FileMode.Open, FileAccess.Read))
             using (StreamReader reader = new StreamReader(stream))
             {
@@ -121,13 +126,13 @@ namespace CanvasCommon
                     {
                         string[] fields = row.Split('\t');
                         string localSDstring = fields[0];
-                        if (localSDstring == "#localSD")
-                            localSDmetric = Convert.ToDouble(fields[1]);                   
+                        if (localSDstring == $"#{coverageMetricType}")
+                            coverageMetric = Convert.ToDouble(fields[1]);                   
                     }
                 }
             }
 
-            return localSDmetric;
+            return coverageMetric;
         }
 
         public static Dictionary<string, string> GetChromosomeAlternativeNames(IEnumerable<string> keys)

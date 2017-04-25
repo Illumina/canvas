@@ -91,9 +91,8 @@
     <Reference Include="MathNet.Numerics.Core, Version=3.17.0.0, Culture=neutral, processorArchitecture=MSIL">
       <HintPath>..\..\Canvas\packages\MathNet.Numerics.Core.3.17.0\lib\net451\MathNet.Numerics.Core.dll</HintPath>
     </Reference>
-    <Reference Include="Newtonsoft.Json, Version=9.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
-      <HintPath>..\Canvas\packages\Newtonsoft.Json.9.0.1\lib\net45\Newtonsoft.Json.dll</HintPath>
-      <Private>True</Private>
+    <Reference Include="Newtonsoft.Json, Version=10.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
+      <HintPath>..\..\Canvas\packages\Newtonsoft.Json.10.0.2\lib\net45\Newtonsoft.Json.dll</HintPath>
     </Reference>
     <Reference Include="protobuf-net, Version=2.1.0.0, Culture=neutral, PublicKeyToken=257b51d87d2e4d67, processorArchitecture=MSIL">
       <HintPath>..\Canvas\packages\protobuf-net.2.1.0\lib\net451\protobuf-net.dll</HintPath>
@@ -119,6 +118,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="CanvasPartition.cs" />
+    <Compile Include="CanvasPartitionParameters.cs" />
     <Compile Include="CBSRunner.cs" />
     <Compile Include="CBSTStatistic.cs" />
     <Compile Include="ChangePoint.cs" />
@@ -147,6 +147,7 @@
       <Generator>SettingsSingleFileGenerator</Generator>
       <LastGenOutput>Settings.Designer.cs</LastGenOutput>
     </None>
+    <None Include="CanvasPartitionParameters.json" />
   </ItemGroup>
   <ItemGroup>
     <BootstrapperPackage Include=".NETFramework,Version=v4.5">
@@ -164,6 +165,11 @@
       <ProductName>.NET Framework 3.5 SP1</ProductName>
       <Install>false</Install>
     </BootstrapperPackage>
+  </ItemGroup>
+    <ItemGroup>
+    <None Include="CanvasPartitionParameters.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\CanvasCommon\CanvasCommon.net45\CanvasCommon.net45.csproj">

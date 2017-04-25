@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -21,6 +22,7 @@ namespace CanvasPartition
     }
     class SegmentationInput
     {
+        public string CoverageMetricsFile { get; }
         public string ReferenceFolder { get; }
 
         #region Members
@@ -62,8 +64,9 @@ namespace CanvasPartition
         }
 
         public SegmentationInput(string inputBinPath, string inputVafPath, string forbiddenBedPath, int maxInterBinDistInSegment,
-            string referenceFolder, string dataType = "logratio")
+            string referenceFolder, string coverageMetricsFile, string dataType = "logratio")
         {
+            CoverageMetricsFile = coverageMetricsFile;
             InputBinPath = inputBinPath;
             InputVafPath = inputVafPath;
             ForbiddenIntervalBedPath = forbiddenBedPath;
@@ -87,8 +90,6 @@ namespace CanvasPartition
 
         public static SegmentationInput.Segment[] DeriveSegments(List<int> breakpoints, int segmentsLength, uint[] startByChr, uint[] endByChr)
         {
-            if (segmentsLength < 1)
-                return new Segment[0];
             var startBreakpointsPos = new List<int>();
             var endBreakpointPos = new List<int>();
             var lengthSeg = new List<int>();
@@ -400,10 +401,14 @@ namespace CanvasPartition
             return newSegment;
         }
 
+        /// <summary>
+        /// Implements evenness score from https://academic.oup.com/nar/article-lookup/doi/10.1093/nar/gkq072#55451628
+        /// </summary>
+        /// <returns></returns>
         public double GetEvennessScore()
         {
             const int windowSize = 100;
-            var evennessScores = new List<double>();
+            var evennessScores = new ConcurrentBag<double>();
             var tasks = CoverageByChr.Select(coverage => new ThreadStart(() =>
             {
                 for (var index = 0; index < coverage.Value.Length - windowSize; index += windowSize)
@@ -413,17 +418,15 @@ namespace CanvasPartition
                     double tmpEvenness = 0;
                     for (var coverageBin = 0; coverageBin <= average; coverageBin++)
                     {
-                        tmpEvenness += tmp.Select(bin => bin >= average).Count() / tmp.Sum();
+                        tmpEvenness += tmp.Select(bin => bin >= coverageBin).Count(c => c) / tmp.Sum();
                     }
-                    lock (evennessScores)
-                    {
-                        if (!double.IsInfinity(tmpEvenness) && double.IsNaN(tmpEvenness))
-                            evennessScores.Add(tmpEvenness);
-                    }
+
+                    if (!double.IsInfinity(tmpEvenness) && !double.IsNaN(tmpEvenness))
+                        evennessScores.Add(tmpEvenness);
                 }
             })).ToList();
             Parallel.ForEach(tasks, task => task.Invoke());
-            return CanvasCommon.Utilities.Median(evennessScores);
+            return CanvasCommon.Utilities.Median(evennessScores.ToList()) * 100.00;
         }   
     }
 }

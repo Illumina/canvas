@@ -174,7 +174,7 @@ namespace CanvasSomaticCaller
             }
             if (!string.IsNullOrEmpty(ffpeOutliersPath))
             {
-                localSDmetric = CanvasCommon.CanvasIO.ReadLocalSDFromTextFile(ffpeOutliersPath);
+                localSDmetric = CanvasCommon.CanvasIO.ReadCoverageMetricFromTextFile(ffpeOutliersPath, CanvasCommon.CanvasIO.CoverageMetric.localSD);
             }
 
             caller.LoadBedFile(bedPath);

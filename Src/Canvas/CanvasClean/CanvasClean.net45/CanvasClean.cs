@@ -518,7 +518,7 @@ namespace CanvasClean
             if (ffpeOutliersFile != null)
             {
                 LocalSD = getLocalStandardDeviation(bins);
-                CanvasIO.WriteLocalSDToTextFile(ffpeOutliersFile, LocalSD);
+                CanvasIO.WriteCoverageMetricToTextFile(ffpeOutliersFile, LocalSD, CanvasIO.CoverageMetric.localSD);
             }
 
             if (doGCnorm)

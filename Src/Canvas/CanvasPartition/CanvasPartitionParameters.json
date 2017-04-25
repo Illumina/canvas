@@ -1,0 +1,7 @@
+{
+  "MaxInterBinDistInSegment": 1000000,
+  "MadFactor": 2.0,
+  "CBSalpha": 0.01,
+  "EvennessScoreThreshold": 100.0,
+  "ThresholdLowerMaf": 0.0
+}
