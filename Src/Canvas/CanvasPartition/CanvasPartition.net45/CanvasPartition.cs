@@ -119,7 +119,8 @@ namespace CanvasPartition
                     Console.WriteLine("{0} Running Wavelet Partitioning", DateTime.Now);
                     var waveletsRunner = new WaveletsRunner(new WaveletsRunner.WaveletsRunnerParams(isGermline, commonCNVsbedPath, madFactor: 
                         canvasPartitionParameters.MadFactor, thresholdLowerMaf: canvasPartitionParameters.ThresholdLowerMaf, verbose: 2));
-                    segmentationResults = new SegmentationInput.GenomeSegmentationResults(waveletsRunner.Run(segmentationInputs.Single()));
+                    segmentationResults = new SegmentationInput.GenomeSegmentationResults(waveletsRunner.Run(segmentationInputs.Single(), 
+                        canvasPartitionParameters.EvennessScoreWindow));
                     segmentationInputs.Single().WriteCanvasPartitionResults(outPartitionedFiles.Single(), segmentationResults);
                     break;
                 case SegmentationInput.SegmentationMethod.CBS:
