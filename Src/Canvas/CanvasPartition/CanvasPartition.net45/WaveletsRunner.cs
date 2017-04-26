@@ -58,8 +58,7 @@ namespace CanvasPartition
             {
                 breakpoints = LaunchWavelets(segmentationInput.CoverageByChr, segmentationInput.StartByChr,
                     segmentationInput.EndByChr);
-                AdjustBreakpoints(segmentationInput.CoverageByChr, segmentationInput.StartByChr,
-                    segmentationInput.EndByChr, ref breakpoints, vafContainingBinsByChr:null);
+                AdjustBreakpoints(segmentationInput.CoverageByChr, segmentationInput, ref breakpoints, vafContainingBinsByChr:null);
             }
             else
             {
@@ -72,7 +71,7 @@ namespace CanvasPartition
                     vafContainingBinsByChr[chr] = segmentationInput.VafByChr[chr].Select(coverageToVafMapper => coverageToVafMapper.Index).ToArray();
                 }
                 breakpoints = LaunchWavelets(vafByChr, segmentationInput.StartByChr, segmentationInput.EndByChr);
-                AdjustBreakpoints(vafByChr, segmentationInput.StartByChr, segmentationInput.EndByChr, ref breakpoints, vafContainingBinsByChr);
+                AdjustBreakpoints(vafByChr, segmentationInput, ref breakpoints, vafContainingBinsByChr);
             }
 
             var segments = new Dictionary<string, SegmentationInput.Segment[]>();
@@ -141,8 +140,8 @@ namespace CanvasPartition
             return breakpointsByChr;
         }
 
-        private void AdjustBreakpoints(Dictionary<string, double[]> binsByChr, Dictionary<string, uint[]> startByChr,
-            Dictionary<string, uint[]> endByChr, ref Dictionary<string, List<int>> breakpoints, Dictionary<string, int[]> vafContainingBinsByChr)
+        private void AdjustBreakpoints(Dictionary<string, double[]> binsByChr, SegmentationInput segmentationInput, 
+            ref Dictionary<string, List<int>> breakpoints, Dictionary<string, int[]> vafContainingBinsByChr)
         {
             // load common CNV segments
             Dictionary<string, List<SampleGenomicBin>> commonCNVintervals = null;
@@ -152,7 +151,6 @@ namespace CanvasPartition
                 CanvasCommon.Utilities.SortAndOverlapCheck(commonCNVintervals, _parameters.CommonCNVs);
             }
 
-            var segments = new Dictionary<string, SegmentationInput.Segment[]>();
             foreach (string chr in binsByChr.Keys)
             {
                 if (vafContainingBinsByChr?[chr] != null && vafContainingBinsByChr[chr].Length > 0)
@@ -167,7 +165,7 @@ namespace CanvasPartition
                 if (commonCNVintervals != null && commonCNVintervals.ContainsKey(chr))
                 {
                     var remappedCommonCNVintervals = SegmentationInput.RemapCommonRegions(commonCNVintervals[chr],
-                        startByChr[chr], endByChr[chr]);
+                        segmentationInput.StartByChr[chr], segmentationInput.EndByChr[chr]);
                     var oldbreakpoints = breakpoints;
                     breakpoints[chr] = SegmentationInput.OverlapCommonRegions(oldbreakpoints[chr], remappedCommonCNVintervals);
                 }
