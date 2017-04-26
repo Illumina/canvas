@@ -3,5 +3,6 @@
   "MadFactor": 2.0,
   "CBSalpha": 0.01,
   "EvennessScoreThreshold": 100.0,
-  "ThresholdLowerMaf": 0.05
+  "ThresholdLowerMaf": 0.05,
+  "EvennessScoreWindow": 1000 
 }
