@@ -42,7 +42,7 @@ namespace FlagUniqueKmers
                             Console.WriteLine("{0}\t{1}\t{2}\t{3}", readIndex, Reads[readIndex], chrA.Name, pos);
                         }
                         pos = -1;
-                        string revComp = Utilities.GetReverseComplement(Reads[readIndex]);
+                        string revComp = Illumina.Common.SequenceUtilities.GetReverseComplement(Reads[readIndex]);
                         while (true)
                         {
                             pos = bases.IndexOf(revComp, pos + 1);

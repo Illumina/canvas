@@ -60,7 +60,7 @@ namespace CanvasCommon
             }
 
             GenomeMetadata genome = new GenomeMetadata();
-            genome.Deserialize(Path.Combine(wholeGenomeFastaDirectory, "GenomeSize.xml"));
+            genome.Deserialize(new FileLocation(Path.Combine(wholeGenomeFastaDirectory, "GenomeSize.xml")));
 
             foreach (GenomeMetadata.SequenceMetadata chromosome in genome.Sequences)
             {

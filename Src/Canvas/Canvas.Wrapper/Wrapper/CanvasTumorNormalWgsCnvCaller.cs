@@ -74,7 +74,6 @@ namespace Canvas.Wrapper
             {
                 ExecutablePath = CrossPlatform.IsThisLinux() ? _runtimeExecutable.FullName : _canvasExe.FullName,
                 CommandLine = CrossPlatform.IsThisLinux() ? _canvasExe + " " + commandLine : commandLine.ToString(),
-                LoggingFolder = _workManager.LoggingFolder.FullName,
                 LoggingStub = "Canvas_" + sampleId,
             };
             _workManager.DoWorkSingleThread(singleSampleJob);

@@ -146,7 +146,7 @@ namespace Canvas.Wrapper
         private bool RunCnvDetection(bool detectCnvDefault)
         {
             bool detectCnvs = detectCnvDefault;
-            string settingString = _sampleSettings.GetStringSetting(SampleSheetUtils.RunCNVDetection, null);
+            string settingString = _sampleSettings.GetStringSetting("RunCNVDetection", null);
             if (!string.IsNullOrEmpty(settingString))
             {
                 detectCnvs = DetectCnvs(settingString);

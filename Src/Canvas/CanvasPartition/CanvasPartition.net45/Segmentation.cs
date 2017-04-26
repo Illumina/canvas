@@ -279,11 +279,7 @@ namespace CanvasPartition
 
                 if (!startSegmentIndex.HasValue || !endSegmentIndex.HasValue) continue;
 
-                var interval = new SampleGenomicBin
-                {
-                    Start = startSegmentIndex.Value,
-                    Stop = endSegmentIndex.Value
-                };
+                var interval = new SampleGenomicBin(null, startSegmentIndex.Value, endSegmentIndex.Value, 0);
                 commonRegionsRemapped.Add(interval);
             }
             return commonRegionsRemapped;
