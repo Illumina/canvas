@@ -407,7 +407,17 @@ namespace CanvasPartition
         /// <returns></returns>
         public double GetEvennessScore(int windowSize)
         {
-            const double IQRthreshold = 0.01;
+            const double IQRthreshold = 0.015;
+            const int windowSizeIQR = 10000;
+            var evennessScoresIQR = reportScoresByWindow(windowSizeIQR);
+            var quartiles = CanvasCommon.Utilities.Quartiles(evennessScoresIQR.Select(Convert.ToSingle).ToList());
+            var evennessScores = reportScoresByWindow(windowSize);
+            double median = CanvasCommon.Utilities.Median(evennessScores.ToList());
+            return quartiles.Item3 - quartiles.Item1 > IQRthreshold ? quartiles.Item3 * 100.0 : median * 100.0;
+        }
+
+        private ConcurrentBag<double> reportScoresByWindow(int windowSize)
+        {
             var evennessScores = new ConcurrentBag<double>();
             var tasks = CoverageByChr.Select(coverage => new ThreadStart(() =>
             {
@@ -426,8 +436,7 @@ namespace CanvasPartition
                 }
             })).ToList();
             Parallel.ForEach(tasks, task => task.Invoke());
-            var quartiles = CanvasCommon.Utilities.Quartiles(evennessScores.Select(Convert.ToSingle).ToList());
-            return quartiles.Item3 - quartiles.Item1 > IQRthreshold ? quartiles.Item3 * 100.0 : quartiles.Item2 * 100.0;
+            return evennessScores;
         }
     }
 }
