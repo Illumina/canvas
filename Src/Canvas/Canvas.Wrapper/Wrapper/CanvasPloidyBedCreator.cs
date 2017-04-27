@@ -14,6 +14,7 @@ using System.Linq;
 
 namespace Canvas.Wrapper
 {
+    [Obsolete("We plan to switch to providing (and consuming) the ploidy information in vcf format, as we do for Strelka and Manta")]
     public class CanvasPloidyBedCreator
     {
         private const string ExpectedSexChromosomeKaryotypeHeader = "##ExpectedSexChromosomeKaryotype";
