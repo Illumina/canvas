@@ -12,7 +12,6 @@ namespace CanvasPartition
         public double MadFactor { get; set; } = 2.0;
         public double CBSalpha { get; set; } = 0.01;
         public double EvennessScoreThreshold { get; set; } = 80.0;
-        public int EvennessScoreWindow { get; set; } = 1000;
         public double ThresholdLowerMaf { get; set; } = 0.05;
     }
 }

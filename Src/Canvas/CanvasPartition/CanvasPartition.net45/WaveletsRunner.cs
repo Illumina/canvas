@@ -48,11 +48,10 @@ namespace CanvasPartition
         /// <summary>
         /// Wavelets: unbalanced HAAR wavelets segmentation 
         /// </summary>
-        public Dictionary<string, SegmentationInput.Segment[]> Run(SegmentationInput segmentationInput, int windowSize)
+        public Dictionary<string, SegmentationInput.Segment[]> Run(SegmentationInput segmentationInput)
         {
-            double evennessScore = segmentationInput.GetEvennessScore(windowSize);
+            double evennessScore = segmentationInput.GetEvennessScore();
             bool useVaf = evennessScore < _parameters.EvennessScoreThreshold;
-            useVaf = true;
             CanvasIO.WriteCoverageMetricToTextFile(segmentationInput.CoverageMetricsFile, evennessScore, CanvasIO.CoverageMetric.evenness);
             Dictionary<string, List<int>> breakpoints;
             if (!useVaf)

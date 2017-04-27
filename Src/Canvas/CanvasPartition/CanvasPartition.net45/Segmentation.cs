@@ -405,8 +405,9 @@ namespace CanvasPartition
         /// Implements evenness score from https://academic.oup.com/nar/article-lookup/doi/10.1093/nar/gkq072#55451628
         /// </summary>
         /// <returns></returns>
-        public double GetEvennessScore(int windowSize)
+        public double GetEvennessScore()
         {
+            const int windowSize = 100;
             var evennessScores = new ConcurrentBag<double>();
             var tasks = CoverageByChr.Select(coverage => new ThreadStart(() =>
             {
