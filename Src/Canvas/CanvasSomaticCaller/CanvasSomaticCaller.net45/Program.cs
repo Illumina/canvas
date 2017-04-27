@@ -34,6 +34,7 @@ namespace CanvasSomaticCaller
             string ffpeOutliersPath = null;
             bool isEnrichment = false;
             bool isDbsnpVcf = false;
+            double? localSDmetric = null;
             double minimumCallSize;
             int qualityFilterThreshold = 10; // Default quality filter threshold = 10, overridable via -q command-line argument
             // Parameters, for parameter-sweep, somatic model training:
@@ -171,18 +172,13 @@ namespace CanvasSomaticCaller
             {
                 caller.LoadReferencePloidy(ploidyBedPath);
             }
-
-            double? localSDmetric = null;
-            double? evennessScore = null;
-
             if (!string.IsNullOrEmpty(ffpeOutliersPath))
             {
                 localSDmetric = CanvasCommon.CanvasIO.ReadCoverageMetricFromTextFile(ffpeOutliersPath, CanvasCommon.CanvasIO.CoverageMetric.localSD);
-                evennessScore = CanvasCommon.CanvasIO.ReadCoverageMetricFromTextFile(ffpeOutliersPath, CanvasCommon.CanvasIO.CoverageMetric.evenness);
             }
 
             caller.LoadBedFile(bedPath);
-            return caller.CallVariants(inFile, variantFrequencyFile, outFile, referenceFolder, name, localSDmetric, evennessScore, somaticClusteringMode);
+            return caller.CallVariants(inFile, variantFrequencyFile, outFile, referenceFolder, name, localSDmetric, somaticClusteringMode);
         }
         private static T Deserialize<T>(IFileLocation path)
         {
