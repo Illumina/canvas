@@ -361,7 +361,7 @@ namespace CanvasSomaticCaller
             this.ExcludedIntervals = CanvasCommon.Utilities.LoadBedFile(bedPath);
         }
 
-        public int CallVariants(string inFile, string variantFrequencyFile, string outputVCFPath, string referenceFolder, string name, double? localSDmertic, double? evennessScore, CanvasSomaticClusteringMode clusteringMode)
+        public int CallVariants(string inFile, string variantFrequencyFile, string outputVCFPath, string referenceFolder, string name, double? localSDmertic, CanvasSomaticClusteringMode clusteringMode)
         {
             this.OutputFolder = Path.GetDirectoryName(outputVCFPath);
             this.TempFolder = Path.GetDirectoryName(inFile);
@@ -398,7 +398,7 @@ namespace CanvasSomaticCaller
             List<string> ExtraHeaders = new List<string>();
             try
             {
-                ExtraHeaders = CallCNVUsingSNVFrequency(localSDmertic, evennessScore, referenceFolder, clusteringMode);
+                ExtraHeaders = CallCNVUsingSNVFrequency(localSDmertic, referenceFolder, clusteringMode);
             }
             catch (Exception e)
             {
@@ -2162,7 +2162,7 @@ namespace CanvasSomaticCaller
         /// Assign copy number calls to segments.  And, produce extra headers for the CNV vcf file, giving the 
         /// overall estimated purity and ploidy.
         /// </summary>
-        protected List<string> CallCNVUsingSNVFrequency(double? localSDmertic, double? evennessScore, string referenceFolder, CanvasSomaticClusteringMode clusteringMode)
+        protected List<string> CallCNVUsingSNVFrequency(double? localSDmertic, string referenceFolder, CanvasSomaticClusteringMode clusteringMode)
         {
             List<string> Headers = new List<string>();
             if (this.CNOracle != null)
@@ -2222,7 +2222,6 @@ namespace CanvasSomaticCaller
             Headers.Add(string.Format("##PurityModelFit={0:F4}", this.Model.Deviation));
             Headers.Add(string.Format("##InterModelDistance={0:F4}", this.Model.InterModelDistance));
             Headers.Add(string.Format("##LocalSDmetric={0:F2}", localSDmertic));
-            Headers.Add(string.Format("##EvennessScore={0:F2}", evennessScore));
             if (!this.IsEnrichment)
                 Headers.Add(string.Format("##HeterogeneityProportion={0:F2}", percentageHeterogeneity));
             return Headers;
