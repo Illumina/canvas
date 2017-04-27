@@ -645,14 +645,14 @@ namespace Canvas
             foreach (PedigreeSample callset in callsets.PedigreeSample)
             {
                 var canvasCallset = new CanvasCallset(callset.Sample, callsets.AnalysisDetails, null, null, null);
-                InvokeCanvasSnv(canvasCallset, false, callset.Sample.SampleName);
+                var snvPath = InvokeCanvasSnv(canvasCallset, false, callset.Sample.SampleName);
             }
         }
 
         /// <summary>
         /// Invoke CanvasSNV.  Return null if this fails and we need to abort CNV calling for this sample.
         /// </summary>
-        protected void InvokeCanvasSnv(CanvasCallset callset, bool isSomatic = false, string sampleName = null)
+        protected IFileLocation InvokeCanvasSnv(CanvasCallset callset, bool isSomatic = false, string sampleName = null)
         {
             List<UnitOfWork> jobList = new List<UnitOfWork>();
             List<string> outputPaths = new List<string>();
@@ -699,6 +699,7 @@ namespace Canvas
             // Concatenate CanvasSNV results:
             ConcatenateCanvasSNVResults(callset.SingleSampleCallset.VfSummaryPath, outputPaths);
             ConcatenateCanvasSNVBafResults(callset.SingleSampleCallset.VfSummaryBafPath, outputPaths.Select(path => path + ".baf"));
+            return new FileLocation(callset.SingleSampleCallset.VfSummaryPath);
         }
 
         protected void ConcatenateCanvasSNVResults(string vfSummaryPath, IEnumerable<string> outputPaths)
@@ -799,11 +800,8 @@ namespace Canvas
             }
 
             // CanvasSNV
-            var canvasSnvTask = _checkpointRunner.RunCheckpointAsync("CanvasSNV", () =>
-            {
-                if (_isSomatic) InvokeCanvasSnv(callset, isSomatic: _isSomatic);
-                else InvokeCanvasSnv(callset);
-            });
+            var canvasSnvTask = _checkpointRunner.RunCheckpointAsync<IFileLocation>("CanvasSNV", () => _isSomatic ? 
+                InvokeCanvasSnv(callset, isSomatic: _isSomatic) : InvokeCanvasSnv(callset));
 
             // Prepare ploidy file:
             string ploidyBedPath = callset.AnalysisDetails.PloidyVcf?.FullName;
@@ -815,8 +813,7 @@ namespace Canvas
             // CanvasClean:
             var canvasCleanOutput = _checkpointRunner.RunCheckpoint("CanvasClean", () => InvokeCanvasClean(callset, binnedPath));
 
-            await canvasSnvTask;
-            var canvasSnvPath = new FileLocation(callset.SingleSampleCallset.VfSummaryPath);
+            var canvasSnvPath = await canvasSnvTask;
             // CanvasPartition:
             var partitionedPath = _checkpointRunner.RunCheckpoint("CanvasPartition", () => InvokeCanvasPartition(callset, canvasCleanOutput.CleanedPath, canvasBedPath, canvasSnvPath));
 
