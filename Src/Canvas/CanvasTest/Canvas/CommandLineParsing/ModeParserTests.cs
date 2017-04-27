@@ -15,15 +15,16 @@ namespace CanvasTest.Canvas.CommandLineParsing
         private const string Copyright = "Copyright";
 
         [Theory]
-        [InlineData("Error: no mode specified")]
-        [InlineData("Available modes:")]
+        [InlineData("Error: no mode specified", "Name", "Description")]
+        [InlineData("Available modes:", "Name", "Description")]
         [InlineData("ModeName - ModeDescription", "ModeName", "ModeDescription")]
-        [InlineData("Options:")]
-        [InlineData("-h, --help")]
-        [InlineData("-v, --version")]
-        public void Parse_NoArguments_DisplaysError(string messageToDisplay, string name, string description, StringWriter standardWriter,
-            StringWriter errorWriter)
+        [InlineData("Options:", "Name", "Description")]
+        [InlineData("-h, --help", "Name", "Description")]
+        [InlineData("-v, --version", "Name", "Description")]
+        public void Parse_NoArguments_DisplaysError(string messageToDisplay, string name, string description)
         {
+            StringWriter standardWriter = new StringWriter();
+            StringWriter errorWriter = new StringWriter();
             // arrange
             GermlineWgsModeParser germlineWgsModeParser = new GermlineWgsModeParser(name, description);
             MainParser parser = GetMainParser(germlineWgsModeParser);
@@ -48,14 +49,16 @@ namespace CanvasTest.Canvas.CommandLineParsing
         }
 
         [Theory]
-        [InlineData("Available modes:")]
+        [InlineData("Available modes:", "name", "description")]
         [InlineData("ModeName - ModeDescription", "ModeName", "ModeDescription")]
-        [InlineData("Options:")]
-        [InlineData("-h, --help")]
-        [InlineData("-v, --version")]
-        public void Parse_WithHelpArgument_ReturnsSuccecssAndDisplaysHelp(string messageToDisplay, string name, string description, StringWriter standardWriter,
-            StringWriter errorWriter)
+        [InlineData("Options:", "name", "description")]
+        [InlineData("-h, --help", "name", "description")]
+        [InlineData("-v, --version", "name", "description")]
+        public void Parse_WithHelpArgument_ReturnsSuccessAndDisplaysHelp(string messageToDisplay, string name, string description)
         {
+            StringWriter standardWriter = new StringWriter();
+            StringWriter errorWriter = new StringWriter();
+
             // arrange
             GermlineWgsModeParser germlineWgsModeParser = new GermlineWgsModeParser(name, description);
             MainParser parser = GetMainParser(germlineWgsModeParser);
@@ -75,15 +78,17 @@ namespace CanvasTest.Canvas.CommandLineParsing
         }
 
         [Theory]
-        [InlineData("Error: found unexpected arguments '--unknown-option'")]
-        [InlineData("Available modes:")]
+        [InlineData("Error: found unexpected arguments '--unknown-option'", "name", "description")]
+        [InlineData("Available modes:", "name", "description")]
         [InlineData("ModeName - ModeDescription", "ModeName", "ModeDescription")]
-        [InlineData("Options:")]
-        [InlineData("-h, --help")]
-        [InlineData("-v, --version")]
-        public void Parse_WithHelpArgumentAndUnkownArgument_DisplaysError(string messageToDisplay, string name, string description, StringWriter standardWriter,
-            StringWriter errorWriter)
+        [InlineData("Options:", "name", "description")]
+        [InlineData("-h, --help", "name", "description")]
+        [InlineData("-v, --version", "name", "description")]
+        public void Parse_WithHelpArgumentAndUnkownArgument_DisplaysError(string messageToDisplay, string name, string description)
         {
+            StringWriter standardWriter = new StringWriter();
+            StringWriter errorWriter = new StringWriter();
+
             // arrange
             GermlineWgsModeParser germlineWgsModeParser = new GermlineWgsModeParser(name, description);
             MainParser parser = GetMainParser(germlineWgsModeParser);
@@ -102,11 +107,13 @@ namespace CanvasTest.Canvas.CommandLineParsing
             Assert.Empty(standardWriter.ToString());
         }
 
-        [Theory]
-        [InlineData("required")]
-        public void Parse_ModeWithMissingRequiredArgument_DisplaysError(string messageToDisplay, string name, string description, StringWriter standardWriter,
-            StringWriter errorWriter)
+        [Fact]
+        public void Parse_ModeWithMissingRequiredArgument_DisplaysError()
         {
+            string messageToDisplay = "required";
+            StringWriter standardWriter = new StringWriter();
+            StringWriter errorWriter = new StringWriter();
+
             // arrange
             GermlineWgsModeParser germlineWgsModeParser = new GermlineWgsModeParser("WGS", "Run Canvas from WGS data");
             MainParser parser = GetMainParser(germlineWgsModeParser);
@@ -126,9 +133,11 @@ namespace CanvasTest.Canvas.CommandLineParsing
 
         [Theory]
         [InlineData("required")]
-        public void Parse_ModeWithVersion_ReturnsSuccecssAndDisplaysVersion(string messageToDisplay, string name, string description,
-            StringWriter standardWriter, StringWriter errorWriter)
+        public void Parse_ModeWithVersion_ReturnsSuccecssAndDisplaysVersion(string messageToDisplay)
         {
+            StringWriter standardWriter = new StringWriter();
+            StringWriter errorWriter = new StringWriter();
+
             // arrange
             GermlineWgsModeParser germlineWgsModeParser = new GermlineWgsModeParser("WGS", "Run Canvas from WGS data");
             MainParser parser = GetMainParser(germlineWgsModeParser);
@@ -362,7 +371,7 @@ namespace CanvasTest.Canvas.CommandLineParsing
             }
         }
 
-        [Theory]
+        [Fact]
         public void ParseCommonOptions_KmerFastaDoesntExist_DisplaysError()
         {
             using (TemporaryDirectoryFixture tempDirectory = new TemporaryDirectoryFixture())
@@ -389,10 +398,14 @@ namespace CanvasTest.Canvas.CommandLineParsing
             }
         }
 
-        [Theory]
-        public void GermlineWgsParse_WithRequiredArguments_ReturnsSuccessfulCallsetResult(string name, string description, StringWriter standardWriter,
-            StringWriter errorWriter)
+        [Fact]
+        public void GermlineWgsParse_WithRequiredArguments_ReturnsSuccessfulCallsetResult()
         {
+            string name = "Hello";
+            string description = "World";
+            StringWriter standardWriter = new StringWriter();
+            StringWriter errorWriter = new StringWriter();
+
             using (TemporaryDirectoryFixture tempDirectory = new TemporaryDirectoryFixture())
             {
 
@@ -412,7 +425,7 @@ namespace CanvasTest.Canvas.CommandLineParsing
             }
         }
 
-        [Theory]
+        [Fact]
         public void ParseMultiFileOption_WithMultipleFileArguments_ReturnsListOfFileLocations()
         {
             using (TemporaryDirectoryFixture tempDirectory = new TemporaryDirectoryFixture())
@@ -438,7 +451,7 @@ namespace CanvasTest.Canvas.CommandLineParsing
             }
         }
 
-        [Theory]
+        [Fact]
         public void ParseExclusiveOption_WithOnlyOneOption_ReturnsOneValue()
         {
             using (TemporaryDirectoryFixture tempDirectory = new TemporaryDirectoryFixture())
@@ -465,7 +478,7 @@ namespace CanvasTest.Canvas.CommandLineParsing
             }
         }
 
-        [Theory]
+        [Fact]
         public void ParseExclusiveOption_WithOnlyTwoOption_ReturnsFailedParseResult()
         {
             using (TemporaryDirectoryFixture tempDirectory = new TemporaryDirectoryFixture())
@@ -503,7 +516,7 @@ namespace CanvasTest.Canvas.CommandLineParsing
                 string[] args =
                 {
 
-            };
+                };
 
                 // act
                 var result = multiFileOption.Parse(args);
@@ -514,7 +527,7 @@ namespace CanvasTest.Canvas.CommandLineParsing
             }
         }
 
-        [Theory]
+        [Fact]
         public void ParseDictionaryOption_WithMultipleKeyValueArguments_ReturnsDictionary()
         {
             using (TemporaryDirectoryFixture tempDirectory = new TemporaryDirectoryFixture())
@@ -542,7 +555,7 @@ namespace CanvasTest.Canvas.CommandLineParsing
             }
         }
 
-        [Theory]
+        [Fact]
         public void ParseDictionaryOption_WithKeyOnlyArgument_ReturnsFailedResult()
         {
             using (TemporaryDirectoryFixture tempDirectory = new TemporaryDirectoryFixture())

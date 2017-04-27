@@ -71,7 +71,7 @@ namespace CanvasPartition
             }
         }
 
-        public new Dictionary<string, List<int>> LaunchWavelets(Dictionary<string, double[]> coverageByChr, Dictionary<string, uint[]> startByChr,
+        public Dictionary<string, List<int>> LaunchWavelets(Dictionary<string, double[]> coverageByChr, Dictionary<string, uint[]> startByChr,
             Dictionary<string, uint[]> endByChr)
         {
             var inaByChr = new Dictionary<string, int[]>();

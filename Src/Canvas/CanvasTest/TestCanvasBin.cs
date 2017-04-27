@@ -75,7 +75,7 @@ namespace CanvasTest
         }
 
         [Fact]
-        public void TestBinOneAlignment()
+        public void TestBinOneAlignmentDifferentPosition()
         {
             TestBinOneAlignment(100, 120);
         }
