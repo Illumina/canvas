@@ -2,7 +2,7 @@
   "MaxInterBinDistInSegment": 1000000,
   "MadFactor": 2.0,
   "CBSalpha": 0.01,
-  "EvennessScoreThreshold": 94.5,
+  "EvennessScoreThreshold": 100.0,
   "ThresholdLowerMaf": 0.05,
-  "EvennessScoreWindow": 100000 
+  "EvennessScoreWindow": 1000 
 }
