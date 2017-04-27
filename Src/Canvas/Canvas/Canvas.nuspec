@@ -28,10 +28,5 @@
     <file src="..\Canvas.Wrapper\bin\Release\netcoreapp1.1\CanvasBin.dll" target="lib\netstandard1.6" />
     <file src="..\Canvas.Wrapper\bin\Release\netcoreapp1.1\CanvasCommon.dll" target="lib\netstandard1.6" />
     <file src="..\Canvas.Wrapper\bin\Release\netcoreapp1.1\Combinatorics.dll" target="lib\netstandard1.6" />
-    <file src="..\Canvas.Wrapper\Wrapper\bin\x64\Release\Canvas.Wrapper.dll" target="lib\net451" />
-    <file src="..\Canvas.Wrapper\Wrapper\bin\x64\Release\Canvas.exe" target="lib\net451" />
-    <file src="..\Canvas.Wrapper\Wrapper\bin\x64\Release\CanvasBin.exe" target="lib\net451" />
-    <file src="..\Canvas.Wrapper\Wrapper\bin\x64\Release\CanvasCommon.dll" target="lib\net451" />
-    <file src="..\Canvas.Wrapper\Wrapper\bin\x64\Release\Combinatorics.dll" target="lib\net451" />
   </files>
 </package>

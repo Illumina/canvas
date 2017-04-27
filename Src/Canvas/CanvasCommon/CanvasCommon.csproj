@@ -21,6 +21,10 @@
     <Optimize>False</Optimize>
   </PropertyGroup>
 
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <Optimize>False</Optimize>
+  </PropertyGroup>
+
   <ItemGroup>
     <None Update="CanvasCommon.net45\QualityScoreParameters.json">
       <Link>QualityScoreParameters.json</Link>

@@ -4,7 +4,6 @@ using Canvas.CommandLineParsing;
 using CanvasCommon.CommandLineParsing.CoreOptionTypes;
 using CanvasCommon.CommandLineParsing.OptionProcessing;
 using Illumina.Common.FileSystem;
-using Ploeh.AutoFixture.Xunit2;
 using Xunit;
 using System.Linq;
 
@@ -16,12 +15,12 @@ namespace CanvasTest.Canvas.CommandLineParsing
         private const string Copyright = "Copyright";
 
         [Theory]
-        [InlineAutoNSubstituteData("Error: no mode specified")]
-        [InlineAutoNSubstituteData("Available modes:")]
-        [InlineAutoNSubstituteData("ModeName - ModeDescription", "ModeName", "ModeDescription")]
-        [InlineAutoNSubstituteData("Options:")]
-        [InlineAutoNSubstituteData("-h, --help")]
-        [InlineAutoNSubstituteData("-v, --version")]
+        [InlineData("Error: no mode specified")]
+        [InlineData("Available modes:")]
+        [InlineData("ModeName - ModeDescription", "ModeName", "ModeDescription")]
+        [InlineData("Options:")]
+        [InlineData("-h, --help")]
+        [InlineData("-v, --version")]
         public void Parse_NoArguments_DisplaysError(string messageToDisplay, string name, string description, StringWriter standardWriter,
             StringWriter errorWriter)
         {
@@ -49,11 +48,11 @@ namespace CanvasTest.Canvas.CommandLineParsing
         }
 
         [Theory]
-        [InlineAutoNSubstituteData("Available modes:")]
-        [InlineAutoNSubstituteData("ModeName - ModeDescription", "ModeName", "ModeDescription")]
-        [InlineAutoNSubstituteData("Options:")]
-        [InlineAutoNSubstituteData("-h, --help")]
-        [InlineAutoNSubstituteData("-v, --version")]
+        [InlineData("Available modes:")]
+        [InlineData("ModeName - ModeDescription", "ModeName", "ModeDescription")]
+        [InlineData("Options:")]
+        [InlineData("-h, --help")]
+        [InlineData("-v, --version")]
         public void Parse_WithHelpArgument_ReturnsSuccecssAndDisplaysHelp(string messageToDisplay, string name, string description, StringWriter standardWriter,
             StringWriter errorWriter)
         {
@@ -76,12 +75,12 @@ namespace CanvasTest.Canvas.CommandLineParsing
         }
 
         [Theory]
-        [InlineAutoNSubstituteData("Error: found unexpected arguments '--unknown-option'")]
-        [InlineAutoNSubstituteData("Available modes:")]
-        [InlineAutoNSubstituteData("ModeName - ModeDescription", "ModeName", "ModeDescription")]
-        [InlineAutoNSubstituteData("Options:")]
-        [InlineAutoNSubstituteData("-h, --help")]
-        [InlineAutoNSubstituteData("-v, --version")]
+        [InlineData("Error: found unexpected arguments '--unknown-option'")]
+        [InlineData("Available modes:")]
+        [InlineData("ModeName - ModeDescription", "ModeName", "ModeDescription")]
+        [InlineData("Options:")]
+        [InlineData("-h, --help")]
+        [InlineData("-v, --version")]
         public void Parse_WithHelpArgumentAndUnkownArgument_DisplaysError(string messageToDisplay, string name, string description, StringWriter standardWriter,
             StringWriter errorWriter)
         {
@@ -104,7 +103,7 @@ namespace CanvasTest.Canvas.CommandLineParsing
         }
 
         [Theory]
-        [InlineAutoNSubstituteData("required")]
+        [InlineData("required")]
         public void Parse_ModeWithMissingRequiredArgument_DisplaysError(string messageToDisplay, string name, string description, StringWriter standardWriter,
             StringWriter errorWriter)
         {
@@ -126,7 +125,7 @@ namespace CanvasTest.Canvas.CommandLineParsing
         }
 
         [Theory]
-        [InlineAutoNSubstituteData("required")]
+        [InlineData("required")]
         public void Parse_ModeWithVersion_ReturnsSuccecssAndDisplaysVersion(string messageToDisplay, string name, string description,
             StringWriter standardWriter, StringWriter errorWriter)
         {
@@ -244,7 +243,6 @@ namespace CanvasTest.Canvas.CommandLineParsing
         {
             // arrange
             string inputArgument1 = "input";
-            string inputArgument2 = "input2";
             Func<string, string, string, ParsingResult<Tuple<string, string, string>>> parse = (value1, value2, value3) => ParsingResult<Tuple<string, string, string>>.SuccessfulResult(Tuple.Create(value1, value2, value3));
             var option1 = StringOption.CreateRequired("value1 option", "value1");
             var option2 = StringOption.CreateRequired("value2 option", "value2");
@@ -336,210 +334,236 @@ namespace CanvasTest.Canvas.CommandLineParsing
             Assert.Contains("required", result.ErrorMessage);
         }
 
-        [Theory]
-        [AutoData]
-        public void ParseCommonOptions_WithRequiredArguments_ReturnsSuccessfulResult(TemporaryDirectoryFixture tempDirectory)
+        [Fact]
+        public void ParseCommonOptions_WithRequiredArguments_ReturnsSuccessfulResult()
         {
-            // arrange
-            Option<CommonOptions> commonOptionsParser = new CommonOptionsParser();
-            var kmerFasta = tempDirectory.CreateFile("kmerv2.fa");
-            var filterBed = tempDirectory.GetFileLocation("filter.bed").Touch();
-            var output = tempDirectory.CreateSubdirectory("output");
-            var genome = tempDirectory.CreateSubdirectory("WholeGenomeFasta");
-            string[] stringInputArgument =
+            using (TemporaryDirectoryFixture tempDirectory = new TemporaryDirectoryFixture())
             {
+                // arrange
+                Option<CommonOptions> commonOptionsParser = new CommonOptionsParser();
+                var kmerFasta = tempDirectory.CreateFile("kmerv2.fa");
+                var filterBed = tempDirectory.GetFileLocation("filter.bed").Touch();
+                var output = tempDirectory.CreateSubdirectory("output");
+                var genome = tempDirectory.CreateSubdirectory("WholeGenomeFasta");
+                string[] stringInputArgument =
+                {
                 "-r", kmerFasta.ToString(), "-o", output.ToString(), "-g", genome.ToString(), "--filter-bed", filterBed.ToString()
             };
 
-            // act
-            ParsingResult<CommonOptions> result = commonOptionsParser.Parse(stringInputArgument);
+                // act
+                ParsingResult<CommonOptions> result = commonOptionsParser.Parse(stringInputArgument);
 
-            // assert
-            Assert.Equal("", result.ErrorMessage);
-            Assert.True(result.Success);
-            Assert.Equal(kmerFasta, result.Result.KmerFasta);
-            Assert.Equal(output, result.Result.OutputDirectory);
-            Assert.Equal(genome, result.Result.WholeGenomeFasta);
+                // assert
+                Assert.Equal("", result.ErrorMessage);
+                Assert.True(result.Success);
+                Assert.Equal(kmerFasta, result.Result.KmerFasta);
+                Assert.Equal(output, result.Result.OutputDirectory);
+                Assert.Equal(genome, result.Result.WholeGenomeFasta);
+            }
         }
 
         [Theory]
-        [AutoData]
-        public void ParseCommonOptions_KmerFastaDoesntExist_DisplaysError(TemporaryDirectoryFixture tempDirectory)
+        public void ParseCommonOptions_KmerFastaDoesntExist_DisplaysError()
         {
-            // arrange
-            Option<CommonOptions> commonOptionsParser = new CommonOptionsParser();
-            var kmerFasta = tempDirectory.GetFileLocation("kmerv2.fa");
-            var filterBed = tempDirectory.GetFileLocation("filter.bed").Touch();
-            var output = tempDirectory.CreateSubdirectory("output");
-            var genome = tempDirectory.CreateSubdirectory("WholeGenomeFasta");
-            string[] stringInputArgument =
+            using (TemporaryDirectoryFixture tempDirectory = new TemporaryDirectoryFixture())
             {
+
+                // arrange
+                Option<CommonOptions> commonOptionsParser = new CommonOptionsParser();
+                var kmerFasta = tempDirectory.GetFileLocation("kmerv2.fa");
+                var filterBed = tempDirectory.GetFileLocation("filter.bed").Touch();
+                var output = tempDirectory.CreateSubdirectory("output");
+                var genome = tempDirectory.CreateSubdirectory("WholeGenomeFasta");
+                string[] stringInputArgument =
+                {
                 "-r", kmerFasta.ToString(), "-o", output.ToString(), "-g", genome.ToString(), "--filter-bed", filterBed.ToString()
             };
 
-            // act
-            ParsingResult<CommonOptions> result = commonOptionsParser.Parse(stringInputArgument);
+                // act
+                ParsingResult<CommonOptions> result = commonOptionsParser.Parse(stringInputArgument);
 
-            // assert
-            Assert.False(result.Success);
-            Assert.Contains("kmerv2.fa", result.ErrorMessage);
-            Assert.Contains("does not exist", result.ErrorMessage);
+                // assert
+                Assert.False(result.Success);
+                Assert.Contains("kmerv2.fa", result.ErrorMessage);
+                Assert.Contains("does not exist", result.ErrorMessage);
+            }
         }
 
         [Theory]
-        [AutoData]
         public void GermlineWgsParse_WithRequiredArguments_ReturnsSuccessfulCallsetResult(string name, string description, StringWriter standardWriter,
-            StringWriter errorWriter, TemporaryDirectoryFixture tempDirectory)
+            StringWriter errorWriter)
         {
-            // arrange
-            GermlineWgsModeParser germlineWgsModeParser = new GermlineWgsModeParser(name, description);
-            MainParser parser = GetMainParser(germlineWgsModeParser);
-            string[] args =
+            using (TemporaryDirectoryFixture tempDirectory = new TemporaryDirectoryFixture())
             {
+
+                // arrange
+                GermlineWgsModeParser germlineWgsModeParser = new GermlineWgsModeParser(name, description);
+                MainParser parser = GetMainParser(germlineWgsModeParser);
+                string[] args =
+                {
                 "-h"
             };
 
-            // act
-            var result = parser.Parse(args, standardWriter, errorWriter);
+                // act
+                var result = parser.Parse(args, standardWriter, errorWriter);
 
-            // assert
-            Assert.True(result.Success);
+                // assert
+                Assert.True(result.Success);
+            }
         }
 
         [Theory]
-        [AutoData]
-        public void ParseMultiFileOption_WithMultipleFileArguments_ReturnsListOfFileLocations(TemporaryDirectoryFixture tempDirectory)
+        public void ParseMultiFileOption_WithMultipleFileArguments_ReturnsListOfFileLocations()
         {
-            // arrange
-            MultiValueOption<IFileLocation> multiFileOption = new MultiValueOption<IFileLocation>(FileOption.CreateRequired("multiple files", "file"));
-            var file1 = tempDirectory.CreateFile("file1");
-            var file2 = tempDirectory.CreateFile("file2");
-            string[] args =
+            using (TemporaryDirectoryFixture tempDirectory = new TemporaryDirectoryFixture())
             {
+
+                // arrange
+                MultiValueOption<IFileLocation> multiFileOption = new MultiValueOption<IFileLocation>(FileOption.CreateRequired("multiple files", "file"));
+                var file1 = tempDirectory.CreateFile("file1");
+                var file2 = tempDirectory.CreateFile("file2");
+                string[] args =
+                {
                 "--file", file1.ToString(), "--file", file2.ToString()
             };
 
-            // act
-            var result = multiFileOption.Parse(args);
+                // act
+                var result = multiFileOption.Parse(args);
 
-            // assert
-            Assert.Equal("", result.ErrorMessage);
-            Assert.True(result.Success);
-            Assert.Equal(file1, result.Result[0]);
-            Assert.Equal(file2, result.Result[1]);
+                // assert
+                Assert.Equal("", result.ErrorMessage);
+                Assert.True(result.Success);
+                Assert.Equal(file1, result.Result[0]);
+                Assert.Equal(file2, result.Result[1]);
+            }
         }
 
         [Theory]
-        [AutoData]
-        public void ParseExclusiveOption_WithOnlyOneOption_ReturnsOneValue(TemporaryDirectoryFixture tempDirectory)
+        public void ParseExclusiveOption_WithOnlyOneOption_ReturnsOneValue()
         {
-            FileOption option1 = FileOption.CreateRequired("file1 option", "file1");
-            FileOption option2 = FileOption.CreateRequired("file2 option", "file2");
-            // arrange
-            ExclusiveFileOption multiFileOption = ExclusiveFileOption.CreateRequired(option1, option2);
-            var file1 = tempDirectory.CreateFile("file1");
-            string[] args =
+            using (TemporaryDirectoryFixture tempDirectory = new TemporaryDirectoryFixture())
             {
+
+                FileOption option1 = FileOption.CreateRequired("file1 option", "file1");
+                FileOption option2 = FileOption.CreateRequired("file2 option", "file2");
+                // arrange
+                ExclusiveFileOption multiFileOption = ExclusiveFileOption.CreateRequired(option1, option2);
+                var file1 = tempDirectory.CreateFile("file1");
+                string[] args =
+                {
                 "--file1", file1.ToString()
             };
 
-            // act
-            var result = multiFileOption.Parse(args);
+                // act
+                var result = multiFileOption.Parse(args);
 
-            // assert
-            Assert.Equal("", result.ErrorMessage);
-            Assert.True(result.Success);
-            Assert.Equal(file1, result.Result.Result);
-            Assert.Equal(option1, result.Result.MatchedOption);
+                // assert
+                Assert.Equal("", result.ErrorMessage);
+                Assert.True(result.Success);
+                Assert.Equal(file1, result.Result.Result);
+                Assert.Equal(option1, result.Result.MatchedOption);
+            }
         }
 
         [Theory]
-        [AutoData]
-        public void ParseExclusiveOption_WithOnlyTwoOption_ReturnsFailedParseResult(TemporaryDirectoryFixture tempDirectory)
+        public void ParseExclusiveOption_WithOnlyTwoOption_ReturnsFailedParseResult()
         {
-            FileOption option1 = FileOption.CreateRequired("file1 option", "file1");
-            FileOption option2 = FileOption.CreateRequired("file2 option", "file2");
-            // arrange
-            ExclusiveFileOption multiFileOption = ExclusiveFileOption.CreateRequired(option1, option2);
-            var file1 = tempDirectory.CreateFile("file1");
-            string[] args =
+            using (TemporaryDirectoryFixture tempDirectory = new TemporaryDirectoryFixture())
             {
+
+                FileOption option1 = FileOption.CreateRequired("file1 option", "file1");
+                FileOption option2 = FileOption.CreateRequired("file2 option", "file2");
+                // arrange
+                ExclusiveFileOption multiFileOption = ExclusiveFileOption.CreateRequired(option1, option2);
+                var file1 = tempDirectory.CreateFile("file1");
+                string[] args =
+                {
                 "--file1", file1.ToString(), "--file2", file1.ToString()
             };
 
-            // act
-            var result = multiFileOption.Parse(args);
+                // act
+                var result = multiFileOption.Parse(args);
 
-            // assert
-            Assert.Contains("not both", result.ErrorMessage);
-            Assert.False(result.Success);
+                // assert
+                Assert.Contains("not both", result.ErrorMessage);
+                Assert.False(result.Success);
+            }
         }
 
-        [Theory]
-        [AutoData]
-        public void ParseRequiredExclusiveOption_WithNeitherOptionSpecified_ReturnsFailedParseResult(TemporaryDirectoryFixture tempDirectory)
+        [Fact]
+        public void ParseRequiredExclusiveOption_WithNeitherOptionSpecified_ReturnsFailedParseResult()
         {
-            FileOption option1 = FileOption.CreateRequired("file1 option", "file1");
-            FileOption option2 = FileOption.CreateRequired("file2 option", "file2");
-            // arrange
-            ExclusiveFileOption multiFileOption = ExclusiveFileOption.CreateRequired(option1, option2);
-            string[] args =
+            using (TemporaryDirectoryFixture tempDirectory = new TemporaryDirectoryFixture())
             {
+
+                FileOption option1 = FileOption.CreateRequired("file1 option", "file1");
+                FileOption option2 = FileOption.CreateRequired("file2 option", "file2");
+                // arrange
+                ExclusiveFileOption multiFileOption = ExclusiveFileOption.CreateRequired(option1, option2);
+                string[] args =
+                {
 
             };
 
-            // act
-            var result = multiFileOption.Parse(args);
+                // act
+                var result = multiFileOption.Parse(args);
 
-            // assert
-            Assert.Contains("must be specified", result.ErrorMessage);
-            Assert.False(result.Success);
+                // assert
+                Assert.Contains("must be specified", result.ErrorMessage);
+                Assert.False(result.Success);
+            }
         }
 
         [Theory]
-        [AutoData]
-        public void ParseDictionaryOption_WithMultipleKeyValueArguments_ReturnsDictionary(TemporaryDirectoryFixture tempDirectory)
+        public void ParseDictionaryOption_WithMultipleKeyValueArguments_ReturnsDictionary()
         {
-            // arrange
-            DictionaryOption dictOption = DictionaryOption.Create("dictionary", "kvp");
-            string key1 = "key1";
-            string value1 = "value1";
-            string key2 = "key2";
-            string value2 = "value2";
-            string[] args =
+            using (TemporaryDirectoryFixture tempDirectory = new TemporaryDirectoryFixture())
             {
+
+                // arrange
+                DictionaryOption dictOption = DictionaryOption.Create("dictionary", "kvp");
+                string key1 = "key1";
+                string value1 = "value1";
+                string key2 = "key2";
+                string value2 = "value2";
+                string[] args =
+                {
                 "--kvp", $"{key1}, {value1}","--kvp",  $"{key2}, {value2}"
             };
 
-            // act
-            var result = dictOption.Parse(args);
+                // act
+                var result = dictOption.Parse(args);
 
-            // assert
-            Assert.Equal("", result.ErrorMessage);
-            Assert.True(result.Success);
-            Assert.Equal(value1, result.Result[key1]);
-            Assert.Equal(value2, result.Result[key2]);
+                // assert
+                Assert.Equal("", result.ErrorMessage);
+                Assert.True(result.Success);
+                Assert.Equal(value1, result.Result[key1]);
+                Assert.Equal(value2, result.Result[key2]);
+            }
         }
 
         [Theory]
-        [AutoData]
-        public void ParseDictionaryOption_WithKeyOnlyArgument_ReturnsFailedResult(TemporaryDirectoryFixture tempDirectory)
+        public void ParseDictionaryOption_WithKeyOnlyArgument_ReturnsFailedResult()
         {
-            // arrange
-            DictionaryOption dictOption = DictionaryOption.Create("dictionary", "kvp");
-            string key = "key1";
-            string[] args =
+            using (TemporaryDirectoryFixture tempDirectory = new TemporaryDirectoryFixture())
             {
+
+                // arrange
+                DictionaryOption dictOption = DictionaryOption.Create("dictionary", "kvp");
+                string key = "key1";
+                string[] args =
+                {
                 "--kvp", key
             };
 
-            // act
-            var result = dictOption.Parse(args);
+                // act
+                var result = dictOption.Parse(args);
 
-            // assert
-            Assert.False(result.Success);
-            Assert.Contains("Error", result.ErrorMessage);
-            Assert.Contains("format", result.ErrorMessage);
+                // assert
+                Assert.False(result.Success);
+                Assert.Contains("Error", result.ErrorMessage);
+                Assert.Contains("format", result.ErrorMessage);
+            }
         }
 
         [Fact]

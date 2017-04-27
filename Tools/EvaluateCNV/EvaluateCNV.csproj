@@ -18,6 +18,8 @@
     <GenerateAssemblyCopyrightAttribute>false</GenerateAssemblyCopyrightAttribute>
   </PropertyGroup>
 
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" />
+
   <ItemGroup>
     <ProjectReference Include="..\..\Src\Canvas\CanvasCommon\CanvasCommon.csproj" />
   </ItemGroup>
