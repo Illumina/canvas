@@ -114,10 +114,42 @@ namespace Canvas.Wrapper
                 ploidyBed.FullName, headerLine, ploidy => true);
             return ploidyBed;
         }
-
-        public bool GeneratePloidyBedFileFromSexChromosomeKaryotype(GenomeMetadata genomeMetadata, string fastaPath, string sexChromosomeKaryotype, string ploidyBedPath, string logFolder)
+        private static SamplePloidyInfo CreateSamplePloidyInfoFromSexChromosomeKaryotypeString(string sexChromosomeKaryotype)
         {
-            return this.GeneratePloidyBedFileFromSexChromosomeKaryotype(genomeMetadata, fastaPath, sexChromosomeKaryotype, ploidyBedPath, logFolder);
+            int ploidyX;
+            int ploidyY;
+            GetPloidyFromSexChromosomeKaryotypeString(sexChromosomeKaryotype, out ploidyX, out ploidyY);
+            SamplePloidyInfo info = new SamplePloidyInfo();
+            info.ProvidedPloidy = new SexPloidyInfo(ploidyX, ploidyY);
+            return info;
+        }
+
+        private static void GetPloidyFromSexChromosomeKaryotypeString(string sexChromosomeKaryotype, out int ploidyX, out int ploidyY)
+        {
+            ploidyX = 0;
+            ploidyY = 0;
+            foreach (char letter in sexChromosomeKaryotype.ToLowerInvariant())
+            {
+                if (letter == 'x')
+                {
+                    ploidyX++;
+                }
+                if (letter == 'y')
+                {
+                    ploidyY++;
+                }
+            }
+        }
+        public bool GeneratePloidyBedFileFromSexChromosomeKaryotype(GenomeMetadata genome, string fastaPath, string sexChromosomeKaryotype, string ploidyBedPath, string logFolder)
+        {
+            if (sexChromosomeKaryotype == null) return false;
+
+            var parIntervals = _ploidyFixer.GetParRegions(genome);
+            var info = CreateSamplePloidyInfoFromSexChromosomeKaryotypeString(sexChromosomeKaryotype);
+
+            string headerLine = $"{ReferenceSexChromosomeKaryotype}={sexChromosomeKaryotype.ToUpperInvariant()}";
+            WritePloidyBedFile(info, genome, parIntervals, ploidyBedPath, headerLine, ploidy => true);
+            return true;
         }
 
         private static void WritePloidyBedLine(BgzipOrStreamWriter writer, string chr, long start, long end, int ploidy, Func<int, bool> includePloidy)
