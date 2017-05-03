@@ -145,6 +145,7 @@ namespace CanvasPartition
         private Dictionary<string, List<int>> AdjustBreakpoints(Dictionary<string, double[]> binsByChr, SegmentationInput segmentationInput, 
             Dictionary<string, List<int>> breakpoints, Dictionary<string, int[]> vafContainingBinsByChr)
         {
+            var adjustedBreakpoints = new Dictionary<string, List<int>>();
             // load common CNV segments
             Dictionary<string, List<SampleGenomicBin>> commonCNVintervals = null;
             if (_parameters.CommonCNVs != null)
@@ -161,17 +162,17 @@ namespace CanvasPartition
                         throw new Exception(
                             $"breakpoint {breakpoints.Max()} is larger then the zero-based size of the " +
                             $"vafToCoverageIndex '{vafContainingBinsByChr.Count - 1}'");
-                    breakpoints[chr] = breakpoints[chr].Select(breakpoint => vafContainingBinsByChr[chr][breakpoint]).ToList();
+                    adjustedBreakpoints[chr] = breakpoints[chr].Select(breakpoint => vafContainingBinsByChr[chr][breakpoint]).ToList();
                 }
 
                 if (commonCNVintervals != null && commonCNVintervals.ContainsKey(chr))
                 {
                     var remappedCommonCNVintervals = SegmentationInput.RemapCommonRegions(commonCNVintervals[chr],
                         segmentationInput.StartByChr[chr], segmentationInput.EndByChr[chr]);
-                    breakpoints[chr] = SegmentationInput.OverlapCommonRegions(breakpoints[chr], remappedCommonCNVintervals);
+                    adjustedBreakpoints[chr] = SegmentationInput.OverlapCommonRegions(adjustedBreakpoints[chr], remappedCommonCNVintervals);
                 }
             }
-            return breakpoints;
+            return adjustedBreakpoints;
         }
     }
 }
