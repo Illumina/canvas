@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using Illumina.Common;
+using Illumina.Common.CSV;
 using Isas.SequencingFiles;
 using Isas.SequencingFiles.Vcf;
 

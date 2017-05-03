@@ -1,16 +1,15 @@
 ﻿using System;
 using System.Collections.Generic;
 using CanvasCommon;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Xunit;
 
 namespace CanvasTest
 {
-    [TestClass]
     public class TestSegments
     {
 
 
-        [TestMethod]
+        [Fact]
         public void TestCIPOS()
         {
             // Merge two segments, and confirm we keep the correct confidence intervals post-merge:
@@ -22,39 +21,39 @@ namespace CanvasTest
             segment2.StartConfidenceInterval = new Tuple<int, int>(-50, 50);
             segment2.EndConfidenceInterval = new Tuple<int, int>(-30, 30);
             segment.MergeIn(segment2);
-            Assert.AreEqual(segment.End, 8787888);
-            Assert.AreEqual(segment.EndConfidenceInterval.Item1, -30);
-            Assert.AreEqual(segment.StartConfidenceInterval.Item2, 100);
+            Assert.Equal(segment.End, 8787888);
+            Assert.Equal(segment.EndConfidenceInterval.Item1, -30);
+            Assert.Equal(segment.StartConfidenceInterval.Item2, 100);
         }
 
-        [TestMethod]
+        [Fact]
         public void TestBins()
         {
             SampleGenomicBin bin = new SampleGenomicBin("chr1", 12345, 678910, 20, 100);
-            Assert.AreEqual(bin.Size, 666565);
+            Assert.Equal(bin.Size, 666565);
         }
 
-        [TestMethod]
+        [Fact]
         public void TestSegment()
         {
             List<float> counts = new List<float>() {100, 90, 110, 100, 95, 105};
             CanvasSegment seg1 = new CanvasSegment("chr17", 100000000, 110000000, counts);
             // Silly constructor tests:
-            Assert.AreEqual(seg1.Begin, 100000000);
-            Assert.AreEqual(seg1.End, 110000000);
-            Assert.AreEqual(seg1.BinCount, counts.Count);
-            Assert.AreEqual(seg1.Chr, "chr17");
+            Assert.Equal(seg1.Begin, 100000000);
+            Assert.Equal(seg1.End, 110000000);
+            Assert.Equal(seg1.BinCount, counts.Count);
+            Assert.Equal(seg1.Chr, "chr17");
             // Property test:
-            Assert.AreEqual(seg1.MeanCount, 100, 0.01);
+            Assert.Equal(seg1.MeanCount, 100, 2);
 
             // Build a second segment, and merge them, and test results:
             CanvasSegment seg2 = new CanvasSegment("chr17", 110000000, 120000000, counts);
             seg1.MergeIn(seg2);
-            Assert.AreEqual(seg1.Counts.Count, 12);
-            Assert.AreEqual(seg1.End, seg2.End);
+            Assert.Equal(seg1.Counts.Count, 12);
+            Assert.Equal(seg1.End, seg2.End);
         }
 
-        [TestMethod]
+        [Fact]
         public void TestSegmentStats()
         {
             List<float> counts = new List<float>() { 80, 79, 78, 77, 2 };
@@ -65,10 +64,10 @@ namespace CanvasTest
                 segments.Add(seg);
             }
             double expectedCount = CanvasSegment.ExpectedCount(segments);
-            Assert.AreEqual(expectedCount, 78, 0.01);
+            Assert.Equal(expectedCount, 78, 2);
         }
 
-        [TestMethod]
+        [Fact]
         public void TestMergeSegments()
         {
             // Construct several segments, and invoke CanvasSegment.MergeSegments, and ensure that the expected
@@ -116,9 +115,9 @@ namespace CanvasTest
 
             CanvasSegment.MergeSegments(ref allSegments, 50000, 10000);
             Dictionary<string, List<CanvasSegment>> segmentsByChromosome = CanvasSegment.GetSegmentsByChromosome(allSegments);
-            Assert.AreEqual(segmentsByChromosome["chr1"].Count, 3);
-            Assert.AreEqual(segmentsByChromosome["chr2"].Count, 3);
-            Assert.AreEqual(segmentsByChromosome["chr3"].Count, 1);
+            Assert.Equal(segmentsByChromosome["chr1"].Count, 3);
+            Assert.Equal(segmentsByChromosome["chr2"].Count, 3);
+            Assert.Equal(segmentsByChromosome["chr3"].Count, 1);
         }
 
     }

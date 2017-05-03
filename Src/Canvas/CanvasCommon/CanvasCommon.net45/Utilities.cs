@@ -797,10 +797,8 @@ namespace CanvasCommon
                     string[] bits = fileLine.Split('\t');
                     string chr = bits[0];
                     if (!excludedIntervals.ContainsKey(chr)) excludedIntervals[chr] = new List<SampleGenomicBin>();
-                    SampleGenomicBin interval = new SampleGenomicBin();
-                    interval.GenomicBin.Chromosome = chr;
-                    interval.Start = int.Parse(bits[1]);
-                    interval.Stop = int.Parse(bits[2]);
+                    
+                    SampleGenomicBin interval = new SampleGenomicBin(chr, int.Parse(bits[1]), int.Parse(bits[2]), 0);
                     if (interval.Start < 0)
                     {
                         throw new Illumina.Common.IlluminaException(String.Format("Start must be non-negative in a BED file: {0}", fileLine));
@@ -906,7 +904,7 @@ namespace CanvasCommon
                     {
                         throw new Illumina.Common.IlluminaException($"Start must be less than Stop");
                     }
-                    GenomicBin interval = new GenomicBin(chr, new GenomicInterval(binStartPosition, stop[chr][binStartPosition]));
+                    GenomicBin interval = new GenomicBin(chr, new Interval(binStartPosition, stop[chr][binStartPosition]));
                     multiSampleGenomicBins[chr].Add(new MultiSampleGenomicBin(interval, binCounts[chr][binStartPosition]));
                 }
             }

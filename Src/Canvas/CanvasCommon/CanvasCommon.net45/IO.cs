@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.IO;
 using Illumina.Common;
+using Illumina.Common.FileSystem;
 using Isas.SequencingFiles;
 
 namespace CanvasCommon
@@ -183,7 +184,7 @@ namespace CanvasCommon
         public static HashSet<string> LoadChromosomeNames(string referenceFolder)
         {
             GenomeMetadata genomeMetaData = new GenomeMetadata();
-            genomeMetaData.Deserialize(Path.Combine(referenceFolder, "GenomeSize.xml"));
+            genomeMetaData.Deserialize(new FileLocation(Path.Combine(referenceFolder, "GenomeSize.xml")));
             var chromosomeNames = new HashSet<string>();
             foreach (var chromosome in genomeMetaData.Sequences)
                 chromosomeNames.Add(chromosome.Name.ToLowerInvariant());
