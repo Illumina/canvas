@@ -37,8 +37,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Illumina.Common" Version="3.2.0.202" />
-    <PackageReference Include="Isas.Framework" Version="6.1.0.241" />
+    <PackageReference Include="Illumina.Common" Version="3.4.0.208" />
+    <PackageReference Include="Isas.Framework" Version="6.3.0.287" />
     <PackageReference Include="Isas.SequencingFiles" Version="4.0.1.275" />
   </ItemGroup>
 
