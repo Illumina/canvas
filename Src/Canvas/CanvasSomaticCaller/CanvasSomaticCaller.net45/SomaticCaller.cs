@@ -1572,7 +1572,7 @@ namespace CanvasSomaticCaller
         /// and then a fine-grained search), and for each one, measure the distortion - the average distance (weighted 
         /// by segment length) between actual and modeled (MAF, Coverage) coordinate.
         /// </summary>
-        protected SomaticCaller.CoveragePurityModel ModelOverallCoverageAndPurity(long genomeLength, CanvasSomaticClusteringMode clusteringMode)
+        protected SomaticCaller.CoveragePurityModel ModelOverallCoverageAndPurity(long genomeLength, CanvasSomaticClusteringMode clusteringMode, double? evennessScore)
         {
             List<SegmentInfo> usableSegments;
 
@@ -1607,7 +1607,8 @@ namespace CanvasSomaticCaller
             int minCoverageLevel = Convert.ToInt32(coverageQuartiles.Item1);
             int maxCoverageLevel = Convert.ToInt32(coverageQuartiles.Item3);
             int medianCoverageLevel = Convert.ToInt32(coverageQuartiles.Item2);
-            this.CoverageWeightingFactor = somaticCallerParameters.CoverageWeighting / medianCoverageLevel;
+            this.CoverageWeightingFactor = (evennessScore >= somaticCallerParameters.EvennessScoreThreshold ? somaticCallerParameters.CoverageWeighting :
+                somaticCallerParameters.CoverageWeightingWithMafSegmentation) / medianCoverageLevel;
             int bestNumClusters = 0;
             double knearestNeighbourCutoff = 0;
             List<double> centroidsMAF = new List<double>();
@@ -2176,7 +2177,7 @@ namespace CanvasSomaticCaller
             genomeMetaData.Deserialize(Path.Combine(referenceFolder, "GenomeSize.xml"));
 
             // Derive a model of diploid coverage, and overall tumor purity:
-            this.Model = ModelOverallCoverageAndPurity(genomeMetaData.Length, clusteringMode);
+            this.Model = ModelOverallCoverageAndPurity(genomeMetaData.Length, clusteringMode, evennessScore);
 
 
             // Make preliminary ploidy calls for all segments.  For those segments which fit their ploidy reasonably well,
@@ -2188,7 +2189,7 @@ namespace CanvasSomaticCaller
                 List<CanvasSegment> sizeFilteredSegment = this.Segments.Where(segment => segment.End - segment.Begin > 5000).ToList();
                 
                 // Do not run heterogeneity adjustment on enrichment data
-                if (!this.IsEnrichment)
+                if (!this.IsEnrichment && evennessScore >= somaticCallerParameters.EvennessScoreThreshold)
                 {
                     percentageHeterogeneity = AssignHeterogeneity();
                     AdjustPloidyCalls();

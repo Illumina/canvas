@@ -38,5 +38,7 @@ namespace CanvasSomaticCaller
         public double ClonalityClusterVariance { get; set; } = 14.9372;
         public double NumClusters { get; set; } = -0.0988;
         public double ModelDeviation { get; set; } = -7.3681;
+        public double EvennessScoreThreshold { get; set; } = 94.5;
+        public double CoverageWeightingWithMafSegmentation { get; set; } = 0.20;
     }
 }
