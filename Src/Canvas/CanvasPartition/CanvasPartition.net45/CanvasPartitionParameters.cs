@@ -11,7 +11,8 @@ namespace CanvasPartition
         public int MaxInterBinDistInSegment { get; set; } = 1000000;
         public double MadFactor { get; set; } = 2.0;
         public double CBSalpha { get; set; } = 0.01;
-        public double EvennessScoreThreshold { get; set; } = 80.0;
+        public double EvennessScoreThreshold { get; set; } = 94.5;
+        public int EvennessScoreWindow { get; set; } = 100000;
         public double ThresholdLowerMaf { get; set; } = 0.05;
     }
 }

@@ -405,9 +405,19 @@ namespace CanvasPartition
         /// Implements evenness score from https://academic.oup.com/nar/article-lookup/doi/10.1093/nar/gkq072#55451628
         /// </summary>
         /// <returns></returns>
-        public double GetEvennessScore()
+        public double GetEvennessScore(int windowSize)
         {
-            const int windowSize = 100;
+            const double IQRthreshold = 0.015;
+            const int windowSizeIQR = 10000;
+            var evennessScoresIQR = reportScoresByWindow(windowSizeIQR);
+            var quartiles = CanvasCommon.Utilities.Quartiles(evennessScoresIQR.Select(Convert.ToSingle).ToList());
+            var evennessScores = reportScoresByWindow(windowSize);
+            double median = CanvasCommon.Utilities.Median(evennessScores.ToList());
+            return quartiles.Item3 - quartiles.Item1 > IQRthreshold ? quartiles.Item3 * 100.0 : median * 100.0;
+        }
+
+        private ConcurrentBag<double> reportScoresByWindow(int windowSize)
+        {
             var evennessScores = new ConcurrentBag<double>();
             var tasks = CoverageByChr.Select(coverage => new ThreadStart(() =>
             {
@@ -426,7 +436,7 @@ namespace CanvasPartition
                 }
             })).ToList();
             Parallel.ForEach(tasks, task => task.Invoke());
-            return CanvasCommon.Utilities.Median(evennessScores.ToList()) * 100.00;
-        }   
+            return evennessScores;
+        }
     }
 }

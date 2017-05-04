@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using CanvasCommon;
+using Illumina.Common;
 
 namespace CanvasPartition
 {
@@ -24,8 +25,8 @@ namespace CanvasPartition
             public int Verbose { get; }
             public bool IsSmallPedegree { get; }
 
-            public WaveletsRunnerParams(bool isGermline, string commonCNVs = null, double evennessScoreThreshold = 80.00, 
-                double thresholdLower = 0, double thresholdLowerMaf = 0.05, double thresholdUpper = 80, double madFactor = 2, int minSize = 10, 
+            public WaveletsRunnerParams(bool isGermline, string commonCNVs = null, double evennessScoreThreshold = 94.50, 
+                double thresholdLower = 5, double thresholdLowerMaf = 0.05, double thresholdUpper = 80, double madFactor = 2, int minSize = 10, 
                 int verbose = 1, bool isSmallPedegree = false)
             {
                 IsGermline = isGermline;
@@ -48,11 +49,12 @@ namespace CanvasPartition
         /// <summary>
         /// Wavelets: unbalanced HAAR wavelets segmentation 
         /// </summary>
-        public Dictionary<string, SegmentationInput.Segment[]> Run(SegmentationInput segmentationInput)
+        public Dictionary<string, SegmentationInput.Segment[]> Run(SegmentationInput segmentationInput, int windowSize)
         {
-            double evennessScore = segmentationInput.GetEvennessScore();
+            double evennessScore = segmentationInput.GetEvennessScore(windowSize);
             bool useVaf = evennessScore < _parameters.EvennessScoreThreshold;
-            CanvasIO.WriteCoverageMetricToTextFile(segmentationInput.CoverageMetricsFile, evennessScore, CanvasIO.CoverageMetric.evenness);
+            if (!segmentationInput.CoverageMetricsFile.IsNullOrEmpty())
+                CanvasIO.WriteCoverageMetricToTextFile(segmentationInput.CoverageMetricsFile, evennessScore, CanvasIO.CoverageMetric.evenness);
             Dictionary<string, List<int>> breakpoints;
             Dictionary<string, List<int>> adjustedBreakpoints;
 

@@ -652,7 +652,7 @@ namespace Canvas
         /// <summary>
         /// Invoke CanvasSNV.  Return null if this fails and we need to abort CNV calling for this sample.
         /// </summary>
-        protected FileLocation InvokeCanvasSnv(CanvasCallset callset, bool isSomatic = false, string sampleName = null)
+        protected IFileLocation InvokeCanvasSnv(CanvasCallset callset, bool isSomatic = false, string sampleName = null)
         {
             List<UnitOfWork> jobList = new List<UnitOfWork>();
             List<string> outputPaths = new List<string>();
