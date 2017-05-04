@@ -33,5 +33,6 @@
   "HeterogeneousClusterMedianCutoff": 1.831,
   "CoverageWeighting": 0.333,
   "EvennessScoreThreshold": 94.5,
+  "MinEvennessScore": 88.0,
   "CoverageWeightingWithMafSegmentation": 0.20
 }

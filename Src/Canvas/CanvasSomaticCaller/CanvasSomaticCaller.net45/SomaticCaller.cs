@@ -1607,8 +1607,27 @@ namespace CanvasSomaticCaller
             int minCoverageLevel = Convert.ToInt32(coverageQuartiles.Item1);
             int maxCoverageLevel = Convert.ToInt32(coverageQuartiles.Item3);
             int medianCoverageLevel = Convert.ToInt32(coverageQuartiles.Item2);
-            this.CoverageWeightingFactor = (evennessScore >= somaticCallerParameters.EvennessScoreThreshold ? somaticCallerParameters.CoverageWeighting :
-                somaticCallerParameters.CoverageWeightingWithMafSegmentation) / medianCoverageLevel;
+            if (evennessScore.HasValue && evennessScore.Value < somaticCallerParameters.EvennessScoreThreshold)
+            {
+                if (somaticCallerParameters.CoverageWeighting <=
+                    somaticCallerParameters.CoverageWeightingWithMafSegmentation)
+                    throw new ArgumentException($"SomaticCallerParameters parameter CoverageWeighting {somaticCallerParameters.CoverageWeighting} " +
+                        $"should be larger than CoverageWeightingWithMafSegmentation {somaticCallerParameters.CoverageWeightingWithMafSegmentation}");
+
+                double scaler = Math.Max(evennessScore.Value -
+                                 Math.Max(somaticCallerParameters.MinEvennessScore, evennessScore.Value), 0.0) /
+                                (somaticCallerParameters.EvennessScoreThreshold -
+                                 somaticCallerParameters.MinEvennessScore);
+                CoverageWeightingFactor = somaticCallerParameters.CoverageWeighting -
+                                               (somaticCallerParameters.CoverageWeighting -
+                                                somaticCallerParameters.CoverageWeightingWithMafSegmentation) * scaler;
+                CoverageWeightingFactor /= medianCoverageLevel;
+            }
+            else
+            {
+                CoverageWeightingFactor = somaticCallerParameters.CoverageWeighting / medianCoverageLevel;
+            }
+
             int bestNumClusters = 0;
             double knearestNeighbourCutoff = 0;
             List<double> centroidsMAF = new List<double>();
@@ -1960,6 +1979,7 @@ namespace CanvasSomaticCaller
             return bestModel;
         }
 
+
         /// <summary>
         /// Extract segments from clusters that appear underclustered, i.e. subclonal CNV variants cluster with the closest clonal copy number 
         /// </summary>
@@ -2189,7 +2209,7 @@ namespace CanvasSomaticCaller
                 List<CanvasSegment> sizeFilteredSegment = this.Segments.Where(segment => segment.End - segment.Begin > 5000).ToList();
                 
                 // Do not run heterogeneity adjustment on enrichment data
-                if (!this.IsEnrichment && evennessScore >= somaticCallerParameters.EvennessScoreThreshold)
+                if (!this.IsEnrichment && evennessScore.HasValue && evennessScore.Value >= somaticCallerParameters.EvennessScoreThreshold)
                 {
                     percentageHeterogeneity = AssignHeterogeneity();
                     AdjustPloidyCalls();
@@ -2217,13 +2237,13 @@ namespace CanvasSomaticCaller
             }
 
 
-
             // Add some extra information to the vcf file header:
             Headers.Add(string.Format("##EstimatedTumorPurity={0:F2}", this.Model.Purity));
             Headers.Add(string.Format("##PurityModelFit={0:F4}", this.Model.Deviation));
             Headers.Add(string.Format("##InterModelDistance={0:F4}", this.Model.InterModelDistance));
             Headers.Add(string.Format("##LocalSDmetric={0:F2}", localSDmertic));
             Headers.Add(string.Format("##EvennessScore={0:F2}", evennessScore));
+            Headers.Add(string.Format($"##CoverageWeightingFactor={CoverageWeightingFactor}"));
             if (!this.IsEnrichment)
                 Headers.Add(string.Format("##HeterogeneityProportion={0:F2}", percentageHeterogeneity));
             return Headers;
