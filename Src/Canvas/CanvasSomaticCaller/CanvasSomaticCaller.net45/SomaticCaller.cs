@@ -1614,11 +1614,10 @@ namespace CanvasSomaticCaller
                     throw new ArgumentException($"SomaticCallerParameters parameter CoverageWeighting {somaticCallerParameters.CoverageWeighting} " +
                         $"should be larger than CoverageWeightingWithMafSegmentation {somaticCallerParameters.CoverageWeightingWithMafSegmentation}");
 
-                double scaler = Math.Max(evennessScore.Value -
-                                 Math.Max(somaticCallerParameters.MinEvennessScore, evennessScore.Value), 0.0) /
+                double scaler = Math.Max(evennessScore.Value - somaticCallerParameters.MinEvennessScore, 0.0) /
                                 (somaticCallerParameters.EvennessScoreThreshold -
                                  somaticCallerParameters.MinEvennessScore);
-                CoverageWeightingFactor = somaticCallerParameters.CoverageWeighting -
+                CoverageWeightingFactor = somaticCallerParameters.CoverageWeightingWithMafSegmentation +
                                                (somaticCallerParameters.CoverageWeighting -
                                                 somaticCallerParameters.CoverageWeightingWithMafSegmentation) * scaler;
                 CoverageWeightingFactor /= medianCoverageLevel;
@@ -2243,7 +2242,6 @@ namespace CanvasSomaticCaller
             Headers.Add(string.Format("##InterModelDistance={0:F4}", this.Model.InterModelDistance));
             Headers.Add(string.Format("##LocalSDmetric={0:F2}", localSDmertic));
             Headers.Add(string.Format("##EvennessScore={0:F2}", evennessScore));
-            Headers.Add(string.Format($"##CoverageWeightingFactor={CoverageWeightingFactor}"));
             if (!this.IsEnrichment)
                 Headers.Add(string.Format("##HeterogeneityProportion={0:F2}", percentageHeterogeneity));
             return Headers;
