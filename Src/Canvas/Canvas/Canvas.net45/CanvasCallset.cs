@@ -31,7 +31,7 @@ namespace Canvas
             CommonCnvsBed = commonCnvsBed;
             var genomeSizeXml = WholeGenomeFastaFolder.GetFileLocation("GenomeSize.xml");
             GenomeMetadata = new GenomeMetadata();
-            GenomeMetadata.Deserialize(genomeSizeXml.FullName);
+            GenomeMetadata.Deserialize(genomeSizeXml);
         }
         internal IDirectoryLocation TempDirectory => OutputFolder.GetDirectoryLocation("TempCNV");
     }

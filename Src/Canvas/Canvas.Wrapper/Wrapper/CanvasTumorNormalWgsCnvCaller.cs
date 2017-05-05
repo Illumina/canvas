@@ -56,7 +56,6 @@ namespace Canvas.Wrapper
                 _logger.Info($"Skipping Canvas for sample {sampleId}: unsupported reference genome '{input.GenomeMetadata.Name}'");
                 return null;
             }
-
             StringBuilder commandLine = new StringBuilder("Somatic-WGS");
             commandLine.Append(_singleSampleInputCommandLineBuilder.GetSingleSampleCommandLine(sampleId, input.TumorBam, input.GenomeMetadata, sampleSandbox));
 
@@ -74,7 +73,6 @@ namespace Canvas.Wrapper
             {
                 ExecutablePath = CrossPlatform.IsThisLinux() ? _runtimeExecutable.FullName : _canvasExe.FullName,
                 CommandLine = CrossPlatform.IsThisLinux() ? _canvasExe + " " + commandLine : commandLine.ToString(),
-                LoggingFolder = _workManager.LoggingFolder.FullName,
                 LoggingStub = "Canvas_" + sampleId,
             };
             _workManager.DoWorkSingleThread(singleSampleJob);

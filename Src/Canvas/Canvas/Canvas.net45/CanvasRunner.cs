@@ -161,7 +161,6 @@ namespace Canvas
             UnitOfWork binJob = new UnitOfWork()
             {
                 ExecutablePath = executablePath,
-                LoggingFolder = _workManager.LoggingFolder.FullName,
                 LoggingStub = Path.GetFileNameWithoutExtension(callset.SingleSampleCallset.BinSizePath),
                 CommandLine = commandLine.ToString()
             };
@@ -324,7 +323,6 @@ namespace Canvas
                 UnitOfWork finalBinJob = new UnitOfWork()
                 {
                     ExecutablePath = executablePath,
-                    LoggingFolder = _workManager.LoggingFolder.FullName,
                     LoggingStub = binnedPath.Name,
                     CommandLine = commandLine.ToString()
                 };
@@ -383,7 +381,6 @@ namespace Canvas
                     UnitOfWork binJob = new UnitOfWork()
                     {
                         ExecutablePath = executablePath,
-                        LoggingFolder = _workManager.LoggingFolder.FullName,
                         LoggingStub = intermediateDataPath.Name,
                         CommandLine = commandLine.ToString()
                     };
@@ -453,7 +450,6 @@ namespace Canvas
                 UnitOfWork binJob = new UnitOfWork()
                 {
                     ExecutablePath = executablePath,
-                    LoggingFolder = _workManager.LoggingFolder.FullName,
                     LoggingStub = binnedPath.Name,
                     CommandLine = commandLine.ToString()
                 };
@@ -548,7 +544,6 @@ namespace Canvas
             UnitOfWork normalizeJob = new UnitOfWork()
             {
                 ExecutablePath = executablePath,
-                LoggingFolder = _workManager.LoggingFolder.FullName,
                 LoggingStub = ratioBinnedPath.Name,
                 CommandLine = commandLine.ToString()
             };
@@ -685,7 +680,6 @@ namespace Canvas
                 {
                     job.CommandLine = Isas.Framework.Settings.CommandOptionsUtilities.MergeCommandLineOptions(job.CommandLine, _customParameters["CanvasSNV"], true);
                 }
-                job.LoggingFolder = _workManager.LoggingFolder.FullName;
                 job.LoggingStub = $"CanvasSNV-'{callset.SingleSampleCallset.SampleName}'-'{chromosome.Name}'";
                 jobList.Add(job);
             }
@@ -901,7 +895,7 @@ namespace Canvas
                     {
                         foreach (MultiSampleGenomicBin genomicBin in normalizedCanvasClean[chr])
                         {
-                            string outLine = string.Format($"{genomicBin.Bin.Chromosome}\t{genomicBin.Bin.Interval.Start}\t{genomicBin.Bin.Interval.End}");
+                            string outLine = string.Format($"{genomicBin.Bin.Chromosome}\t{genomicBin.Bin.Interval.OneBasedStart}\t{genomicBin.Bin.Interval.OneBasedEnd}");
                             outLine += string.Format($"\t{genomicBin.Counts[fileCounter]}");
                             writer.WriteLine(outLine);
                         }
@@ -938,7 +932,6 @@ namespace Canvas
             UnitOfWork partitionJob = new UnitOfWork()
             {
                 ExecutablePath = executablePath,
-                LoggingFolder = _workManager.LoggingFolder.FullName,
                 LoggingStub = Path.GetFileName(partitionedPaths.First().ToString()),
                 CommandLine = commandLine.ToString()
             };
@@ -975,7 +968,6 @@ namespace Canvas
             UnitOfWork partitionJob = new UnitOfWork()
             {
                 ExecutablePath = executablePath,
-                LoggingFolder = _workManager.LoggingFolder.FullName,
                 LoggingStub = Path.GetFileName(partitionedPath),
                 CommandLine = commandLine.ToString()
             };
@@ -1041,7 +1033,6 @@ namespace Canvas
             UnitOfWork cleanJob = new UnitOfWork()
             {
                 ExecutablePath = executablePath,
-                LoggingFolder = _workManager.LoggingFolder.FullName,
                 LoggingStub = cleanedPath.Name,
                 CommandLine = commandLine.ToString()
             };
@@ -1101,7 +1092,6 @@ namespace Canvas
             {
                 callerJob.CommandLine = Isas.Framework.Settings.CommandOptionsUtilities.MergeCommandLineOptions(callerJob.CommandLine, _customParameters["CanvasSomaticCaller"], true);
             }
-            callerJob.LoggingFolder = _workManager.LoggingFolder.FullName;
             callerJob.LoggingStub = $"SomaticCNV-{callset.SingleSampleCallset.SampleName}";
             _workManager.DoWorkSingleThread(callerJob);
         }
@@ -1143,7 +1133,6 @@ namespace Canvas
             UnitOfWork callJob = new UnitOfWork()
             {
                 ExecutablePath = executablePath,
-                LoggingFolder = _workManager.LoggingFolder.FullName,
                 LoggingStub = "CanvasPedigreeCaller",
                 CommandLine = commandLine.ToString()
             };
@@ -1198,7 +1187,6 @@ namespace Canvas
             UnitOfWork callJob = new UnitOfWork()
             {
                 ExecutablePath = executablePath,
-                LoggingFolder = _workManager.LoggingFolder.FullName,
                 LoggingStub = cnvVcfPath.Name,
                 CommandLine = commandLine.ToString()
             };

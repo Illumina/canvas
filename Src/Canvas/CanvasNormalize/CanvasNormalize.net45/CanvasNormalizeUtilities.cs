@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.IO;
 using CanvasCommon;
+using Illumina.Common.CSV;
 using Illumina.Common.FileSystem;
 using Isas.SequencingFiles;
 

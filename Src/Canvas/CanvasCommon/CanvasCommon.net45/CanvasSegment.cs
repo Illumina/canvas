@@ -309,7 +309,7 @@ namespace CanvasCommon
 
             Dictionary<string, List<CanvasSegment>> segmentsByChromosome = GetSegmentsByChromosome(segments);
             GenomeMetadata genome = new GenomeMetadata();
-            genome.Deserialize(Path.Combine(referenceFolder, "GenomeSize.xml"));
+            genome.Deserialize(new FileLocation(Path.Combine(referenceFolder, "GenomeSize.xml")));
 
 
             List<float> counts = new List<float>();

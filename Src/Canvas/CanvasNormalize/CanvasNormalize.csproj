@@ -22,15 +22,19 @@
     <OutputPath>..\x64\CanvasCore\</OutputPath>
   </PropertyGroup>
 
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <OutputPath>..\x64\CanvasCore\</OutputPath>
+  </PropertyGroup>
+
   <ItemGroup>
     <ProjectReference Include="..\CanvasCommon\CanvasCommon.csproj" />
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Illumina.Common" Version="2.8.0.171" />
-    <PackageReference Include="Isas.Framework" Version="5.7.1.192" />
-    <PackageReference Include="Isas.Manifests" Version="2.12.0.45" />
-    <PackageReference Include="Isas.SequencingFiles" Version="3.13.2.254" />
+    <PackageReference Include="Illumina.Common" Version="3.4.0.208" />
+    <PackageReference Include="Isas.Framework" Version="6.3.0.287" />
+    <PackageReference Include="Isas.Manifests" Version="3.0.0.51" />
+    <PackageReference Include="Isas.SequencingFiles" Version="4.0.1.275" />
   </ItemGroup>
 
 </Project>

@@ -6,6 +6,7 @@ using System.IO;
 using Isas.SequencingFiles;
 using Isas.SequencingFiles.Vcf;
 using CanvasCommon;
+using Illumina.Common.FileSystem;
 
 namespace CanvasSomaticCaller
 {
@@ -2173,7 +2174,7 @@ namespace CanvasSomaticCaller
             // Get genome length.
             GenomeMetadata genomeMetaData = null;
             genomeMetaData = new GenomeMetadata();
-            genomeMetaData.Deserialize(Path.Combine(referenceFolder, "GenomeSize.xml"));
+            genomeMetaData.Deserialize(new FileLocation(Path.Combine(referenceFolder, "GenomeSize.xml")));
 
             // Derive a model of diploid coverage, and overall tumor purity:
             this.Model = ModelOverallCoverageAndPurity(genomeMetaData.Length, clusteringMode);

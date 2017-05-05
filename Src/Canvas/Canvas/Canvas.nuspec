@@ -11,27 +11,22 @@
     <copyright>Copyright 2017</copyright>
     <tags>Canvas</tags>
     <dependencies>
-      <dependency id="ClassicBioinfoTools" version="[0.0.1,1.0.0)" />
-      <dependency id="Isas.Manifests" version="[2.12.0,3.0.0)" />
-      <dependency id="Isas.Ploidy" version="[1.0.2,2.0.0)" />
-      <dependency id="Isas.SequencingFiles" version="[3.10.3,4.0.0)" />
-      <dependency id="Isas.Framework" version="[5.4.0,6.0.0)" />
-      <dependency id="Illumina.Common" version="[2.3.0,3.0.0)" />
+      <dependency id="ClassicBioinfoTools" version="[0.2.0.92,1.0.0)" />
+      <dependency id="Isas.Manifests" version="[3.0.0.51,4.0.0)" />
+      <dependency id="Isas.Ploidy" version="[2.0.0.47,3.0.0)" />
+      <dependency id="Isas.SequencingFiles" version="[4.0.1.275,5.0.0)" />
+      <dependency id="Isas.Framework" version="[6.3.0.287,7.0.0)" />
+      <dependency id="Illumina.Common" version="[3.4.0.208,4.0.0)" />
       <dependency id="MathNet.Numerics.Core" version="[3.17.0,4.0.0)" />
     </dependencies>
   </metadata>
   <files>
     <file src="..\x64\CanvasCore\netcoreapp1.1\publish\*" target="build/Canvas" />
     <file src="Canvas.targets" target="build/Canvas.targets" />
-    <file src="..\Canvas.Wrapper\bin\Release\netcoreapp1.1\Canvas.Wrapper.dll" target="lib\netstandard1.6" />
-    <file src="..\Canvas.Wrapper\bin\Release\netcoreapp1.1\Canvas.dll" target="lib\netstandard1.6" />
-    <file src="..\Canvas.Wrapper\bin\Release\netcoreapp1.1\CanvasBin.dll" target="lib\netstandard1.6" />
-    <file src="..\Canvas.Wrapper\bin\Release\netcoreapp1.1\CanvasCommon.dll" target="lib\netstandard1.6" />
-    <file src="..\Canvas.Wrapper\bin\Release\netcoreapp1.1\Combinatorics.dll" target="lib\netstandard1.6" />
-    <file src="..\Canvas.Wrapper\Wrapper\bin\x64\Release\Canvas.Wrapper.dll" target="lib\net451" />
-    <file src="..\Canvas.Wrapper\Wrapper\bin\x64\Release\Canvas.exe" target="lib\net451" />
-    <file src="..\Canvas.Wrapper\Wrapper\bin\x64\Release\CanvasBin.exe" target="lib\net451" />
-    <file src="..\Canvas.Wrapper\Wrapper\bin\x64\Release\CanvasCommon.dll" target="lib\net451" />
-    <file src="..\Canvas.Wrapper\Wrapper\bin\x64\Release\Combinatorics.dll" target="lib\net451" />
+    <file src="..\Canvas.Wrapper\bin\x64\Release\netcoreapp1.1\Canvas.Wrapper.dll" target="lib\netstandard1.6" />
+    <file src="..\Canvas.Wrapper\bin\x64\Release\netcoreapp1.1\Canvas.dll" target="lib\netstandard1.6" />
+    <file src="..\Canvas.Wrapper\bin\x64\Release\netcoreapp1.1\CanvasBin.dll" target="lib\netstandard1.6" />
+    <file src="..\Canvas.Wrapper\bin\x64\Release\netcoreapp1.1\CanvasCommon.dll" target="lib\netstandard1.6" />
+    <file src="..\Canvas.Wrapper\bin\x64\Release\netcoreapp1.1\Combinatorics.dll" target="lib\netstandard1.6" />
   </files>
 </package>
