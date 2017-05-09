@@ -71,8 +71,9 @@ namespace CanvasPartition
 
                 foreach (string chr in segmentationInput.VafByChr.Keys)
                 {
-                    vafByChr[chr] = segmentationInput.VafByChr[chr].Select(vafContainingBins => vafContainingBins.Vaf).ToArray();
+                    var tmpVaf = segmentationInput.VafByChr[chr].Select(vafContainingBins => vafContainingBins.Vaf).ToArray();
                     vafContainingBinsByChr[chr] = segmentationInput.VafByChr[chr].Select(coverageToVafMapper => coverageToVafMapper.Index).ToArray();
+                    vafByChr[chr] = WaveletMeanSmoother(tmpVaf);
                 }
                 breakpoints = LaunchWavelets(vafByChr, segmentationInput.StartByChr, segmentationInput.EndByChr);
                 adjustedBreakpoints = AdjustBreakpoints(vafByChr, segmentationInput, breakpoints, vafContainingBinsByChr);
@@ -85,7 +86,7 @@ namespace CanvasPartition
                     segmentationInput.StartByChr[chr], segmentationInput.EndByChr[chr]);
             }
             return segments;
-        }
+        }   
 
         public new Dictionary<string, List<int>> LaunchWavelets(Dictionary<string, double[]> coverageByChr, Dictionary<string, uint[]> startByChr,
             Dictionary<string, uint[]> endByChr)
@@ -175,6 +176,22 @@ namespace CanvasPartition
                 }
             }
             return adjustedBreakpoints;
+        }
+
+        public double[] WaveletMeanSmoother(double[] canvasBins)
+        {
+            var canvasBinsCopy = new double[canvasBins.Length];
+            const int halfWindow = 1;
+            for (var index = 0; index < canvasBins.Length; index++)
+                canvasBinsCopy[index] = canvasBins[index];
+            const double w1 = 1.0 / 3.0;
+            const double w2 = 1.0 / 3.0;
+            const double w3 = 1.0 / 3.0;
+
+            for (int index = halfWindow; index < canvasBins.Length - halfWindow; index++)
+                canvasBinsCopy[index] = canvasBins[index - halfWindow] * w1 + canvasBins[index] * w2 + canvasBins[index + halfWindow] * w3;
+
+            return canvasBinsCopy;
         }
     }
 }
