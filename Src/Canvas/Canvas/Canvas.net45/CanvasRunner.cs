@@ -647,7 +647,7 @@ namespace Canvas
         /// <summary>
         /// Invoke CanvasSNV.  Return null if this fails and we need to abort CNV calling for this sample.
         /// </summary>
-        protected FileLocation InvokeCanvasSnv(CanvasCallset callset, bool isSomatic = false, string sampleName = null)
+        protected IFileLocation InvokeCanvasSnv(CanvasCallset callset, bool isSomatic = false, string sampleName = null)
         {
             List<UnitOfWork> jobList = new List<UnitOfWork>();
             List<string> outputPaths = new List<string>();
@@ -956,7 +956,15 @@ namespace Canvas
             commandLine.Append($" -r \"{callset.AnalysisDetails.WholeGenomeFastaFolder}\" ");
             if (!_isSomatic)
                 commandLine.AppendFormat(" -g");
-
+            else
+            {
+                if (!callset.IsEnrichment || callset.Manifest.Regions.Count > 2000)
+                {
+                    var tempFolder = new DirectoryLocation(callset.SingleSampleCallset.SampleOutputFolder.FullName);
+                    var ffpePath = tempFolder.GetFileLocation("FilterRegions.txt");
+                    commandLine.AppendFormat("-f \"{0}\" ", ffpePath);
+                }
+            }
             UnitOfWork partitionJob = new UnitOfWork()
             {
                 ExecutablePath = executablePath,
