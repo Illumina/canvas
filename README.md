@@ -77,6 +77,8 @@ The required input files for Human reference genome builds GRCh37, hg19, and GRC
 The easiest way to install Canvas is to use the latest pre-copiled binaries from [releases]:https://github.com/Illumina/canvas/releases (just download and uncopress). 
 ### .Net Core 
 To install .NET Core follow the instructions at https://www.microsoft.com/net/core#linuxubuntu
+The .Net core runtime can be download here:
+https://www.microsoft.com/net/download/core#/runtime
 ### Mono
 Exact installation of mono environment depends on OS, below is an installation example for Ubuntu:
 #### Compiling mono from source
