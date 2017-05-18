@@ -11,9 +11,9 @@ namespace CanvasSomaticCaller
         public double PrecisionWeightingFactor { get; set; } = 0.3333333333f;
         public static int MaximumRelatedModels { get; set; } = 5;
         public double PercentNormal2WeightingFactor { get; set; } = 0.275;
-        public double DeviationScoreWeightingFactor { get; set; } = 0.275;
+        public double DeviationScoreWeightingFactor { get; set; } = 0.375;
         public double CN2WeightingFactor { get; set; } = 0.375;     
-        public double DiploidDistanceScoreWeightingFactor { get; set; } = 0.225;
+        public double DiploidDistanceScoreWeightingFactor { get; set; } = 0.125;
         public double HeterogeneityScoreWeightingFactor { get; set; } = 0.275;
         public float DeviationFactor { get; set; } = 1.75f;
         public int DeviationIndexCutoff { get; set; } = 18;
