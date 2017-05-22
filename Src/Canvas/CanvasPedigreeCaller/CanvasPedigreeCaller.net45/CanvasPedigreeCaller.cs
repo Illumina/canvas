@@ -130,7 +130,7 @@ namespace CanvasPedigreeCaller
             var alleles = pedigreeMembers.Select(x => x.Segments[segmentIndex].Alleles.Counts).ToList();
             var alleleCounts = alleles.Select(allele => allele.Count).ToList();
             bool lowAlleleCounts = alleleCounts.Select(x => x < CallerParameters.DefaultAlleleCountThreshold).Any(c => c == true);
-            var coverageCounts = pedigreeMembers.Select(x => x.Segments[segmentIndex].MedianCount).ToList();
+            var coverageCounts = pedigreeMembers.Select(x => x.Segments[segmentIndex].TruncatedMedianCount).ToList();
             var isSkewedHetHomRatio = false;
             if (!lowAlleleCounts)
             {
@@ -275,15 +275,15 @@ namespace CanvasPedigreeCaller
             foreach (var segment in pedigreeMember.Segments)
                 if (segment.Alleles.Counts.Count > defaultAlleleCountThreshold)
                     segment.Alleles.SetMedianCounts();
-            pedigreeMember.Variance = Math.Pow(Utilities.StandardDeviation(pedigreeMember.Segments.Select(x => x.MedianCount).ToArray()), 2);
+            pedigreeMember.Variance = Math.Pow(Utilities.StandardDeviation(pedigreeMember.Segments.Select(x => x.TruncatedMedianCount).ToArray()), 2);
             pedigreeMember.MafVariance =
                 Math.Pow(
                     Utilities.StandardDeviation(
                         pedigreeMember.Segments.Where(x => x.Alleles.TotalCoverage.Count > 0)
                             .Select(x => x.Alleles.TotalCoverage.Average())
                             .ToArray()), 2);
-            pedigreeMember.MeanCoverage = pedigreeMember.Segments.Any() ? pedigreeMember.Segments.Select(x => x.MedianCount).Average() : 0;
-            pedigreeMember.MaxCoverage = pedigreeMember.Segments.Any() ? (int)(pedigreeMember.Segments.Select(x => x.MedianCount).Max() + 10) : 0;
+            pedigreeMember.MeanCoverage = pedigreeMember.Segments.Any() ? pedigreeMember.Segments.Select(x => x.TruncatedMedianCount).Average() : 0;
+            pedigreeMember.MaxCoverage = pedigreeMember.Segments.Any() ? (int)(pedigreeMember.Segments.Select(x => x.TruncatedMedianCount).Max() + 10) : 0;
             if (!ploidyBedPath.IsNullOrEmpty() && File.Exists(ploidyBedPath))
                 pedigreeMember.Ploidy = PloidyInfo.LoadPloidyFromVcfFile(ploidyBedPath, pedigreeMember.Name);
             return pedigreeMember;

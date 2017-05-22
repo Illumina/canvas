@@ -91,6 +91,31 @@ namespace CanvasCommon
             }
         }
 
+
+        /// <summary>
+        /// Use only central 50% of the segment bins for median calculation
+        /// to guard against inaccurate breakpoints
+        /// </summary>
+        public double TruncatedMedianCount
+        {
+            get
+            {
+                var tmpMedian = new SortedList<double>();
+                int start = Convert.ToInt32(Counts.Count * 0.25);
+                int end = Convert.ToInt32(Counts.Count * 0.75);
+                if (end - start > 5)
+                {
+                    for (int index = start; index < end; index++)
+                    {
+                        tmpMedian.Add(Counts[index]);
+                    }
+                    return tmpMedian.Median();
+
+                }
+                var sorted = new SortedList<double>(this.Counts.Select(x => Convert.ToDouble(x)));
+                return sorted.Median();
+            }
+        }
         public CnvType GetCnvType(int referenceCopyNumber)
         {
             if (CopyNumber < referenceCopyNumber)
