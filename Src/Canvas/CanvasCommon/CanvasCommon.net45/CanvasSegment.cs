@@ -93,28 +93,24 @@ namespace CanvasCommon
 
 
         /// <summary>
-        /// Use only central 50% of the segment bins for median calculation
-        /// to guard against inaccurate breakpoints
+        /// removes flanking bins before median estimation
         /// </summary>
-        public double TruncatedMedianCount
+        public double TruncatedMedianCount(int bins2Remove)
         {
-            get
+            var tmpMedian = new SortedList<double>();
+            int start = Convert.ToInt32(Counts.Count * 0.25);
+            int end = Counts.Count - bins2Remove;
+            if (end - start > 5)
             {
-                var tmpMedian = new SortedList<double>();
-                int start = Convert.ToInt32(Counts.Count * 0.25);
-                int end = Convert.ToInt32(Counts.Count * 0.75);
-                if (end - start > 5)
+                for (int index = bins2Remove; index < end; index++)
                 {
-                    for (int index = start; index < end; index++)
-                    {
-                        tmpMedian.Add(Counts[index]);
-                    }
-                    return tmpMedian.Median();
-
+                    tmpMedian.Add(Counts[index]);
                 }
-                var sorted = new SortedList<double>(this.Counts.Select(x => Convert.ToDouble(x)));
-                return sorted.Median();
+                return tmpMedian.Median();
+
             }
+            var sorted = new SortedList<double>(this.Counts.Select(x => Convert.ToDouble(x)));
+            return sorted.Median();
         }
         public CnvType GetCnvType(int referenceCopyNumber)
         {
