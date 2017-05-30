@@ -84,20 +84,6 @@ namespace CanvasPartition
                 return 1;
             }
 
-
-            if (partitionMethod != SegmentationInput.SegmentationMethod.HMM && outPartitionedFiles.Count > 1)
-            {
-                Console.WriteLine("CanvasPartition.exe: SegmentationMethod.HMM only works for MultiSample SPW worlfow, " +
-                                  "please provide multiple -o arguments");
-                return 1;
-            }
-
-            if (partitionMethod == SegmentationInput.SegmentationMethod.HMM && cleanedFiles.Count == 1)
-            {
-                Console.WriteLine("CanvasPartition.exe: method=HMM option only works when more than one input files (-i) are provided");
-                return 1;
-            }
-
             if (!File.Exists(parameterconfigPath))
             {
                 Console.WriteLine($"CanvasPedigreeCaller.exe: File {parameterconfigPath} does not exist! Exiting.");

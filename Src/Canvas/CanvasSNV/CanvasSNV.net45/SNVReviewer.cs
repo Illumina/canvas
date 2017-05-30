@@ -24,7 +24,7 @@ namespace CanvasSNV
         protected readonly string OutputPath;
         protected readonly string SampleName;
         protected readonly bool IsDbSnpVcf;
-        private readonly bool   IsSomatic;
+        private readonly bool IsSomatic;
         List<VcfVariant> Variants;
         int[] ReferenceCounts;
         int[] VariantCounts;
@@ -47,7 +47,7 @@ namespace CanvasSNV
 
         public int Run()
         {
-            
+
             if (!File.Exists(VcfPath))
             {
                 Console.Error.WriteLine("Error: Input vcf file not found at {0}", VcfPath);
@@ -74,16 +74,14 @@ namespace CanvasSNV
         {
             Console.WriteLine("{0} Loading variants of interest from {1}", DateTime.Now, vcfPath);
             this.Variants = new List<VcfVariant>();
-            int overallCount = 0; 
+            int overallCount = 0;
             int countThisChromosome = 0;
             int sampleIndex = 0;
             using (VcfReader reader = new VcfReader(vcfPath, requireGenotypes: false))
             {
                 if (!SampleName.IsNullOrEmpty() && IsDbSnpVcf == false)
                 {
-                    if (!SampleName.IsNullOrEmpty() && reader.Samples.Count < 2)
-                        throw new ArgumentException($"File '{vcfPath}' must be a multi-sample sample VCF containing > 1 samples");
-                    if (reader.Samples.Select(x => Convert.ToInt32(x == SampleName)).Sum() != 1)
+                    if (reader.Samples.All(sample => sample != SampleName))
                         throw new ArgumentException($"File '{vcfPath}' should contain one genotypes column corresponding to sample {SampleName}");
                     sampleIndex = reader.Samples.IndexOf(SampleName);
                 }
@@ -98,7 +96,7 @@ namespace CanvasSNV
                 {
                     bool result = reader.GetNextVariant(out variant);
                     if (!result) break;
-                    overallCount++; 
+                    overallCount++;
                     if (variant.ReferenceName != this.Chromosome)
                     {
                         // Shortcut: If we've seen records for the desired chromosome, then as soon as we hit another chromosome,
@@ -117,8 +115,8 @@ namespace CanvasSNV
                         if (isSomatic)
                         {
                             string genotype = variant.GenotypeColumns[0]["GT"];
-                            if (genotype != "0/1" && genotype != "1/0" && genotype != "0|1" && genotype != "1|0") 
-                                continue;                            
+                            if (genotype != "0/1" && genotype != "1/0" && genotype != "0|1" && genotype != "1|0")
+                                continue;
                         }
 
                         // Also require they have a high enough quality score:
@@ -214,7 +212,7 @@ namespace CanvasSNV
                 {
                     case 'M':
                         // Loop over matches/mismatches:
-                        for (int index = 0; index < cigar.Length; index++,position++,baseIndex++)
+                        for (int index = 0; index < cigar.Length; index++, position++, baseIndex++)
                         {
                             for (int varIndex = nextVariantIndex; varIndex < this.Variants.Count; varIndex++)
                             {
