@@ -45,7 +45,7 @@ namespace CanvasPedigreeCaller
             var pedigreeMembers = new LinkedList<PedigreeMember>();
             foreach (string sampleName in sampleNames)
             {
-                var pedigreeMember = SetPedigreeMember(variantFrequencyFiles, segmentFiles, ploidyBedPath, sampleName, fileCounter, CallerParameters.DefaultAlleleCountThreshold, referenceFolder);
+                var pedigreeMember = SetPedigreeMember(variantFrequencyFiles, segmentFiles, ploidyBedPath, sampleName, fileCounter, CallerParameters.DefaultAlleleCountThreshold, referenceFolder, CallerParameters.NumberOfTrimmedBins );
                 pedigreeMember.Kin = kinships[pedigreeMember.Name] == PedigreeMember.Kinship.Parent ?
                     PedigreeMember.Kinship.Parent : PedigreeMember.Kinship.Offspring;
                 if (kinships[pedigreeMember.Name] == PedigreeMember.Kinship.Proband)
@@ -130,7 +130,7 @@ namespace CanvasPedigreeCaller
             var alleles = pedigreeMembers.Select(x => x.Segments[segmentIndex].Alleles.Counts).ToList();
             var alleleCounts = alleles.Select(allele => allele.Count).ToList();
             bool lowAlleleCounts = alleleCounts.Select(x => x < CallerParameters.DefaultAlleleCountThreshold).Any(c => c == true);
-            var coverageCounts = pedigreeMembers.Select(x => x.Segments[segmentIndex].MedianCount).ToList();
+            var coverageCounts = pedigreeMembers.Select(x => x.Segments[segmentIndex].TruncatedMedianCount(CallerParameters.NumberOfTrimmedBins)).ToList();
             var isSkewedHetHomRatio = false;
             if (!lowAlleleCounts)
             {
@@ -187,7 +187,8 @@ namespace CanvasPedigreeCaller
             var pedigreeMembers = new LinkedList<PedigreeMember>();
             foreach (string sampleName in sampleNames)
             {
-                var pedigreeMember = SetPedigreeMember(variantFrequencyFiles, segmentFiles, ploidyBedPath, sampleName, fileCounter, CallerParameters.DefaultAlleleCountThreshold, referenceFolder);
+                var pedigreeMember = SetPedigreeMember(variantFrequencyFiles, segmentFiles, ploidyBedPath, sampleName, fileCounter, CallerParameters.DefaultAlleleCountThreshold, 
+                    referenceFolder, CallerParameters.NumberOfTrimmedBins);
                 pedigreeMembers.AddLast(pedigreeMember);
                 fileCounter++;
             }
@@ -263,7 +264,7 @@ namespace CanvasPedigreeCaller
         }
 
         private static PedigreeMember SetPedigreeMember(List<string> variantFrequencyFiles, List<string> segmentFiles, string ploidyBedPath,
-            string sampleName, int fileCounter, int defaultAlleleCountThreshold, string referenceFolder)
+            string sampleName, int fileCounter, int defaultAlleleCountThreshold, string referenceFolder, int numberOfTrimmedBins)
         {
             var pedigreeMember = new PedigreeMember
             {
@@ -275,15 +276,15 @@ namespace CanvasPedigreeCaller
             foreach (var segment in pedigreeMember.Segments)
                 if (segment.Alleles.Counts.Count > defaultAlleleCountThreshold)
                     segment.Alleles.SetMedianCounts();
-            pedigreeMember.Variance = Math.Pow(Utilities.StandardDeviation(pedigreeMember.Segments.Select(x => x.MedianCount).ToArray()), 2);
+            pedigreeMember.Variance = Math.Pow(Utilities.StandardDeviation(pedigreeMember.Segments.Select(x => x.TruncatedMedianCount(numberOfTrimmedBins)).ToArray()), 2);
             pedigreeMember.MafVariance =
                 Math.Pow(
                     Utilities.StandardDeviation(
                         pedigreeMember.Segments.Where(x => x.Alleles.TotalCoverage.Count > 0)
                             .Select(x => x.Alleles.TotalCoverage.Average())
                             .ToArray()), 2);
-            pedigreeMember.MeanCoverage = pedigreeMember.Segments.Any() ? pedigreeMember.Segments.Select(x => x.MedianCount).Average() : 0;
-            pedigreeMember.MaxCoverage = pedigreeMember.Segments.Any() ? (int)(pedigreeMember.Segments.Select(x => x.MedianCount).Max() + 10) : 0;
+            pedigreeMember.MeanCoverage = pedigreeMember.Segments.Any() ? pedigreeMember.Segments.Select(x => x.TruncatedMedianCount(numberOfTrimmedBins)).Average() : 0;
+            pedigreeMember.MaxCoverage = pedigreeMember.Segments.Any() ? (int)(pedigreeMember.Segments.Select(x => x.TruncatedMedianCount(numberOfTrimmedBins)).Max() + 10) : 0;
             if (!ploidyBedPath.IsNullOrEmpty() && File.Exists(ploidyBedPath))
                 pedigreeMember.Ploidy = PloidyInfo.LoadPloidyFromVcfFile(ploidyBedPath, pedigreeMember.Name);
             return pedigreeMember;
@@ -398,8 +399,8 @@ namespace CanvasPedigreeCaller
         {
             double maximalLikelihood;
             InitializeLikelihood(out maximalLikelihood, segmentPosition, parents, children);
-            var parent1Likelihood = parents.First().CnModel.GetCnLikelihood(Math.Min(parents.First().GetCoverage(segmentPosition), parents.First().MeanCoverage * 3.0));
-            var parent2Likelihood = parents.Last().CnModel.GetCnLikelihood(Math.Min(parents.Last().GetCoverage(segmentPosition), parents.Last().MeanCoverage * 3.0));
+            var parent1Likelihood = parents.First().CnModel.GetCnLikelihood(Math.Min(parents.First().GetCoverage(segmentPosition, CallerParameters.NumberOfTrimmedBins), parents.First().MeanCoverage * 3.0));
+            var parent2Likelihood = parents.Last().CnModel.GetCnLikelihood(Math.Min(parents.Last().GetCoverage(segmentPosition, CallerParameters.NumberOfTrimmedBins), parents.Last().MeanCoverage * 3.0));
 
             if (parent1Likelihood.Count != parent2Likelihood.Count)
                 throw new ArgumentException("Both parents should have the same number of CN states");
@@ -420,7 +421,7 @@ namespace CanvasPedigreeCaller
                             var modelIndex = Math.Min(offspringGtStates[counter].CountsA + offspringGtStates[counter].CountsB, CallerParameters.MaximumCopyNumber - 1);
                             currentLikelihood *= transitionMatrix[cn1][offspringGtStates[counter].CountsA] *
                                 transitionMatrix[cn2][offspringGtStates[counter].CountsB] *
-                                child.CnModel.GetCnLikelihood(child.GetCoverage(segmentPosition))[modelIndex];
+                                child.CnModel.GetCnLikelihood(child.GetCoverage(segmentPosition, CallerParameters.NumberOfTrimmedBins))[modelIndex];
                             counter++;
 
                         }
@@ -586,7 +587,7 @@ namespace CanvasPedigreeCaller
                     maximalLikelihood = 0;
                     foreach (var copyNumber in copyNumberCombination)
                     {
-                        var currentLikelihood = sample.CnModel.GetCnLikelihood(Math.Min(sample.GetCoverage(segmentPosition), sample.MeanCoverage * maxCoverageMultiplier))[copyNumber];
+                        var currentLikelihood = sample.CnModel.GetCnLikelihood(Math.Min(sample.GetCoverage(segmentPosition, CallerParameters.NumberOfTrimmedBins), sample.MeanCoverage * maxCoverageMultiplier))[copyNumber];
                         currentLikelihood = Double.IsNaN(currentLikelihood) || Double.IsInfinity(currentLikelihood) ? 0 : currentLikelihood;
                         if (currentLikelihood > maximalLikelihood)
                             maximalLikelihood = currentLikelihood;
@@ -606,7 +607,7 @@ namespace CanvasPedigreeCaller
                 counter++;
                 foreach (var copyNumber in bestcopyNumberCombination)
                 {
-                    double currentLikelihood = sample.CnModel.GetCnLikelihood(Math.Min(sample.GetCoverage(segmentPosition), sample.MeanCoverage * maxCoverageMultiplier))[copyNumber];
+                    double currentLikelihood = sample.CnModel.GetCnLikelihood(Math.Min(sample.GetCoverage(segmentPosition, CallerParameters.NumberOfTrimmedBins), sample.MeanCoverage * maxCoverageMultiplier))[copyNumber];
                     currentLikelihood = Double.IsNaN(currentLikelihood) || Double.IsInfinity(currentLikelihood) ? 0 : currentLikelihood;
                     if (currentLikelihood > maximalLikelihood)
                     {

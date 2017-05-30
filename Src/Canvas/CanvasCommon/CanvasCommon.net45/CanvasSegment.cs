@@ -91,6 +91,27 @@ namespace CanvasCommon
             }
         }
 
+
+        /// <summary>
+        /// removes flanking bins before median estimation
+        /// </summary>
+        public double TruncatedMedianCount(int bins2Remove)
+        {
+            var tmpMedian = new SortedList<double>();
+            int start = Convert.ToInt32(Counts.Count * 0.25);
+            int end = Counts.Count - bins2Remove;
+            if (end - start > 5)
+            {
+                for (int index = bins2Remove; index < end; index++)
+                {
+                    tmpMedian.Add(Counts[index]);
+                }
+                return tmpMedian.Median();
+
+            }
+            var sorted = new SortedList<double>(this.Counts.Select(x => Convert.ToDouble(x)));
+            return sorted.Median();
+        }
         public CnvType GetCnvType(int referenceCopyNumber)
         {
             if (CopyNumber < referenceCopyNumber)
