@@ -25,13 +25,13 @@ namespace CanvasPartition
             public int Verbose { get; }
             public bool IsSmallPedegree { get; }
 
-            public WaveletsRunnerParams(bool isGermline, string commonCNVs = null, double evennessScoreThreshold = 94.50, 
-                double thresholdLower = 5, double thresholdLowerMaf = 0.05, double thresholdUpper = 80, double madFactor = 2, int minSize = 10, 
+            public WaveletsRunnerParams(bool isGermline, string commonCNVs = null, double evennessScoreThreshold = 94.50,
+                double thresholdLower = 5, double thresholdLowerMaf = 0.05, double thresholdUpper = 80, double madFactor = 2, int minSize = 10,
                 int verbose = 1, bool isSmallPedegree = false)
             {
                 IsGermline = isGermline;
                 EvennessScoreThreshold = evennessScoreThreshold;
-                CommonCNVs = commonCNVs;           
+                CommonCNVs = commonCNVs;
                 ThresholdLower = thresholdLowerMaf;
                 ThresholdUpper = thresholdUpper;
                 MadFactor = madFactor;
@@ -51,10 +51,22 @@ namespace CanvasPartition
         /// </summary>
         public Dictionary<string, SegmentationInput.Segment[]> Run(SegmentationInput segmentationInput, int windowSize)
         {
-            double evennessScore = segmentationInput.GetEvennessScore(windowSize);
-            bool useVaf = evennessScore < _parameters.EvennessScoreThreshold;
-            if (!segmentationInput.CoverageMetricsFile.IsNullOrEmpty())
-                CanvasIO.WriteCoverageMetricToTextFile(segmentationInput.CoverageMetricsFile, evennessScore, CanvasIO.CoverageMetric.evenness);
+            bool useVaf = false;
+            try
+            {
+                double evennessScore = segmentationInput.GetEvennessScore(windowSize);
+                if (!segmentationInput.CoverageMetricsFile.IsNullOrEmpty())
+                    CanvasIO.WriteCoverageMetricToTextFile(segmentationInput.CoverageMetricsFile, evennessScore, CanvasIO.CoverageMetric.evenness);
+
+                useVaf = evennessScore < _parameters.EvennessScoreThreshold;
+            }
+            catch (Exception e)
+            {
+                Console.Error.WriteLine("Unable to calculate an evenness score");
+            }
+
+            Console.WriteLine(useVaf ? "Using variant allele frequencies for segmentation" : "Using coverage for segmentation");
+
             Dictionary<string, List<int>> breakpoints;
             Dictionary<string, List<int>> adjustedBreakpoints;
 
@@ -62,7 +74,7 @@ namespace CanvasPartition
             {
                 breakpoints = LaunchWavelets(segmentationInput.CoverageByChr, segmentationInput.StartByChr,
                     segmentationInput.EndByChr);
-                adjustedBreakpoints = AdjustBreakpoints(segmentationInput.CoverageByChr, segmentationInput, breakpoints, vafContainingBinsByChr:null);
+                adjustedBreakpoints = AdjustBreakpoints(segmentationInput.CoverageByChr, segmentationInput, breakpoints, vafContainingBinsByChr: null);
             }
             else
             {
@@ -86,7 +98,7 @@ namespace CanvasPartition
                     segmentationInput.StartByChr[chr], segmentationInput.EndByChr[chr]);
             }
             return segments;
-        }   
+        }
 
         public Dictionary<string, List<int>> LaunchWavelets(Dictionary<string, double[]> coverageByChr, Dictionary<string, uint[]> startByChr,
             Dictionary<string, uint[]> endByChr)
@@ -145,7 +157,7 @@ namespace CanvasPartition
             return breakpointsByChr;
         }
 
-        private Dictionary<string, List<int>> AdjustBreakpoints(Dictionary<string, double[]> binsByChr, SegmentationInput segmentationInput, 
+        private Dictionary<string, List<int>> AdjustBreakpoints(Dictionary<string, double[]> binsByChr, SegmentationInput segmentationInput,
             Dictionary<string, List<int>> breakpoints, Dictionary<string, int[]> vafContainingBinsByChr)
         {
             var adjustedBreakpoints = new Dictionary<string, List<int>>();
