@@ -160,7 +160,7 @@ namespace CanvasPartition
         private Dictionary<string, List<int>> AdjustBreakpoints(Dictionary<string, double[]> binsByChr, SegmentationInput segmentationInput,
             Dictionary<string, List<int>> breakpoints, Dictionary<string, int[]> vafContainingBinsByChr)
         {
-            var adjustedBreakpoints = new Dictionary<string, List<int>>();
+            var adjustedBreakpoints = new Dictionary<string, List<int>>(breakpoints);
             // load common CNV segments
             Dictionary<string, List<SampleGenomicBin>> commonCNVintervals = null;
             if (_parameters.CommonCNVs != null)
