@@ -32,124 +32,34 @@ namespace Canvas.Wrapper
         }
 
         /// <summary>
-        /// Write out the ploidy bed file if ploidy information is available from the vcf header
-        /// </summary>
-        public IFileLocation CreatePloidyBed(Vcf vcf, GenomeMetadata genomeMetadata, IDirectoryLocation sampleSandbox)
-        {
-            IFileLocation ploidyBed = sampleSandbox.GetFileLocation("ploidy.bed.gz");
-            string fastaPath = genomeMetadata.Sequences.First().FastaPath;
-            if (this.GeneratePloidyBedFileFromVcf(
-                genomeMetadata,
-                fastaPath,
-                vcf.VcfFile.FullName,
-                ploidyBed.FullName, sampleSandbox.FullName, _logger, _workManager))
-            {
-                return ploidyBed;
-            }
-            _logger.Warn($"Sex chromosome ploidy not found in {vcf.VcfFile} header. No ploidy will be provided to Canvas.");
-            return null;
-        }
-
-        public bool GeneratePloidyBedFileFromVcf(GenomeMetadata genome, string fastaPath, string vcfPath, string ploidyBedPath, string logFolder, ILogger logger, IWorkManager workManager)
-        {
-            if (string.IsNullOrEmpty(vcfPath) || !File.Exists(vcfPath)) return false;
-
-            var sexChromosomeKaryotype = GetSexChromosomeKaryotypeFromVcfHeader(vcfPath);
-            if (sexChromosomeKaryotype == null) return false;
-
-            return GeneratePloidyBedFileFromSexChromosomeKaryotype(genome, fastaPath, sexChromosomeKaryotype, ploidyBedPath, logFolder);
-        }
-
-        /// <summary>
-        /// return ExpectedSexChromosomeKaryotype if available
-        /// otherwise return PredictedSexChromosomeKaryotype if available
-        /// otherwise return null
-        /// </summary>
-        public static string GetSexChromosomeKaryotypeFromVcfHeader(string vcfPath)
-        {
-            string predictedSexChromosomeKaryotype = null;
-            using (VcfReader reader = new VcfReader(vcfPath))
-            {
-                foreach (string fileLine in reader.HeaderLines)
-                {
-                    // return ExpectedSexChromosomeKaryotype if available
-                    if (fileLine.StartsWith(ExpectedSexChromosomeKaryotypeHeader))
-                        return fileLine.Split('=')[1];
-                    if (!fileLine.StartsWith(PredictedSexChromosomeKaryotypeHeader))
-                        continue;
-                    predictedSexChromosomeKaryotype = fileLine.Split('=')[1];
-                }
-            }
-            return predictedSexChromosomeKaryotype;
-        }
-
-        /// <summary>
         ///  Write out the ploidy bed file if ploidy information is available from the vcf header
         /// Only create the normal XX or XY ploidy bed file so that Canvas can properly classify any abnormalities as variant. 
         /// If ploidy Y is > 1 produce the XY ploidy bed file, otherwise produce the XX ploidy bed file
         /// </summary>
-        public IFileLocation CreateGermlinePloidyBed(Vcf vcf, GenomeMetadata genomeMetadata, IDirectoryLocation sampleSandbox)
+        public IFileLocation CreateGermlinePloidyBed(SexPloidyInfo sexPloidy, GenomeMetadata genomeMetadata, IDirectoryLocation sampleSandbox)
         {
-            string sexKaryotype = PloidyCorrector.GetSexChromosomeKaryotypeFromVcfHeader(vcf.VcfFile.FullName);
-            if (sexKaryotype == null)
+            if (sexPloidy.PloidyY > 0)
             {
-                _logger.Warn($"Sex chromosome ploidy not found in {vcf.VcfFile} header. No ploidy will be provided to Canvas.");
-                return null;
-            }
-            _logger.Info($"Found sex chromosome ploidy {PloidyCorrector.PrintPloidy(sexKaryotype)} in {vcf.VcfFile}");
-            var ploidyInfo = new SamplePloidyInfo();
-            IFileLocation ploidyBed = sampleSandbox.GetFileLocation("ploidy.bed.gz");
-            if (sexKaryotype.ToLower().Contains("y"))
-            {
-                ploidyInfo.ProvidedPloidy = SexPloidyInfo.NormalMale;
-                _logger.Info($"Creating male ploidy bed file at {ploidyBed}.");
+                sexPloidy = SexPloidyInfo.NormalMale;
             }
             else
             {
-                ploidyInfo.ProvidedPloidy = SexPloidyInfo.NormalFemale;
-                _logger.Info($"Creating female ploidy bed file at {ploidyBed}.");
+                sexPloidy = SexPloidyInfo.NormalFemale;
             }
-            string headerLine = $"{PloidyCorrector.ReferenceSexChromosomeKaryotype}={PloidyCorrector.PrettyPrintPloidy(ploidyInfo.ProvidedPloidyX.Value, ploidyInfo.ProvidedPloidyY.Value)}";
+            return CreatePloidyBed(sexPloidy, genomeMetadata, sampleSandbox);
+        }
+
+        public IFileLocation CreatePloidyBed(SexPloidyInfo sexPloidy, GenomeMetadata genomeMetadata, IDirectoryLocation sampleSandbox)
+        {
+            var ploidyInfo = new SamplePloidyInfo();
+            ploidyInfo.ProvidedPloidy = sexPloidy;
+            IFileLocation ploidyBed = sampleSandbox.GetFileLocation("ploidy.bed.gz");
+            var sexKaryotype = PloidyCorrector.PrettyPrintPloidy(sexPloidy.PloidyX, sexPloidy.PloidyY);
+            _logger.Info($"Creating sex chromosome ploidy bed file at '{ploidyBed}' for sex karyotype '{sexKaryotype}'");
+            string headerLine = $"{PloidyCorrector.ReferenceSexChromosomeKaryotype}={sexKaryotype}";
             this.WritePloidyBedFile(ploidyInfo, genomeMetadata, _ploidyFixer.GetParRegions(genomeMetadata),
                 ploidyBed.FullName, headerLine, ploidy => true);
             return ploidyBed;
-        }
-        private static SamplePloidyInfo CreateSamplePloidyInfoFromSexChromosomeKaryotypeString(string sexChromosomeKaryotype)
-        {
-            int ploidyX;
-            int ploidyY;
-            GetPloidyFromSexChromosomeKaryotypeString(sexChromosomeKaryotype, out ploidyX, out ploidyY);
-            SamplePloidyInfo info = new SamplePloidyInfo();
-            info.ProvidedPloidy = new SexPloidyInfo(ploidyX, ploidyY);
-            return info;
-        }
-
-        private static void GetPloidyFromSexChromosomeKaryotypeString(string sexChromosomeKaryotype, out int ploidyX, out int ploidyY)
-        {
-            ploidyX = 0;
-            ploidyY = 0;
-            foreach (char letter in sexChromosomeKaryotype.ToLowerInvariant())
-            {
-                if (letter == 'x')
-                {
-                    ploidyX++;
-                }
-                if (letter == 'y')
-                {
-                    ploidyY++;
-                }
-            }
-        }
-        public bool GeneratePloidyBedFileFromSexChromosomeKaryotype(GenomeMetadata genome, string fastaPath, string sexChromosomeKaryotype, string ploidyBedPath, string logFolder)
-        {
-            if (sexChromosomeKaryotype == null) return false;
-
-            var parIntervals = _ploidyFixer.GetParRegions(genome);
-            var info = CreateSamplePloidyInfoFromSexChromosomeKaryotypeString(sexChromosomeKaryotype);
-
-            string headerLine = $"{ReferenceSexChromosomeKaryotype}={sexChromosomeKaryotype.ToUpperInvariant()}";
-            WritePloidyBedFile(info, genome, parIntervals, ploidyBedPath, headerLine, ploidy => true);
-            return true;
         }
 
         private static void WritePloidyBedLine(BgzipOrStreamWriter writer, string chr, long start, long end, int ploidy, Func<int, bool> includePloidy)
@@ -172,7 +82,7 @@ namespace Canvas.Wrapper
         }
 
         [Obsolete("Use WritePloidyVcf")]
-        public void WritePloidyBedFile(
+        private void WritePloidyBedFile(
             SamplePloidyInfo ploidyInfo,
             GenomeMetadata genome,
             Dictionary<string, List<Interval>> parIntervals,
@@ -259,7 +169,17 @@ namespace Canvas.Wrapper
             }
         }
 
-
-
+        private static SexPloidyInfo GetSexPloidy(string sexChromosomeKaryotype)
+        {
+            var karyotypeLower = sexChromosomeKaryotype.ToLowerInvariant();
+            var ploidyX = karyotypeLower.Count(letter => letter == 'x');
+            var ploidyY = karyotypeLower.Count(letter => letter == 'y');
+            return new SexPloidyInfo(ploidyX, ploidyY);
+        }
+        public IFileLocation GeneratePloidyBedFileFromSexChromosomeKaryotype(GenomeMetadata genome, string sexChromosomeKaryotype, IDirectoryLocation sampleSandbox)
+        {
+            var sexPloidy = GetSexPloidy(sexChromosomeKaryotype);
+            return CreatePloidyBed(sexPloidy, genome, sampleSandbox);
+        }
     }
 }
