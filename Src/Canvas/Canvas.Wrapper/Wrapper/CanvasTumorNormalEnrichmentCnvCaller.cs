@@ -94,7 +94,7 @@ namespace Canvas.Wrapper
 
             commandLine.Append($" --somatic-vcf \"{input.SomaticVcf.VcfFile}\"");
 
-            IFileLocation ploidyBed = _canvasPloidyBedCreator.CreatePloidyBed(input.NormalVcf, input.GenomeMetadata, sampleSandbox);
+            IFileLocation ploidyBed = _canvasPloidyBedCreator.CreatePloidyBed(input.SexPloidy, input.GenomeMetadata, sampleSandbox);
             if (ploidyBed != null)
                 commandLine.Append($" --{SingleSampleCommonOptionsParser.PloidyBedOptionName} \"{ploidyBed}\"");
             commandLine.Append(_singleSampleInputCommandLineBuilder.GetCustomParameters());
