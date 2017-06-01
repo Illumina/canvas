@@ -30,7 +30,6 @@ namespace CanvasTest
 
             Assert.Equal(new[]
             {
-                new []{ 2 }.ToList(),
                 new []{ 1 }.ToList(),
             }.ToList(), result);
         }
