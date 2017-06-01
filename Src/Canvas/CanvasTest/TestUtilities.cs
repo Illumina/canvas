@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using CanvasCommon;
@@ -196,7 +197,7 @@ namespace CanvasTest
         [Fact]
         public void TestMedianFilter()
         {
-            float[] values = new float[] { 2, 1, 3, 5, 4, 6, 7, 8};
+            float[] values = new float[] { 2, 1, 3, 5, 4, 6, 7, 8 };
             float[] expected = new float[] { 1.5f, 2, 3, 4, 5, 6, 7, 7.5f };
             var smoothedValues = Utilities.MedianFilter(values, 1).ToArray();
 

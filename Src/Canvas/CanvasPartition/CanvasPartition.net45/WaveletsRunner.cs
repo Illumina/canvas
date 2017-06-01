@@ -60,19 +60,18 @@ namespace CanvasPartition
 
                 useVaf = evennessScore < _parameters.EvennessScoreThreshold;
             }
-            catch (Exception e)
+            catch (Exception)
             {
                 Console.Error.WriteLine("Unable to calculate an evenness score");
             }
 
             Console.WriteLine(useVaf ? "Using variant allele frequencies for segmentation" : "Using coverage for segmentation");
-
-            Dictionary<string, List<int>> breakpoints;
+            
             Dictionary<string, List<int>> adjustedBreakpoints;
 
             if (!useVaf)
             {
-                breakpoints = LaunchWavelets(segmentationInput.CoverageByChr, segmentationInput.StartByChr,
+                var breakpoints = LaunchWavelets(segmentationInput.CoverageByChr, segmentationInput.StartByChr,
                     segmentationInput.EndByChr);
                 adjustedBreakpoints = AdjustBreakpoints(segmentationInput.CoverageByChr, segmentationInput, breakpoints, vafContainingBinsByChr: null);
             }
@@ -87,7 +86,7 @@ namespace CanvasPartition
                     vafContainingBinsByChr[chr] = segmentationInput.VafByChr[chr].Select(coverageToVafMapper => coverageToVafMapper.Index).ToArray();
                     vafByChr[chr] = WaveletMeanSmoother(tmpVaf);
                 }
-                breakpoints = LaunchWavelets(vafByChr, segmentationInput.StartByChr, segmentationInput.EndByChr);
+                var breakpoints = LaunchWavelets(vafByChr, segmentationInput.StartByChr, segmentationInput.EndByChr);
                 adjustedBreakpoints = AdjustBreakpoints(vafByChr, segmentationInput, breakpoints, vafContainingBinsByChr);
             }
 
