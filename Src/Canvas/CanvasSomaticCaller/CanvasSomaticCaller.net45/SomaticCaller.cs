@@ -403,28 +403,32 @@ namespace CanvasSomaticCaller
             }
             catch (Exception e)
             {
-                // In a training mode (INTERNAL) somatic model is initialized with a large number of parameter trials. 
-                // Some of them might lead to exception as they would fall outside testable range. 
-                // For such cases when the IsTrainingMode is set, the program will terminate normally but will produce an empty vcf file. 
-                // This will penalize a parameter combination that lead to exception thereby preventing it from creeping into default SomaticCallerParameters.json.
-
-                if (this.IsTrainingMode)
+                if (IsTrainingMode)
                 {
+                    // In a training mode (INTERNAL) somatic model is initialized with a large number of parameter trials. 
+                    // Some of them might lead to exception as they would fall outside testable range. 
+                    // For such cases when the IsTrainingMode is set, the program will terminate normally but will produce an empty vcf file. 
+                    // This will penalize a parameter combination that lead to exception thereby preventing it from creeping into default SomaticCallerParameters.json.
                     Console.WriteLine("IsTrainingMode activated. Not calling any CNVs. Reason: {0}", e.Message);
                     Segments.Clear();
                     CanvasSegmentWriter.WriteSegments(outputVCFPath, this.Segments, Model.DiploidCoverage, referenceFolder, name, ExtraHeaders,
-                    this.ReferencePloidy, QualityFilterThreshold, isPedigreeInfoSupplied:false);
+                    this.ReferencePloidy, QualityFilterThreshold, isPedigreeInfoSupplied: false);
                     Environment.Exit(0);
+                }
+                else if (e is NotEnoughUsableSegementsException)
+                {
+                    Console.Error.WriteLine("Not calling any CNVs. Reason: {0}", e.Message);
+                    // pass: this sample does not have enough coverage/baf variation to estimate purity/ploidy
                 }
                 else
                 {
-                    if (e is SomaticCaller.UncallableDataException)
+                    if (e is UncallableDataException)
                     {
-                        Console.Error.WriteLine("Not calling any CNVs. Reason: {0}", e.Message);
+                        Console.Error.WriteLine("Cannot call CNVs. Reason: {0}", e.Message);
                         Segments.Clear();
                     }
                     // Throw the exception - if we can't do CNV calling in production we should treat that as a fatal error for
-                    // the workflow: 
+                    // the workflow
                     throw;
                 }
             }
@@ -465,7 +469,7 @@ namespace CanvasSomaticCaller
             ExtraHeaders.Add($"##EstimatedChromosomeCount={this.EstimateChromosomeCount():F2}");
 
             // Write out results.  Note that model may be null here, in training mode, if we hit an UncallableDataException:
-            CanvasSegmentWriter.WriteSegments(outputVCFPath, this.Segments, Model?.DiploidCoverage, referenceFolder, name, ExtraHeaders, 
+            CanvasSegmentWriter.WriteSegments(outputVCFPath, this.Segments, Model?.DiploidCoverage, referenceFolder, name, ExtraHeaders,
                 this.ReferencePloidy, QualityFilterThreshold, isPedigreeInfoSupplied: false);
 
             return 0;
@@ -1591,7 +1595,7 @@ namespace CanvasSomaticCaller
             }
             Console.WriteLine("Modeling overall coverage/purity across {0} segments", usableSegments.Count);
             if (usableSegments.Count < 10)
-                throw new SomaticCaller.UncallableDataException("Cannot model coverage/purity with less than 10 segments.");
+                throw new NotEnoughUsableSegementsException("Cannot model coverage/purity with less than 10 segments.");
 
             // When computing distances between model and actual points, we want to provide roughly equal weight
             // to coverage (which covers a large range) and MAF, which falls in the range (0, 0.5).  
@@ -2207,7 +2211,7 @@ namespace CanvasSomaticCaller
             {
                 AssignPloidyCalls();
                 List<CanvasSegment> sizeFilteredSegment = this.Segments.Where(segment => segment.End - segment.Begin > 5000).ToList();
-                
+
                 // Do not run heterogeneity adjustment on enrichment data
                 if (!this.IsEnrichment && evennessScore.HasValue && evennessScore.Value >= somaticCallerParameters.EvennessScoreThreshold)
                 {
@@ -2909,6 +2913,23 @@ namespace CanvasSomaticCaller
             }
 
             public UncallableDataException(string message, Exception inner)
+                : base(message, inner)
+            {
+            }
+        }
+
+        class NotEnoughUsableSegementsException : Exception
+        {
+            public NotEnoughUsableSegementsException()
+            {
+            }
+
+            public NotEnoughUsableSegementsException(string message)
+                : base(message)
+            {
+            }
+
+            public NotEnoughUsableSegementsException(string message, Exception inner)
                 : base(message, inner)
             {
             }

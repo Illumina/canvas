@@ -59,14 +59,20 @@ namespace CanvasPartition
                     CanvasIO.WriteCoverageMetricToTextFile(segmentationInput.CoverageMetricsFile, evennessScore, CanvasIO.CoverageMetric.evenness);
 
                 useVaf = evennessScore < _parameters.EvennessScoreThreshold;
+                if (useVaf)
+                {
+                    Console.WriteLine($"Coverage evennness score {evennessScore} was below threshold of {_parameters.EvennessScoreThreshold}. Using variant allele frequencies for segmentation.");
+                }
+                else
+                {
+                    Console.WriteLine($"Coverage evennness score {evennessScore} was at or above threshold of {_parameters.EvennessScoreThreshold}. Using coverage for segmentation.");
+                }
             }
             catch (Exception)
             {
-                Console.Error.WriteLine("Unable to calculate an evenness score");
+                Console.Error.WriteLine("Unable to calculate an evenness score, using coverage for segmentation");
             }
 
-            Console.WriteLine(useVaf ? "Using variant allele frequencies for segmentation" : "Using coverage for segmentation");
-            
             Dictionary<string, List<int>> adjustedBreakpoints;
 
             if (!useVaf)
