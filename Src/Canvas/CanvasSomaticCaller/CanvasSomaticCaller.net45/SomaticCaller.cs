@@ -2271,6 +2271,7 @@ namespace CanvasSomaticCaller
                     currentChromosome = segment.Chr;
                 }
                 if (segment.Filter != "PASS") continue;
+                if (segment.CopyNumber == -1) continue;
                 baseCountByCopyNumber[Math.Min(segment.CopyNumber, somaticCallerParameters.MaximumCopyNumber)] += (segment.End - segment.Begin);
             }
             overallCount += GetWeightedChromosomeCount(baseCountByCopyNumber);
