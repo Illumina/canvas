@@ -106,24 +106,19 @@ namespace Canvas.Wrapper
             }
             if (controlSexChromosomeKaryotype != null)
             {
-                var controlPloidyBed = sampleSandbox.GetFileLocation("control-ploidy.bed.gz");
-                if (_canvasPloidyBedCreator.GeneratePloidyBedFileFromSexChromosomeKaryotype(input.GenomeMetadata, input.GenomeMetadata.Sequences.First().FastaPath,
-                    controlSexChromosomeKaryotype, controlPloidyBed.FullName, sampleSandbox.FullName))
-                {
-                    commandLine.Append($" --{SomaticEnrichmentOptionsParser.ControlPloidyBedOptionName} \"{controlPloidyBed}\"");
-                }
+                var controlSandbox = sampleSandbox.CreateSubdirectory("control");
+                var controlPloidyBed =
+                    _canvasPloidyBedCreator.GeneratePloidyBedFileFromSexChromosomeKaryotype(input.GenomeMetadata, controlSexChromosomeKaryotype, controlSandbox);
+                commandLine.Append($" --{SomaticEnrichmentOptionsParser.ControlPloidyBedOptionName} \"{controlPloidyBed}\"");
             }
             commandLine.Append($" --{SingleSampleCommonOptionsParser.PopulationBAlleleVcfOptionName} \"{dbSnpVcf}\"");
             commandLine.Append($" --manifest \"{manifest}\"");
 
             if (sexChromosomeKaryotype != null)
             {
-                var ploidyBed = sampleSandbox.GetFileLocation("ploidy.bed.gz");
-                if (_canvasPloidyBedCreator.GeneratePloidyBedFileFromSexChromosomeKaryotype(input.GenomeMetadata, input.GenomeMetadata.Sequences.First().FastaPath,
-                    sexChromosomeKaryotype, ploidyBed.FullName, sampleSandbox.FullName))
-                {
-                    commandLine.Append($" --{SingleSampleCommonOptionsParser.PloidyBedOptionName} \"{ploidyBed}\"");
-                }
+                var ploidyBed = _canvasPloidyBedCreator.GeneratePloidyBedFileFromSexChromosomeKaryotype(input.GenomeMetadata, sexChromosomeKaryotype, sampleSandbox);
+                commandLine.Append($" --{SingleSampleCommonOptionsParser.PloidyBedOptionName} \"{ploidyBed}\"");
+
             }
 
             if (input.PredefinedBinsFile != null)
@@ -137,7 +132,6 @@ namespace Canvas.Wrapper
             {
                 ExecutablePath = CrossPlatform.IsThisLinux() ? _runtimeExecutable.FullName : _canvasExe.FullName,
                 CommandLine = CrossPlatform.IsThisLinux() ? _canvasExe + " " + commandLine : commandLine.ToString(),
-                LoggingFolder = _workManager.LoggingFolder.FullName,
                 LoggingStub = "Canvas_" + sampleId,
             };
             _workManager.DoWorkSingleThread(singleSampleJob);

@@ -23,9 +23,9 @@ namespace CanvasPedigreeCaller
         public CopyNumberModel CnModel { get; set; }
         public Kinship Kin { get; set; }
 
-        public double GetCoverage(int segmentIndex)
+        public double GetCoverage(int segmentIndex, int numberOfTrimmedBins)
         {
-            return Segments[segmentIndex].MedianCount;
+            return Segments[segmentIndex].TruncatedMedianCount(numberOfTrimmedBins);
         }
         public Tuple<int,int> GetMedianAlleleCounts(int segmentIndex)
         {

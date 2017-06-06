@@ -10,12 +10,15 @@
     <GenerateAssemblyTitleAttribute>false</GenerateAssemblyTitleAttribute>
     <GenerateAssemblyDescriptionAttribute>false</GenerateAssemblyDescriptionAttribute>
     <GenerateAssemblyConfigurationAttribute>false</GenerateAssemblyConfigurationAttribute>
-    <GenerateAssemblyCompanyAttribute>false</GenerateAssemblyCompanyAttribute>
     <GenerateAssemblyProductAttribute>false</GenerateAssemblyProductAttribute>
-    <GenerateAssemblyCopyrightAttribute>false</GenerateAssemblyCopyrightAttribute>
     <GenerateAssemblyVersionAttribute>false</GenerateAssemblyVersionAttribute>
     <GenerateAssemblyFileVersionAttribute>false</GenerateAssemblyFileVersionAttribute>
+    <GenerateAssemblyInformationalVersionAttribute>false</GenerateAssemblyInformationalVersionAttribute>
+    <GenerateAssemblyCompanyAttribute>false</GenerateAssemblyCompanyAttribute>
+    <GenerateAssemblyCopyrightAttribute>false</GenerateAssemblyCopyrightAttribute>
   </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" />
 
   <ItemGroup>
     <ProjectReference Include="..\Canvas\Canvas.csproj" />
@@ -23,12 +26,12 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="ClassicBioinfoTools" Version="0.0.1.56" />
-    <PackageReference Include="Illumina.Common" Version="2.3.1.139" />
-    <PackageReference Include="Isas.Framework" Version="5.4.1.144" />
-    <PackageReference Include="Isas.Manifests" Version="2.12.0.43" />
-    <PackageReference Include="Isas.Ploidy" Version="1.0.2.31" />
-    <PackageReference Include="Isas.SequencingFiles" Version="3.11.4.232" />
+    <PackageReference Include="ClassicBioinfoTools" Version="0.3.0.114" />
+    <PackageReference Include="Illumina.Common" Version="3.9.0.226" />
+    <PackageReference Include="Isas.Framework" Version="6.10.0.354" />
+    <PackageReference Include="Isas.Manifests" Version="3.0.1.64" />
+    <PackageReference Include="Isas.Ploidy" Version="2.2.0.63" />
+    <PackageReference Include="Isas.SequencingFiles" Version="4.2.1.300" />
   </ItemGroup>
 
 </Project>

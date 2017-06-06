@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using CanvasCommon;
+using Illumina.Common;
 
 namespace CanvasPartition
 {
@@ -15,7 +16,8 @@ namespace CanvasPartition
         public class WaveletsRunnerParams
         {
             public bool IsGermline { get; }
-            public string CommonCnVs { get; }
+            public double EvennessScoreThreshold { get; }
+            public string CommonCNVs { get; }
             public double ThresholdLower { get; }
             public double ThresholdUpper { get; }
             public double MadFactor { get; }
@@ -23,11 +25,14 @@ namespace CanvasPartition
             public int Verbose { get; }
             public bool IsSmallPedegree { get; }
 
-            public WaveletsRunnerParams(bool isGermline, string commonCNVs, double thresholdLower = 5, double thresholdUpper = 80, double madFactor = 2, int minSize = 10, int verbose = 1, bool isSmallPedegree = false)
+            public WaveletsRunnerParams(bool isGermline, string commonCNVs = null, double evennessScoreThreshold = 94.50,
+                double thresholdLower = 5, double thresholdLowerMaf = 0.05, double thresholdUpper = 80, double madFactor = 2, int minSize = 10,
+                int verbose = 1, bool isSmallPedegree = false)
             {
                 IsGermline = isGermline;
-                CommonCnVs = commonCNVs;
-                ThresholdLower = thresholdLower;
+                EvennessScoreThreshold = evennessScoreThreshold;
+                CommonCNVs = commonCNVs;
+                ThresholdLower = thresholdLowerMaf;
                 ThresholdUpper = thresholdUpper;
                 MadFactor = madFactor;
                 MinSize = minSize;
@@ -44,93 +49,166 @@ namespace CanvasPartition
         /// <summary>
         /// Wavelets: unbalanced HAAR wavelets segmentation 
         /// </summary>
-        /// <param name="threshold">wavelets coefficient threshold</param>
-        public Dictionary<string, Segmentation.Segment[]> Run(Segmentation segmentation)
+        public Dictionary<string, SegmentationInput.Segment[]> Run(SegmentationInput segmentationInput, int windowSize)
         {
-            Dictionary<string, int[]> inaByChr = new Dictionary<string, int[]>();
-            Dictionary<string, double[]> finiteScoresByChr = new Dictionary<string, double[]>();
-
-            List<ThreadStart> tasks = new List<ThreadStart>();
-            foreach (KeyValuePair<string, double[]> scoreByChrKVP in segmentation.ScoreByChr)
+            bool useVaf = false;
+            try
             {
-                tasks.Add(new ThreadStart(() =>
+                double evennessScore = segmentationInput.GetEvennessScore(windowSize);
+                if (!segmentationInput.CoverageMetricsFile.IsNullOrEmpty())
+                    CanvasIO.WriteCoverageMetricToTextFile(segmentationInput.CoverageMetricsFile, evennessScore, CanvasIO.CoverageMetric.evenness);
+
+                useVaf = evennessScore < _parameters.EvennessScoreThreshold;
+                if (useVaf)
                 {
-                    string chr = scoreByChrKVP.Key;
-                    int[] ina;
-                    Helper.GetFiniteIndices(scoreByChrKVP.Value, out ina); // not NaN, -Inf, Inf
-
-                    double[] scores;
-                    if (ina.Length == scoreByChrKVP.Value.Length)
-                    {
-                        scores = scoreByChrKVP.Value;
-                    }
-                    else
-                    {
-                        Helper.ExtractValues<double>(scoreByChrKVP.Value, ina, out scores);
-                    }
-
-                    lock (finiteScoresByChr)
-                    {
-                        finiteScoresByChr[chr] = scores;
-                        inaByChr[chr] = ina;
-                    }
-
-                }));
+                    Console.WriteLine($"Coverage evennness score {evennessScore} was below threshold of {_parameters.EvennessScoreThreshold}. Using variant allele frequencies for segmentation.");
+                }
+                else
+                {
+                    Console.WriteLine($"Coverage evennness score {evennessScore} was at or above threshold of {_parameters.EvennessScoreThreshold}. Using coverage for segmentation.");
+                }
             }
+            catch (Exception)
+            {
+                Console.Error.WriteLine("Unable to calculate an evenness score, using coverage for segmentation");
+            }
+
+            Dictionary<string, List<int>> adjustedBreakpoints;
+
+            if (!useVaf)
+            {
+                var breakpoints = LaunchWavelets(segmentationInput.CoverageByChr, segmentationInput.StartByChr,
+                    segmentationInput.EndByChr);
+                adjustedBreakpoints = AdjustBreakpoints(segmentationInput.CoverageByChr, segmentationInput, breakpoints, vafContainingBinsByChr: null);
+            }
+            else
+            {
+                var vafByChr = new Dictionary<string, double[]>();
+                var vafContainingBinsByChr = new Dictionary<string, int[]>();
+
+                foreach (string chr in segmentationInput.VafByChr.Keys)
+                {
+                    var tmpVaf = segmentationInput.VafByChr[chr].Select(vafContainingBins => vafContainingBins.Vaf).ToArray();
+                    vafContainingBinsByChr[chr] = segmentationInput.VafByChr[chr].Select(coverageToVafMapper => coverageToVafMapper.Index).ToArray();
+                    vafByChr[chr] = WaveletMeanSmoother(tmpVaf);
+                }
+                var breakpoints = LaunchWavelets(vafByChr, segmentationInput.StartByChr, segmentationInput.EndByChr);
+                adjustedBreakpoints = AdjustBreakpoints(vafByChr, segmentationInput, breakpoints, vafContainingBinsByChr);
+            }
+
+            var segments = new Dictionary<string, SegmentationInput.Segment[]>();
+            foreach (string chr in segmentationInput.VafByChr.Keys)
+            {
+                segments[chr] = SegmentationInput.DeriveSegments(adjustedBreakpoints[chr], segmentationInput.CoverageByChr[chr].Length,
+                    segmentationInput.StartByChr[chr], segmentationInput.EndByChr[chr]);
+            }
+            return segments;
+        }
+
+        public Dictionary<string, List<int>> LaunchWavelets(Dictionary<string, double[]> coverageByChr, Dictionary<string, uint[]> startByChr,
+            Dictionary<string, uint[]> endByChr)
+        {
+            var inaByChr = new Dictionary<string, int[]>();
+            var finiteScoresByChr = new Dictionary<string, double[]>();
+
+            var tasks = coverageByChr.Select(scoreByChrKVP => new ThreadStart(() =>
+            {
+                string chr = scoreByChrKVP.Key;
+                Helper.GetFiniteIndices(scoreByChrKVP.Value, out int[] ina); // not NaN, -Inf, Inf
+
+                double[] scores;
+                if (ina.Length == scoreByChrKVP.Value.Length)
+                    scores = scoreByChrKVP.Value;
+                else
+                    Helper.ExtractValues<double>(scoreByChrKVP.Value, ina, out scores);
+
+                lock (finiteScoresByChr)
+                {
+                    finiteScoresByChr[chr] = scores;
+                    inaByChr[chr] = ina;
+                }
+            })).ToList();
+
+
             Parallel.ForEach(tasks, task => task.Invoke());
             // Quick sanity-check: If we don't have any segments, then return a dummy result.
             int n = finiteScoresByChr.Values.Sum(list => list.Length);
-
             if (n == 0)
-                return new Dictionary<string, Segmentation.Segment[]>();           
+                return new Dictionary<string, List<int>>();
 
-            Dictionary<string, Segmentation.Segment[]> segmentByChr = new Dictionary<string, Segmentation.Segment[]>();
-
-            // load common CNV segments
-            Dictionary<string, List<SampleGenomicBin>> commonCNVintervals = null;
-            if (_parameters.CommonCnVs != null)
+            var breakpointsByChr = new Dictionary<string, List<int>>();
+            tasks = coverageByChr.Keys.Select(chr => new ThreadStart(() =>
             {
-                commonCNVintervals = CanvasCommon.Utilities.LoadBedFile(_parameters.CommonCnVs);
-                CanvasCommon.Utilities.SortAndOverlapCheck(commonCNVintervals, _parameters.CommonCnVs);
-            }
-
-            tasks = new List<ThreadStart>();
-            foreach (string chr in segmentation.ScoreByChr.Keys)
-            {
-                tasks.Add(new ThreadStart(() =>
+                var breakpoints = new List<int>();
+                // to cover cases of no SNVs present (i.e. chrY) => chromosome becomes one segment
+                int segmentLengthByChr = Math.Max(coverageByChr[chr].Length, 1);
+                if (segmentLengthByChr > _parameters.MinSize)
                 {
-                    List<int> breakpoints = new List<int>();
-                    int sizeScoreByChr = segmentation.ScoreByChr[chr].Length;
-                    if (sizeScoreByChr > _parameters.MinSize)
-                    {
-                        WaveletSegmentation.HaarWavelets(segmentation.ScoreByChr[chr], _parameters.ThresholdLower, _parameters.ThresholdUpper,
-                            breakpoints, _parameters.IsGermline, madFactor: _parameters.MadFactor);
-                    }
+                    WaveletSegmentation.HaarWavelets(coverageByChr[chr], _parameters.ThresholdLower,
+                        _parameters.ThresholdUpper,
+                        breakpoints, _parameters.IsGermline, madFactor: _parameters.MadFactor);
+                }
 
-                    if (_parameters.CommonCnVs != null)
-                    {
-                        if (commonCNVintervals.ContainsKey(chr))
-                        {
-                            List <SampleGenomicBin> remappedCommonCNVintervals = Segmentation.RemapCommonRegions(commonCNVintervals[chr], segmentation.StartByChr[chr], segmentation.EndByChr[chr]);
-                            List <int> oldbreakpoints = breakpoints;
-                            breakpoints = Segmentation.OverlapCommonRegions(oldbreakpoints, remappedCommonCNVintervals);
-                        }
-                    }
+                lock (breakpointsByChr)
+                {
+                    breakpointsByChr[chr] = breakpoints;
+                }
+            })).ToList();
 
-                    var segments = Segmentation.DeriveSegments(breakpoints, sizeScoreByChr, segmentation.StartByChr[chr], segmentation.EndByChr[chr]);
-
-                    lock (segmentByChr)
-                    {
-                        segmentByChr[chr] = segments;
-                    }
-                }));
-
-            }
             Console.WriteLine("{0} Launching wavelet tasks", DateTime.Now);
             Parallel.ForEach(tasks, task => task.Invoke());
             Console.WriteLine("{0} Completed wavelet tasks", DateTime.Now);
             Console.WriteLine("{0} Segmentation results complete", DateTime.Now);
-            return segmentByChr;
+            return breakpointsByChr;
+        }
+
+        private Dictionary<string, List<int>> AdjustBreakpoints(Dictionary<string, double[]> binsByChr, SegmentationInput segmentationInput,
+            Dictionary<string, List<int>> breakpoints, Dictionary<string, int[]> vafContainingBinsByChr)
+        {
+            var adjustedBreakpoints = new Dictionary<string, List<int>>(breakpoints);
+            // load common CNV segments
+            Dictionary<string, List<SampleGenomicBin>> commonCNVintervals = null;
+            if (_parameters.CommonCNVs != null)
+            {
+                commonCNVintervals = CanvasCommon.Utilities.LoadBedFile(_parameters.CommonCNVs);
+                CanvasCommon.Utilities.SortAndOverlapCheck(commonCNVintervals, _parameters.CommonCNVs);
+            }
+
+            foreach (string chr in binsByChr.Keys)
+            {
+                if (vafContainingBinsByChr?[chr] != null && vafContainingBinsByChr[chr].Length > 0)
+                {
+                    if (breakpoints[chr].Max() > vafContainingBinsByChr[chr].Length)
+                        throw new Exception(
+                            $"breakpoint {breakpoints.Max()} is larger then the zero-based size of the " +
+                            $"vafToCoverageIndex '{vafContainingBinsByChr.Count - 1}'");
+                    adjustedBreakpoints[chr] = breakpoints[chr].Select(breakpoint => vafContainingBinsByChr[chr][breakpoint]).ToList();
+                }
+
+                if (commonCNVintervals != null && commonCNVintervals.ContainsKey(chr))
+                {
+                    var remappedCommonCNVintervals = SegmentationInput.RemapCommonRegions(commonCNVintervals[chr],
+                        segmentationInput.StartByChr[chr], segmentationInput.EndByChr[chr]);
+                    adjustedBreakpoints[chr] = SegmentationInput.OverlapCommonRegions(adjustedBreakpoints[chr], remappedCommonCNVintervals);
+                }
+            }
+            return adjustedBreakpoints;
+        }
+
+        public double[] WaveletMeanSmoother(double[] canvasBins)
+        {
+            var canvasBinsCopy = new double[canvasBins.Length];
+            const int halfWindow = 1;
+            for (var index = 0; index < canvasBins.Length; index++)
+                canvasBinsCopy[index] = canvasBins[index];
+            const double w1 = 1.0 / 3.0;
+            const double w2 = 1.0 / 3.0;
+            const double w3 = 1.0 / 3.0;
+
+            for (int index = halfWindow; index < canvasBins.Length - halfWindow; index++)
+                canvasBinsCopy[index] = canvasBins[index - halfWindow] * w1 + canvasBins[index] * w2 + canvasBins[index + halfWindow] * w3;
+
+            return canvasBinsCopy;
         }
     }
 }

@@ -33,6 +33,7 @@ namespace CanvasCommon
         public int? MajorChromosomeCount;
         public double QScore;
         public double? DQScore;
+        public double? MajorChromosomeCountScore;
         public double ModelDistance;
         public double RunnerUpModelDistance;
         public bool CopyNumberSwapped;
@@ -74,7 +75,7 @@ namespace CanvasCommon
                 if (this.Alleles.Frequencies.Count <= 5)
                     return null;
 
-                return this.Alleles.Frequencies.Select(VF=>VF > 0.5 ? 1 - VF : VF).Average();
+                return this.Alleles.Frequencies.Select(VF => VF > 0.5 ? 1 - VF : VF).Average();
             }
         }
 
@@ -90,6 +91,27 @@ namespace CanvasCommon
             }
         }
 
+
+        /// <summary>
+        /// removes flanking bins before median estimation
+        /// </summary>
+        public double TruncatedMedianCount(int bins2Remove)
+        {
+            var tmpMedian = new SortedList<double>();
+            int start = Convert.ToInt32(Counts.Count * 0.25);
+            int end = Counts.Count - bins2Remove;
+            if (end - start > 5)
+            {
+                for (int index = bins2Remove; index < end; index++)
+                {
+                    tmpMedian.Add(Counts[index]);
+                }
+                return tmpMedian.Median();
+
+            }
+            var sorted = new SortedList<double>(this.Counts.Select(x => Convert.ToDouble(x)));
+            return sorted.Median();
+        }
         public CnvType GetCnvType(int referenceCopyNumber)
         {
             if (CopyNumber < referenceCopyNumber)
@@ -258,7 +280,7 @@ namespace CanvasCommon
                 segment.QScore = segment.ComputeQScore(qscoreMethod, qscoreParameters);
             }
         }
-   
+
 
         static public Dictionary<string, List<CanvasSegment>> GetSegmentsByChromosome(List<CanvasSegment> segments)
         {
@@ -301,14 +323,12 @@ namespace CanvasCommon
         public static void WriteCoveragePlotData(List<CanvasSegment> segments, double? normalDiploidCoverage, PloidyInfo referencePloidy,
             string filePath, string referenceFolder)
         {
-            if (segments.Any() && !normalDiploidCoverage.HasValue)
-                throw new Illumina.Common.IlluminaException("normal diploid coverage must be specified");
             int pointLength = 100000;
             int minimumBinsToPlot = GetMinimumBinsForCoveragePlotPoint(segments, pointLength);
 
             Dictionary<string, List<CanvasSegment>> segmentsByChromosome = GetSegmentsByChromosome(segments);
             GenomeMetadata genome = new GenomeMetadata();
-            genome.Deserialize(Path.Combine(referenceFolder, "GenomeSize.xml"));
+            genome.Deserialize(new FileLocation(Path.Combine(referenceFolder, "GenomeSize.xml")));
 
 
             List<float> counts = new List<float>();
@@ -435,8 +455,9 @@ namespace CanvasCommon
                             counts.Sort();
                             double medianHits = counts[counts.Count / 2];
                             writer.Write("{0:F2}\t", medianHits);
-                            double normalizedCount = 2 * medianHits / normalDiploidCoverage.Value;
-                            writer.Write("{0:F2}\t", normalizedCount);
+                            var normalizedCount = 2 * medianHits / normalDiploidCoverage;
+                            var normalizedCountString = normalizedCount.HasValue ? $"{normalizedCount:F2}" : ".";
+                            writer.Write($"{normalizedCountString}\t");
                             if (MAF.Count >= 10)
                             {
                                 MAF.Sort();
@@ -614,7 +635,7 @@ namespace CanvasCommon
 
             // Assimilate short segments into the *best* available neighbor:
             List<CanvasSegment> mergedSegments = new List<CanvasSegment>();
-            int segmentIndex = 0;   
+            int segmentIndex = 0;
             while (segmentIndex < segments.Count)
             {
                 if (segments[segmentIndex].End - segments[segmentIndex].Begin >= minimumCallSize)
@@ -743,7 +764,7 @@ namespace CanvasCommon
                     score = Math.Exp(score);
                     score = score / (score + 1);
                     // Transform probability into a q-score:
-                    qscore = (int) Math.Round(-10 * Math.Log10(1 - score));
+                    qscore = (int)Math.Round(-10 * Math.Log10(1 - score));
                     qscore = Math.Min(60, qscore);
                     qscore = Math.Max(2, qscore);
                     return qscore;

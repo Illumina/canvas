@@ -3,13 +3,12 @@ using System.Collections.Generic;
 using System.IO;
 using CanvasBin;
 using CanvasCommon;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Isas.SequencingFiles;
 using Illumina.Common;
+using Xunit;
 
 namespace CanvasTest
 {
-    [TestClass]
     public class TestCanvasBin
     {
         public void TestBinOneAlignment(int pos1, int pos2)
@@ -43,7 +42,7 @@ namespace CanvasTest
                 ref usableFragmentCount, bins, ref binIndexStart);
             FragmentBinner.BinTask.BinOneAlignment(alignment2, qualityThreshold, readNameToBinIndex, samePositionReadNames,
                 ref usableFragmentCount, bins, ref binIndexStart);
-            Assert.AreEqual(bins[0].Count, 1);
+            Assert.Equal(bins[0].Count, 1);
 
             // First read passes filters
             bins[0].Count = 0; // reset bin count
@@ -52,7 +51,7 @@ namespace CanvasTest
                 ref usableFragmentCount, bins, ref binIndexStart);
             FragmentBinner.BinTask.BinOneAlignment(alignment2, qualityThreshold, readNameToBinIndex, samePositionReadNames,
                 ref usableFragmentCount, bins, ref binIndexStart);
-            Assert.AreEqual(bins[0].Count, 0);
+            Assert.Equal(bins[0].Count, 0);
 
             // Second read passes filters
             bins[0].Count = 0; // reset bin count
@@ -62,7 +61,7 @@ namespace CanvasTest
                 ref usableFragmentCount, bins, ref binIndexStart);
             FragmentBinner.BinTask.BinOneAlignment(alignment2, qualityThreshold, readNameToBinIndex, samePositionReadNames,
                 ref usableFragmentCount, bins, ref binIndexStart);
-            Assert.AreEqual(bins[0].Count, 0);
+            Assert.Equal(bins[0].Count, 0);
 
             // Both fail filters
             bins[0].Count = 0; // reset bin count
@@ -72,22 +71,22 @@ namespace CanvasTest
                 ref usableFragmentCount, bins, ref binIndexStart);
             FragmentBinner.BinTask.BinOneAlignment(alignment2, qualityThreshold, readNameToBinIndex, samePositionReadNames,
                 ref usableFragmentCount, bins, ref binIndexStart);
-            Assert.AreEqual(bins[0].Count, 0);
+            Assert.Equal(bins[0].Count, 0);
         }
 
-        [TestMethod]
-        public void TestBinOneAlignment()
+        [Fact]
+        public void TestBinOneAlignmentDifferentPosition()
         {
             TestBinOneAlignment(100, 120);
         }
 
-        [TestMethod]
+        [Fact]
         public void TestBinOneAlignmentSamePosition()
         {
             TestBinOneAlignment(100, 100);
         }
 
-        [TestMethod]
+        [Fact]
         public void TestBinSingleEndBam()
         {
             string assemblyFolder = Isas.Framework.Utilities.Utilities.GetAssemblyFolder(typeof(TestCanvasBin));
@@ -107,10 +106,10 @@ namespace CanvasTest
                 if (e.Message.Contains("No paired alignments found"))
                     exceptionCaught = true;
             }
-            Assert.IsTrue(exceptionCaught);
+            Assert.True(exceptionCaught);
         }
 
-        [TestMethod]
+        [Fact]
         public void TestAllChromsInBedAreInBam()
         {
             CanvasBinParameters parameters = new CanvasBinParameters();
@@ -131,7 +130,7 @@ namespace CanvasTest
                 if (e.Message.Contains(String.Format("Not all chromosomes in {0} are found in {1}.", parameters.predefinedBinsFile, parameters.bamFile)))
                     exceptionCaught = true;
             }
-            Assert.IsTrue(exceptionCaught);
+            Assert.True(exceptionCaught);
         }
     }
 }

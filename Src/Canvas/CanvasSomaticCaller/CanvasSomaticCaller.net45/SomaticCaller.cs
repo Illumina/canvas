@@ -6,6 +6,7 @@ using System.IO;
 using Isas.SequencingFiles;
 using Isas.SequencingFiles.Vcf;
 using CanvasCommon;
+using Illumina.Common.FileSystem;
 
 namespace CanvasSomaticCaller
 {
@@ -361,7 +362,7 @@ namespace CanvasSomaticCaller
             this.ExcludedIntervals = CanvasCommon.Utilities.LoadBedFile(bedPath);
         }
 
-        public int CallVariants(string inFile, string variantFrequencyFile, string outputVCFPath, string referenceFolder, string name, double? localSDmertic, CanvasSomaticClusteringMode clusteringMode)
+        public int CallVariants(string inFile, string variantFrequencyFile, string outputVCFPath, string referenceFolder, string name, double? localSDmertic, double? evennessScore, CanvasSomaticClusteringMode clusteringMode)
         {
             this.OutputFolder = Path.GetDirectoryName(outputVCFPath);
             this.TempFolder = Path.GetDirectoryName(inFile);
@@ -384,7 +385,7 @@ namespace CanvasSomaticCaller
                 this.DebugModelSegmentCoverageByCN();
             }
 
-            this.MeanCoverage = CanvasIO.LoadFrequencies(variantFrequencyFile, this.Segments);
+            this.MeanCoverage = CanvasIO.LoadFrequenciesBySegment(variantFrequencyFile, this.Segments, referenceFolder);
             if (this.IsDbsnpVcf)
             {
                 int tmpMinimumVariantFreq = somaticCallerParameters.MinimumVariantFrequenciesForInformativeSegment;
@@ -398,32 +399,36 @@ namespace CanvasSomaticCaller
             List<string> ExtraHeaders = new List<string>();
             try
             {
-                ExtraHeaders = CallCNVUsingSNVFrequency(localSDmertic, referenceFolder, clusteringMode);
+                ExtraHeaders = CallCNVUsingSNVFrequency(localSDmertic, evennessScore, referenceFolder, clusteringMode);
             }
             catch (Exception e)
             {
-                // In a training mode (INTERNAL) somatic model is initialized with a large number of parameter trials. 
-                // Some of them might lead to exception as they would fall outside testable range. 
-                // For such cases when the IsTrainingMode is set, the program will terminate normally but will produce an empty vcf file. 
-                // This will penalize a parameter combination that lead to exception thereby preventing it from creeping into default SomaticCallerParameters.json.
-
-                if (this.IsTrainingMode)
+                if (IsTrainingMode)
                 {
+                    // In a training mode (INTERNAL) somatic model is initialized with a large number of parameter trials. 
+                    // Some of them might lead to exception as they would fall outside testable range. 
+                    // For such cases when the IsTrainingMode is set, the program will terminate normally but will produce an empty vcf file. 
+                    // This will penalize a parameter combination that lead to exception thereby preventing it from creeping into default SomaticCallerParameters.json.
                     Console.WriteLine("IsTrainingMode activated. Not calling any CNVs. Reason: {0}", e.Message);
                     Segments.Clear();
                     CanvasSegmentWriter.WriteSegments(outputVCFPath, this.Segments, Model.DiploidCoverage, referenceFolder, name, ExtraHeaders,
-                    this.ReferencePloidy, QualityFilterThreshold, isPedigreeInfoSupplied:false);
+                    this.ReferencePloidy, QualityFilterThreshold, isPedigreeInfoSupplied: false);
                     Environment.Exit(0);
+                }
+                else if (e is NotEnoughUsableSegementsException)
+                {
+                    Console.Error.WriteLine("Not calling any CNVs. Reason: {0}", e.Message);
+                    // pass: this sample does not have enough coverage/baf variation to estimate purity/ploidy
                 }
                 else
                 {
-                    if (e is SomaticCaller.UncallableDataException)
+                    if (e is UncallableDataException)
                     {
-                        Console.Error.WriteLine("Not calling any CNVs. Reason: {0}", e.Message);
+                        Console.Error.WriteLine("Cannot call CNVs. Reason: {0}", e.Message);
                         Segments.Clear();
                     }
                     // Throw the exception - if we can't do CNV calling in production we should treat that as a fatal error for
-                    // the workflow: 
+                    // the workflow
                     throw;
                 }
             }
@@ -464,7 +469,7 @@ namespace CanvasSomaticCaller
             ExtraHeaders.Add($"##EstimatedChromosomeCount={this.EstimateChromosomeCount():F2}");
 
             // Write out results.  Note that model may be null here, in training mode, if we hit an UncallableDataException:
-            CanvasSegmentWriter.WriteSegments(outputVCFPath, this.Segments, Model?.DiploidCoverage, referenceFolder, name, ExtraHeaders, 
+            CanvasSegmentWriter.WriteSegments(outputVCFPath, this.Segments, Model?.DiploidCoverage, referenceFolder, name, ExtraHeaders,
                 this.ReferencePloidy, QualityFilterThreshold, isPedigreeInfoSupplied: false);
 
             return 0;
@@ -1572,7 +1577,7 @@ namespace CanvasSomaticCaller
         /// and then a fine-grained search), and for each one, measure the distortion - the average distance (weighted 
         /// by segment length) between actual and modeled (MAF, Coverage) coordinate.
         /// </summary>
-        protected SomaticCaller.CoveragePurityModel ModelOverallCoverageAndPurity(long genomeLength, CanvasSomaticClusteringMode clusteringMode)
+        protected SomaticCaller.CoveragePurityModel ModelOverallCoverageAndPurity(long genomeLength, CanvasSomaticClusteringMode clusteringMode, double? evennessScore)
         {
             List<SegmentInfo> usableSegments;
 
@@ -1590,7 +1595,7 @@ namespace CanvasSomaticCaller
             }
             Console.WriteLine("Modeling overall coverage/purity across {0} segments", usableSegments.Count);
             if (usableSegments.Count < 10)
-                throw new SomaticCaller.UncallableDataException("Cannot model coverage/purity with less than 10 segments.");
+                throw new NotEnoughUsableSegementsException("Cannot model coverage/purity with less than 10 segments.");
 
             // When computing distances between model and actual points, we want to provide roughly equal weight
             // to coverage (which covers a large range) and MAF, which falls in the range (0, 0.5).  
@@ -1607,7 +1612,26 @@ namespace CanvasSomaticCaller
             int minCoverageLevel = Convert.ToInt32(coverageQuartiles.Item1);
             int maxCoverageLevel = Convert.ToInt32(coverageQuartiles.Item3);
             int medianCoverageLevel = Convert.ToInt32(coverageQuartiles.Item2);
-            this.CoverageWeightingFactor = somaticCallerParameters.CoverageWeighting / medianCoverageLevel;
+            if (evennessScore.HasValue && evennessScore.Value < somaticCallerParameters.EvennessScoreThreshold)
+            {
+                if (somaticCallerParameters.CoverageWeighting <=
+                    somaticCallerParameters.CoverageWeightingWithMafSegmentation)
+                    throw new ArgumentException($"SomaticCallerParameters parameter CoverageWeighting {somaticCallerParameters.CoverageWeighting} " +
+                        $"should be larger than CoverageWeightingWithMafSegmentation {somaticCallerParameters.CoverageWeightingWithMafSegmentation}");
+
+                double scaler = Math.Max(evennessScore.Value - somaticCallerParameters.MinEvennessScore, 0.0) /
+                                (somaticCallerParameters.EvennessScoreThreshold -
+                                 somaticCallerParameters.MinEvennessScore);
+                CoverageWeightingFactor = somaticCallerParameters.CoverageWeightingWithMafSegmentation +
+                                               (somaticCallerParameters.CoverageWeighting -
+                                                somaticCallerParameters.CoverageWeightingWithMafSegmentation) * scaler;
+                CoverageWeightingFactor /= medianCoverageLevel;
+            }
+            else
+            {
+                CoverageWeightingFactor = somaticCallerParameters.CoverageWeighting / medianCoverageLevel;
+            }
+
             int bestNumClusters = 0;
             double knearestNeighbourCutoff = 0;
             List<double> centroidsMAF = new List<double>();
@@ -1959,6 +1983,7 @@ namespace CanvasSomaticCaller
             return bestModel;
         }
 
+
         /// <summary>
         /// Extract segments from clusters that appear underclustered, i.e. subclonal CNV variants cluster with the closest clonal copy number 
         /// </summary>
@@ -2162,7 +2187,7 @@ namespace CanvasSomaticCaller
         /// Assign copy number calls to segments.  And, produce extra headers for the CNV vcf file, giving the 
         /// overall estimated purity and ploidy.
         /// </summary>
-        protected List<string> CallCNVUsingSNVFrequency(double? localSDmertic, string referenceFolder, CanvasSomaticClusteringMode clusteringMode)
+        protected List<string> CallCNVUsingSNVFrequency(double? localSDmertic, double? evennessScore, string referenceFolder, CanvasSomaticClusteringMode clusteringMode)
         {
             List<string> Headers = new List<string>();
             if (this.CNOracle != null)
@@ -2173,10 +2198,10 @@ namespace CanvasSomaticCaller
             // Get genome length.
             GenomeMetadata genomeMetaData = null;
             genomeMetaData = new GenomeMetadata();
-            genomeMetaData.Deserialize(Path.Combine(referenceFolder, "GenomeSize.xml"));
+            genomeMetaData.Deserialize(new FileLocation(Path.Combine(referenceFolder, "GenomeSize.xml")));
 
             // Derive a model of diploid coverage, and overall tumor purity:
-            this.Model = ModelOverallCoverageAndPurity(genomeMetaData.Length, clusteringMode);
+            this.Model = ModelOverallCoverageAndPurity(genomeMetaData.Length, clusteringMode, evennessScore);
 
 
             // Make preliminary ploidy calls for all segments.  For those segments which fit their ploidy reasonably well,
@@ -2186,9 +2211,9 @@ namespace CanvasSomaticCaller
             {
                 AssignPloidyCalls();
                 List<CanvasSegment> sizeFilteredSegment = this.Segments.Where(segment => segment.End - segment.Begin > 5000).ToList();
-                
+
                 // Do not run heterogeneity adjustment on enrichment data
-                if (!this.IsEnrichment)
+                if (!this.IsEnrichment && evennessScore.HasValue && evennessScore.Value >= somaticCallerParameters.EvennessScoreThreshold)
                 {
                     percentageHeterogeneity = AssignHeterogeneity();
                     AdjustPloidyCalls();
@@ -2216,12 +2241,12 @@ namespace CanvasSomaticCaller
             }
 
 
-
             // Add some extra information to the vcf file header:
             Headers.Add(string.Format("##EstimatedTumorPurity={0:F2}", this.Model.Purity));
             Headers.Add(string.Format("##PurityModelFit={0:F4}", this.Model.Deviation));
             Headers.Add(string.Format("##InterModelDistance={0:F4}", this.Model.InterModelDistance));
             Headers.Add(string.Format("##LocalSDmetric={0:F2}", localSDmertic));
+            Headers.Add(string.Format("##EvennessScore={0:F2}", evennessScore));
             if (!this.IsEnrichment)
                 Headers.Add(string.Format("##HeterogeneityProportion={0:F2}", percentageHeterogeneity));
             return Headers;
@@ -2246,6 +2271,7 @@ namespace CanvasSomaticCaller
                     currentChromosome = segment.Chr;
                 }
                 if (segment.Filter != "PASS") continue;
+                if (segment.CopyNumber == -1) continue;
                 baseCountByCopyNumber[Math.Min(segment.CopyNumber, somaticCallerParameters.MaximumCopyNumber)] += (segment.End - segment.Begin);
             }
             overallCount += GetWeightedChromosomeCount(baseCountByCopyNumber);
@@ -2888,6 +2914,23 @@ namespace CanvasSomaticCaller
             }
 
             public UncallableDataException(string message, Exception inner)
+                : base(message, inner)
+            {
+            }
+        }
+
+        class NotEnoughUsableSegementsException : Exception
+        {
+            public NotEnoughUsableSegementsException()
+            {
+            }
+
+            public NotEnoughUsableSegementsException(string message)
+                : base(message)
+            {
+            }
+
+            public NotEnoughUsableSegementsException(string message, Exception inner)
                 : base(message, inner)
             {
             }

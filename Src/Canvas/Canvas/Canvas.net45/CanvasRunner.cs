@@ -122,7 +122,7 @@ namespace Canvas
             {
                 commandLineBuilder.Append(Path.Combine(_canvasFolder, string.Format("{0}.exe", canvasExecutableStub)));
                 commandLineBuilder.Append(" ");
-                return _runtimeExecutable.FullName;   
+                return _runtimeExecutable.FullName;
             }
             else
             {
@@ -161,7 +161,6 @@ namespace Canvas
             UnitOfWork binJob = new UnitOfWork()
             {
                 ExecutablePath = executablePath,
-                LoggingFolder = _workManager.LoggingFolder.FullName,
                 LoggingStub = Path.GetFileNameWithoutExtension(callset.SingleSampleCallset.BinSizePath),
                 CommandLine = commandLine.ToString()
             };
@@ -324,7 +323,6 @@ namespace Canvas
                 UnitOfWork finalBinJob = new UnitOfWork()
                 {
                     ExecutablePath = executablePath,
-                    LoggingFolder = _workManager.LoggingFolder.FullName,
                     LoggingStub = binnedPath.Name,
                     CommandLine = commandLine.ToString()
                 };
@@ -383,7 +381,6 @@ namespace Canvas
                     UnitOfWork binJob = new UnitOfWork()
                     {
                         ExecutablePath = executablePath,
-                        LoggingFolder = _workManager.LoggingFolder.FullName,
                         LoggingStub = intermediateDataPath.Name,
                         CommandLine = commandLine.ToString()
                     };
@@ -406,7 +403,7 @@ namespace Canvas
         protected IFileLocation InvokeCanvasBinFragment(CanvasCallset callset, string canvasReferencePath, string canvasBedPath, string ploidyBedPath)
         {
             StringBuilder commandLine = new StringBuilder();
-            
+
 
             // require predefined bins
             string predefinedBinsPath = GetPredefinedBinsPath();
@@ -453,7 +450,6 @@ namespace Canvas
                 UnitOfWork binJob = new UnitOfWork()
                 {
                     ExecutablePath = executablePath,
-                    LoggingFolder = _workManager.LoggingFolder.FullName,
                     LoggingStub = binnedPath.Name,
                     CommandLine = commandLine.ToString()
                 };
@@ -548,7 +544,6 @@ namespace Canvas
             UnitOfWork normalizeJob = new UnitOfWork()
             {
                 ExecutablePath = executablePath,
-                LoggingFolder = _workManager.LoggingFolder.FullName,
                 LoggingStub = ratioBinnedPath.Name,
                 CommandLine = commandLine.ToString()
             };
@@ -645,14 +640,14 @@ namespace Canvas
             foreach (PedigreeSample callset in callsets.PedigreeSample)
             {
                 var canvasCallset = new CanvasCallset(callset.Sample, callsets.AnalysisDetails, null, null, null);
-                InvokeCanvasSnv(canvasCallset, false, callset.Sample.SampleName);
+                var snvPath = InvokeCanvasSnv(canvasCallset, false, callset.Sample.SampleName);
             }
         }
 
         /// <summary>
         /// Invoke CanvasSNV.  Return null if this fails and we need to abort CNV calling for this sample.
         /// </summary>
-        protected void InvokeCanvasSnv(CanvasCallset callset, bool isSomatic = false, string sampleName = null)
+        protected IFileLocation InvokeCanvasSnv(CanvasCallset callset, bool isSomatic = false, string sampleName = null)
         {
             List<UnitOfWork> jobList = new List<UnitOfWork>();
             List<string> outputPaths = new List<string>();
@@ -685,7 +680,6 @@ namespace Canvas
                 {
                     job.CommandLine = Isas.Framework.Settings.CommandOptionsUtilities.MergeCommandLineOptions(job.CommandLine, _customParameters["CanvasSNV"], true);
                 }
-                job.LoggingFolder = _workManager.LoggingFolder.FullName;
                 job.LoggingStub = $"CanvasSNV-'{callset.SingleSampleCallset.SampleName}'-'{chromosome.Name}'";
                 jobList.Add(job);
             }
@@ -699,6 +693,7 @@ namespace Canvas
             // Concatenate CanvasSNV results:
             ConcatenateCanvasSNVResults(callset.SingleSampleCallset.VfSummaryPath, outputPaths);
             ConcatenateCanvasSNVBafResults(callset.SingleSampleCallset.VfSummaryBafPath, outputPaths.Select(path => path + ".baf"));
+            return new FileLocation(callset.SingleSampleCallset.VfSummaryPath);
         }
 
         protected void ConcatenateCanvasSNVResults(string vfSummaryPath, IEnumerable<string> outputPaths)
@@ -799,17 +794,8 @@ namespace Canvas
             }
 
             // CanvasSNV
-            var canvasSnvTask = _checkpointRunner.RunCheckpointAsync("CanvasSNV", () =>
-            {
-                if (_isSomatic)
-                {
-                    InvokeCanvasSnv(callset, isSomatic: _isSomatic);
-                }
-                else
-                {
-                    InvokeCanvasSnv(callset);
-                }
-            });
+            var canvasSnvTask = _checkpointRunner.RunCheckpointAsync<IFileLocation>("CanvasSNV", () => _isSomatic ? 
+                InvokeCanvasSnv(callset, isSomatic: _isSomatic) : InvokeCanvasSnv(callset));
 
             // Prepare ploidy file:
             string ploidyBedPath = callset.AnalysisDetails.PloidyVcf?.FullName;
@@ -821,8 +807,9 @@ namespace Canvas
             // CanvasClean:
             var canvasCleanOutput = _checkpointRunner.RunCheckpoint("CanvasClean", () => InvokeCanvasClean(callset, binnedPath));
 
+            var canvasSnvPath = await canvasSnvTask;
             // CanvasPartition:
-            var partitionedPath = _checkpointRunner.RunCheckpoint("CanvasPartition", () => InvokeCanvasPartition(callset, canvasCleanOutput.CleanedPath, canvasBedPath));
+            var partitionedPath = _checkpointRunner.RunCheckpoint("CanvasPartition", () => InvokeCanvasPartition(callset, canvasCleanOutput.CleanedPath, canvasBedPath, canvasSnvPath));
 
             // Intersect bins with manifest
             if (callset.IsEnrichment)
@@ -831,18 +818,16 @@ namespace Canvas
                     () => IntersectBinsWithTargetedRegions(callset, partitionedPath));
             }
 
-            await canvasSnvTask;
-
             // Variant calling
             _checkpointRunner.RunCheckpoint("Variant calling", () =>
             {
                 if (_isSomatic)
                 {
-                    RunSomaticCalling(partitionedPath, callset, canvasBedPath, ploidyBedPath, canvasCleanOutput.FfpePath);
+                    RunSomaticCalling(partitionedPath, callset, canvasBedPath, ploidyBedPath, canvasCleanOutput.FfpePath, canvasSnvPath);
                 }
                 else
                 {
-                    RunGermlineCalling(partitionedPath, callset, ploidyBedPath);
+                    RunGermlineCalling(partitionedPath, callset, ploidyBedPath, canvasSnvPath);
                 }
             });
         }
@@ -910,7 +895,7 @@ namespace Canvas
                     {
                         foreach (MultiSampleGenomicBin genomicBin in normalizedCanvasClean[chr])
                         {
-                            string outLine = string.Format($"{genomicBin.Bin.Chromosome}\t{genomicBin.Bin.Interval.Start}\t{genomicBin.Bin.Interval.End}");
+                            string outLine = string.Format($"{genomicBin.Bin.Chromosome}\t{genomicBin.Bin.Interval.OneBasedStart}\t{genomicBin.Bin.Interval.OneBasedEnd}");
                             outLine += string.Format($"\t{genomicBin.Counts[fileCounter]}");
                             writer.WriteLine(outLine);
                         }
@@ -941,40 +926,48 @@ namespace Canvas
                 partitionedPaths.Add(partitionedPath);
                 commandLine.AppendFormat("-o \"{0}\" ", partitionedPath);
             }
-
+            commandLine.AppendFormat("-r \"{0}\" ", callsets.AnalysisDetails.WholeGenomeFastaFolder);
             commandLine.AppendFormat("-m HMM");
 
             UnitOfWork partitionJob = new UnitOfWork()
             {
                 ExecutablePath = executablePath,
-                LoggingFolder = _workManager.LoggingFolder.FullName,
                 LoggingStub = Path.GetFileName(partitionedPaths.First().ToString()),
                 CommandLine = commandLine.ToString()
             };
             if (_customParameters.ContainsKey("CanvasPartition"))
             {
-                partitionJob.CommandLine = Isas.Framework.Settings.CommandOptionsUtilities.MergeCommandLineOptions(partitionJob.CommandLine, _customParameters["CanvasPartition"], true);
+                partitionJob.CommandLine = Isas.Framework.Settings.CommandOptionsUtilities.MergeCommandLineOptions
+                    (partitionJob.CommandLine, _customParameters["CanvasPartition"], true);
             }
             _workManager.DoWorkSingleThread(partitionJob);
             return partitionedPaths;
         }
 
-        private IFileLocation InvokeCanvasPartition(CanvasCallset callset, IFileLocation cleanedPath, string canvasBedPath)
+        private IFileLocation InvokeCanvasPartition(CanvasCallset callset, IFileLocation cleanedPath, string canvasBedPath, IFileLocation canvasSnvPath)
         {
             StringBuilder commandLine = new StringBuilder();
             string executablePath = GetExecutablePath("CanvasPartition", commandLine);
-
+            commandLine.Append($" -v {canvasSnvPath} ");
             commandLine.AppendFormat("-i \"{0}\" ", cleanedPath);
             commandLine.AppendFormat("-b \"{0}\" ", canvasBedPath);
             string partitionedPath = callset.SingleSampleCallset.PartitionedPath.FullName;
             commandLine.AppendFormat("-o \"{0}\" ", partitionedPath);
+            commandLine.Append($" -r \"{callset.AnalysisDetails.WholeGenomeFastaFolder}\" ");
             if (!_isSomatic)
                 commandLine.AppendFormat(" -g");
-
+            else
+            {
+                if (!callset.IsEnrichment || callset.Manifest.Regions.Count > 2000)
+                {
+                    var tempFolder = new DirectoryLocation(callset.SingleSampleCallset.SampleOutputFolder.FullName);
+                    var ffpePath = tempFolder.GetFileLocation("FilterRegions.txt");
+                    commandLine.AppendFormat("-f \"{0}\" ", ffpePath);
+                }
+            }
             UnitOfWork partitionJob = new UnitOfWork()
             {
                 ExecutablePath = executablePath,
-                LoggingFolder = _workManager.LoggingFolder.FullName,
                 LoggingStub = Path.GetFileName(partitionedPath),
                 CommandLine = commandLine.ToString()
             };
@@ -1040,7 +1033,6 @@ namespace Canvas
             UnitOfWork cleanJob = new UnitOfWork()
             {
                 ExecutablePath = executablePath,
-                LoggingFolder = _workManager.LoggingFolder.FullName,
                 LoggingStub = cleanedPath.Name,
                 CommandLine = commandLine.ToString()
             };
@@ -1055,7 +1047,7 @@ namespace Canvas
         }
 
         protected void RunSomaticCalling(IFileLocation partitionedPath, CanvasCallset callset, string canvasBedPath,
-            string ploidyBedPath, IFileLocation ffpePath)
+            string ploidyBedPath, IFileLocation ffpePath, IFileLocation canvasSnvPath)
         {
 
             // get somatic SNV output:
@@ -1066,7 +1058,7 @@ namespace Canvas
             var cnvVcfPath = callset.SingleSampleCallset.OutputVcfPath;
             StringBuilder commandLine = new StringBuilder();
             callerJob.ExecutablePath = GetExecutablePath("CanvasSomaticCaller", commandLine);
-            commandLine.Append($" -v {callset.SingleSampleCallset.VfSummaryPath}");
+            commandLine.Append($" -v {canvasSnvPath}");
             commandLine.Append($" -i {partitionedPath}");
             commandLine.Append($" -o {cnvVcfPath}");
             commandLine.Append($" -b {canvasBedPath}");
@@ -1100,7 +1092,6 @@ namespace Canvas
             {
                 callerJob.CommandLine = Isas.Framework.Settings.CommandOptionsUtilities.MergeCommandLineOptions(callerJob.CommandLine, _customParameters["CanvasSomaticCaller"], true);
             }
-            callerJob.LoggingFolder = _workManager.LoggingFolder.FullName;
             callerJob.LoggingStub = $"SomaticCNV-{callset.SingleSampleCallset.SampleName}";
             _workManager.DoWorkSingleThread(callerJob);
         }
@@ -1111,7 +1102,10 @@ namespace Canvas
             if (callsets.PedigreeSample.Count != partitionedPaths.Count)
                 throw new Exception($"Number of output CanvasPartition files {partitionedPaths.Count} is not equal to the number of Canvas callsets {callsets.PedigreeSample.Count}");
 
-            bool haveProband = callsets.PedigreeSample.Where(x => x.SampleType == SampleType.Proband).ToList().Count > 0;
+            bool haveProband = callsets.PedigreeSample.Any(x => x.SampleType == SampleType.Proband);
+            bool haveMother = callsets.PedigreeSample.Any(x => x.SampleType == SampleType.Mother);
+            bool haveFather = callsets.PedigreeSample.Any(x => x.SampleType == SampleType.Father);
+            bool haveTrio = haveProband && haveMother && haveFather;
 
             // CanvasSmallPedigreeCaller:
             StringBuilder commandLine = new StringBuilder();
@@ -1128,7 +1122,7 @@ namespace Canvas
             var vcf = callsets.AnalysisDetails.OutputFolder.GetFileLocation("CNV.vcf.gz");
             commandLine.Append($"-o \"{vcf}\" ");
             commandLine.AppendFormat("-r \"{0}\" ", callsets.AnalysisDetails.WholeGenomeFastaFolder);
-            if (haveProband)
+            if (haveTrio)
             {
                 string pedigreeFile = WritePedigreeFile(callsets);
                 commandLine.AppendFormat("-f \"{0}\" ", pedigreeFile);
@@ -1139,7 +1133,6 @@ namespace Canvas
             UnitOfWork callJob = new UnitOfWork()
             {
                 ExecutablePath = executablePath,
-                LoggingFolder = _workManager.LoggingFolder.FullName,
                 LoggingStub = "CanvasPedigreeCaller",
                 CommandLine = commandLine.ToString()
             };
@@ -1155,8 +1148,8 @@ namespace Canvas
         private static string WritePedigreeFile(SmallPedigreeCallset callsets)
         {
             string outFile = Path.Combine(callsets.AnalysisDetails.OutputFolder.FullName, "pedigree.ped");
-            string motherSampleName = callsets.PedigreeSample.Where(x => x.SampleType == SampleType.Mother).Select(x => x.Sample.SampleName).Single();
-            string fatherSampleName = callsets.PedigreeSample.Where(x => x.SampleType == SampleType.Father).Select(x => x.Sample.SampleName).Single();
+            string motherSampleName = callsets.PedigreeSample.Where(x => x.SampleType == SampleType.Mother).Select(x => x.Sample.SampleName).SingleOrDefault() ?? "0";
+            string fatherSampleName = callsets.PedigreeSample.Where(x => x.SampleType == SampleType.Father).Select(x => x.Sample.SampleName).SingleOrDefault() ?? "0";
             using (FileStream stream = new FileStream(outFile, FileMode.Create, FileAccess.Write))
             using (StreamWriter writer = new StreamWriter(stream))
             {
@@ -1172,7 +1165,7 @@ namespace Canvas
             return outFile;
         }
 
-        protected void RunGermlineCalling(IFileLocation partitionedPath, CanvasCallset callset, string ploidyBedPath)
+        protected void RunGermlineCalling(IFileLocation partitionedPath, CanvasCallset callset, string ploidyBedPath, IFileLocation canvasSnvPath)
         {
             StringBuilder commandLine = new StringBuilder();
             ////////////////////////////////////////////////////////
@@ -1180,7 +1173,7 @@ namespace Canvas
             string executablePath = GetExecutablePath("CanvasDiploidCaller", commandLine);
 
             commandLine.AppendFormat("-i \"{0}\" ", partitionedPath);
-            commandLine.AppendFormat("-v \"{0}\" ", callset.SingleSampleCallset.VfSummaryPath);
+            commandLine.AppendFormat("-v \"{0}\" ", canvasSnvPath);
             var cnvVcfPath = callset.SingleSampleCallset.OutputVcfPath;
             commandLine.AppendFormat("-o \"{0}\" ", cnvVcfPath);
             commandLine.AppendFormat("-n \"{0}\" ", callset.SingleSampleCallset.SampleName);
@@ -1194,7 +1187,6 @@ namespace Canvas
             UnitOfWork callJob = new UnitOfWork()
             {
                 ExecutablePath = executablePath,
-                LoggingFolder = _workManager.LoggingFolder.FullName,
                 LoggingStub = cnvVcfPath.Name,
                 CommandLine = commandLine.ToString()
             };

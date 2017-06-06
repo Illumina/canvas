@@ -94,20 +94,29 @@ namespace Canvas.Wrapper
 
             commandLine.Append($" --somatic-vcf \"{input.SomaticVcf.VcfFile}\"");
 
-            IFileLocation ploidyBed = _canvasPloidyBedCreator.CreatePloidyBed(input.NormalVcf, input.GenomeMetadata, sampleSandbox);
-            if (ploidyBed != null)
-                commandLine.Append($" --{SingleSampleCommonOptionsParser.PloidyBedOptionName} \"{ploidyBed}\"");
+            AddPloidyBed(commandLine, input, sampleSandbox);
+
             commandLine.Append(_singleSampleInputCommandLineBuilder.GetCustomParameters());
             commandLine = _singleSampleInputCommandLineBuilder.MergeCustomCanvasParameters(commandLine);
             UnitOfWork singleSampleJob = new UnitOfWork
             {
                 ExecutablePath = CrossPlatform.IsThisLinux() ? _runtimeExecutable.FullName : _canvasExe.FullName,
                 CommandLine = CrossPlatform.IsThisLinux() ? _canvasExe + " " + commandLine : commandLine.ToString(),
-                LoggingFolder = _workManager.LoggingFolder.FullName,
                 LoggingStub = "Canvas_" + sampleId,
             };
             _workManager.DoWorkSingleThread(singleSampleJob);
             return GetCanvasOutput(sampleId, sampleSandbox);
+        }
+
+        private void AddPloidyBed(StringBuilder commandLine, CanvasTumorNormalEnrichmentInput input, IDirectoryLocation sampleSandbox)
+        {
+            if (input.SexPloidy == null)
+            {
+                _logger.Warn("Sex chromosome ploidy not available. No ploidy will be provided to Canvas.");
+                return;
+            }
+            IFileLocation ploidyBed = _canvasPloidyBedCreator.CreatePloidyBed(input.SexPloidy, input.GenomeMetadata, sampleSandbox);
+            commandLine.Append($" --{SingleSampleCommonOptionsParser.PloidyBedOptionName} \"{ploidyBed}\"");
         }
 
         private CanvasOutput GetCanvasOutput(string sampleId, IDirectoryLocation sampleSandbox)

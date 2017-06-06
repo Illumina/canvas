@@ -77,10 +77,8 @@ namespace Canvas.Wrapper
             }
             commandLine.Append($" --{bAlleleVcfOptionName} \"{bAlleleVcf}\"");
 
+            AddPloidyBed(commandLine, input, sampleSandbox);
 
-            IFileLocation ploidyBed = _canvasPloidyBedCreator.CreateGermlinePloidyBed(input.Vcf, input.GenomeMetadata, sampleSandbox);
-            if (ploidyBed != null)
-                commandLine.Append($" --{SingleSampleCommonOptionsParser.PloidyBedOptionName} \"{ploidyBed}\"");
             var canvasPartitionParam = $@"--commoncnvs {_annotationFileProvider.GetCanvasAnnotationFile(input.GenomeMetadata, "commoncnvs.bed")}";
             var moreCustomParameters = new Dictionary<string, string>();
             moreCustomParameters["CanvasPartition"] = canvasPartitionParam;
@@ -91,11 +89,21 @@ namespace Canvas.Wrapper
             {
                 ExecutablePath = CrossPlatform.IsThisLinux() ? _runtimeExecutable.FullName : _canvasExe.FullName,
                 CommandLine = CrossPlatform.IsThisLinux() ? _canvasExe + " " + commandLine : commandLine.ToString(),
-                LoggingFolder = _workManager.LoggingFolder.FullName,
                 LoggingStub = "Canvas_" + sampleId,
             };
             _workManager.DoWorkSingleThread(singleSampleJob);
             return GetCanvasOutput(sampleId, sampleSandbox);
+        }
+
+        private void AddPloidyBed(StringBuilder commandLine, CanvasResequencingInput input, IDirectoryLocation sampleSandbox)
+        {
+            if (input.SexPloidy == null)
+            {
+                _logger.Warn("Sex chromosome ploidy not available. No ploidy will be provided to Canvas.");
+                return;
+            }
+            IFileLocation ploidyBed = _canvasPloidyBedCreator.CreateGermlinePloidyBed(input.SexPloidy, input.GenomeMetadata, sampleSandbox);
+            commandLine.Append($" --{SingleSampleCommonOptionsParser.PloidyBedOptionName} \"{ploidyBed}\"");
         }
 
         private CanvasOutput GetCanvasOutput(string sampleId, IDirectoryLocation sampleSandbox)

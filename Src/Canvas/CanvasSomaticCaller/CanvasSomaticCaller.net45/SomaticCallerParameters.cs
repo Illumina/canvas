@@ -11,9 +11,9 @@ namespace CanvasSomaticCaller
         public double PrecisionWeightingFactor { get; set; } = 0.3333333333f;
         public static int MaximumRelatedModels { get; set; } = 5;
         public double PercentNormal2WeightingFactor { get; set; } = 0.275;
-        public double DeviationScoreWeightingFactor { get; set; } = 0.275;
+        public double DeviationScoreWeightingFactor { get; set; } = 0.375;
         public double CN2WeightingFactor { get; set; } = 0.375;     
-        public double DiploidDistanceScoreWeightingFactor { get; set; } = 0.225;
+        public double DiploidDistanceScoreWeightingFactor { get; set; } = 0.125;
         public double HeterogeneityScoreWeightingFactor { get; set; } = 0.275;
         public float DeviationFactor { get; set; } = 1.75f;
         public int DeviationIndexCutoff { get; set; } = 18;
@@ -38,5 +38,8 @@ namespace CanvasSomaticCaller
         public double ClonalityClusterVariance { get; set; } = 14.9372;
         public double NumClusters { get; set; } = -0.0988;
         public double ModelDeviation { get; set; } = -7.3681;
+        public double EvennessScoreThreshold { get; set; } = 94.5;
+        public double MinEvennessScore { get; set; } = 88.0;
+        public double CoverageWeightingWithMafSegmentation { get; set; } = 0.20;
     }
 }

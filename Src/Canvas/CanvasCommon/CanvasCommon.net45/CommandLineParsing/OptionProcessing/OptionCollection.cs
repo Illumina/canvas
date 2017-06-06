@@ -134,7 +134,7 @@ namespace CanvasCommon.CommandLineParsing.OptionProcessing
         private OptionData AddOption(IOptionInfo info, OptionSet set)
         {
             OptionData s = new OptionData();
-            set.Add(info.GetPrototype(), info.Description, v => s.Data.Add(v.ToSingleItemEnumerable().ToList()));
+            set.Add(info.GetPrototype(), info.Description, v => s.Data.Add(v.ToEnumerable().ToList()));
             return s;
         }
 

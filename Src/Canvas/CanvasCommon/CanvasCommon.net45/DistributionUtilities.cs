@@ -26,7 +26,6 @@ namespace CanvasCommon
                 IEnumerable<int> states = Enumerable.Repeat(currentState, numberOfStates - numberOfDiploidStates)
                     .Concat(Enumerable.Repeat(diploidState, numberOfDiploidStates));
                 var permutations = new Permutations<int>(states.ToList(), GenerateOption.WithoutRepetition);
-                //List<List<int>> permutations = null; // %%%
                 var list = permutations.Select(x => x.ToList()).ToList();
                 allCombinations.AddRange(list);
             }

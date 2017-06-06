@@ -21,13 +21,13 @@ namespace CanvasCommon
         {
         }
 
-        public GenomicBin(string chromosome, GenomicInterval interval)
+        public GenomicBin(string chromosome, Interval interval)
         {
             Chromosome = chromosome;
             Interval = interval;
         }
 
-        public GenomicBin(string chromosome, GenomicInterval interval, int gc)
+        public GenomicBin(string chromosome, Interval interval, int gc)
         {
             Chromosome = chromosome;
             Interval = interval;
@@ -36,7 +36,7 @@ namespace CanvasCommon
 
         public string Chromosome { get; set; }
         public int GC { get; set; }
-        public GenomicInterval Interval { get; set; }
+        public Interval Interval { get; set; }
     }
 
     /// <summary>
@@ -49,20 +49,20 @@ namespace CanvasCommon
         public float Count { get; set; }
         public double CountDeviation { get; set; }
 
-        public SampleGenomicBin()
-        {
-            _genomicBin = new GenomicBin();
-            GenomicBin.Chromosome = null;
-            GenomicBin.Interval = new GenomicInterval();
-            GenomicBin.GC = -1;
-            this.CountDeviation = -1;
-        }
+        //public SampleGenomicBin()
+        //{
+        //    _genomicBin = new GenomicBin();
+        //    GenomicBin.Chromosome = null;
+        //    GenomicBin.Interval = new Interval();
+        //    GenomicBin.GC = -1;
+        //    this.CountDeviation = -1;
+        //}
 
         public SampleGenomicBin(string chr, int start, int stop, int gc, float count, double MadOfDIffs)
         {
             _genomicBin = new GenomicBin();
             GenomicBin.Chromosome = chr;
-            GenomicBin.Interval = new GenomicInterval() { Start = start, End = stop };
+            GenomicBin.Interval = new Interval(start, stop);
             GenomicBin.GC = gc;
             this.Count = count;
             this.CountDeviation = MadOfDIffs;
@@ -72,7 +72,7 @@ namespace CanvasCommon
         {
             _genomicBin = new GenomicBin();
             GenomicBin.Chromosome = chr;
-            GenomicBin.Interval = new GenomicInterval() { Start = start, End = stop };
+            GenomicBin.Interval = new Interval(start, stop);
             GenomicBin.GC = gc;
             this.CountDeviation = -1;
         }
@@ -80,24 +80,24 @@ namespace CanvasCommon
 
         public SampleGenomicBin(string chr, int start, int stop, int gc, float count)
         {
-            _genomicBin = new GenomicBin(chr, new GenomicInterval() { Start = start, End = stop }, gc);
+            _genomicBin = new GenomicBin(chr, new Interval(start, stop), gc);
             this.Count = count;
             this.CountDeviation = -1;
         }
 
         public int Size
         {
-            get { return GenomicBin.Interval.End - GenomicBin.Interval.Start; }
+            get { return GenomicBin.Interval.OneBasedEnd - GenomicBin.Interval.OneBasedStart; }
         }
         public int Start
         {
-            get { return GenomicBin.Interval.Start; }
-            set { GenomicBin.Interval.Start = value; }
+            get { return GenomicBin.Interval.OneBasedStart; }
+            //set { GenomicBin.Interval.OneBasedStart = value; }
         }
         public int Stop
         {
-            get { return GenomicBin.Interval.End; }
-            set { GenomicBin.Interval.End = value; }
+            get { return GenomicBin.Interval.OneBasedEnd; }
+            //set { GenomicBin.Interval.OneBasedEnd = value; }
         }
 
         public GenomicBin GenomicBin
@@ -108,7 +108,7 @@ namespace CanvasCommon
 
         public bool IsSameBin(SampleGenomicBin bin)
         {
-            return GenomicBin.Chromosome == bin.GenomicBin.Chromosome && GenomicBin.Interval.Start == bin.GenomicBin.Interval.Start && GenomicBin.Interval.End == bin.GenomicBin.Interval.End;
+            return GenomicBin.Chromosome == bin.GenomicBin.Chromosome && GenomicBin.Interval.OneBasedStart == bin.GenomicBin.Interval.OneBasedStart && GenomicBin.Interval.OneBasedEnd == bin.GenomicBin.Interval.OneBasedEnd;
         }
     }
 }

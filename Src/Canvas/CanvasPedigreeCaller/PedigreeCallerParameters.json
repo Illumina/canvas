@@ -1,11 +1,12 @@
 {
-        "MaximumCopyNumber" : 5,
-        "MaxAlleleNumber" : 3,
-        "DefaultAlleleDensityThreshold" : 300,
-        "MaxQscore" : 60.0,
-        "DefaultPerSegmentAlleleMaxCounts" : 100,
-        "DefaultAlleleCountThreshold" : 4,
-        "MaxNumOffspringGenotypes" : 500,
-        "DeNovoRate" : 0.00001,
-        "MinimumCallSize" : 2000
+  "MaximumCopyNumber": 5,
+  "MaxAlleleNumber": 3,
+  "DefaultAlleleDensityThreshold": 300,
+  "MaxQscore": 100.0,
+  "DefaultPerSegmentAlleleMaxCounts": 100,
+  "DefaultAlleleCountThreshold": 4,
+  "MaxNumOffspringGenotypes": 500,
+  "DeNovoRate": 0.00001,
+  "MinimumCallSize": 2000,
+  "NumberOfTrimmedBins": 2
 }

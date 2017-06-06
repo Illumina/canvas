@@ -1,14 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
 using CanvasCommon;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Xunit;
 
 namespace CanvasTest
 {
-    [TestClass]
     public class TestCanvasSomatic
     {
-        [TestMethod]
+        [Fact]
         public void TestUsableSegments()
         {
             List<CanvasSegment> segments = new List<CanvasSegment>();
@@ -38,7 +37,7 @@ namespace CanvasTest
                 segments.Add(segment);
             }
             var usable = CanvasSomaticCaller.SomaticCaller.GetUsableSegmentsForModeling(segments, false, 50);
-            Assert.AreEqual(50, usable.Count);
+            Assert.Equal(50, usable.Count);
         }
     }
 }
