@@ -19,17 +19,17 @@ namespace CanvasCommon
                 numberOfStates = maxNumberOfStates;
             }
 
-            var upperSetBound = SpecialFunctions.Factorial(numberOfStates) * SpecialFunctions.Factorial(numberOfStates / 2);
+            double upperSetBound = SpecialFunctions.Factorial(numberOfStates) * SpecialFunctions.Factorial(numberOfStates / 2);
             var allCombinations = new List<List<int>>(Convert.ToInt32(upperSetBound));
             for (int numberOfDiploidStates = 1; numberOfDiploidStates < numberOfStates; numberOfDiploidStates++)
             {
-                IEnumerable<int> states = Enumerable.Repeat(currentState, numberOfStates - numberOfDiploidStates)
+                var states = Enumerable.Repeat(currentState, numberOfStates - numberOfDiploidStates)
                     .Concat(Enumerable.Repeat(diploidState, numberOfDiploidStates));
                 var permutations = new Permutations<int>(states.ToList(), GenerateOption.WithoutRepetition);
                 var list = permutations.Select(x => x.ToList()).ToList();
                 allCombinations.AddRange(list);
             }
-            return allCombinations;
+            return allCombinations.Count == 0 ? new List<List<int>>{new List<int>{currentState}} : allCombinations;
         }
 
         public static List<double> NegativeBinomialWrapper(double mean, double variance, int maxValue, bool adjustR = false)
