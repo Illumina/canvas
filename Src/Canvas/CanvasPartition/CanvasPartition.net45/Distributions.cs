@@ -231,14 +231,8 @@ namespace CanvasPartition
 
             for (int cnState = 0; cnState < negativeBinomialDistributions.Count; cnState++)
             {
-                List<List<int>> currentGenotypePermutation = null;
                 int nDimensions = _negativeBinomialDistributions[cnState].GetDimensions();
-                if (_negativeBinomialDistributions[cnState].Mean().Average() < haploidMeans.Average() * 1.5 ||
-                    _negativeBinomialDistributions[cnState].Mean().Average() > haploidMeans.Average() * 1.5)
-                {
-                    currentGenotypePermutation = DistributionUtilities.GetGenotypeCombinations(nDimensions, cnState);
-                }
-                GenotypePermutations[cnState] = currentGenotypePermutation;
+                GenotypePermutations[cnState] = DistributionUtilities.GetGenotypeCombinations(nDimensions, cnState);
             }
         }
 

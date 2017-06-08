@@ -98,7 +98,7 @@ namespace CanvasCommon
         public double TruncatedMedianCount(int bins2Remove)
         {
             var tmpMedian = new SortedList<double>();
-            int start = Convert.ToInt32(Counts.Count * 0.25);
+            int start = bins2Remove;
             int end = Counts.Count - bins2Remove;
             if (end - start > 5)
             {
