@@ -87,21 +87,14 @@ namespace CanvasCommon
 
         public static PloidyInfo LoadPloidyFromVcfFile(string vcfPath, string sampleName)
         {
-            int sampleIndex = 0;
             PloidyInfo ploidy = new PloidyInfo();
 
             using (VcfReader reader = new VcfReader(vcfPath))
             {
-                if (!sampleName.IsNullOrEmpty())
-                {
-                    if (!sampleName.IsNullOrEmpty() && reader.Samples.Count < 2)
+                int sampleIndex = reader.Samples.IndexOf(sampleName);
+                    if (sampleIndex == -1)
                         throw new ArgumentException(
-                            $"File '{vcfPath}' must be a multi-sample sample VCF containing > 1 samples");
-                    if (reader.Samples.Select(x => Convert.ToInt32(x == sampleName)).Sum() != 1)
-                        throw new ArgumentException(
-                            $"File '{vcfPath}' should contain one genotypes column corresponding to sample {sampleName}");
-                    sampleIndex = reader.Samples.IndexOf(sampleName);
-                }
+                            $"File '{vcfPath}' does not contain a genotype column for sample '{sampleName}'");
 
                 ploidy.HeaderLine = string.Join(" ", reader.HeaderLines);
 
