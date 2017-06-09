@@ -197,7 +197,8 @@ namespace CanvasPedigreeCaller
             const int maxCoreNumber = 30;
             var segmentIntervals = GetParallelIntervals(numberOfSegments, Math.Min(Environment.ProcessorCount, maxCoreNumber));
             var genotypes = GenerateGenotypeCombinations(CallerParameters.MaximumCopyNumber);
-            var copyNumberCombinations = GenerateCopyNumberCombinations(CallerParameters.MaximumCopyNumber, CallerParameters.MaxAlleleNumber);
+            int maxAlleleNumber = Math.Min(CallerParameters.MaxAlleleNumber, pedigreeMembers.Count);         
+            var copyNumberCombinations = GenerateCopyNumberCombinations(CallerParameters.MaximumCopyNumber, maxAlleleNumber);
 
             foreach (PedigreeMember pedigreeMember in pedigreeMembers)
                 pedigreeMember.CnModel = new CopyNumberModel(CallerParameters.MaximumCopyNumber, pedigreeMember.MeanCoverage / 2.0, pedigreeMember.MeanMafCoverage / 2.0,
@@ -597,9 +598,18 @@ namespace CanvasPedigreeCaller
                 totalLikelihoods.Add(totalLikelihood);
             }
 
+            var density = new double[samples.Count][];
+            // no need to iterate over multiple genotypes for n (samples.Count) = 1
+            if (samples.Count == 1)
+            {
+                samples.First().Segments[segmentPosition].CopyNumber =
+                    copyNumberCombinations[totalLikelihoods.IndexOf(totalLikelihoods.Max())].First();
+                density[0] = totalLikelihoods.ToArray();
+                return density;
+            }
+
             var bestcopyNumberCombination = copyNumberCombinations[totalLikelihoods.IndexOf(totalLikelihoods.Max())];
             int counter = 0;
-            var density = new double[samples.Count][];
             foreach (PedigreeMember sample in samples)
             {
                 maximalLikelihood = 0;
