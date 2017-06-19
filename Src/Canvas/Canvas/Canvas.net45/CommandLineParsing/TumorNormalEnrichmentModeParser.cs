@@ -1,9 +1,10 @@
 using CanvasCommon.CommandLineParsing.CoreOptionTypes;
 using CanvasCommon.CommandLineParsing.OptionProcessing;
+using Illumina.Common.FileSystem;
 
 namespace Canvas.CommandLineParsing
 {
-    public class TumorNormalEnrichmentModeParser : ModeParser
+    public class TumorNormalEnrichmentModeParser : ModeParser<TumorNormalEnrichmentInput>
     {
         private static readonly CommonOptionsParser CommonOptionsParser = new CommonOptionsParser();
         private static readonly SingleSampleCommonOptionsParser SingleSampleCommonOptionsParser = new SingleSampleCommonOptionsParser();
@@ -15,22 +16,45 @@ namespace Canvas.CommandLineParsing
         {
         }
 
-        public override ParsingResult<IModeRunner> Parse(SuccessfulResultCollection parseInput)
+        public override ParsingResult<TumorNormalEnrichmentInput> GetResult(SuccessfulResultCollection result, CommonOptions commonOptions)
         {
-            CommonOptions commonOptions = parseInput.Get(CommonOptionsParser);
-            SingleSampleCommonOptions singleSampleCommonOptions = parseInput.Get(SingleSampleCommonOptionsParser);
-            TumorNormalOptions tumorNormalOptions = parseInput.Get(TumorNormalOptionsParser);
-            var normalBam = parseInput.Get(NormalBam);
-            var manifest = parseInput.Get(Manifest);
-            return ParsingResult<IModeRunner>.SuccessfulResult(new TumorNormalEnrichmentRunner(commonOptions, singleSampleCommonOptions, tumorNormalOptions, normalBam, manifest));
+            SingleSampleCommonOptions singleSampleCommonOptions = result.Get(SingleSampleCommonOptionsParser);
+            TumorNormalOptions tumorNormalOptions = result.Get(TumorNormalOptionsParser);
+            var normalBam = result.Get(NormalBam);
+            var manifest = result.Get(Manifest);
+            return ParsingResult<TumorNormalEnrichmentInput>.SuccessfulResult(
+                new TumorNormalEnrichmentInput(commonOptions, singleSampleCommonOptions, tumorNormalOptions, normalBam, manifest));
         }
 
-        public override OptionCollection<IModeRunner> GetOptions()
+        public override ParsingResult<IModeRunner> GetRunner(TumorNormalEnrichmentInput result)
         {
-            return new OptionCollection<IModeRunner>
+            return ParsingResult<IModeRunner>.SuccessfulResult(new TumorNormalEnrichmentRunner(result));
+        }
+
+        public override OptionCollection<IModeLauncher> GetModeOptions()
+        {
+            return new OptionCollection<IModeLauncher>
             {
                 TumorNormalOptionsParser, NormalBam, Manifest, CommonOptionsParser, SingleSampleCommonOptionsParser
             };
         }
+    }
+
+    public class TumorNormalEnrichmentInput
+    {
+        public TumorNormalEnrichmentInput(CommonOptions commonOptions, SingleSampleCommonOptions singleSampleCommonOptions, TumorNormalOptions tumorNormalOptions, IFileLocation normalBam, IFileLocation manifest)
+        {
+            CommonOptions = commonOptions;
+            SingleSampleCommonOptions = singleSampleCommonOptions;
+            TumorNormalOptions = tumorNormalOptions;
+            NormalBam = normalBam;
+            Manifest = manifest;
+        }
+
+        public CommonOptions CommonOptions { get; }
+        public SingleSampleCommonOptions SingleSampleCommonOptions { get; }
+        public TumorNormalOptions TumorNormalOptions { get; }
+        public IFileLocation NormalBam { get; }
+        public IFileLocation Manifest { get; }
     }
 }

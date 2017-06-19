@@ -5,6 +5,9 @@ using System.Linq;
 using CanvasCommon.CommandLineParsing.CoreOptionTypes;
 using CanvasCommon.CommandLineParsing.OptionProcessing;
 using Illumina.Common;
+using Illumina.Common.FileSystem;
+using Isas.Framework.FrameworkFactory;
+using Isas.Framework.Settings;
 
 namespace Canvas.CommandLineParsing
 {
@@ -12,63 +15,77 @@ namespace Canvas.CommandLineParsing
     {
         private readonly string _version;
         private readonly string _copyright;
-        private static readonly BaseOptionsParser BaseOptionsParser = new BaseOptionsParser();
-        private readonly Dictionary<string, ModeParser> _modeParsers;
+        public static readonly BaseOptionsParser BaseOptionsParser = new BaseOptionsParser();
+        public static readonly CommonOptionsParser CommonOptionsParser = new CommonOptionsParser();
+        private readonly Dictionary<string, IModeParser> _modeParsers;
 
-        public MainParser(string version, string copyright, params ModeParser[] modeParsers)
+        public MainParser(string version, string copyright, params IModeParser[] modeParsers)
         {
             _version = version;
             _copyright = copyright;
             _modeParsers = modeParsers.ToDictionary(modeParser => modeParser.Name, modeParser => modeParser, StringComparer.OrdinalIgnoreCase);
         }
 
-        public ParsingResult<IModeLauncher> Parse(string[] args, TextWriter standardWriter, TextWriter errorWriter)
+        public bool IsMissingMode(string[] args)
         {
-            if (args.Empty() || !_modeParsers.ContainsKey(args[0]))
-            {
-                return GetMissingModeResult(args, standardWriter, errorWriter);
-            }
-            var mode = _modeParsers[args[0]];
-            var options = new OptionCollection<IModeLauncher> { BaseOptionsParser, mode };
-            var result = options.Parse(args.Skip(1));
-            ParsingResult<IModeLauncher> failedResult;
-            var baseOptions = result.Get(BaseOptionsParser);
-            if (!result.RemainingArgs.Any() && baseOptions.Success && HandleBaseOptions(baseOptions.Result, standardWriter, mode))
-                return ParsingResult<IModeLauncher>.SuccessfulResult(new NullModeLauncher());
+            return args.Empty() || !_modeParsers.ContainsKey(args[0]);
+        }
 
-            if (!result.Validate(out failedResult))
+        public ParsingResult<CommonOptions> ParseCommonOptions(string[] args)
+        {
+            var options = new OptionCollection<IModeLauncher> { CommonOptionsParser };
+            var result = options.Parse(args.Skip(1));
+            return result.Get(CommonOptionsParser);
+        }
+
+        public ParsingResult<IModeLauncher> Parse(FrameworkServices frameworkServices, string[] args, TextWriter standardWriter, TextWriter errorWriter)
+        {
+            var mode = _modeParsers[args[0]];
+            return mode.Parse(this, frameworkServices, args, standardWriter, errorWriter);
+        }
+
+        public int Parse(string[] args, TextWriter standardWriter, TextWriter errorWriter)
+        {
+            var mode = _modeParsers[args[0]];
+            var options = mode.GetModeOptions();
+            options.Add(BaseOptionsParser);
+            options.Add(CommonOptionsParser);
+            var result = options.Parse(args.Skip(1));
+            var baseOptions = result.Get(BaseOptionsParser);
+            if (!result.RemainingArgs.Any() && baseOptions.Success && HandleBaseOptions(baseOptions.Result, standardWriter))
+                return 0;
+
+            if (!result.Validate(out ParsingResult<IModeLauncher> failedResult))
             {
                 errorWriter.WriteLine(failedResult.ErrorMessage);
                 errorWriter.WriteLine();
-                ShowHelp(errorWriter, mode);
-                return failedResult;
+                ShowHelp(errorWriter);
+                return -1;
             }
 
-            var runner = result.Get(mode).Result;
-            return ParsingResult<IModeLauncher>.SuccessfulResult(new ModeLauncher(runner, args, GetVersion(), mode.Name));
+            throw new IlluminaException("This method should only be called when we fail to parse common options");
         }
 
-        private ParsingResult<IModeLauncher> GetMissingModeResult(IEnumerable<string> args, TextWriter standardWriter, TextWriter errorWriter)
+        public int HandleMissingMode(IEnumerable<string> args, TextWriter standardWriter, TextWriter errorWriter)
         {
             string error = "Error: no mode specified";
             var baseOptionsResult = BaseOptionsParser.Parse(args);
             if (baseOptionsResult.Success)
             {
                 if (HandleBaseOptions(baseOptionsResult.Result, standardWriter))
-                    return ParsingResult<IModeLauncher>.SuccessfulResult(new NullModeLauncher());
+                    return 0;
             }
             else
             {
                 error = baseOptionsResult.ErrorMessage;
             }
-
             errorWriter.WriteLine(error);
             errorWriter.WriteLine();
             ShowHelp(errorWriter);
-            return ParsingResult<IModeLauncher>.FailedResult(error);
+            return -1;
         }
 
-        private bool HandleBaseOptions(BaseOptions baseOptions, TextWriter writer, ModeParser specifiedMode = null)
+        public bool HandleBaseOptions(BaseOptions baseOptions, TextWriter writer, IModeParser specifiedMode = null)
         {
             if (baseOptions.ShowHelp)
             {
@@ -84,7 +101,7 @@ namespace Canvas.CommandLineParsing
             return false;
         }
 
-        private void ShowHelp(TextWriter writer, ModeParser specifiedMode = null)
+        public void ShowHelp(TextWriter writer, IModeParser specifiedMode = null)
         {
             writer.WriteLine($"Canvas {GetVersion()} {GetCopyright()}");
             writer.WriteLine();
@@ -118,7 +135,7 @@ namespace Canvas.CommandLineParsing
             standardWriter.WriteLine(GetVersion());
         }
 
-        private string GetVersion()
+        public string GetVersion()
         {
             return _version;
         }
@@ -126,6 +143,37 @@ namespace Canvas.CommandLineParsing
         private string GetCopyright()
         {
             return _copyright;
+        }
+
+        public int Run(string[] args, TextWriter standardOutput, TextWriter standardError)
+        {
+            if (IsMissingMode(args))
+            {
+                return HandleMissingMode(args, standardOutput, standardError);
+            }
+
+            var commonOptionsResult = ParseCommonOptions(args);
+            if (!commonOptionsResult.Success)
+            {
+                return Parse(args, standardOutput, standardError);
+            }
+            var commonOptions = commonOptionsResult.Result;
+            IDirectoryLocation outFolder = commonOptions.OutputDirectory;
+            var log = outFolder.GetFileLocation("CanvasLog.txt");
+            var error = outFolder.GetFileLocation("CanvasError.txt");
+            IsasConfiguration config = IsasConfiguration.GetConfiguration();
+            IDirectoryLocation genomeRoot = commonOptions.WholeGenomeFasta?.Parent?.Parent?.Parent?.Parent?.Parent;
+            int returnValue = 0;
+            IsasFrameworkFactory.RunWithIsasFramework(outFolder, log, error, commonOptions.StartCheckpoint, commonOptions.StopCheckpoint, 0,
+                config.MaximumMemoryGB, config.MaximumHoursPerProcess, false, genomeRoot,
+                frameworkServices =>
+                {
+                    var result = Parse(frameworkServices, args, standardOutput, standardError);
+                    if (!result.Success)
+                        returnValue = -1;
+                    returnValue = result.Result.Launch();
+                });
+            return returnValue;
         }
     }
 }

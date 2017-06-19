@@ -6,11 +6,27 @@ using CanvasCommon.CommandLineParsing.OptionProcessing;
 using Illumina.Common.FileSystem;
 using Xunit;
 using System.Linq;
+using Isas.Framework.Checkpointing;
+using Isas.Framework.FrameworkFactory;
+using Isas.Framework.Logging;
+using Isas.Framework.Utilities;
+using Isas.Framework.WorkManagement;
+using NSubstitute;
 
 namespace CanvasTest.Canvas.CommandLineParsing
 {
     public class ModeParserTests
     {
+        private FrameworkServices _services;
+        private ICheckpointRunner _checkpointer;
+
+        public ModeParserTests()
+        {
+            var logger = Substitute.For<ILogger>();
+            _checkpointer = Substitute.For<ICheckpointRunner>();
+            _services = new FrameworkServices(logger, _checkpointer, Substitute.For<IWorkManager>());
+        }
+
         private const string Version = "Version";
         private const string Copyright = "Copyright";
 
@@ -33,18 +49,17 @@ namespace CanvasTest.Canvas.CommandLineParsing
             };
 
             // act
-            var result = parser.Parse(noArgs, standardWriter, errorWriter);
+            var result = parser.Run(noArgs, standardWriter, errorWriter);
             string errorOutput = errorWriter.ToString();
 
             // assert
-            Assert.False(result.Success);
+            Assert.Equal(-1, result);
             Assert.Contains(messageToDisplay, errorOutput);
             Assert.Empty(standardWriter.ToString());
         }
 
-        private static MainParser GetMainParser(ModeParser germlineWgsModeParser)
+        private static MainParser GetMainParser(IModeParser germlineWgsModeParser)
         {
-
             return new MainParser(Version, Copyright, germlineWgsModeParser);
         }
 
@@ -68,11 +83,11 @@ namespace CanvasTest.Canvas.CommandLineParsing
             };
 
             // act
-            var result = parser.Parse(args, standardWriter, errorWriter);
+            var result = parser.Run(args, standardWriter, errorWriter);
             string standardOutput = standardWriter.ToString();
 
             // assert
-            Assert.True(result.Success);
+            Assert.Equal(0, result);
             Assert.Contains(messageToDisplay, standardOutput);
             Assert.Empty(errorWriter.ToString());
         }
@@ -98,11 +113,11 @@ namespace CanvasTest.Canvas.CommandLineParsing
             };
 
             // act
-            var result = parser.Parse(args, standardWriter, errorWriter);
+            var result = parser.Run(args, standardWriter, errorWriter);
             string errorOutput = errorWriter.ToString();
 
             // assert
-            Assert.False(result.Success);
+            Assert.Equal(-1, result);
             Assert.Contains(messageToDisplay, errorOutput);
             Assert.Empty(standardWriter.ToString());
         }
@@ -110,6 +125,7 @@ namespace CanvasTest.Canvas.CommandLineParsing
         [Fact]
         public void Parse_ModeWithMissingRequiredArgument_DisplaysError()
         {
+            _checkpointer.RunCheckpoint("name", () => (GermlineWgsInput)null).ReturnsForAnyArgs(info => info.ArgAt<Func<GermlineWgsInput>>(1)());
             string messageToDisplay = "required";
             StringWriter standardWriter = new StringWriter();
             StringWriter errorWriter = new StringWriter();
@@ -123,10 +139,11 @@ namespace CanvasTest.Canvas.CommandLineParsing
             };
 
             // act
-            parser.Parse(modeArgs, standardWriter, errorWriter);
+            var result = parser.Parse(_services, modeArgs, standardWriter, errorWriter);
             string errorOutput = errorWriter.ToString();
 
             // assert
+            Assert.False(result.Success);
             Assert.Contains(messageToDisplay, errorOutput);
             Assert.Empty(standardWriter.ToString());
         }
@@ -147,11 +164,11 @@ namespace CanvasTest.Canvas.CommandLineParsing
             };
 
             // act
-            var result = parser.Parse(modeArgs, standardWriter, errorWriter);
+            var result = parser.Run(modeArgs, standardWriter, errorWriter);
             string output = standardWriter.ToString().Trim();
 
             // assert
-            Assert.True(result.Success);
+            Assert.Equal(0, result);
             Assert.Equal(Version, output);
             Assert.Empty(errorWriter.ToString());
         }
@@ -406,23 +423,19 @@ namespace CanvasTest.Canvas.CommandLineParsing
             StringWriter standardWriter = new StringWriter();
             StringWriter errorWriter = new StringWriter();
 
-            using (TemporaryDirectoryFixture tempDirectory = new TemporaryDirectoryFixture())
+            // arrange
+            GermlineWgsModeParser germlineWgsModeParser = new GermlineWgsModeParser(name, description);
+            MainParser parser = GetMainParser(germlineWgsModeParser);
+            string[] args =
             {
-
-                // arrange
-                GermlineWgsModeParser germlineWgsModeParser = new GermlineWgsModeParser(name, description);
-                MainParser parser = GetMainParser(germlineWgsModeParser);
-                string[] args =
-                {
                 "-h"
             };
 
-                // act
-                var result = parser.Parse(args, standardWriter, errorWriter);
+            // act
+            var result = parser.Run(args, standardWriter, errorWriter);
 
-                // assert
-                Assert.True(result.Success);
-            }
+            // assert
+            Assert.Equal(0, result);
         }
 
         [Fact]
@@ -690,8 +703,8 @@ namespace CanvasTest.Canvas.CommandLineParsing
             {
                 var result = parser.Parse(args, standardWriter, errorWriter);
                 // assert
-                Assert.False(result.Success);
-                Assert.Contains("does not exist", result.ErrorMessage);
+                Assert.Equal(-1, result);
+                Assert.Contains("does not exist", errorWriter.GetStringBuilder().ToString());
             }
         }
 

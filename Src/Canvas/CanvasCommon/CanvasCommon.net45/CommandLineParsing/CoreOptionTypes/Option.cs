@@ -8,12 +8,17 @@ namespace CanvasCommon.CommandLineParsing.CoreOptionTypes
     {
         IOptionCollection GetOptions();
         IParsingResult Parse(SuccessfulResultCollection parseInput);
+        void ShowHelp(TextWriter writer);
     }
 
     public abstract class Option<TParseOutput> : IOption
     {
         public abstract OptionCollection<TParseOutput> GetOptions();
         public abstract ParsingResult<TParseOutput> Parse(SuccessfulResultCollection parseInput);
+        public void ShowHelp(TextWriter writer)
+        {
+            OptionExtensions.ShowHelp(this, writer);
+        }
 
         IOptionCollection IOption.GetOptions()
         {

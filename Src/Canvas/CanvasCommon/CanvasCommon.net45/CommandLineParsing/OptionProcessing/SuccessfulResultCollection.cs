@@ -12,7 +12,7 @@ namespace CanvasCommon.CommandLineParsing.OptionProcessing
         {
             IParsingResult failedResult;
             if (!collection.Validate(out failedResult))
-                throw new ArgumentException($"{nameof(collection)}: all parsing results must be successful");
+                throw new ArgumentException($"{nameof(collection)}: all parsing results must be successful. {failedResult.ErrorMessage}.");
             _collection = collection;
         }
 

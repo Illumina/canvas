@@ -12,11 +12,11 @@ namespace Canvas
     {
         private readonly SomaticEnrichmentOptions _somaticEnrichmentOptions;
 
-        public SomaticEnrichmentRunner(CommonOptions commonOptions, SingleSampleCommonOptions singleSampleCommonOptions, SomaticEnrichmentOptions somaticEnrichmentOptions)
+        public SomaticEnrichmentRunner(SomaticEnrichmentInput input)
         {
-            _somaticEnrichmentOptions = somaticEnrichmentOptions;
-            CommonOptions = commonOptions;
-            SingleSampleCommonOptions = singleSampleCommonOptions;
+            _somaticEnrichmentOptions = input.SomaticEnrichmentOptions;
+            CommonOptions = input.CommonOptions;
+            SingleSampleCommonOptions = input.SingleSampleCommonOptions;
         }
 
         public CommonOptions CommonOptions { get; }

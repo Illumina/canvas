@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
@@ -16,6 +17,8 @@ namespace CanvasCommon.CommandLineParsing.OptionProcessing
         IResultCollection ParseInternal(IEnumerable<string> args);
         IResultCollection ParseInternal(Dictionary<IOption, OptionData> optionResults, IEnumerable<string> remainingArgs = null);
         IEnumerable<IOptionInfo> GetLeafs();
+        void Add<T>(Option<T> option);
+        IResultCollection Parse(IEnumerable<string> args);
     }
 
     public class OptionCollection<TResult> : IOptionCollection, IEnumerable<KeyValuePair<IOption, IOptionCollection>>
@@ -189,6 +192,11 @@ namespace CanvasCommon.CommandLineParsing.OptionProcessing
         IEnumerator IEnumerable.GetEnumerator()
         {
             return _optionCollections.GetEnumerator();
+        }
+
+        IResultCollection IOptionCollection.Parse(IEnumerable<string> args)
+        {
+            return Parse(args);
         }
     }
 }

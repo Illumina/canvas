@@ -4,9 +4,8 @@ using Illumina.Common.FileSystem;
 
 namespace Canvas.CommandLineParsing
 {
-    public class TumorNormalWgsModeParser : ModeParser
+    public class TumorNormalWgsModeParser : ModeParser<TumorNormalWgsInput>
     {
-        private static readonly CommonOptionsParser CommonOptionsParser = new CommonOptionsParser();
         private static readonly TumorNormalOptionsParser TumorNormalOptionsParser = new TumorNormalOptionsParser();
         private static readonly SingleSampleCommonOptionsParser SingleSampleCommonOptionsParser = new SingleSampleCommonOptionsParser();
 
@@ -15,21 +14,41 @@ namespace Canvas.CommandLineParsing
         {
         }
 
-        public override ParsingResult<IModeRunner> Parse(SuccessfulResultCollection parseInput)
+        public override ParsingResult<TumorNormalWgsInput> GetResult(SuccessfulResultCollection result, CommonOptions commonOptions)
         {
-            CommonOptions commonOptions = parseInput.Get(CommonOptionsParser);
-            SingleSampleCommonOptions singleSampleCommonOptions = parseInput.Get(SingleSampleCommonOptionsParser);
-            TumorNormalOptions tumorNormalOptions = parseInput.Get(TumorNormalOptionsParser);
-            return ParsingResult<IModeRunner>.SuccessfulResult(new TumorNormalWgsRunner(commonOptions, singleSampleCommonOptions, tumorNormalOptions));
+            var singleSampleCommonOptions = result.Get(SingleSampleCommonOptionsParser);
+            TumorNormalOptions tumorNormalOptions = result.Get(TumorNormalOptionsParser);
+            return ParsingResult<TumorNormalWgsInput>.SuccessfulResult(
+                new TumorNormalWgsInput(commonOptions, singleSampleCommonOptions, tumorNormalOptions));
+
         }
 
-        public override OptionCollection<IModeRunner> GetOptions()
+        public override ParsingResult<IModeRunner> GetRunner(TumorNormalWgsInput result)
         {
-            return new OptionCollection<IModeRunner>
+            return ParsingResult<IModeRunner>.SuccessfulResult(new TumorNormalWgsRunner(result));
+        }
+
+        public override OptionCollection<IModeLauncher> GetModeOptions()
+        {
+            return new OptionCollection<IModeLauncher>
             {
-                TumorNormalOptionsParser, CommonOptionsParser, SingleSampleCommonOptionsParser
+                TumorNormalOptionsParser, SingleSampleCommonOptionsParser
             };
         }
+    }
+
+    public class TumorNormalWgsInput
+    {
+        public TumorNormalWgsInput(CommonOptions commonOptions, SingleSampleCommonOptions singleSampleCommonOptions, TumorNormalOptions tumorNormalOptions)
+        {
+            CommonOptions = commonOptions;
+            SingleSampleCommonOptions = singleSampleCommonOptions;
+            TumorNormalOptions = tumorNormalOptions;
+        }
+
+        public CommonOptions CommonOptions { get; }
+        public SingleSampleCommonOptions SingleSampleCommonOptions { get; }
+        public TumorNormalOptions TumorNormalOptions { get; }
     }
 
     internal class TumorNormalOptionsParser : Option<TumorNormalOptions>

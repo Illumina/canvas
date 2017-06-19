@@ -8,6 +8,7 @@ namespace CanvasCommon.CommandLineParsing.OptionProcessing
     {
         bool Validate(out IParsingResult result);
         ParsingResult<T> Get<T>(Option<T> option);
+        IEnumerable<string> RemainingArgs { get; }
     }
 
     public class ResultCollection<TResult> : IResultCollection
