@@ -16,7 +16,7 @@ namespace Canvas.Wrapper
     {
         private readonly IWorkManager _workManager;
         private readonly ILogger _logger;
-        private readonly IFileLocation _canvasExe;
+        private readonly IFileLocation _canvasDll;
         private readonly ICanvasAnnotationFileProvider _annotationFileProvider;
         private readonly ICanvasSingleSampleInputCommandLineBuilder _singleSampleInputCommandLineBuilder;
         private readonly CanvasPloidyBedCreator _canvasPloidyBedCreator;
@@ -25,14 +25,14 @@ namespace Canvas.Wrapper
         public CanvasResequencingCnvCaller(
             IWorkManager workManager,
             ILogger logger,
-            IFileLocation canvasExe, IFileLocation runtimeExecutable,
+            IFileLocation canvasDll, IFileLocation runtimeExecutable,
             ICanvasAnnotationFileProvider annotationFileProvider,
             ICanvasSingleSampleInputCommandLineBuilder singleSampleInputCommandLineBuilder,
             CanvasPloidyBedCreator canvasPloidyBedCreator)
         {
             _workManager = workManager;
             _logger = logger;
-            _canvasExe = canvasExe;
+            _canvasDll = canvasDll;
             _annotationFileProvider = annotationFileProvider;
             _singleSampleInputCommandLineBuilder = singleSampleInputCommandLineBuilder;
             _canvasPloidyBedCreator = canvasPloidyBedCreator;
@@ -87,8 +87,8 @@ namespace Canvas.Wrapper
 
             UnitOfWork singleSampleJob = new UnitOfWork()
             {
-                ExecutablePath = CrossPlatform.IsThisLinux() ? _runtimeExecutable.FullName : _canvasExe.FullName,
-                CommandLine = CrossPlatform.IsThisLinux() ? _canvasExe + " " + commandLine : commandLine.ToString(),
+                ExecutablePath = _runtimeExecutable.FullName,
+                CommandLine = _canvasDll + " " + commandLine,
                 LoggingStub = "Canvas_" + sampleId,
             };
             _workManager.DoWorkSingleThread(singleSampleJob);
