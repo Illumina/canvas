@@ -304,12 +304,16 @@ namespace CanvasPedigreeCaller
 
             foreach (PedigreeMember proband in probands)
             {
-                var probandIndex = names.IndexOf(proband.Name);
+                int probandIndex = names.IndexOf(proband.Name);
                 var remainingProbandIndex = probands.Except(proband.ToEnumerable()).Select(x => names.IndexOf(x.Name));
-
-                if (cnStates[probandIndex] != 2 && cnStates[parent1Index] == 2 && cnStates[parent2Index] == 2 &&
-                    remainingProbandIndex.All(index => cnStates[index] == 2) && singleSampleQualityScores[probandIndex] > QualityFilterThreshold &&
-                    singleSampleQualityScores[parent1Index] > QualityFilterThreshold && singleSampleQualityScores[parent2Index] > QualityFilterThreshold)
+                if (cnStates[probandIndex] != proband.GetPloidy(segmentIndex) && // targeted proband is ALT
+                   (ParentsRefCheck(parents, segmentIndex, cnStates, parent1Index, parent2Index) || // either parent are REF or 
+                    CommonCnvCheck(parents, proband, cnStates, parent1Index, probandIndex, parent2Index, segmentIndex)) && // or common variant 
+                    remainingProbandIndex.All(index => cnStates[index] == probands[index].GetPloidy(segmentIndex) ||
+                    CommonCnvCheck(parents, probands[index], cnStates, parent1Index, parent2Index, index, segmentIndex)) && // and other probands are REF or common variant 
+                    singleSampleQualityScores[probandIndex] > QualityFilterThreshold &&
+                    singleSampleQualityScores[parent1Index] > QualityFilterThreshold && 
+                    singleSampleQualityScores[parent2Index] > QualityFilterThreshold) // and all q-scores are above the threshold
                 {
                     var deNovoQualityScore = GetConditionalDeNovoQualityScore(copyNumberLikelihoods, probandIndex,
                         cnStates[probandIndex], names[probandIndex], parent1Index, parent2Index, remainingProbandIndex.ToList());
@@ -327,6 +331,18 @@ namespace CanvasPedigreeCaller
                     sample.Segments[segmentIndex].Filter = $"q{QualityFilterThreshold}";
                 counter++;
             }
+        }
+
+        private static bool CommonCnvCheck(List<PedigreeMember> parents, PedigreeMember proband, List<int> cnStates, int parent1Index, int parent2Index,
+            int probandIndex, int segmentIndex)
+        {
+            return (cnStates[parent1Index] == cnStates[probandIndex] && parents.First().GetPloidy(segmentIndex) == proband.GetPloidy(segmentIndex)) || 
+                cnStates[parent2Index] == cnStates[probandIndex] && parents.Last().GetPloidy(segmentIndex) == proband.GetPloidy(segmentIndex);
+        }
+
+        private static bool ParentsRefCheck(List<PedigreeMember> parents, int segmentIndex, List<int> cnStates, int parent1Index, int parent2Index)
+        {
+            return cnStates[parent1Index] == parents.First().GetPloidy(segmentIndex) && cnStates[parent2Index] == parents.Last().GetPloidy(segmentIndex);
         }
 
         private void EstimateQScoresNoPedigreeInfo(LinkedList<PedigreeMember> samples, int segmentIndex, double[][] copyNumberLikelihoods)
