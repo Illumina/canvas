@@ -298,38 +298,44 @@ namespace CanvasPedigreeCaller
             var names = parents.Concat(offsprings).Select(x => x.Name).ToList();
             var probands = GetProbands(offsprings);
             var singleSampleQualityScores = GetSingleSampleQualityScores(copyNumberLikelihoods, cnStates, names);
-
-            var parent1Index = names.IndexOf(parents.First().Name);
-            var parent2Index = names.IndexOf(parents.Last().Name);
-
-            foreach (PedigreeMember proband in probands)
-            {
-                int probandIndex = names.IndexOf(proband.Name);
-                var remainingProbandIndex = probands.Except(proband.ToEnumerable()).Select(x => names.IndexOf(x.Name));
-                if (cnStates[probandIndex] != proband.GetPloidy(segmentIndex) && // targeted proband is ALT
-                   (ParentsRefCheck(parents, segmentIndex, cnStates, parent1Index, parent2Index) || // either parent are REF or 
-                    CommonCnvCheck(parents, proband, cnStates, parent1Index, probandIndex, parent2Index, segmentIndex)) && // or common variant 
-                    remainingProbandIndex.All(index => cnStates[index] == probands[index].GetPloidy(segmentIndex) ||
-                    CommonCnvCheck(parents, probands[index], cnStates, parent1Index, parent2Index, index, segmentIndex)) && // and other probands are REF or common variant 
-                    singleSampleQualityScores[probandIndex] > QualityFilterThreshold &&
-                    singleSampleQualityScores[parent1Index] > QualityFilterThreshold && 
-                    singleSampleQualityScores[parent2Index] > QualityFilterThreshold) // and all q-scores are above the threshold
-                {
-                    var deNovoQualityScore = GetConditionalDeNovoQualityScore(copyNumberLikelihoods, probandIndex,
-                        cnStates[probandIndex], names[probandIndex], parent1Index, parent2Index, remainingProbandIndex.ToList());
-                    if (Double.IsInfinity(deNovoQualityScore) | deNovoQualityScore > CallerParameters.MaxQscore)
-                        deNovoQualityScore = CallerParameters.MaxQscore;
-                    proband.Segments[segmentIndex].DQScore = deNovoQualityScore;
-                }
-            }
-
             var counter = 0;
-            foreach (PedigreeMember sample in parents.Concat(offsprings))
+            foreach (var sample in parents.Concat(offsprings))
             {
                 sample.Segments[segmentIndex].QScore = singleSampleQualityScores[counter];
                 if (sample.Segments[segmentIndex].QScore < QualityFilterThreshold)
                     sample.Segments[segmentIndex].Filter = $"q{QualityFilterThreshold}";
                 counter++;
+            }
+            SetDenovoQualityScores(parents, segmentIndex, copyNumberLikelihoods, names, probands, cnStates, singleSampleQualityScores);
+        }
+
+        private void SetDenovoQualityScores(List<PedigreeMember> parents, int segmentIndex, CopyNumberDistribution copyNumberLikelihoods,
+            List<string> names, List<PedigreeMember> probands, List<int> cnStates, List<double> singleSampleQualityScores)
+        {
+            int parent1Index = names.IndexOf(parents.First().Name);
+            int parent2Index = names.IndexOf(parents.Last().Name);
+
+            foreach (var proband in probands)
+            {
+                int probandIndex = names.IndexOf(proband.Name);
+                var remainingProbandIndex = probands.Except(proband.ToEnumerable()).Select(x => names.IndexOf(x.Name));
+                if (cnStates[probandIndex] != proband.GetPloidy(segmentIndex) && // targeted proband is ALT
+                    (ParentsRefCheck(parents, segmentIndex, cnStates, parent1Index, parent2Index) ||
+                     // either parent are REF or 
+                     CommonCnvCheck(parents, proband, cnStates, parent1Index, probandIndex, parent2Index, segmentIndex)) &&
+                    // or a common variant 
+                    // and other probands are REF or common variant 
+                    singleSampleQualityScores[probandIndex] > QualityFilterThreshold &&
+                    singleSampleQualityScores[parent1Index] > QualityFilterThreshold &&
+                    singleSampleQualityScores[parent2Index] > QualityFilterThreshold)
+                    // and all q-scores are above the threshold
+                {
+                    double deNovoQualityScore = GetConditionalDeNovoQualityScore(copyNumberLikelihoods, probandIndex,
+                        cnStates[probandIndex], names[probandIndex], parent1Index, parent2Index, remainingProbandIndex.ToList());
+                    if (Double.IsInfinity(deNovoQualityScore) | deNovoQualityScore > CallerParameters.MaxQscore)
+                        deNovoQualityScore = CallerParameters.MaxQscore;
+                    proband.Segments[segmentIndex].DQScore = deNovoQualityScore;
+                }
             }
         }
 
