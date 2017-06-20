@@ -320,8 +320,13 @@ namespace CanvasPedigreeCaller
                 int probandIndex = names.IndexOf(proband.Name);
                 var remainingProbandIndex = probands.Except(proband.ToEnumerable()).Select(x => names.IndexOf(x.Name));
                 if (cnStates[probandIndex] != proband.GetPloidy(segmentIndex) && // targeted proband is ALT
-                    ParentsRefCheck(parents, segmentIndex, cnStates, parent1Index, parent2Index) &&
+                    (ParentsRefCheck(parents, segmentIndex, cnStates, parent1Index, parent2Index) ||
+                     // either parent are REF or 
+                     CommonCnvCheck(parents, proband, cnStates, parent1Index,  parent2Index, probandIndex, segmentIndex)) &&
                     // or a common variant 
+                    remainingProbandIndex.All(index => cnStates[index] == probands[index].GetPloidy(segmentIndex) ||
+                                                       CommonCnvCheck(parents, probands[index], cnStates, parent1Index,
+                                                           parent2Index, index, segmentIndex)) &&
                     // and other probands are REF or common variant 
                     singleSampleQualityScores[probandIndex] > QualityFilterThreshold &&
                     singleSampleQualityScores[parent1Index] > QualityFilterThreshold &&
