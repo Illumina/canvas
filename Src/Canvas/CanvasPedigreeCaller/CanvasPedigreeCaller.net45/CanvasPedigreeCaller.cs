@@ -336,8 +336,9 @@ namespace CanvasPedigreeCaller
         private static bool CommonCnvCheck(List<PedigreeMember> parents, PedigreeMember proband, List<int> cnStates, int parent1Index, int parent2Index,
             int probandIndex, int segmentIndex)
         {
-            return (cnStates[parent1Index] == cnStates[probandIndex] && parents.First().GetPloidy(segmentIndex) == proband.GetPloidy(segmentIndex)) || 
-                cnStates[parent2Index] == cnStates[probandIndex] && parents.Last().GetPloidy(segmentIndex) == proband.GetPloidy(segmentIndex);
+            bool isCommoCnv = (cnStates[parent1Index] == cnStates[probandIndex] && parents.First().GetPloidy(segmentIndex) == proband.GetPloidy(segmentIndex)) || 
+                (cnStates[parent2Index] == cnStates[probandIndex] && parents.Last().GetPloidy(segmentIndex) == proband.GetPloidy(segmentIndex));
+            return !isCommoCnv;
         }
 
         private static bool ParentsRefCheck(List<PedigreeMember> parents, int segmentIndex, List<int> cnStates, int parent1Index, int parent2Index)
