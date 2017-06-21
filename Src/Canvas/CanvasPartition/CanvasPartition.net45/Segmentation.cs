@@ -184,7 +184,7 @@ namespace CanvasPartition
         /// <summary>
         /// Merge segmentation breakpoints with common CNV intervals
         /// </summary>
-        public static List<int> OverlapCommonRegions(List<int> breakpoints, List<SampleGenomicBin> commonCNVintervals)
+        public static List<int> OverlapCommonRegions(List<int> breakpoints, List<Interval> commonCNVintervals)
         {
             var newBreakpoints = new List<int>();
             int index = 0;
@@ -194,22 +194,22 @@ namespace CanvasPartition
                 while (index < length)
                 {
 
-                    if (breakpoint <= commonCNVintervals[index].Start)
+                    if (breakpoint <= commonCNVintervals[index].OneBasedStart)
                     {
                         newBreakpoints.Add(breakpoint);
                         break;
                     }
-                    if (breakpoint > commonCNVintervals[index].Start && breakpoint < commonCNVintervals[index].Stop)
+                    if (breakpoint > commonCNVintervals[index].OneBasedStart && breakpoint < commonCNVintervals[index].OneBasedEnd)
                     {
-                        newBreakpoints.Add(commonCNVintervals[index].Start);
-                        newBreakpoints.Add(commonCNVintervals[index].Stop);
+                        newBreakpoints.Add(commonCNVintervals[index].OneBasedStart);
+                        newBreakpoints.Add(commonCNVintervals[index].OneBasedEnd);
                         index++;
                         break;
                     }
-                    if (breakpoint >= commonCNVintervals[index].Stop)
+                    if (breakpoint >= commonCNVintervals[index].OneBasedEnd)
                     {
-                        newBreakpoints.Add(commonCNVintervals[index].Start);
-                        newBreakpoints.Add(commonCNVintervals[index].Stop);
+                        newBreakpoints.Add(commonCNVintervals[index].OneBasedStart);
+                        newBreakpoints.Add(commonCNVintervals[index].OneBasedEnd);
                         index++;
                     }
                 }

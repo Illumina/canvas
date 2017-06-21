@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Reflection.Metadata;
 using System.Runtime.InteropServices;
 using MathNet.Numerics.Distributions;
 using System.Threading.Tasks;
@@ -10,6 +11,7 @@ using Combinatorics.Collections;
 using Illumina.Common;
 using Illumina.Common.FileSystem;
 using Isas.SequencingFiles;
+using MathNet.Numerics;
 
 namespace CanvasPedigreeCaller
 {
@@ -274,15 +276,20 @@ namespace CanvasPedigreeCaller
                 Name = sampleName,
                 Segments = CanvasSegment.ReadSegments(segmentFiles[fileCounter])
             };
-            CoverageInfo coverage = CanvasSegment.ReadBEDInput(segmentFiles[fileCounter]);
+            var coverage = CanvasSegment.ReadBEDInput(segmentFiles[fileCounter]);
             if (commonCNVsbedPath != null)
             {
                 var commonRegions = CanvasCommon.Utilities.LoadBedFile(commonCNVsbedPath);
                 CanvasCommon.Utilities.SortAndOverlapCheck(commonRegions, commonCNVsbedPath);
+                CanvasCommon.Utilities.SortAndOverlapCheck(commonRegions, commonCNVsbedPath);
+                if (IdenticalChromosomeNames(commonRegions, coverage) == 0)
+                    throw new ArgumentException($"Chromosome names in a common CNVs bed file {commonCNVsbedPath} does not match " +
+                        $"chromosomes in {segmentFiles[fileCounter]}");
+
                 foreach (string chr in commonRegions.Keys)
                 {
                     var genomicRegions = CanvasSegment.RemapCommonRegions(commonRegions[chr], coverage.StartByChr[chr], coverage.EndByChr[chr]);
-
+                    var commonCnvCanvasSegments = CanvasSegment.CreateSegmentsFromCommonCnvs(coverage, chr, genomicRegions);
                 }
             }
             pedigreeMember.MeanMafCoverage = CanvasIO.LoadFrequenciesBySegment(variantFrequencyFiles[fileCounter],
@@ -302,6 +309,12 @@ namespace CanvasPedigreeCaller
             if (!ploidyBedPath.IsNullOrEmpty() && File.Exists(ploidyBedPath))
                 pedigreeMember.Ploidy = PloidyInfo.LoadPloidyFromVcfFile(ploidyBedPath, pedigreeMember.Name);
             return pedigreeMember;
+        }
+
+        private static int IdenticalChromosomeNames(Dictionary<string, List<SampleGenomicBin>> commonRegions, CoverageInfo coverage)
+        {
+            var chromsomes = new HashSet<string> (coverage.CoverageByChr.Keys);
+            return  commonRegions.Keys.Count(chromosome => chromsomes.Contains(chromosome));
         }
 
         private void EstimateQScoresWithPedigreeInfo(List<PedigreeMember> parents, List<PedigreeMember> offsprings, int segmentIndex,
