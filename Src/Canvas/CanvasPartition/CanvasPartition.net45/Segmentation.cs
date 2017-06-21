@@ -20,24 +20,21 @@ namespace CanvasPartition
             Vaf = vaf;
         }
     }
+
     class SegmentationInput
     {
         public string CoverageMetricsFile { get; }
         public string ReferenceFolder { get; }
 
-        #region Members
 
+        #region Members
         private string InputBinPath;
         private string InputVafPath;
-        private const int idxChr = 0, idxStart = 1, idxEnd = 2;
-        private int idxScore = 3;
-        public Dictionary<string, uint[]> StartByChr = new Dictionary<string, uint[]>();
-        public Dictionary<string, uint[]> EndByChr = new Dictionary<string, uint[]>();
-        public Dictionary<string, double[]> CoverageByChr = new Dictionary<string, double[]>();
         public Dictionary<string, List<VafContainingBins>> VafByChr = new Dictionary<string, List<VafContainingBins>>();
-
         public string ForbiddenIntervalBedPath = null;
         public int MaxInterBinDistInSegment;
+        public CoverageInfo CoverageInfo = new CoverageInfo();
+
         #endregion
 
         public class Segment
@@ -50,7 +47,7 @@ namespace CanvasPartition
         {
             public IDictionary<string, SegmentationInput.Segment[]> SegmentByChr;
 
-            public GenomeSegmentationResults(IDictionary<string, Segment[]> segmentByChr)
+            public GenomeSegmentationResults(IDictionary<string, SegmentationInput.Segment[]> segmentByChr)
             {
                 this.SegmentByChr = segmentByChr;
             }
@@ -76,7 +73,7 @@ namespace CanvasPartition
 
         private void ReadInputFiles(string referenceFolder)
         {
-            ReadBEDInput();
+            CoverageInfo = CanvasSegment.ReadBEDInput(InputBinPath, ForbiddenIntervalBedPath);
             if (InputVafPath != null)
                 LoadVAFInput(referenceFolder);
         }
@@ -130,58 +127,6 @@ namespace CanvasPartition
             return segments;
         }
 
-
-        /// <summary>
-        /// Assume that the rows are sorted by the start position and ascending order
-        /// </summary>
-        private void ReadBEDInput()
-        {
-            GenomicBinFilter binFilter = new GenomicBinFilter(ForbiddenIntervalBedPath);
-
-            try
-            {
-                var startByChr = new Dictionary<string, List<uint>>();
-                var endByChr = new Dictionary<string, List<uint>>();
-                var scoreByChr = new Dictionary<string, List<double>>();
-                using (var reader = new GzipReader(this.InputBinPath))
-                {
-                    string line;
-                    while ((line = reader.ReadLine()) != null)
-                    {
-                        var tokens = line.Split('\t');
-                        string chrom = tokens[idxChr].Trim();
-                        uint start = Convert.ToUInt32(tokens[idxStart].Trim());
-                        uint end = Convert.ToUInt32(tokens[idxEnd].Trim());
-                        if (binFilter.SkipBin(chrom, start, end))
-                            continue;
-                        if (!startByChr.ContainsKey(chrom))
-                        {
-                            startByChr.Add(chrom, new List<uint>());
-                            endByChr.Add(chrom, new List<uint>());
-                            scoreByChr.Add(chrom, new List<double>());
-                        }
-                        startByChr[chrom].Add(start);
-                        endByChr[chrom].Add(end);
-                        scoreByChr[chrom].Add(Convert.ToDouble(tokens[idxScore].Trim()));
-                    }
-                    foreach (string chr in startByChr.Keys)
-                    {
-                        this.StartByChr[chr] = startByChr[chr].ToArray();
-                        this.EndByChr[chr] = endByChr[chr].ToArray();
-                        this.CoverageByChr[chr] = scoreByChr[chr].ToArray();
-                    }
-                }
-            }
-            catch (Exception e)
-            {
-                Console.Error.WriteLine("File {0} could not be read:", this.InputBinPath);
-                Console.Error.WriteLine(e.Message);
-                Environment.Exit(1);
-            }
-        }
-
-
-
         /// <summary>
         /// Parse the outputs of CanvasSNV, and note these variant frequencies in the appropriate segment.
         /// </summary>
@@ -192,19 +137,18 @@ namespace CanvasPartition
                 var vafByChr = new Dictionary<string, List<List<double>>>();
                 var intervalsByChromosome = new Dictionary<string, List<Interval>>();
 
-                foreach (string chr in StartByChr.Keys)
+                foreach (string chr in CoverageInfo.StartByChr.Keys)
                 {
-                    vafByChr[chr] = new List<List<double>>(StartByChr[chr].Length);
+                    vafByChr[chr] = new List<List<double>>(CoverageInfo.StartByChr[chr].Length);
                     intervalsByChromosome[chr] = new List<Interval>();
-                    for (int index = 0; index < StartByChr[chr].Length; index++)
+                    for (int index = 0; index < CoverageInfo.StartByChr[chr].Length; index++)
                     {
                         vafByChr[chr].Add(new List<double>());
-                        intervalsByChromosome[chr].Add(new Interval(StartByChr[chr][index], EndByChr[chr][index]));
+                        intervalsByChromosome[chr].Add(new Interval(CoverageInfo.StartByChr[chr][index], CoverageInfo.EndByChr[chr][index]));
                     }
                 }
 
                 var alleleCountsByChromosome = CanvasIO.ReadFrequencies(this.InputVafPath, intervalsByChromosome, referenceFolder, out float meanCoverage);
-
                 foreach (var chr in alleleCountsByChromosome.Keys)
                 {
                     for (int index = 0; index < alleleCountsByChromosome[chr].Count; index++)
@@ -235,58 +179,7 @@ namespace CanvasPartition
             }
         }
 
-        /// <summary>
-        /// Remap index from genomic coordinates into CanvasBin coordinates
-        /// </summary>
-        private static int? RemapIndex(uint[] startPos, uint[] endPos, int value, int length, ref int index)
-        {
-            const int distanceThreshold = 10000;
-            int bestMinDistanceStart = Int32.MaxValue;
-            var remappedIndex = 0;
-            while (index < length)
-            {
-                int tmpMinDistanceStart = Math.Abs(Convert.ToInt32(startPos[index] + (endPos[index] - startPos[index])) - value);
-                index++;
-                if (tmpMinDistanceStart < bestMinDistanceStart)
-                {
-                    bestMinDistanceStart = tmpMinDistanceStart;
-                    remappedIndex = index - 1;
-                }
-                else if (bestMinDistanceStart < distanceThreshold)
-                {
-                    return remappedIndex;
-                }
-                else
-                {
-                    return null;
-                }
-            }
-            return null;
-        }
 
-        /// <summary>
-        /// Remap GenomicBin from genome coordiantes into CanvasBin coordiantes
-        /// </summary>
-        public static List<SampleGenomicBin> RemapCommonRegions(List<SampleGenomicBin> commonRegions, uint[] startByChr, uint[] endByChr)
-        {
-            int length = startByChr.Length;
-            var index = 0;
-            var commonRegionsRemapped = new List<SampleGenomicBin>();
-
-            foreach (var commonRegion in commonRegions)
-            {
-                if (index > length)
-                    break;
-                var startSegmentIndex = RemapIndex(startByChr, endByChr, commonRegion.Start, length, ref index);
-                var endSegmentIndex = RemapIndex(startByChr, endByChr, commonRegion.Stop, length, ref index);
-
-                if (!startSegmentIndex.HasValue || !endSegmentIndex.HasValue) continue;
-
-                var interval = new SampleGenomicBin(null, startSegmentIndex.Value, endSegmentIndex.Value, 0);
-                commonRegionsRemapped.Add(interval);
-            }
-            return commonRegionsRemapped;
-        }
 
         /// <summary>
         /// Merge segmentation breakpoints with common CNV intervals
@@ -327,7 +220,7 @@ namespace CanvasPartition
         }
 
 
-        public void WriteCanvasPartitionResults(string outPath, GenomeSegmentationResults segmentationResults)
+        public void WriteCanvasPartitionResults(string outPath, SegmentationInput.GenomeSegmentationResults segmentationResults)
         {
             var starts = new Dictionary<string, bool>();
             var stops = new Dictionary<string, bool>();
@@ -352,20 +245,20 @@ namespace CanvasPartition
             {
                 int segmentNum = -1;
 
-                foreach (string chr in StartByChr.Keys)
+                foreach (string chr in CoverageInfo.StartByChr.Keys)
                 {
                     List<SampleGenomicBin> excludeIntervals = null;
                     if (excludedIntervals.ContainsKey(chr)) excludeIntervals = excludedIntervals[chr];
                     var excludeIndex = 0; // Points to the first interval which *doesn't* end before our current position
                     uint previousBinEnd = 0;
-                    for (int pos = 0; pos < StartByChr[chr].Length; pos++)
+                    for (int pos = 0; pos < CoverageInfo.StartByChr[chr].Length; pos++)
                     {
-                        uint start = StartByChr[chr][pos];
-                        uint end = EndByChr[chr][pos];
+                        uint start = CoverageInfo.StartByChr[chr][pos];
+                        uint end = CoverageInfo.EndByChr[chr][pos];
                         string key = chr + ":" + start;
                         bool newSegment = IsNewSegment(starts, key, excludeIntervals, previousBinEnd, end, start, ref excludeIndex);
                         if (newSegment) segmentNum++;
-                        writer.WriteLine(string.Format($"{chr}\t{start}\t{end}\t{CoverageByChr[chr][pos]}\t{segmentNum}"));
+                        writer.WriteLine(string.Format($"{chr}\t{start}\t{end}\t{CoverageInfo.CoverageByChr[chr][pos]}\t{segmentNum}"));
                         previousBinEnd = end;
                     }
                 }
@@ -415,7 +308,7 @@ namespace CanvasPartition
         private ConcurrentBag<double> reportScoresByWindow(int windowSize)
         {
             var evennessScores = new ConcurrentBag<double>();
-            var tasks = CoverageByChr.Select(coverage => new ThreadStart(() =>
+            var tasks = CoverageInfo.CoverageByChr.Select(coverage => new ThreadStart(() =>
             {
                 for (var index = 0; index < coverage.Value.Length - windowSize; index += windowSize)
                 {

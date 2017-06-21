@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.IO;
+using System.Net.Http.Headers;
 using Illumina.Common;
 using Illumina.Common.FileSystem;
 using Isas.SequencingFiles;
@@ -21,12 +22,22 @@ namespace CanvasCommon
             MedianCounts = new Tuple<int, int>(item1, item2);
         }
     }
+
+    public class CoverageInfo
+    {
+        public Dictionary<string, uint[]> StartByChr = new Dictionary<string, uint[]>();
+        public Dictionary<string, uint[]> EndByChr = new Dictionary<string, uint[]>();
+        public Dictionary<string, double[]> CoverageByChr = new Dictionary<string, double[]>();
+    }
+
     /// <summary>
     /// Contains information about a genomic interval. Has functions for computing copy numbers and their likelihoods.
     /// </summary>
-    public class CanvasSegment
+    public partial class CanvasSegment
     {
         #region Members
+
+        private CanvasSegment NextSegment;
         public List<float> Counts;
         public int CopyNumber { get; set; }
         public int SecondBestCopyNumber { get; set; }
@@ -38,7 +49,7 @@ namespace CanvasCommon
         public double RunnerUpModelDistance;
         public bool CopyNumberSwapped;
         public bool IsHeterogeneous;
-        private static readonly int NumberVariantFrequencyBins = 100;
+        private const int NumberVariantFrequencyBins = 100;
         public string Filter = "PASS";
         public Tuple<int, int> StartConfidenceInterval; // if not null, this is a confidence interval around Start, reported in the CIPOS tag
         public Tuple<int, int> EndConfidenceInterval; // if not null, this is a confidence interval around End, reported in the CIEND tag
@@ -166,7 +177,7 @@ namespace CanvasCommon
         /// <returns>Median of counts.</returns>
         public static double ExpectedCount(List<CanvasSegment> segments)
         {
-            List<double> counts = new List<double>();
+            var counts = new List<double>();
 
             // Get all of the counts contained within all autosomal segments.
             foreach (CanvasSegment segment in segments)
@@ -189,7 +200,7 @@ namespace CanvasCommon
         public static List<CanvasSegment> ReadSegments(string infile)
         {
             Console.WriteLine("{0} Read segments from {1}", DateTime.Now, infile);
-            List<CanvasSegment> segments = new List<CanvasSegment>();
+            var segments = new List<CanvasSegment>();
 
             string chr = null;
             int begin = -1;
@@ -197,16 +208,16 @@ namespace CanvasCommon
             int previousSegmentIndex = -1;
             int previousBinStart = 0;
             int previousBinEnd = 0;
-            List<float> counts = new List<float>();
+            var counts = new List<float>();
             Tuple<int, int> segmentStartCI = null;
-            using (GzipReader reader = new GzipReader(infile))
+            
+            using (var reader = new GzipReader(infile))
             {
                 string row = null;
 
                 while ((row = reader.ReadLine()) != null)
                 {
-                    string[] fields = row.Split('\t');
-
+                    var fields = row.Split('\t');
                     int currentSegmentIndex = Convert.ToInt32(fields[4]);
                     int newBinStart = Convert.ToInt32(fields[1]);
                     int newBinEnd = Convert.ToInt32(fields[2]);
@@ -217,7 +228,7 @@ namespace CanvasCommon
                         // Make a segment
                         if (previousSegmentIndex != -1)
                         {
-                            CanvasSegment segment = new CanvasSegment(chr, begin, previousBinEnd, counts);
+                            var segment = new CanvasSegment(chr, begin, previousBinEnd, counts);
                             // Prepare the confidence interval for the end of the segment that just ended, based on the size of its last bin
                             // (and, if the segments abut, based on the size of the next segment's first bin):
                             int CIEnd1 = -(previousBinEnd - previousBinStart) / 2;
@@ -252,20 +263,31 @@ namespace CanvasCommon
                     }
                     previousBinStart = newBinStart;
                     previousBinEnd = newBinEnd;
-
                     counts.Add(float.Parse(fields[3]));
                 }
 
                 if (previousSegmentIndex != -1)
                 {
                     // Add the last segment
-                    CanvasSegment segment = new CanvasSegment(chr, begin, previousBinEnd, counts);
+                    var segment = new CanvasSegment(chr, begin, previousBinEnd, counts);
                     segments.Add(segment);
                     segment.StartConfidenceInterval = segmentStartCI;
                 }
             }
             Console.WriteLine("{0} Loaded {1} segments", DateTime.Now, segments.Count);
             return segments;
+        }
+
+
+        public static void LinkAdjacentSegments(Dictionary<string, List<CanvasSegment>> genomewideSegments)
+        {
+            foreach (var segmentsByChromosome in genomewideSegments.Values)
+            {
+                foreach (var segment in segmentsByChromosome.SkipLast())
+                {
+                    segment.NextSegment = segmentsByChromosome.Skip(segmentsByChromosome.FindIndex(x => x == segment)).Take(1).Single();
+                }
+            }
         }
 
 
@@ -283,6 +305,22 @@ namespace CanvasCommon
 
 
         static public Dictionary<string, List<CanvasSegment>> GetSegmentsByChromosome(List<CanvasSegment> segments)
+        {
+            Dictionary<string, List<CanvasSegment>> segmentsByChromosome = new Dictionary<string, List<CanvasSegment>>();
+            foreach (CanvasSegment segment in segments)
+            {
+                if (!segmentsByChromosome.ContainsKey(segment.Chr))
+                {
+                    segmentsByChromosome[segment.Chr] = new List<CanvasSegment>();
+                }
+                segmentsByChromosome[segment.Chr].Add(segment);
+            }
+            return segmentsByChromosome;
+        }
+
+
+
+        static public Dictionary<string, List<CanvasSegment>> GetCommonCnvSegmentsByChromosome(List<CanvasSegment> segments)
         {
             Dictionary<string, List<CanvasSegment>> segmentsByChromosome = new Dictionary<string, List<CanvasSegment>>();
             foreach (CanvasSegment segment in segments)
@@ -732,135 +770,6 @@ namespace CanvasCommon
         }
 
         /// <summary>
-        /// Computes QScore using one of the available methods
-        /// </summary>
-        public enum QScoreMethod { BinCountLinearFit, GeneralizedLinearFit, Logistic, LogisticGermline };
-        public int ComputeQScore(QScoreMethod qscoreMethod, QualityScoreParameters qscoreParameters)
-        {
-            double score;
-            int qscore;
-            switch (qscoreMethod)
-            {
-                case QScoreMethod.LogisticGermline:
-                    // Logistic model using a new selection of features.  Gives ROC curve area 0.921
-                    score = qscoreParameters.LogisticGermlineIntercept;
-                    score += GetQScorePredictor(QScorePredictor.LogBinCount) * qscoreParameters.LogisticGermlineLogBinCount;
-                    score += GetQScorePredictor(QScorePredictor.ModelDistance) * qscoreParameters.LogisticGermlineModelDistance;
-                    score += GetQScorePredictor(QScorePredictor.DistanceRatio) * qscoreParameters.LogisticGermlineDistanceRatio;
-                    score = Math.Exp(score);
-                    score = score / (score + 1);
-                    // Transform probability into a q-score:
-                    qscore = (int)(Math.Round(-10 * Math.Log10(1 - score)));
-                    qscore = Math.Min(40, qscore);
-                    qscore = Math.Max(2, qscore);
-                    return qscore;
-                case QScoreMethod.Logistic:
-                    // Logistic model using a new selection of features.  Gives ROC curve area 0.8289
-                    score = qscoreParameters.LogisticIntercept;
-                    score += GetQScorePredictor(QScorePredictor.LogBinCount) * qscoreParameters.LogisticLogBinCount;
-                    score += GetQScorePredictor(QScorePredictor.ModelDistance) * qscoreParameters.LogisticModelDistance;
-                    score += GetQScorePredictor(QScorePredictor.DistanceRatio) * qscoreParameters.LogisticDistanceRatio;
-                    score += GetQScorePredictor(QScorePredictor.BinCountAmpDistance);
-                    score = Math.Exp(score);
-                    score = score / (score + 1);
-                    // Transform probability into a q-score:
-                    qscore = (int)Math.Round(-10 * Math.Log10(1 - score));
-                    qscore = Math.Min(60, qscore);
-                    qscore = Math.Max(2, qscore);
-                    return qscore;
-                case QScoreMethod.BinCountLinearFit:
-                    if (this.BinCount >= 100)
-                        return 61;
-                    else
-                        return (int)Math.Round(-10 * Math.Log10(1 - 1 / (1 + Math.Exp(0.5532 - this.BinCount * 0.147))), 0, MidpointRounding.AwayFromZero);
-                case QScoreMethod.GeneralizedLinearFit: // Generalized linear fit with linear transformation to QScore
-                    double linearFit = qscoreParameters.GeneralizedLinearFitIntercept;
-                    linearFit += qscoreParameters.GeneralizedLinearFitLogBinCount *
-                                 GetQScorePredictor(QScorePredictor.LogBinCount);
-                    linearFit += qscoreParameters.GeneralizedLinearFitModelDistance *
-                                 GetQScorePredictor(QScorePredictor.ModelDistance);
-                    linearFit += qscoreParameters.GeneralizedLinearFitMajorChromosomeCount *
-                                 GetQScorePredictor(QScorePredictor.MajorChromosomeCount);
-                    linearFit += qscoreParameters.GeneralizedLinearFitMafMean *
-                                 GetQScorePredictor(QScorePredictor.MafMean);
-                    linearFit += qscoreParameters.GeneralizedLinearFitLogMafCv * GetQScorePredictor(QScorePredictor.LogMafCv);
-                    linearFit += GetQScorePredictor(QScorePredictor.BinCountAmpDistance);
-                    score = -11.9 - 11.4 * linearFit; // Scaling to achieve 2 <= qscore <= 61
-                    score = Math.Max(2, score);
-                    score = Math.Min(61, score);
-                    return (int)Math.Round(score, 0, MidpointRounding.AwayFromZero);
-                default:
-                    throw new Exception("Unhandled qscore method");
-            }
-        }
-
-        /// <summary>
-        /// Computes QScore predictor
-        /// </summary>
-        public enum QScorePredictor
-        {
-            BinCount, LogBinCount, BinCountAmpDistance, BinMean, BinCv, MafCount, MafMean, MafCv, LogMafCv, ModelDistance,
-            RunnerUpModelDistance, DistanceRatio, CopyNumber, MajorChromosomeCount
-        };
-        public double GetQScorePredictor(QScorePredictor predictorId)
-        {
-            switch (predictorId)
-            {
-                case QScorePredictor.BinCount:
-                    return (double)this.BinCount;
-
-                case QScorePredictor.LogBinCount:
-                    return Math.Log10(1 + this.BinCount);
-
-                case QScorePredictor.BinCountAmpDistance:
-                    return this.CopyNumber >= 15 ? Math.Log10(1 + this.BinCount) : 0.0;
-
-                case QScorePredictor.BinMean:
-                    if (this.Counts.Count == 0) return 0;
-                    return this.Counts.Average();
-
-                case QScorePredictor.BinCv:
-                    if (this.Counts.Count == 0) return 0;
-                    if (this.Counts.Average() == 0) return 0;
-                    return Utilities.CoefficientOfVariation(this.Counts);
-
-                case QScorePredictor.MafCount:
-                    return Alleles.Frequencies.Count;
-
-                case QScorePredictor.MafMean:
-                    if (Alleles.Frequencies.Count == 0) return 0;
-                    return Alleles.Frequencies.Average();
-
-                case QScorePredictor.MafCv:
-                    if (Alleles.Frequencies.Count == 0) return 0;
-                    if (Alleles.Frequencies.Average() == 0) return 0;
-                    return Utilities.CoefficientOfVariation(Alleles.Frequencies);
-
-                case QScorePredictor.LogMafCv:
-                    return Math.Log10(1 + GetQScorePredictor(QScorePredictor.MafCv));
-
-                case QScorePredictor.ModelDistance:
-                    return this.ModelDistance;
-
-                case QScorePredictor.RunnerUpModelDistance:
-                    return this.RunnerUpModelDistance;
-
-                case QScorePredictor.DistanceRatio:
-                    if (this.RunnerUpModelDistance == 0) return 0;
-                    return this.ModelDistance / this.RunnerUpModelDistance;
-
-                case QScorePredictor.CopyNumber:
-                    return (double)this.CopyNumber;
-
-                case QScorePredictor.MajorChromosomeCount:
-                    // Force a double:
-                    if (!this.MajorChromosomeCount.HasValue) return Math.Ceiling(this.CopyNumber / 2f);
-                    return (double)this.MajorChromosomeCount;
-            }
-            return 0;
-        }
-
-        /// <summary>
         /// Set segment.Filter for each of our segments.
         /// </summary>
         public static void FilterSegments(int qualityFilterThreshold, List<CanvasSegment> segments)
@@ -886,5 +795,124 @@ namespace CanvasCommon
                 segment.Filter = filter;
             }
         }
+
+        /// <summary>
+        /// Remap GenomicBin from genome coordiantes into CanvasBin coordiantes
+        /// </summary>
+        public static List<SampleGenomicBin> RemapCommonRegions(List<SampleGenomicBin> commonRegions, uint[] startByChr, uint[] endByChr)
+        {
+            int length = startByChr.Length;
+            var index = 0;
+            var commonRegionsRemapped = new List<SampleGenomicBin>();
+
+            foreach (var commonRegion in commonRegions)
+            {
+                if (index > length)
+                    break;
+                var startSegmentIndex = RemapIndex(startByChr, endByChr, commonRegion.Start, length, ref index);
+                var endSegmentIndex = RemapIndex(startByChr, endByChr, commonRegion.Stop, length, ref index);
+
+                if (!startSegmentIndex.HasValue || !endSegmentIndex.HasValue) continue;
+
+                var interval = new SampleGenomicBin(null, startSegmentIndex.Value, endSegmentIndex.Value, 0);
+                commonRegionsRemapped.Add(interval);
+            }
+            return commonRegionsRemapped;
+        }
+
+        /// <summary>
+        /// Remap index from genomic coordinates into CanvasBin coordinates
+        /// </summary>
+        private static int? RemapIndex(uint[] startPos, uint[] endPos, int value, int length, ref int index)
+        {
+            const int distanceThreshold = 10000;
+            int bestMinDistanceStart = Int32.MaxValue;
+            var remappedIndex = 0;
+            while (index < length)
+            {
+                int tmpMinDistanceStart = Math.Abs(Convert.ToInt32(startPos[index] + (endPos[index] - startPos[index])) - value);
+                index++;
+                if (tmpMinDistanceStart < bestMinDistanceStart)
+                {
+                    bestMinDistanceStart = tmpMinDistanceStart;
+                    remappedIndex = index - 1;
+                }
+                else if (bestMinDistanceStart < distanceThreshold)
+                {
+                    return remappedIndex;
+                }
+                else
+                {
+                    return null;
+                }
+            }
+            return null;
+        }
+
+        /// <summary>
+        /// Assume that the rows are sorted by the start position and ascending order
+        /// </summary>
+        public static CoverageInfo ReadBEDInput(string inputbed, string forbiddenIntervalBedPath = null)
+        {
+            const int idxChr = 0, idxStart = 1, idxEnd = 2, idxScore = 3;
+            var binFilter = new GenomicBinFilter(forbiddenIntervalBedPath);
+            var coverageInfo = new CoverageInfo();
+            try
+            {
+                var startByChr = new Dictionary<string, List<uint>>();
+                var endByChr = new Dictionary<string, List<uint>>();
+                var scoreByChr = new Dictionary<string, List<double>>();
+                using (var reader = new GzipReader(inputbed))
+                {
+                    string line;
+                    while ((line = reader.ReadLine()) != null)
+                    {
+                        var tokens = line.Split('\t');
+                        string chrom = tokens[idxChr].Trim();
+                        uint start = Convert.ToUInt32(tokens[idxStart].Trim());
+                        uint end = Convert.ToUInt32(tokens[idxEnd].Trim());
+                        if (binFilter.SkipBin(chrom, start, end))
+                            continue;
+                        if (!startByChr.ContainsKey(chrom))
+                        {
+                            startByChr.Add(chrom, new List<uint>());
+                            endByChr.Add(chrom, new List<uint>());
+                            scoreByChr.Add(chrom, new List<double>());
+                        }
+                        startByChr[chrom].Add(start);
+                        endByChr[chrom].Add(end);
+                        scoreByChr[chrom].Add(Convert.ToDouble(tokens[idxScore].Trim()));
+                    }
+                    foreach (string chr in startByChr.Keys)
+                    {
+                        coverageInfo.StartByChr[chr] = startByChr[chr].ToArray();
+                        coverageInfo.EndByChr[chr] = endByChr[chr].ToArray();
+                        coverageInfo.CoverageByChr[chr] = scoreByChr[chr].ToArray();
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                Console.Error.WriteLine("File {0} could not be read:", inputbed);
+                Console.Error.WriteLine(e.Message);
+                Environment.Exit(1);
+            }
+            return coverageInfo;
+        }
+
+        public static List<CanvasSegment> CreateSegmentsFromCommonCnvs(CoverageInfo coverageInfo, string chromosome, List<GenomicBin> intervals)
+        {
+            var segments = new List<CanvasSegment>();
+            foreach (var interval in intervals)
+            {
+                var length = interval.Interval.OneBasedEnd - interval.Interval.OneBasedStart;
+                var counts = coverageInfo.CoverageByChr[chromosome].Skip(interval.Interval.OneBasedStart).Take(length).Select(Convert.ToSingle).ToList();
+                var segment = new CanvasSegment(chromosome, Convert.ToInt32(coverageInfo.StartByChr[chromosome][interval.Interval.OneBasedStart]),
+                    Convert.ToInt32(coverageInfo.EndByChr[chromosome][interval.Interval.OneBasedEnd]), counts);
+                segments.Add(segment);
+            }
+            return segments;
+        }
+
     }
 }
