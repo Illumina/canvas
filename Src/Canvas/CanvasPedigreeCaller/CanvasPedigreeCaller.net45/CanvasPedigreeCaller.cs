@@ -345,8 +345,12 @@ namespace CanvasPedigreeCaller
         private static bool CommonCnvCheck(List<PedigreeMember> parents, PedigreeMember proband, List<int> cnStates, int parent1Index, int parent2Index,
             int probandIndex, int segmentIndex)
         {
-            bool isCommoCnv = (cnStates[parent1Index] == cnStates[probandIndex] && parents.First().GetPloidy(segmentIndex) == proband.GetPloidy(segmentIndex)) || 
-                (cnStates[parent2Index] == cnStates[probandIndex] && parents.Last().GetPloidy(segmentIndex) == proband.GetPloidy(segmentIndex));
+            var parent1Genotypes = GenerateCnAlleles(cnStates[parent1Index]);
+            var parent2Genotypes = GenerateCnAlleles(cnStates[parent2Index]);
+            var probandGenotypes = GenerateCnAlleles(cnStates[probandIndex]);
+
+            bool isCommoCnv = (parent1Genotypes.Intersect(probandGenotypes).Any() && parents.First().GetPloidy(segmentIndex) == proband.GetPloidy(segmentIndex)) || 
+                (parent2Genotypes.Intersect(probandGenotypes).Any() && parents.Last().GetPloidy(segmentIndex) == proband.GetPloidy(segmentIndex));
             return !isCommoCnv;
         }
 
@@ -732,16 +736,18 @@ namespace CanvasPedigreeCaller
         /// <summary>
         /// Generate all possible copy number genotype combinations with the maximal number of alleles per segment set to maxAlleleNumber.
         /// </summary>
-        /// <param name="numberOfCnStates"></param>
+        /// <param name="copyNumber"></param>
         /// <returns> </returns>
-        public List<Tuple<int, int>> GenerateGenotypes(int numberOfCnStates)
+        public static List<int> GenerateCnAlleles(int copyNumber)
         {
-            var genotypes = new List<Tuple<int, int>>();
-            for (int gt = 0; gt <= numberOfCnStates; gt++)
-            {
-                genotypes.Add(new Tuple<int, int>(gt, numberOfCnStates - gt));
-            }
-            return genotypes;
+            if (copyNumber == 0)
+                return new List<int>{0};
+
+            var alleles = new List<int>();
+            for (int gt = 1; gt <= copyNumber; gt++)
+                alleles.Add(gt);
+
+            return alleles;
         }
 
         /// <summary>
@@ -778,7 +784,7 @@ namespace CanvasPedigreeCaller
             }
         }
 
-        private List<SegmentIndexRange> GetParallelIntervals(int nSegments, int nCores)
+        private static List<SegmentIndexRange> GetParallelIntervals(int nSegments, int nCores)
         {
 
             var segmentIndexRanges = new List<SegmentIndexRange>();
