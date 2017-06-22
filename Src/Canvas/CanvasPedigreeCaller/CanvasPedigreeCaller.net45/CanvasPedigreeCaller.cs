@@ -743,6 +743,9 @@ namespace CanvasPedigreeCaller
             if (copyNumber == 0)
                 return new List<int>{0};
 
+            if (copyNumber == 1)
+                return new List<int> { 0, 1 };
+
             var alleles = new List<int>();
             for (int gt = 1; gt <= copyNumber; gt++)
                 alleles.Add(gt);
