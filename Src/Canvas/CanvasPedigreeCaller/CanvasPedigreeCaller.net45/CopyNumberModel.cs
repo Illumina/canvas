@@ -15,12 +15,14 @@ namespace CanvasPedigreeCaller
         {
             for (int copyNumber = 0; copyNumber  < numCnStates; copyNumber ++)
             {
-                var multiplier = 1.0;
+                var multiplier = copyNumber * 1.0;
                 if (copyNumber == 1)
-                    multiplier = 0.9;
+                    multiplier *= 0.9;
+                if (copyNumber == 0)
+                    multiplier = 0.1;
                 if (copyNumber == 3)
-                    multiplier = 1.1;
-                CnDistribution.Add(DistributionUtilities.NegativeBinomialWrapper(haploidMean * copyNumber * multiplier, variance, maxValue, adjustR: true));
+                    multiplier *= 1.1;
+                CnDistribution.Add(DistributionUtilities.NegativeBinomialWrapper(haploidMean * multiplier, variance, maxValue, adjustR: true));
             }
 
             _alleleDistribution = new Tuple<List<double>, List<double>>[numCnStates][];
