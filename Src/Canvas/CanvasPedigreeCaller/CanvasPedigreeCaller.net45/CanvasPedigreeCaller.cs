@@ -322,10 +322,10 @@ namespace CanvasPedigreeCaller
                 if (cnStates[probandIndex] != proband.GetPloidy(segmentIndex) && // targeted proband is ALT
                     (ParentsRefCheck(parents, segmentIndex, cnStates, parent1Index, parent2Index) ||
                      // either parent are REF or 
-                     CommonCnvCheck(parents, proband, cnStates, parent1Index,  parent2Index, probandIndex, segmentIndex)) &&
+                     IsNotCommonCnv(parents, proband, cnStates, parent1Index,  parent2Index, probandIndex, segmentIndex)) &&
                     // or a common variant 
                     remainingProbandIndex.All(index => cnStates[index] == probands[index].GetPloidy(segmentIndex) ||
-                                                       CommonCnvCheck(parents, probands[index], cnStates, parent1Index,
+                                                       IsNotCommonCnv(parents, probands[index], cnStates, parent1Index,
                                                            parent2Index, index, segmentIndex)) &&
                     // and other probands are REF or common variant 
                     singleSampleQualityScores[probandIndex] > QualityFilterThreshold &&
@@ -342,7 +342,7 @@ namespace CanvasPedigreeCaller
             }
         }
 
-        private static bool CommonCnvCheck(List<PedigreeMember> parents, PedigreeMember proband, List<int> cnStates, int parent1Index, int parent2Index,
+        private static bool IsNotCommonCnv(List<PedigreeMember> parents, PedigreeMember proband, List<int> cnStates, int parent1Index, int parent2Index,
             int probandIndex, int segmentIndex)
         {
             var parent1Genotypes = GenerateCnAlleles(cnStates[parent1Index]);
@@ -747,8 +747,8 @@ namespace CanvasPedigreeCaller
                 return new List<int> { 0, 1 };
 
             var alleles = new List<int>();
-            for (int gt = 1; gt <= copyNumber; gt++)
-                alleles.Add(gt);
+            for (int allele = 1; allele <= copyNumber; allele++)
+                alleles.Add(allele);
 
             return alleles;
         }
