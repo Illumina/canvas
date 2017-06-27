@@ -12,6 +12,8 @@ namespace CanvasCommon
     {
         public int CountsA { get; }
         public int CountsB { get; }
+        public int Pos { get; }
+
 
         public Genotype()
         {
@@ -21,6 +23,13 @@ namespace CanvasCommon
 
         public Genotype(int countsA, int countsB)
         {
+            CountsA = countsA;
+            CountsB = countsB;
+        }
+
+        public Genotype(int pos, int countsA, int countsB)
+        {
+            Pos = pos;
             CountsA = countsA;
             CountsB = countsB;
         }
@@ -168,18 +177,20 @@ namespace CanvasCommon
                     intervalsByChromosome[chr].Add(new Interval(canvasSegment.Begin, canvasSegment.End));
                 }
             }
-            var alleleCountsByChromosome = ReadFrequencies(variantFrequencyFile, intervalsByChromosome, 
+            var allelesByChromosome = ReadFrequencies(variantFrequencyFile, intervalsByChromosome, 
                 referenceFolder, out float meanCoverage);
 
             foreach (string chr in segmentsByChromosome.Keys)
             {
                 for (int index = 0; index < segmentsByChromosome[chr].Count; index++)
                 {
-                    foreach (var genotype in alleleCountsByChromosome[chr][index])
+                    foreach (var genotype in allelesByChromosome[chr][index])
                     {
-                        segmentsByChromosome[chr][index].Alleles.Frequencies.Add(genotype.CountsB / (float)(genotype.CountsA + genotype.CountsB));
-                        segmentsByChromosome[chr][index].Alleles.TotalCoverage.Add(genotype.CountsA + genotype.CountsB);
-                        segmentsByChromosome[chr][index].Alleles.Counts.Add(new Tuple<int, int>(genotype.CountsA, genotype.CountsB));
+                        float MAF = genotype.CountsB / (float) (genotype.CountsA + genotype.CountsB);
+                        int totalCoverage = genotype.CountsA + genotype.CountsB;
+                        var counts = new Tuple<int, int>(genotype.CountsA, genotype.CountsB);
+                        var allele = new Allele(genotype.Pos, MAF, totalCoverage, counts);
+                        segmentsByChromosome[chr][index].Alleles.Balleles.Add(allele);
                     }
                 }
             }
@@ -254,7 +265,7 @@ namespace CanvasCommon
                             mid = (start + end) / 2;
                             continue;
                         }
-                        alleleCountsByChromosome[chr][mid].Add(new Genotype(countRef, countAlt));
+                        alleleCountsByChromosome[chr][mid].Add(new Genotype(position, countRef, countAlt));
                         count++;
                         totalCoverage += countRef + countAlt; // use only coverage information in segments
                         totalRecords++;

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using CanvasCommon;
 
 namespace CanvasPedigreeCaller
@@ -35,7 +36,7 @@ namespace CanvasPedigreeCaller
         }
         public List<Tuple<int, int>> GetAlleleCounts(int segmentIndex)
         {
-            return Segments[segmentIndex].Alleles.Counts;
+            return Segments[segmentIndex].Alleles.Balleles.Select(x=>x.Counts).ToList();
         }
 
         public int GetPloidy(int segmentIndex)

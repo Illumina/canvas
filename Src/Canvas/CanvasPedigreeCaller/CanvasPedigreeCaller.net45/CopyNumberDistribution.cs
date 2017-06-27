@@ -10,6 +10,7 @@ namespace CanvasPedigreeCaller
         public List<string> SampleNames { get; }
         public int Count { get; }
         public List<int[]> Indices { get; }
+        public double MaximalLikelihood;
 
         public CopyNumberDistribution(int nCopyNumbers, List<string> names)
         {

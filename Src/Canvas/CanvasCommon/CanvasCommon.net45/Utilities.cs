@@ -618,6 +618,13 @@ namespace CanvasCommon
             return result;
         }
 
+
+        public static double MaxValue(double[][] matrix)
+        {
+            return Enumerable.Concat(matrix.SelectMany(vector => vector), new[] {Double.MinValue}).Max();
+        }
+
+
         /// <summary>
         /// Allocates/creates a 3D matrix initialized to all 0.0, assume rows and cols > 0
         /// </summary>
@@ -977,9 +984,8 @@ namespace CanvasCommon
                     //  (2) At least one of the alleles have a MAF >= 0.2
                     if ((float)nonZeroIndices.Count / (float)mafs.Length > 0.1 || isGreaterThan20)
                     {
-                        segment.Alleles.Frequencies = nonZeroIndices.Select(i => segment.Alleles.Frequencies[i]).ToList();
-                        var tmpVFs = segment.Alleles.Frequencies.Where(v => v > 0.1).ToList(); // heuristic to use only the right mode
-                        if (tmpVFs.Count > 0) { segment.Alleles.Frequencies = tmpVFs; }
+                        var tmpVFs = segment.Alleles.Balleles.Where(v => v.Frequency > 0.1).ToList(); // heuristic to use only the right mode
+                        if (tmpVFs.Count > 0) { segment.Alleles.Balleles = tmpVFs; }
                         if (mafs.Length >= MinimumVariantFrequenciesForInformativeSegment) // adjust MinimumVariantFrequenciesForInformativeSegment
                         {
                             MinimumVariantFrequenciesForInformativeSegment = Math.Min(MinimumVariantFrequenciesForInformativeSegment, segment.Alleles.Frequencies.Count);
