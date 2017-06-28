@@ -95,11 +95,8 @@ namespace CanvasPedigreeCaller
                     Console.WriteLine($"{DateTime.Now} Launching SPW task for segment {interval.Start} - {interval.End}");
                     for (int segmentIndex = interval.Start; segmentIndex <= interval.End; segmentIndex++)
                     {
-                        var copyNumberLikelihoods = AssignCopyNumberWithPedigreeInfo(parents, offsprings,
-                            segmentIndex, transitionMatrix, offspringsGenotypes);
-                        EstimateQScoresWithPedigreeInfo(parents, offsprings, segmentIndex, copyNumberLikelihoods);
-                        if (!UseMafInformation(pedigreeMembers, segmentIndex))
-                            AssignMccWithPedigreeInfo(parents, offsprings, segmentIndex, genotypes);
+                        SingleGenotypePathWithPedigreeInfo(pedigreeMembers, parents, offsprings, segmentIndex,
+                            transitionMatrix, offspringsGenotypes, genotypes);
                     }
                     Console.WriteLine($"{DateTime.Now} Finished SPW task for segment {interval.Start} - {interval.End}");
                 });
@@ -295,13 +292,17 @@ namespace CanvasPedigreeCaller
                         $"chromosomes in {segmentFiles[fileCounter]}");
 
                 var sortedJoinedSegmentsByChromosome = new Dictionary<string, List<CanvasSegment>>();
-                foreach (string chr in commonRegions.Keys)
-                {
-                    var genomicRegions = CanvasSegment.RemapCommonRegions(commonRegions[chr], coverage.StartByChr[chr], coverage.EndByChr[chr]);
-                    var commonCnvCanvasSegments = CanvasSegment.CreateSegmentsFromCommonCnvs(coverage, chr, genomicRegions);
-                    var joinedSegments = CanvasSegment.MergeCommonCnvSegments(segmentsByChromosome[chr], commonCnvCanvasSegments); 
-                    sortedJoinedSegmentsByChromosome[chr] = joinedSegments.OrderBy(o => o.Begin).ToList();
-                }
+                Parallel.ForEach(
+                    commonRegions.Keys,
+                    chr =>
+                    {
+                        var genomicRegions = CanvasSegment.RemapCommonRegions(commonRegions[chr],                             coverage.StartByChr[chr], coverage.EndByChr[chr]);
+                        var commonCnvCanvasSegments = CanvasSegment.CreateSegmentsFromCommonCnvs(coverage, chr,
+                            genomicRegions);
+                        var joinedSegments = CanvasSegment.MergeCommonCnvSegments(segmentsByChromosome[chr],
+                            commonCnvCanvasSegments, chr);
+                        sortedJoinedSegmentsByChromosome[chr] = joinedSegments.OrderBy(o => o.Begin).ToList();
+                    });
                 pedigreeMember.Segments = sortedJoinedSegmentsByChromosome.Values.SelectMany(x => x).ToList();
             }
             else
@@ -514,14 +515,15 @@ namespace CanvasPedigreeCaller
         }
 
 
-        public int SingleGenotypePathWithPedigreeInfo(List<PedigreeMember> parents, List<PedigreeMember> children,
+        public int SingleGenotypePathWithPedigreeInfo(LinkedList<PedigreeMember> pedigreeMembers, List<PedigreeMember> parents, List<PedigreeMember> children,
     int segmentPosition, double[][] transitionMatrix, List<List<Genotype>> offspringsGenotypes,
     Dictionary<int, List<Genotype>> genotypes)
         {
 
             var ll = AssignCopyNumberWithPedigreeInfo(parents, children, segmentPosition, transitionMatrix, offspringsGenotypes);
             EstimateQScoresWithPedigreeInfo(parents, children, segmentPosition, ll);
-            AssignMccWithPedigreeInfo(parents, children, segmentPosition, genotypes);
+            if (!UseMafInformation(pedigreeMembers, segmentPosition))
+                AssignMccWithPedigreeInfo(parents, children, segmentPosition, genotypes);
 
             if (parents.First().Segments[segmentPosition].NextSegments.Count <= 1)
             {
@@ -556,7 +558,8 @@ namespace CanvasPedigreeCaller
                 {
                     EstimateQScoresWithPedigreeInfo(parents, children, segmentIndecesFirst[index],
                         likelyhoodsFirst[index]);
-                    AssignMccWithPedigreeInfo(parents, children, segmentIndecesFirst[index], genotypes);
+                    if (!UseMafInformation(pedigreeMembers, segmentIndecesFirst[index]))
+                        AssignMccWithPedigreeInfo(parents, children, segmentIndecesFirst[index], genotypes);
                 }
                 return parents.First().Segments[segmentIndecesFirst.Last()].NextSegments.Single().segmentIndex;
             }
@@ -565,7 +568,8 @@ namespace CanvasPedigreeCaller
             {
                 EstimateQScoresWithPedigreeInfo(parents, children, segmentIndecesLast[index],
                     likelyhoodsFirst[index]);
-                AssignMccWithPedigreeInfo(parents, children, segmentIndecesLast[index], genotypes);
+                if (!UseMafInformation(pedigreeMembers, segmentIndecesLast[index]))
+                    AssignMccWithPedigreeInfo(parents, children, segmentIndecesLast[index], genotypes);
             }
             return parents.First().Segments[segmentIndecesLast.Last()].NextSegments.Single().segmentIndex;
         }

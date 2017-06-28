@@ -87,6 +87,9 @@ namespace CanvasCommon
         public CanvasSegment(string chr, int begin, int end, List<SampleGenomicBin> counts)
         {
             Chr = chr;
+            GenomicBins = new List<SampleGenomicBin>();
+            PreviousSegments = new List<CanvasSegment>();
+            NextSegments = new List<CanvasSegment>();
             Begin = begin;
             End = end;
             GenomicBins = new List<SampleGenomicBin>(counts);
@@ -97,6 +100,9 @@ namespace CanvasCommon
         public CanvasSegment(string chr, int begin, int end, List<SampleGenomicBin> counts, Alleles alleles)
         {
             Chr = chr;
+            GenomicBins = new List<SampleGenomicBin>();
+            PreviousSegments = new List<CanvasSegment>();
+            NextSegments = new List<CanvasSegment>();
             Begin = begin;
             End = end;
             GenomicBins = new List<SampleGenomicBin>(counts);
@@ -231,6 +237,17 @@ namespace CanvasCommon
             Alleles.Balleles.AddRange(s.Alleles.Balleles);
         }
 
+        public bool CheckOveralp(CanvasSegment segment, int flankRegion = 5)
+        {
+            if (segment.Begin - flankRegion > this.Begin && segment.End + flankRegion < this.End)
+                return true;
+            if (segment.Begin > this.Begin && segment.Begin < this.End && this.End < segment.End)
+                return true;
+            if (segment.Begin < this.Begin && segment.End > this.Begin && this.End > segment.End)
+                return true;
+            return false;
+        }
+
         public List<CanvasSegment> Split(CanvasSegment previous, CanvasSegment segment, CanvasSegment next,
             ref int canvasSegmentsIndex, ref int commonSegmentsIndex)
         {
@@ -261,6 +278,7 @@ namespace CanvasCommon
                 }
                 canvasSegmentsIndex++;
                 commonSegmentsIndex++;
+                return newSegments;
             }
 
             if (segment.Begin >  this.Begin && segment.Begin < this.End && this.End < segment.End)
@@ -275,6 +293,7 @@ namespace CanvasCommon
                 }
                 newSegments.Last().NextSegments.Add(segment);
                 canvasSegmentsIndex++;
+                return newSegments;
             }
 
             if (segment.Begin < this.Begin && segment.End > this.Begin && this.End > segment.End)
@@ -295,6 +314,7 @@ namespace CanvasCommon
 
                 canvasSegmentsIndex++;
                 commonSegmentsIndex++;
+                return newSegments;
             }
             return newSegments;
         }
@@ -416,7 +436,7 @@ namespace CanvasCommon
             {
                 foreach (var segment in segmentsByChromosome.SkipLast())
                 {
-                    segment.NextSegments.Add(segmentsByChromosome.Skip(segmentsByChromosome.FindIndex(x => x == segment)).Take(1).Single());
+                    segment.NextSegments.Add(segmentsByChromosome.Skip(segmentsByChromosome.FindIndex(x => x == segment)+1).Take(1).Single());
                 }
             }
         }
@@ -692,40 +712,61 @@ namespace CanvasCommon
             return false;
         }
 
-        public static List<CanvasSegment> MergeCommonCnvSegments(List<CanvasSegment> canvasSegments,  List<CanvasSegment> commonCnvSegments)
+        public static List<CanvasSegment> MergeCommonCnvSegments(List<CanvasSegment> canvasSegments,  List<CanvasSegment> commonCnvSegments, string chr)
         {
-            var mergedSegments = new List<CanvasSegment>();
+            var mergedSegments = new List<CanvasSegment>(canvasSegments.Count + commonCnvSegments.Count*3);
             var sortedCanvasSegments = canvasSegments.OrderBy(o => o.Begin).ToList();
             var sortedCommonCnvSegments = commonCnvSegments.OrderBy(o => o.Begin).ToList();
-            var canvasSegmentsIndex= 0;
+            var canvasSegmentsIndex = 1;
             var commonSegmentsIndex = 0;
+
+            int unaccountedcommonSegmentsIndex = 0;
+            int unaccountedcanvasSegmentsIndex = 0;
+            int unmergedcanvasSegmentsIndex = 0;
+            mergedSegments.Add(sortedCanvasSegments[0]);
+
             while (canvasSegmentsIndex < sortedCanvasSegments.Count && commonSegmentsIndex < sortedCommonCnvSegments.Count)
             {
-                if (sortedCanvasSegments[canvasSegmentsIndex].Begin < sortedCommonCnvSegments[canvasSegmentsIndex].Begin &&
-                    sortedCanvasSegments[canvasSegmentsIndex].End < sortedCommonCnvSegments[canvasSegmentsIndex].Begin)
+                if (sortedCanvasSegments[canvasSegmentsIndex].Begin < sortedCommonCnvSegments[commonSegmentsIndex].Begin &&
+                    sortedCanvasSegments[canvasSegmentsIndex].End < sortedCommonCnvSegments[commonSegmentsIndex].Begin)
                 {
                     mergedSegments.Add(sortedCanvasSegments[canvasSegmentsIndex]);
                     canvasSegmentsIndex++;
                 }
-                else if (sortedCommonCnvSegments[canvasSegmentsIndex].Begin < sortedCanvasSegments[canvasSegmentsIndex].Begin &&
-                         sortedCommonCnvSegments[canvasSegmentsIndex].End < sortedCanvasSegments[canvasSegmentsIndex].Begin)
+                else if (sortedCanvasSegments[canvasSegmentsIndex].Begin > sortedCommonCnvSegments[commonSegmentsIndex].Begin &&
+                    sortedCanvasSegments[canvasSegmentsIndex].End < sortedCommonCnvSegments[commonSegmentsIndex].End)
+                {
+                    commonSegmentsIndex++;
+                }
+                else if (sortedCommonCnvSegments[commonSegmentsIndex].Begin < sortedCanvasSegments[canvasSegmentsIndex].Begin && sortedCommonCnvSegments[commonSegmentsIndex].End < sortedCanvasSegments[canvasSegmentsIndex].Begin)
                 {
                     mergedSegments.Add(sortedCommonCnvSegments[commonSegmentsIndex]);
                     commonSegmentsIndex++;
                 }
+                else if (sortedCanvasSegments[canvasSegmentsIndex].CheckOveralp(sortedCommonCnvSegments[commonSegmentsIndex]))
+                {
+                    var newSegments =
+                        sortedCanvasSegments[canvasSegmentsIndex].Split(sortedCanvasSegments[canvasSegmentsIndex - 1],
+                            sortedCommonCnvSegments[commonSegmentsIndex], sortedCanvasSegments[canvasSegmentsIndex + 1],
+                            ref canvasSegmentsIndex,
+                            ref commonSegmentsIndex);
+                    if (newSegments == null)
+                        unmergedcanvasSegmentsIndex++;
+                    mergedSegments.AddRange(newSegments);
+                }
                 else
                 {
-                    var newSegments = sortedCanvasSegments[canvasSegmentsIndex].Split(sortedCanvasSegments[canvasSegmentsIndex-1],
-                    sortedCommonCnvSegments[commonSegmentsIndex], sortedCanvasSegments[canvasSegmentsIndex+2], ref canvasSegmentsIndex, 
-                    ref commonSegmentsIndex);
-                    mergedSegments.AddRange(newSegments);
+                    unaccountedcommonSegmentsIndex++;
+                    unaccountedcanvasSegmentsIndex++;
                 }
             }
             if (canvasSegmentsIndex < sortedCanvasSegments.Count)
                 mergedSegments.AddRange(sortedCanvasSegments.Skip(canvasSegmentsIndex));
             if (commonSegmentsIndex < sortedCommonCnvSegments.Count)
                 mergedSegments.AddRange(sortedCommonCnvSegments.Skip(commonSegmentsIndex));
-
+            Console.WriteLine($"Chromosome {chr}    unmergedcanvasSegmentsIndex: {unmergedcanvasSegmentsIndex}");
+            Console.WriteLine($"Chromosome {chr} unaccountedcommonSegmentsIndex: {unaccountedcommonSegmentsIndex}");
+            Console.WriteLine($"Chromosome {chr} unaccountedcanvasSegmentsIndex: {unaccountedcanvasSegmentsIndex}");
             return mergedSegments;
         }
 
