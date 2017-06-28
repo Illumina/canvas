@@ -719,6 +719,7 @@ namespace CanvasCommon
             var sortedCommonCnvSegments = commonCnvSegments.OrderBy(o => o.Begin).ToList();
             var canvasSegmentsIndex = 1;
             var commonSegmentsIndex = 0;
+            Console.WriteLine($"MergeCommonCnvSegments for {chr} ");
 
             int unaccountedcommonSegmentsIndex = 0;
             int unaccountedcanvasSegmentsIndex = 0;

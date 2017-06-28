@@ -296,9 +296,14 @@ namespace CanvasPedigreeCaller
                     commonRegions.Keys,
                     chr =>
                     {
-                        var genomicRegions = CanvasSegment.RemapCommonRegions(commonRegions[chr],                             coverage.StartByChr[chr], coverage.EndByChr[chr]);
+                        Console.WriteLine($"Processing  chromosome {chr} ");
+
+                        var genomicRegions = CanvasSegment.RemapCommonRegions(commonRegions[chr],                             
+                            coverage.StartByChr[chr], coverage.EndByChr[chr]);
+                        Console.WriteLine($"RemapCommonRegions for {chr} ");
                         var commonCnvCanvasSegments = CanvasSegment.CreateSegmentsFromCommonCnvs(coverage, chr,
                             genomicRegions);
+                        Console.WriteLine($"CreateSegmentsFromCommonCnvs for {chr} ");
                         var joinedSegments = CanvasSegment.MergeCommonCnvSegments(segmentsByChromosome[chr],
                             commonCnvCanvasSegments, chr);
                         sortedJoinedSegmentsByChromosome[chr] = joinedSegments.OrderBy(o => o.Begin).ToList();
