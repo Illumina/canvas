@@ -759,14 +759,17 @@ namespace CanvasCommon
                     unaccountedcommonSegmentsIndex++;
                     unaccountedcanvasSegmentsIndex++;
                 }
+                Console.WriteLine($"Chromosome {chr} canvasSegmentsIndex: {canvasSegmentsIndex} out of {sortedCanvasSegments.Count}");
+                Console.WriteLine($"Chromosome {chr} commonSegmentsIndex: {commonSegmentsIndex} out of {sortedCommonCnvSegments.Count} ");
+                Console.WriteLine($"Chromosome {chr} unmergedcanvasSegmentsIndex: {unmergedcanvasSegmentsIndex}");
+                Console.WriteLine($"Chromosome {chr} unaccountedcommonSegmentsIndex: {unaccountedcommonSegmentsIndex}");
+                Console.WriteLine($"Chromosome {chr} unaccountedcanvasSegmentsIndex: {unaccountedcanvasSegmentsIndex}");
             }
             if (canvasSegmentsIndex < sortedCanvasSegments.Count)
                 mergedSegments.AddRange(sortedCanvasSegments.Skip(canvasSegmentsIndex));
             if (commonSegmentsIndex < sortedCommonCnvSegments.Count)
                 mergedSegments.AddRange(sortedCommonCnvSegments.Skip(commonSegmentsIndex));
-            Console.WriteLine($"Chromosome {chr}    unmergedcanvasSegmentsIndex: {unmergedcanvasSegmentsIndex}");
-            Console.WriteLine($"Chromosome {chr} unaccountedcommonSegmentsIndex: {unaccountedcommonSegmentsIndex}");
-            Console.WriteLine($"Chromosome {chr} unaccountedcanvasSegmentsIndex: {unaccountedcanvasSegmentsIndex}");
+
             return mergedSegments;
         }
 
