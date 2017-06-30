@@ -95,6 +95,8 @@ namespace CanvasPartition
             var lengthSeg = new List<int>();
             if (breakpoints.Count >= 2 && segmentsLength > 10)
             {
+                if (breakpoints[0] != 0)
+                    breakpoints.Insert(0,0);
                 startBreakpointsPos.Add(breakpoints[0]);
                 endBreakpointPos.Add(breakpoints[1] - 1);
                 lengthSeg.Add(breakpoints[1] - 1);
