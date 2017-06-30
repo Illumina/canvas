@@ -113,22 +113,9 @@ namespace Canvas
         /// </summary>
         private string GetExecutablePath(string canvasExecutableStub, StringBuilder commandLineBuilder)
         {
-#if DotNetCore
             commandLineBuilder.Append(Path.Combine(_canvasFolder, string.Format("{0}.dll", canvasExecutableStub)));
             commandLineBuilder.Append(" ");
             return _runtimeExecutable.FullName;
-#else
-            if (CrossPlatform.IsThisLinux())
-            {
-                commandLineBuilder.Append(Path.Combine(_canvasFolder, string.Format("{0}.exe", canvasExecutableStub)));
-                commandLineBuilder.Append(" ");
-                return _runtimeExecutable.FullName;
-            }
-            else
-            {
-                return Path.Combine(_canvasFolder, string.Format("{0}.exe", canvasExecutableStub));
-            }
-#endif
         }
 
         private int GetBinSize(CanvasCallset callset, IFileLocation bamPath, IReadOnlyList<IFileLocation> intermediateDataPaths,

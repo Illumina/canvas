@@ -1073,7 +1073,8 @@ namespace CanvasBin
                 {
                     int bitsInLastByte = kvp.Value.Length % 8;
                     byte[] bytes = new byte[kvp.Value.Length / 8 + (bitsInLastByte == 0 ? 0 : 1)];
-#if DotNetCore
+
+                    // kvp.Value.CopyTo(bytes, 0); // not available in .NET core
                     BitArray array = kvp.Value;
                     int byteIndex = 0;
                     int bytePosition = 0;
@@ -1084,9 +1085,7 @@ namespace CanvasBin
                         bytePosition = (bytePosition + 1) % 8;
                         if (bytePosition == 0) byteIndex++;
                     }
-#else
-                    kvp.Value.CopyTo(bytes, 0);
-#endif
+                    
                     this.PossibleAlignments[kvp.Key] = bytes;
                     BitsInLastBytePossibleAlignments[kvp.Key] = bitsInLastByte;
                 }
