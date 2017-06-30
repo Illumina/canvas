@@ -265,7 +265,7 @@ namespace CanvasCommon
                 }
                 newSegments.Last().NextSegments.Add(segment);
                 segment.PreviousSegments.Add(newSegments.Last());
-                NextSegments.Add(segment);
+                newSegments.Add(segment);
 
                 countsSubRange = GetSampleGenomicBinSubrange(segment.End + 1, this.End);
                 allelesSubRange = GetAllelesSubrange(segment.End + 1, this.End);
@@ -281,7 +281,7 @@ namespace CanvasCommon
                 return newSegments;
             }
 
-            if (segment.Begin >  this.Begin && segment.Begin < this.End && this.End < segment.End)
+            if (segment.Begin >  this.Begin && segment.Begin < this.End && this.End <= segment.End)
             {
                 var countsSubRange = GetSampleGenomicBinSubrange(this.Begin, segment.Begin);
                 var allelesSubRange = GetAllelesSubrange(this.Begin, segment.Begin);
@@ -293,21 +293,31 @@ namespace CanvasCommon
                 }
                 newSegments.Last().NextSegments.Add(segment);
                 canvasSegmentsIndex++;
+
+                if (this.End != segment.End) return newSegments;
+                newSegments.Last().NextSegments.Add(next);
+                commonSegmentsIndex++;
                 return newSegments;
             }
 
-            if (segment.Begin < this.Begin && segment.End > this.Begin && this.End > segment.End)
+            if (segment.Begin <= this.Begin && segment.End > this.Begin && this.End > segment.End)
             {
+                if (segment.Begin == this.Begin)
+                {
+                    newSegments.Add(segment);
+                    previous.NextSegments.Add(segment);
+                    newSegments.Last().PreviousSegments.Add(previous);
+                }
 
-                var countsSubRange = GetSampleGenomicBinSubrange(segment.Begin, this.End);
-                var allelesSubRange = GetAllelesSubrange(segment.Begin, this.End);
+                var countsSubRange = GetSampleGenomicBinSubrange(segment.End, this.End);
+                var allelesSubRange = GetAllelesSubrange(segment.End, this.End);
                 if (countsSubRange.Empty())
                 {
                     segment.NextSegments.Add(next);
                     newSegments.Add(segment);
                 }
-                var tmpSegment = new CanvasSegment(segment.Chr, this.Begin, segment.Begin, countsSubRange,
-                    allelesSubRange);
+
+                var tmpSegment = new CanvasSegment(segment.Chr, segment.End, this.End, countsSubRange, allelesSubRange);
                 segment.NextSegments.Add(tmpSegment);
                 newSegments.Add(segment);
                 newSegments.Add(tmpSegment);
@@ -728,18 +738,20 @@ namespace CanvasCommon
 
             while (canvasSegmentsIndex < sortedCanvasSegments.Count && commonSegmentsIndex < sortedCommonCnvSegments.Count)
             {
+
                 if (sortedCanvasSegments[canvasSegmentsIndex].Begin < sortedCommonCnvSegments[commonSegmentsIndex].Begin &&
-                    sortedCanvasSegments[canvasSegmentsIndex].End < sortedCommonCnvSegments[commonSegmentsIndex].Begin)
+                    sortedCanvasSegments[canvasSegmentsIndex].End <= sortedCommonCnvSegments[commonSegmentsIndex].Begin)
                 {
                     mergedSegments.Add(sortedCanvasSegments[canvasSegmentsIndex]);
                     canvasSegmentsIndex++;
                 }
-                else if (sortedCanvasSegments[canvasSegmentsIndex].Begin > sortedCommonCnvSegments[commonSegmentsIndex].Begin &&
-                    sortedCanvasSegments[canvasSegmentsIndex].End < sortedCommonCnvSegments[commonSegmentsIndex].End)
+                else if (sortedCanvasSegments[canvasSegmentsIndex].Begin >= sortedCommonCnvSegments[commonSegmentsIndex].Begin &&
+                    sortedCanvasSegments[canvasSegmentsIndex].End <= sortedCommonCnvSegments[commonSegmentsIndex].End)
                 {
                     commonSegmentsIndex++;
                 }
-                else if (sortedCommonCnvSegments[commonSegmentsIndex].Begin < sortedCanvasSegments[canvasSegmentsIndex].Begin && sortedCommonCnvSegments[commonSegmentsIndex].End < sortedCanvasSegments[canvasSegmentsIndex].Begin)
+                else if (sortedCommonCnvSegments[commonSegmentsIndex].Begin < sortedCanvasSegments[canvasSegmentsIndex].Begin && 
+                    sortedCommonCnvSegments[commonSegmentsIndex].End <= sortedCanvasSegments[canvasSegmentsIndex].Begin)
                 {
                     mergedSegments.Add(sortedCommonCnvSegments[commonSegmentsIndex]);
                     commonSegmentsIndex++;
