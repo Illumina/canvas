@@ -142,6 +142,16 @@ namespace Canvas
             throw new NotImplementedException();
         }
 
+        public T GetSetting<T>(Setting<T> setting)
+        {
+            throw new NotImplementedException();
+        }
+
+        public bool HasSetting<T>(Setting<T> setting)
+        {
+            throw new NotImplementedException();
+        }
+
         public string SampleSheetPath => null;
     }
 }

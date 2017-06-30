@@ -59,9 +59,11 @@ namespace Canvas
         {
             SingleSampleCallset = new SingleSampleCallset(new Bam(bam), sampleName, normalVcfPath, isDbSnpVcf, analysisDetails.OutputFolder, outputVcfPath);
             Manifest = manifest;
+            
             SomaticVcfPath = somaticVcfPath;
             AnalysisDetails = analysisDetails;
             NormalBamPaths = normalBamPaths.Select(file => new Bam(file));
+            System.Console.WriteLine("%%% CanvasCallset() - set manifest to {0}", Manifest);
         }
 
         public CanvasCallset(
@@ -79,6 +81,7 @@ namespace Canvas
             AnalysisDetails = analysisDetails;
             if (normalBamPaths != null)
                 NormalBamPaths = normalBamPaths.Select(file => new Bam(file));
+            System.Console.WriteLine("%%% CanvasCallset() - set manifest to {0}", Manifest);
         }
         public bool IsEnrichment => Manifest != null;
         internal string TempManifestPath => Path.Combine(SingleSampleCallset.SampleOutputFolder.FullName, "manifest.txt");

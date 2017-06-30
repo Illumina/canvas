@@ -135,6 +135,9 @@ namespace Canvas
 
             commandLine.AppendFormat("-y "); // bin size only
 
+            Console.WriteLine("%%% GetBinSize() check manifest: IsEnrichment '{0}' manifest '{1}' '{2}' temp path '{3}'", callset.IsEnrichment, 
+                callset.Manifest, callset.Manifest?.Name, callset.TempManifestPath);
+
             if (callset.IsEnrichment) // manifest
             {
                 if (!File.Exists(callset.TempManifestPath)) { NexteraManifestUtils.WriteNexteraManifests(callset.Manifest, callset.TempManifestPath); }
@@ -217,6 +220,9 @@ namespace Canvas
                     NexteraManifestUtils.WriteNexteraManifests(callset.Manifest, callset.TempManifestPath);
                 }
             }
+
+            Console.WriteLine("%%% InvokeCanvasBin35Mers() check manifest: IsEnrichment '{0}' manifest '{1}' '{2}' temp path '{3}'", callset.IsEnrichment,
+                callset.Manifest, callset.Manifest?.Name, callset.TempManifestPath);
 
             // read bams 
             var intermediateDataPathsByBamPath = GetIntermediateBinnedFilesByBamPath(callset.AnalysisDetails.GenomeMetadata, callset.SingleSampleCallset.Bam.IsPairedEnd, new List<string>() { callset.SingleSampleCallset.SampleName }, callset.AnalysisDetails.TempDirectory,
@@ -1009,6 +1015,9 @@ namespace Canvas
                 ffpePath = tempFolder.GetFileLocation("FilterRegions.txt");
                 commandLine.AppendFormat(" -s -r -f \"{0}\"", ffpePath);
             }
+            Console.WriteLine("%%% InvokeCanvasClean() check manifest: IsEnrichment '{0}' manifest '{1}' '{2}' temp path '{3}'", callset.IsEnrichment,
+                callset.Manifest, callset.Manifest?.Name, callset.TempManifestPath);
+
             if (callset.IsEnrichment) // manifest
             {
                 if (!File.Exists(callset.TempManifestPath))

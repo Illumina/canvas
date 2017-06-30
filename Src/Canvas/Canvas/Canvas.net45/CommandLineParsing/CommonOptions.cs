@@ -20,6 +20,7 @@ namespace Canvas.CommandLineParsing
         /// <param name="sampleName"></param>
         public SingleSampleCommonOptions(IFileLocation bAlleleSites, bool isDbSnpVcf, IFileLocation ploidyBed, string sampleName)
         {
+            System.Console.WriteLine("%%% SingleSampleCommonOptions: {0} {1} {2} {3}", bAlleleSites, isDbSnpVcf, ploidyBed, sampleName);
             BAlleleSites = bAlleleSites;
             IsDbSnpVcf = isDbSnpVcf;
             PloidyBed = ploidyBed;
