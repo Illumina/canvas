@@ -220,8 +220,8 @@ namespace CanvasPartition
                     var index = 0;
                     foreach (var bin in vafByChr[chr])
                     {
-                        if (bin.Count < 1) continue;
-                        VafByChr[chr].Add(new VafContainingBins(index, bin.Average()));
+                        if (bin.Count > 0) 
+                            VafByChr[chr].Add(new VafContainingBins(index, bin.Average()));
                         index++;
                     }
                 }
