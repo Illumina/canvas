@@ -149,7 +149,7 @@ namespace Canvas
 
         public bool HasSetting<T>(Setting<T> setting)
         {
-            throw new NotImplementedException();
+            return false;
         }
 
         public string SampleSheetPath => null;
