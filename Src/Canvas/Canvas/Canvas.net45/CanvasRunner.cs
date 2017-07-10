@@ -354,8 +354,7 @@ namespace Canvas
 
                 var intermediateDataPaths = new List<IFileLocation>();
                 intermediateDataPathsByBamPath[bamPath] = intermediateDataPaths;
-                foreach (
-                    GenomeMetadata.SequenceMetadata sequenceMetadata in
+                foreach (GenomeMetadata.SequenceMetadata sequenceMetadata in
                         genomeMetadata.Sequences.OrderByDescending(sequence => sequence.Length))
                 {
                     // Only invoke CanvasBin for autosomes + allosomes;
@@ -392,8 +391,7 @@ namespace Canvas
                     binJobs.Add(binJob);
                 }
             }
-
-            _workManager.DoWorkParallelThreads(binJobs);
+            _workManager.DoWorkParallel(binJobs, new TaskResourceRequirements(1, 8));
             return intermediateDataPathsByBamPath;
         }
 
@@ -687,7 +685,7 @@ namespace Canvas
 
             // Invoke CanvasSNV jobs:
             Console.WriteLine($"CanvasSNV start for sample {callset.SingleSampleCallset.SampleName}");
-            _workManager.DoWorkParallelThreads(jobList);
+            _workManager.DoWorkParallel(jobList, new TaskResourceRequirements(1, 8));
             Console.WriteLine($"CanvasSNV complete for sample {callset.SingleSampleCallset.SampleName}");
 
             // Concatenate CanvasSNV results:
