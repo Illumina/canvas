@@ -391,7 +391,7 @@ namespace Canvas
                     binJobs.Add(binJob);
                 }
             }
-            _workManager.DoWorkParallel(binJobs, new TaskResourceRequirements(1, 8));
+            _workManager.DoWorkParallel(binJobs, new TaskResourceRequirements(1, 10));
             return intermediateDataPathsByBamPath;
         }
 
@@ -685,7 +685,7 @@ namespace Canvas
 
             // Invoke CanvasSNV jobs:
             Console.WriteLine($"CanvasSNV start for sample {callset.SingleSampleCallset.SampleName}");
-            _workManager.DoWorkParallel(jobList, new TaskResourceRequirements(1, 8));
+            _workManager.DoWorkParallel(jobList, new TaskResourceRequirements(1, 10));
             Console.WriteLine($"CanvasSNV complete for sample {callset.SingleSampleCallset.SampleName}");
 
             // Concatenate CanvasSNV results:
