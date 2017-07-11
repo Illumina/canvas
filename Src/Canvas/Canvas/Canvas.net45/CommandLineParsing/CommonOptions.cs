@@ -24,8 +24,6 @@ namespace Canvas.CommandLineParsing
             IsDbSnpVcf = isDbSnpVcf;
             PloidyBed = ploidyBed;
             SampleName = sampleName;
-
-            System.Console.WriteLine("%%% SingleSampleCommonOptions: {0} {1} {2} {3}", bAlleleSites, isDbSnpVcf, ploidyBed, sampleName);
         }
     }
     public class CommonOptions

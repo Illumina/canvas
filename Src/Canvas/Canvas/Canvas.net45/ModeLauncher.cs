@@ -46,9 +46,8 @@ namespace Canvas
             var log = outFolder.GetFileLocation("CanvasLog.txt");
             var error = outFolder.GetFileLocation("CanvasError.txt");
             IsasConfiguration config = IsasConfiguration.GetConfiguration();
-            // From $Root/Homo_sapiens/NCBI/GRCh38Decoy/Sequence/WholeGenomeFasta/genome.fa to $Root
+            // From $Root/Homo_sapiens/NCBI/GRCh38Decoy/Sequence/WholeGenomeFasta to $Root
             IDirectoryLocation genomeRoot = commonOptions.WholeGenomeFasta?.Parent?.Parent?.Parent?.Parent?.Parent;
-            Console.WriteLine("%%% genomeRoot '{0}' from whole genome fasta '{1}'", genomeRoot, commonOptions.WholeGenomeFasta);
             int returnValue = 0;
             IsasFrameworkFactory.RunWithIsasFramework(outFolder, log, error, commonOptions.StartCheckpoint, commonOptions.StopCheckpoint, 0,
                 config.MaximumMemoryGB, config.MaximumHoursPerProcess, false, genomeRoot,
