@@ -1,14 +1,15 @@
-﻿using System;
-using System.Collections.Generic;
-using Canvas.CommandLineParsing;
-using Illumina.Common;
+﻿using Canvas.CommandLineParsing;
 using Illumina.Common.FileSystem;
 using Isas.Framework.Checkpointing;
-using Isas.Framework.DataTypes;
 using Isas.Framework.FrameworkFactory;
 using Isas.Framework.Logging;
 using Isas.Framework.Settings;
 using Isas.Framework.WorkManagement;
+using Illumina.Common;
+using System;
+using System.IO;
+using System.Linq;
+using System.Collections.Generic;
 
 namespace Canvas
 {
@@ -56,7 +57,8 @@ namespace Canvas
                     var logger = frameworkServices.Logger;
                     try
                     {
-                        var executableProcessor = new ExecutableProcessor(new NullSampleSettings(), logger);
+                        var workerDirectory = new DirectoryLocation(Isas.Framework.Utilities.Utilities.GetAssemblyFolder(typeof(ModeLauncher)));
+                        var executableProcessor = new NullExecutableProcessor(logger, workerDirectory);
                         var runtimeExecutable = new FileLocation(executableProcessor.GetEnvironmentExecutablePath("dotnet"));
                         frameworkServices.Logger.Info($"Running Canvas {_mode} {_version}");
                         logger.Info($"Command-line arguments: {string.Join(" ", _args)}");
@@ -73,6 +75,7 @@ namespace Canvas
         }
     }
 
+
     public class NullModeLauncher : IModeLauncher
     {
         public int Launch()
@@ -81,81 +84,91 @@ namespace Canvas
         }
     }
 
-    public class NullSampleSettings : ISampleSettings
+    public class NullExecutableProcessor : IExecutableProcessor
     {
-        /// <summary>
-        /// Returns the value associated with the given key in the Header section.
-        /// </summary>
-        /// <param name="key">The key to look up.</param>
-        /// <returns>The value associated with the key, or null if key not present.</returns>
-        public string GetHeader(string key)
+        private ILogger _logger;
+        protected readonly List<IDirectoryLocation> _execDirs;
+
+        public NullExecutableProcessor(ILogger log, params IDirectoryLocation[] binaryDirs) 
+        {
+            _logger = log;
+            _execDirs = binaryDirs.ToList();
+        }
+
+        public string GetExecutableParameters(string executableFileNameWithoutExtension)
         {
             return null;
         }
 
-        /// <summary>
-        /// Returns the value associated with the given key in the Settings section.
-        /// </summary>
-        /// <param name="key">The key to look up.</param>
-        /// <returns>The value associated with the key, or null if key not present.</returns>
-        public string GetSetting(string key)
+        public string GetExecutable(string executableFileNameWithoutExtension, params string[] relativeBinDirectory)
         {
-            return null;
+            return GetExecutableFileLocation(executableFileNameWithoutExtension, relativeBinDirectory).FullName;
         }
 
-        /// <summary>Returns all the setting keys.</summary>
-        /// <returns></returns>
-        public IEnumerable<string> GetSettingKeys()
+        public string GetEnvironmentExecutablePath(string executableFileNameWithoutExtension)
         {
-            return null;
+            IFileLocation path;
+
+            // Now check the environment paths
+            var paths = Environment.GetEnvironmentVariable("PATH").Split(Path.PathSeparator).Select(dir => new DirectoryLocation(dir));
+            foreach (var candidatePath in paths)
+            {
+                var fullCandidatePath =
+                    GetPlatformDependentExecutablePath(candidatePath.GetFileLocation(executableFileNameWithoutExtension));
+
+                if (fullCandidatePath.Exists)
+                {
+                    return fullCandidatePath.FullName;
+                }
+            }
+            throw new Exception("Could not find executable '" + executableFileNameWithoutExtension + "' in environment path");
         }
 
-        /// <summary>
-        /// </summary>
-        /// <param name="key"></param>
-        /// <returns>SampleSet&lt;List&lt;string&gt;&gt;, or SampleSet&lt;List&lt;(string)null&gt;&gt; if key not present.</returns>
-        public SampleSet<List<string>> GetDataColumn(string key)
+        public bool TryGetCustomExecutableFileLocation(string executableFileNameWithoutExtension, out IFileLocation path)
         {
-            throw new NotImplementedException();
+            path = null;
+            return false;
         }
-
-        public SampleSet<SampleInfo> GetSamples()
+        public bool TryGetCustomExecutablePath(string executableFileNameWithoutExtension, out string path)
         {
-            throw new NotImplementedException();
-        }
-
-        public string GetManifest(string key)
-        {
-            throw new NotImplementedException();
-        }
-
-        public IEnumerable<string> GetManifestKeys()
-        {
-            throw new NotImplementedException();
-        }
-
-        public List<string> GetSection(string sectionName)
-        {
-            throw new NotImplementedException();
-        }
-
-        public void CheckUnusedEntries()
-        {
-            throw new NotImplementedException();
-        }
-
-        public T GetSetting<T>(Setting<T> setting)
-        {
-            //if (setting.HasDefaultValue) return setting.DefaultValue;
-            return default(T);
-            //return setting.Has
-        }
-
-        public bool HasSetting<T>(Setting<T> setting)
-        {
+            path = null;
             return false;
         }
 
-        public string SampleSheetPath => null;
+
+        public IFileLocation GetExecutableFileLocation(string executableFileNameWithoutExtension, params string[] executableRelativePath)
+        {
+            IFileLocation path;
+
+            IDirectoryLocation SearchDir(IDirectoryLocation execDir) => executableRelativePath.Aggregate(execDir,
+                (dir, relativePath) => dir.GetDirectoryLocation(relativePath), result => result);
+
+            var execDirs = _execDirs.Select(SearchDir).ToList();
+            foreach (var execDir in execDirs)
+            {
+                path = GetPlatformDependentExecutablePath(
+                    execDir.GetFileLocation(executableFileNameWithoutExtension));
+                if (path.Exists) return path;
+            }
+            string searchedDirs = string.Join(", ", execDirs);
+            throw new Exception($"Could not find executable {executableFileNameWithoutExtension} in {searchedDirs}");
+        }
+
+        private IFileLocation GetPlatformDependentExecutablePath(IFileLocation executablePathWithoutExtension)
+        {
+            var path = executablePathWithoutExtension.AppendName(".exe");
+            if (path.Exists && !CrossPlatform.IsThisLinux())
+            {
+                return path;
+            }
+            path = executablePathWithoutExtension.AppendName(".dll");
+            if (path.Exists)
+            {
+                return path;
+            }
+            return executablePathWithoutExtension; // fallback
+        }
+
     }
+    
 }
