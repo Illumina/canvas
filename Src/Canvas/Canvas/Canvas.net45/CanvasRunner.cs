@@ -226,7 +226,7 @@ namespace Canvas
 
             // read bams 
             var intermediateDataPathsByBamPath = GetIntermediateBinnedFilesByBamPath(callset.AnalysisDetails.GenomeMetadata, callset.SingleSampleCallset.Bam.IsPairedEnd, new List<string>() { callset.SingleSampleCallset.SampleName }, callset.AnalysisDetails.TempDirectory,
-                canvasReferencePath, canvasBedPath, bamPaths, commandLine, callset.TempManifestPath);
+                canvasReferencePath, canvasBedPath, bamPaths, commandLine, callset.IsEnrichment ? callset.TempManifestPath : null);
 
             int binSize = -1;
             if (bamPaths.Count > 1)
