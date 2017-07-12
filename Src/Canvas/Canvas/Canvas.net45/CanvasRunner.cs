@@ -113,22 +113,9 @@ namespace Canvas
         /// </summary>
         private string GetExecutablePath(string canvasExecutableStub, StringBuilder commandLineBuilder)
         {
-#if DotNetCore
             commandLineBuilder.Append(Path.Combine(_canvasFolder, string.Format("{0}.dll", canvasExecutableStub)));
             commandLineBuilder.Append(" ");
             return _runtimeExecutable.FullName;
-#else
-            if (CrossPlatform.IsThisLinux())
-            {
-                commandLineBuilder.Append(Path.Combine(_canvasFolder, string.Format("{0}.exe", canvasExecutableStub)));
-                commandLineBuilder.Append(" ");
-                return _runtimeExecutable.FullName;
-            }
-            else
-            {
-                return Path.Combine(_canvasFolder, string.Format("{0}.exe", canvasExecutableStub));
-            }
-#endif
         }
 
         private int GetBinSize(CanvasCallset callset, IFileLocation bamPath, IReadOnlyList<IFileLocation> intermediateDataPaths,
@@ -233,7 +220,7 @@ namespace Canvas
 
             // read bams 
             var intermediateDataPathsByBamPath = GetIntermediateBinnedFilesByBamPath(callset.AnalysisDetails.GenomeMetadata, callset.SingleSampleCallset.Bam.IsPairedEnd, new List<string>() { callset.SingleSampleCallset.SampleName }, callset.AnalysisDetails.TempDirectory,
-                canvasReferencePath, canvasBedPath, bamPaths, commandLine, callset.TempManifestPath);
+                canvasReferencePath, canvasBedPath, bamPaths, commandLine, callset.IsEnrichment ? callset.TempManifestPath : null);
 
             int binSize = -1;
             if (bamPaths.Count > 1)

@@ -20,9 +20,9 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" />
 
   <ItemGroup>
-    <PackageReference Include="Illumina.Common" Version="3.9.0.226" />
-    <PackageReference Include="Isas.Framework" Version="6.10.0.354" />
-    <PackageReference Include="Isas.SequencingFiles" Version="4.2.1.300" />
+    <PackageReference Include="Illumina.Common" Version="3.11.0.236" />
+    <PackageReference Include="Isas.Framework" Version="6.15.1.431" />
+    <PackageReference Include="Isas.SequencingFiles" Version="4.2.1.304" />
   </ItemGroup>
 
 </Project>

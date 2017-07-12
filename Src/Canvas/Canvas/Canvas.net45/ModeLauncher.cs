@@ -1,14 +1,15 @@
-﻿using System;
-using System.Collections.Generic;
-using Canvas.CommandLineParsing;
-using Illumina.Common;
+﻿using Canvas.CommandLineParsing;
 using Illumina.Common.FileSystem;
 using Isas.Framework.Checkpointing;
-using Isas.Framework.DataTypes;
 using Isas.Framework.FrameworkFactory;
 using Isas.Framework.Logging;
 using Isas.Framework.Settings;
 using Isas.Framework.WorkManagement;
+using Illumina.Common;
+using System;
+using System.IO;
+using System.Linq;
+using System.Collections.Generic;
 
 namespace Canvas
 {
@@ -45,6 +46,7 @@ namespace Canvas
             var log = outFolder.GetFileLocation("CanvasLog.txt");
             var error = outFolder.GetFileLocation("CanvasError.txt");
             IsasConfiguration config = IsasConfiguration.GetConfiguration();
+            // From $Root/Homo_sapiens/NCBI/GRCh38Decoy/Sequence/WholeGenomeFasta to $Root
             IDirectoryLocation genomeRoot = commonOptions.WholeGenomeFasta?.Parent?.Parent?.Parent?.Parent?.Parent;
             int returnValue = 0;
             IsasFrameworkFactory.RunWithIsasFramework(outFolder, log, error, commonOptions.StartCheckpoint, commonOptions.StopCheckpoint, 0,
@@ -54,12 +56,9 @@ namespace Canvas
                     var logger = frameworkServices.Logger;
                     try
                     {
-                        var executableProcessor = new ExecutableProcessor(new NullSampleSettings(), logger);
-#if DotNetCore
+                        var workerDirectory = new DirectoryLocation(Isas.Framework.Utilities.Utilities.GetAssemblyFolder(typeof(ModeLauncher)));
+                        var executableProcessor = new ExecutableProcessor((ISampleSettings)(new SettingsProcessor()), logger, workerDirectory);
                         var runtimeExecutable = new FileLocation(executableProcessor.GetEnvironmentExecutablePath("dotnet"));
-#else
-                        var runtimeExecutable = CrossPlatform.IsThisLinux() ? new FileLocation(executableProcessor.GetMonoPath()) : null;
-#endif
                         frameworkServices.Logger.Info($"Running Canvas {_mode} {_version}");
                         logger.Info($"Command-line arguments: {string.Join(" ", _args)}");
                         _modeRunner.Run(logger, frameworkServices.Checkpointer, frameworkServices.WorkManager, runtimeExecutable);
@@ -75,6 +74,7 @@ namespace Canvas
         }
     }
 
+
     public class NullModeLauncher : IModeLauncher
     {
         public int Launch()
@@ -83,69 +83,5 @@ namespace Canvas
         }
     }
 
-    public class NullSampleSettings : ISampleSettings
-    {
-        /// <summary>
-        /// Returns the value associated with the given key in the Header section.
-        /// </summary>
-        /// <param name="key">The key to look up.</param>
-        /// <returns>The value associated with the key, or null if key not present.</returns>
-        public string GetHeader(string key)
-        {
-            return null;
-        }
-
-        /// <summary>
-        /// Returns the value associated with the given key in the Settings section.
-        /// </summary>
-        /// <param name="key">The key to look up.</param>
-        /// <returns>The value associated with the key, or null if key not present.</returns>
-        public string GetSetting(string key)
-        {
-            return null;
-        }
-
-        /// <summary>Returns all the setting keys.</summary>
-        /// <returns></returns>
-        public IEnumerable<string> GetSettingKeys()
-        {
-            return null;
-        }
-
-        /// <summary>
-        /// </summary>
-        /// <param name="key"></param>
-        /// <returns>SampleSet&lt;List&lt;string&gt;&gt;, or SampleSet&lt;List&lt;(string)null&gt;&gt; if key not present.</returns>
-        public SampleSet<List<string>> GetDataColumn(string key)
-        {
-            throw new NotImplementedException();
-        }
-
-        public SampleSet<SampleInfo> GetSamples()
-        {
-            throw new NotImplementedException();
-        }
-
-        public string GetManifest(string key)
-        {
-            throw new NotImplementedException();
-        }
-
-        public IEnumerable<string> GetManifestKeys()
-        {
-            throw new NotImplementedException();
-        }
-
-        public List<string> GetSection(string sectionName)
-        {
-            throw new NotImplementedException();
-        }
-
-        public void CheckUnusedEntries()
-        {
-            throw new NotImplementedException();
-        }
-
-        public string SampleSheetPath => null;
-    }
+    
 }

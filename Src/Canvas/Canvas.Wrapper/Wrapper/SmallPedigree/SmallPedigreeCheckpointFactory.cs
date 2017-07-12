@@ -97,12 +97,7 @@ namespace Canvas.Wrapper.SmallPedigree
 
         private IFileLocation GetRuntimeExecutable()
         {
-#if DotNetCore
             return new FileLocation(_executableProcessor.GetEnvironmentExecutablePath("dotnet"));
-#else
-            var mono = CrossPlatform.IsThisLinux() ? _executableProcessor.GetMonoPath() : null;
-            return new FileLocation(mono);
-#endif
         }
     }
 }
