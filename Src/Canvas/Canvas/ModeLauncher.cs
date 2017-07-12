@@ -58,7 +58,9 @@ namespace Canvas
                     try
                     {
                         var workerDirectory = new DirectoryLocation(Isas.Framework.Utilities.Utilities.GetAssemblyFolder(typeof(ModeLauncher)));
-                        var executableProcessor = new ExecutableProcessor(new SettingsProcessor(), logger, workerDirectory);
+                        SettingsProcessor processor = new SettingsProcessor();
+                        ISettings settings = (ISettings)processor;
+                        var executableProcessor = new ExecutableProcessor(settings, logger, workerDirectory);
                         var runtimeExecutable = new FileLocation(executableProcessor.GetEnvironmentExecutablePath("dotnet"));
                         frameworkServices.Logger.Info($"Running Canvas {_mode} {_version}");
                         logger.Info($"Command-line arguments: {string.Join(" ", _args)}");
