@@ -31,7 +31,6 @@ namespace Canvas.Wrapper
             bool detectCnvDefault)
         {
             _workManager = workManager;
-            Console.WriteLine("%%% CanvasWorkerFactory: max gb {0} max threads {1}", workManager.MaximumMemoryGB, workManager.MaximumThreadCount); // %%%
             _sampleSettings = sampleSettings;
             _logger = logger;
             _executableProcessor = executableProcessor;

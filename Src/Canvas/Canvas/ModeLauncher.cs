@@ -49,7 +49,6 @@ namespace Canvas
             // From $Root/Homo_sapiens/NCBI/GRCh38Decoy/Sequence/WholeGenomeFasta to $Root
             IDirectoryLocation genomeRoot = commonOptions.WholeGenomeFasta?.Parent?.Parent?.Parent?.Parent?.Parent;
             int returnValue = 0;
-
             IsasFrameworkFactory.RunWithIsasFramework(outFolder, log, error, commonOptions.StartCheckpoint, commonOptions.StopCheckpoint, 0,
                 config.MaximumMemoryGB, config.MaximumHoursPerProcess, false, genomeRoot,
                 frameworkServices =>
