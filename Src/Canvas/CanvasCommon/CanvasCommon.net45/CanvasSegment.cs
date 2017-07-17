@@ -78,18 +78,48 @@ namespace CanvasCommon
         public Dictionary<string, double[]> CoverageByChr = new Dictionary<string, double[]>();
     }
 
+    public enum SegmentsSet
+    {
+        SetA,
+        SetB
+    }
+
+    /// <summary>
+    /// Groups overlapping genomic intervals into sets / blocks. 
+    /// Used for keeping track of merged common and Canvas-called intervals when common CNV option is used.   
+    /// </summary>
+    public class CanvasSegmentsSet
+    {
+
+        public List<CanvasSegment> SetA { get; }
+        public List<CanvasSegment> SetB { get; }
+
+        public SegmentsSet SelectedSet { get; set; }
+
+        public List<CanvasSegment> GetSet(SegmentsSet segmentsSet)
+        {
+            return segmentsSet == SegmentsSet.SetA ? SetA : SetB;
+        }
+
+        public CanvasSegmentsSet(List<CanvasSegment> setA, List<CanvasSegment> setB)
+        {
+            SetA = setA;
+            SetB = setB;
+            SelectedSet = SegmentsSet.SetA;
+
+        }
+    }
+
     /// <summary>
     /// Contains information about a genomic interval. Has functions for computing copy numbers and their likelihoods.
     /// </summary>
     public partial class CanvasSegment
-    {
+        {
 
         public CanvasSegment(string chr, int begin, int end, List<SampleGenomicBin> counts)
         {
             Chr = chr;
             GenomicBins = new List<SampleGenomicBin>();
-            PreviousSegments = new List<CanvasSegment>();
-            NextSegments = new List<CanvasSegment>();
             Begin = begin;
             End = end;
             GenomicBins = new List<SampleGenomicBin>(counts);
@@ -101,8 +131,6 @@ namespace CanvasCommon
         {
             Chr = chr;
             GenomicBins = new List<SampleGenomicBin>();
-            PreviousSegments = new List<CanvasSegment>();
-            NextSegments = new List<CanvasSegment>();
             Begin = begin;
             End = end;
             GenomicBins = new List<SampleGenomicBin>(counts);
@@ -112,15 +140,12 @@ namespace CanvasCommon
         }
 
         #region Members
-        public List<CanvasSegment> NextSegments;
-        public List<CanvasSegment> PreviousSegments;
         public List<SampleGenomicBin> GenomicBins;
-        public int segmentIndex; 
         public int CopyNumber { get; set; }
         public int SecondBestCopyNumber { get; set; }
         public int? MajorChromosomeCount;
         public double QScore;
-        public double? DQScore;
+        public double? DqScore;
         public double? MajorChromosomeCountScore;
         public double ModelDistance;
         public double RunnerUpModelDistance;
@@ -156,9 +181,13 @@ namespace CanvasCommon
         {
             return this.GenomicBins.Where(x => x.Start >= start && x.Stop <= end).ToList();
         }
-        public Alleles GetAllelesSubrange(int start, int end)
+        public Alleles GetAllelesSubrange(int start, int end, int defaultAlleleCountThreshold)
         {
-            return new Alleles(Alleles.Balleles.Where(x => x.Position >= start && x.Position <= end).ToList());
+            var array = Alleles.Balleles.Where(x => x.Position >= start && x.Position <= end).ToList();
+            var allele = new Alleles(array);
+            if (array.Count > defaultAlleleCountThreshold)
+                allele.SetMedianCounts();
+            return allele;
         }
         /// <summary>
         /// Mean of the segment's counts.
@@ -183,7 +212,6 @@ namespace CanvasCommon
                 return sorted.Median();
             }
         }
-
 
         /// <summary>
         /// removes flanking bins before median estimation
@@ -237,98 +265,147 @@ namespace CanvasCommon
             Alleles.Balleles.AddRange(s.Alleles.Balleles);
         }
 
-        public bool CheckOveralp(CanvasSegment segment, int flankRegion = 5)
+        public int SizeOveralp(CanvasSegment segment)
         {
-            if (segment.Begin - flankRegion > this.Begin && segment.End + flankRegion < this.End)
-                return true;
-            if (segment.Begin > this.Begin && segment.Begin < this.End && this.End < segment.End)
-                return true;
+            if (segment.Begin > this.Begin && segment.End < this.End)
+                return this.Length - segment.Length;
+            if (segment.Begin > this.Begin && segment.Begin < this.End && this.End <= segment.End)
+                return this.End - segment.Begin;
             if (segment.Begin < this.Begin && segment.End > this.Begin && this.End > segment.End)
-                return true;
-            return false;
+                return segment.End - this.Begin;
+            return 0;
         }
 
-        public List<CanvasSegment> Split(CanvasSegment previous, CanvasSegment segment, CanvasSegment next,
+        /// <summary>
+        /// Handle different overlap scenarios between Canvas segment and common segment
+        /// </summary>
+        /// <param name="canvasSegments"></param>
+        /// <param name="commonSegments"></param>
+        /// <param name="canvasSegmentsIndex"></param>
+        /// <param name="commonSegmentsIndex"></param>
+        /// <returns></returns>
+        public static CanvasSegmentsSet Split(List<CanvasSegment> canvasSegments, List<CanvasSegment> commonSegments, int defaultAlleleCountThreshold,
             ref int canvasSegmentsIndex, ref int commonSegmentsIndex)
         {
-            var newSegments = new List<CanvasSegment>();
-            const int flankRegion = 5;
-            if (segment.Begin - flankRegion > this.Begin && segment.End + flankRegion < this.End)
+            var haplotypebSegments = new List<CanvasSegment>();
+            var haplotypeaSegments = new List<CanvasSegment>();
+
+            // scenario: common segment within Canvas segment
+            // canvasSegment:   ----------------------------------
+            // commonSegment:         -----------------
+            if (commonSegments[commonSegmentsIndex].Begin > canvasSegments[canvasSegmentsIndex].Begin && commonSegments[commonSegmentsIndex].End  < canvasSegments[canvasSegmentsIndex].End)
             {
-                var countsSubRange = GetSampleGenomicBinSubrange(this.Begin, segment.Begin);
-                var allelesSubRange = GetAllelesSubrange(this.Begin, segment.Begin);
+                var countsSubRange = canvasSegments[canvasSegmentsIndex].GetSampleGenomicBinSubrange(canvasSegments[canvasSegmentsIndex].Begin, commonSegments[commonSegmentsIndex].Begin);
+                var allelesSubRange = canvasSegments[canvasSegmentsIndex].GetAllelesSubrange(canvasSegments[canvasSegmentsIndex].Begin, commonSegments[commonSegmentsIndex].Begin, defaultAlleleCountThreshold);
                 if (!countsSubRange.Empty())
-                {
-                    newSegments.Add(new CanvasSegment(segment.Chr, this.Begin, segment.Begin, countsSubRange, allelesSubRange));
-                    previous.NextSegments.Add(newSegments.Last());
-                    newSegments.Last().PreviousSegments.Add(previous);
-                }
-                newSegments.Last().NextSegments.Add(segment);
-                segment.PreviousSegments.Add(newSegments.Last());
-                newSegments.Add(segment);
+                    haplotypebSegments.Add(new CanvasSegment(commonSegments[commonSegmentsIndex].Chr, canvasSegments[canvasSegmentsIndex].Begin, commonSegments[commonSegmentsIndex].Begin, countsSubRange, allelesSubRange));
 
-                countsSubRange = GetSampleGenomicBinSubrange(segment.End + 1, this.End);
-                allelesSubRange = GetAllelesSubrange(segment.End + 1, this.End);
+                haplotypebSegments.Add(commonSegments[commonSegmentsIndex]);
 
+                countsSubRange = canvasSegments[canvasSegmentsIndex].GetSampleGenomicBinSubrange(commonSegments[commonSegmentsIndex].End, canvasSegments[canvasSegmentsIndex].End);
+                allelesSubRange = canvasSegments[canvasSegmentsIndex].GetAllelesSubrange(commonSegments[commonSegmentsIndex].End, canvasSegments[canvasSegmentsIndex].End, defaultAlleleCountThreshold);
                 if (!countsSubRange.Empty())
+                    haplotypebSegments.Add(new CanvasSegment(commonSegments[commonSegmentsIndex].Chr, commonSegments[commonSegmentsIndex].End, canvasSegments[canvasSegmentsIndex].End, countsSubRange, allelesSubRange));
+
+                // scenario: Canvas segment spans more than one common segment
+                // canvasSegment:   ------------------------------------------------
+                // commonSegment:            ------------     -----------------
+                if (commonSegments.Count > commonSegmentsIndex + 1 && commonSegments[commonSegmentsIndex + 1].Begin < canvasSegments[canvasSegmentsIndex].End)
                 {
-                    newSegments.Add(new CanvasSegment(segment.Chr, this.Begin, segment.Begin, countsSubRange, allelesSubRange));
-                    segment.NextSegments.Add(newSegments.Last());
-                    newSegments.Last().NextSegments.Add(next);
+                    haplotypebSegments.Add(commonSegments[commonSegmentsIndex]);
+                    commonSegmentsIndex++;
+
+                    while (commonSegments.Count > commonSegmentsIndex && commonSegments[commonSegmentsIndex].Begin < canvasSegments[canvasSegmentsIndex].End)
+                    {
+                        haplotypebSegments.Add(commonSegments[commonSegmentsIndex]);
+                        commonSegmentsIndex++;
+                    }
+                    haplotypeaSegments.Add(canvasSegments[canvasSegmentsIndex]);
+                    canvasSegmentsIndex++;
+                    return new CanvasSegmentsSet(setA: haplotypeaSegments, setB: haplotypebSegments);
                 }
+
+                haplotypeaSegments.Add(canvasSegments[canvasSegmentsIndex]);
                 canvasSegmentsIndex++;
                 commonSegmentsIndex++;
-                return newSegments;
+                return new CanvasSegmentsSet(setA: haplotypeaSegments, setB: haplotypebSegments);
             }
 
-            if (segment.Begin >  this.Begin && segment.Begin < this.End && this.End <= segment.End)
+            // scenario: Canvas segment part-overlaps common segment and comes first
+            // canvasSegment:   --------------------
+            // commonSegment:            ------------------
+            if (commonSegments[commonSegmentsIndex].Begin > canvasSegments[canvasSegmentsIndex].Begin && commonSegments[commonSegmentsIndex].Begin < canvasSegments[canvasSegmentsIndex].End &&
+                canvasSegments[canvasSegmentsIndex].End <= commonSegments[commonSegmentsIndex].End)
             {
-                var countsSubRange = GetSampleGenomicBinSubrange(this.Begin, segment.Begin);
-                var allelesSubRange = GetAllelesSubrange(this.Begin, segment.Begin);
+                haplotypeaSegments.Add(canvasSegments[canvasSegmentsIndex]);
+                var countsSubRange = canvasSegments[canvasSegmentsIndex].GetSampleGenomicBinSubrange(canvasSegments[canvasSegmentsIndex].Begin, commonSegments[commonSegmentsIndex].Begin);
+                var allelesSubRange = canvasSegments[canvasSegmentsIndex].GetAllelesSubrange(canvasSegments[canvasSegmentsIndex].Begin, commonSegments[commonSegmentsIndex].Begin, defaultAlleleCountThreshold);
                 if (!countsSubRange.Empty())
                 {
-                    newSegments.Add(new CanvasSegment(segment.Chr, this.Begin, segment.Begin, countsSubRange, allelesSubRange));
-                    previous.NextSegments.Add(newSegments.Last());
-                    newSegments.Last().PreviousSegments.Add(previous);
+                    haplotypebSegments.Add(new CanvasSegment(commonSegments[commonSegmentsIndex].Chr, canvasSegments[canvasSegmentsIndex].Begin, commonSegments[commonSegmentsIndex].Begin, countsSubRange, allelesSubRange));
                 }
-                newSegments.Last().NextSegments.Add(segment);
-                canvasSegmentsIndex++;
 
-                if (this.End != segment.End) return newSegments;
-                newSegments.Last().NextSegments.Add(next);
-                commonSegmentsIndex++;
-                return newSegments;
+                // scenario: Canvas segment part-overlaps common segment,  comes first and both segments have the same end coords
+                // canvasSegment:   ---------------------------
+                // commonSegment:            ------------------
+                if (canvasSegments[canvasSegmentsIndex].End == commonSegments[commonSegmentsIndex].End)
+                {
+                    canvasSegmentsIndex++;
+                    commonSegmentsIndex++;
+                    haplotypebSegments.Add(commonSegments[commonSegmentsIndex]);
+                    return new CanvasSegmentsSet(setA: haplotypeaSegments, setB: haplotypebSegments);
+                }
+
+                // scenario: common segment spans more than one Canvas segment
+                // canvasSegment:   -------------------      --------
+                // commonSegment:            ---------------------------------
+                if (canvasSegments.Count > canvasSegmentsIndex + 1 && commonSegments[commonSegmentsIndex].End > canvasSegments[canvasSegmentsIndex + 1].End)
+                {
+                    canvasSegmentsIndex++;
+
+                    while (canvasSegments.Count > canvasSegmentsIndex && commonSegments[commonSegmentsIndex].End > canvasSegments[canvasSegmentsIndex].End)
+                    {
+                        haplotypeaSegments.Add(canvasSegments[canvasSegmentsIndex]);
+                        canvasSegmentsIndex++;
+                    }
+                    haplotypebSegments.Add(commonSegments[commonSegmentsIndex]);
+                    commonSegmentsIndex++;
+                    return new CanvasSegmentsSet(setA: haplotypeaSegments, setB: haplotypebSegments);
+                }
+
+                haplotypebSegments.Add(commonSegments[commonSegmentsIndex]);
+                canvasSegmentsIndex++;
+                countsSubRange = canvasSegments[canvasSegmentsIndex].GetSampleGenomicBinSubrange(commonSegments[commonSegmentsIndex].End, canvasSegments[canvasSegmentsIndex].End);
+                allelesSubRange = canvasSegments[canvasSegmentsIndex].GetAllelesSubrange(commonSegments[commonSegmentsIndex].End, canvasSegments[canvasSegmentsIndex].End, defaultAlleleCountThreshold);
+                if (!countsSubRange.Empty())
+                    haplotypebSegments.Add(new CanvasSegment(commonSegments[commonSegmentsIndex].Chr, canvasSegments[canvasSegmentsIndex].Begin, commonSegments[commonSegmentsIndex].Begin, countsSubRange, allelesSubRange));
+                haplotypeaSegments.Add(canvasSegments[canvasSegmentsIndex]);
+                canvasSegmentsIndex++;
+                return new CanvasSegmentsSet(setA: haplotypeaSegments, setB: haplotypebSegments);
             }
 
-            if (segment.Begin <= this.Begin && segment.End > this.Begin && this.End > segment.End)
+            // scenario: common segment part-overlaps Canvas segment and comes first
+            // canvasSegment:           --------------------
+            // commonSegment:   ------------------
+            if (commonSegments[commonSegmentsIndex].Begin <= canvasSegments[canvasSegmentsIndex].Begin && commonSegments[commonSegmentsIndex].End > canvasSegments[canvasSegmentsIndex].Begin && canvasSegments[canvasSegmentsIndex].End > commonSegments[commonSegmentsIndex].End)
             {
-                if (segment.Begin == this.Begin)
-                {
-                    newSegments.Add(segment);
-                    previous.NextSegments.Add(segment);
-                    newSegments.Last().PreviousSegments.Add(previous);
-                }
+                haplotypebSegments.Add(commonSegments[commonSegmentsIndex]);
 
-                var countsSubRange = GetSampleGenomicBinSubrange(segment.End, this.End);
-                var allelesSubRange = GetAllelesSubrange(segment.End, this.End);
-                if (countsSubRange.Empty())
-                {
-                    segment.NextSegments.Add(next);
-                    newSegments.Add(segment);
-                }
+                var countsSubRange = canvasSegments[canvasSegmentsIndex].GetSampleGenomicBinSubrange(commonSegments[commonSegmentsIndex].End, canvasSegments[canvasSegmentsIndex].End);
+                var allelesSubRange = canvasSegments[canvasSegmentsIndex].GetAllelesSubrange(commonSegments[commonSegmentsIndex].End, canvasSegments[canvasSegmentsIndex].End, defaultAlleleCountThreshold);
+                if (!countsSubRange.Empty())
+                    haplotypebSegments.Add(new CanvasSegment(commonSegments[commonSegmentsIndex].Chr, canvasSegments[canvasSegmentsIndex].Begin, commonSegments[commonSegmentsIndex].Begin, countsSubRange, allelesSubRange));
 
-                var tmpSegment = new CanvasSegment(segment.Chr, segment.End, this.End, countsSubRange, allelesSubRange);
-                segment.NextSegments.Add(tmpSegment);
-                newSegments.Add(segment);
-                newSegments.Add(tmpSegment);
-
+                haplotypeaSegments.Add(canvasSegments[canvasSegmentsIndex]);
                 canvasSegmentsIndex++;
                 commonSegmentsIndex++;
-                return newSegments;
+                return new CanvasSegmentsSet(setA: haplotypeaSegments, setB: haplotypebSegments);
             }
-            return newSegments;
+
+            // default: for now do now handle other conditions
+            canvasSegmentsIndex++;
+            return new CanvasSegmentsSet(setA: new List<CanvasSegment> { canvasSegments[canvasSegmentsIndex] }, setB: null);
         }
-
 
         public int BinCount => Counts.Count;
 
@@ -438,21 +515,7 @@ namespace CanvasCommon
             Console.WriteLine("{0} Loaded {1} segments", DateTime.Now, segments.Count);
             return segments;
         }
-
-
-        public static void LinkAdjacentSegments(Dictionary<string, List<CanvasSegment>> genomewideSegments)
-        {
-            foreach (var segmentsByChromosome in genomewideSegments.Values)
-            {
-                foreach (var segment in segmentsByChromosome.SkipLast())
-                {
-                    segment.NextSegments.Add(segmentsByChromosome.Skip(segmentsByChromosome.FindIndex(x => x == segment)+1).Take(1).Single());
-                }
-            }
-        }
-
-
-
+   
         /// <summary>
         /// Apply quality scores.
         /// </summary>
@@ -464,8 +527,7 @@ namespace CanvasCommon
             }
         }
 
-
-        static public Dictionary<string, List<CanvasSegment>> GetSegmentsByChromosome(List<CanvasSegment> segments)
+        public static Dictionary<string, List<CanvasSegment>> GetSegmentsByChromosome(List<CanvasSegment> segments)
         {
             Dictionary<string, List<CanvasSegment>> segmentsByChromosome = new Dictionary<string, List<CanvasSegment>>();
             foreach (CanvasSegment segment in segments)
@@ -479,9 +541,7 @@ namespace CanvasCommon
             return segmentsByChromosome;
         }
 
-
-
-        static public Dictionary<string, List<CanvasSegment>> GetCommonCnvSegmentsByChromosome(List<CanvasSegment> segments)
+        public static Dictionary<string, List<CanvasSegment>> GetCommonCnvSegmentsByChromosome(List<CanvasSegment> segments)
         {
             Dictionary<string, List<CanvasSegment>> segmentsByChromosome = new Dictionary<string, List<CanvasSegment>>();
             foreach (CanvasSegment segment in segments)
@@ -708,7 +768,7 @@ namespace CanvasCommon
         /// <summary>
         /// Return true if we are not allowed to merge two segments separated by the interval (start, end).
         /// </summary>
-        static private bool IsForbiddenInterval(string chr, int start, int end,
+        private static bool IsForbiddenInterval(string chr, int start, int end,
             Dictionary<string, List<SampleGenomicBin>> excludedIntervals)
         {
             if (excludedIntervals == null) return false;
@@ -722,66 +782,80 @@ namespace CanvasCommon
             return false;
         }
 
-        public static List<CanvasSegment> MergeCommonCnvSegments(List<CanvasSegment> canvasSegments,  List<CanvasSegment> commonCnvSegments, string chr)
+        /// <summary>
+        /// Merge common CNV regions and Canvas segment creating CanvasSegmentsHaplotype blocks of CanvasSegments.
+        /// CanvasSegmentsHaplotype will have two haplotypes where common CNV regions and Canvas segment overlap
+        /// The method calculates various overlap scenarious and outputs list of CanvasSegmentsHaplotype
+        /// </summary>
+        /// <param name="canvasSegments"></param>
+        /// <param name="commonCnvSegments"></param>
+        /// <param name="chr"></param>
+        /// <returns></returns>
+        public static List<CanvasSegmentsSet> MergeCommonCnvSegments(List<CanvasSegment> canvasSegments,  
+            List<CanvasSegment> commonCnvSegments, string chr, int defaultAlleleCountThreshold)
         {
-            var mergedSegments = new List<CanvasSegment>(canvasSegments.Count + commonCnvSegments.Count*3);
+            var mergedSegments = new List<CanvasSegmentsSet>(canvasSegments.Count + commonCnvSegments.Count*3);
             var sortedCanvasSegments = canvasSegments.OrderBy(o => o.Begin).ToList();
             var sortedCommonCnvSegments = commonCnvSegments.OrderBy(o => o.Begin).ToList();
             var canvasSegmentsIndex = 1;
             var commonSegmentsIndex = 0;
             Console.WriteLine($"MergeCommonCnvSegments for {chr} ");
 
-            int unaccountedcommonSegmentsIndex = 0;
-            int unaccountedcanvasSegmentsIndex = 0;
-            int unmergedcanvasSegmentsIndex = 0;
-            mergedSegments.Add(sortedCanvasSegments[0]);
-
-            while (canvasSegmentsIndex < sortedCanvasSegments.Count && commonSegmentsIndex < sortedCommonCnvSegments.Count)
+            mergedSegments.Add(new CanvasSegmentsSet(setA: new List<CanvasSegment> {sortedCanvasSegments[0]}, setB: null));
+            
+            // iterate over two CanvasSegment lists and merge using various scenarious 
+            while (canvasSegmentsIndex < sortedCanvasSegments.Count - 1 && commonSegmentsIndex < sortedCommonCnvSegments.Count - 1)
             {
-
-                if (sortedCanvasSegments[canvasSegmentsIndex].Begin < sortedCommonCnvSegments[commonSegmentsIndex].Begin &&
-                    sortedCanvasSegments[canvasSegmentsIndex].End <= sortedCommonCnvSegments[commonSegmentsIndex].Begin)
+                // Canvas segment and common segment have the same coordinates
+                if (sortedCanvasSegments[canvasSegmentsIndex].Begin == sortedCommonCnvSegments[commonSegmentsIndex].Begin &&
+                    sortedCanvasSegments[canvasSegmentsIndex].End == sortedCommonCnvSegments[commonSegmentsIndex].End)
                 {
-                    mergedSegments.Add(sortedCanvasSegments[canvasSegmentsIndex]);
+                    mergedSegments.Add(new CanvasSegmentsSet(setA: new List<CanvasSegment> { sortedCanvasSegments[canvasSegmentsIndex] }, setB: null));
                     canvasSegmentsIndex++;
-                }
-                else if (sortedCanvasSegments[canvasSegmentsIndex].Begin >= sortedCommonCnvSegments[commonSegmentsIndex].Begin &&
-                    sortedCanvasSegments[canvasSegmentsIndex].End <= sortedCommonCnvSegments[commonSegmentsIndex].End)
-                {
                     commonSegmentsIndex++;
+                    continue;
                 }
-                else if (sortedCommonCnvSegments[commonSegmentsIndex].Begin < sortedCanvasSegments[canvasSegmentsIndex].Begin && 
-                    sortedCommonCnvSegments[commonSegmentsIndex].End <= sortedCanvasSegments[canvasSegmentsIndex].Begin)
+                // Canvas segment comes before common segment and does not overlap it
+                if (sortedCanvasSegments[canvasSegmentsIndex].Begin < sortedCommonCnvSegments[commonSegmentsIndex].Begin &&
+                    sortedCanvasSegments[canvasSegmentsIndex].End   <= sortedCommonCnvSegments[commonSegmentsIndex].Begin)
                 {
-                    mergedSegments.Add(sortedCommonCnvSegments[commonSegmentsIndex]);
+                    mergedSegments.Add(new CanvasSegmentsSet(setA: new List<CanvasSegment> { sortedCanvasSegments[canvasSegmentsIndex] }, setB: null));
+                    canvasSegmentsIndex++;
+                    continue;
+                }
+                // common segment comes before Canvas segment and does not overlap it
+                if (sortedCanvasSegments[canvasSegmentsIndex].Begin > sortedCommonCnvSegments[commonSegmentsIndex].Begin &&
+                    sortedCanvasSegments[canvasSegmentsIndex].End  >= sortedCommonCnvSegments[commonSegmentsIndex].Begin)
+                {
+                    mergedSegments.Add(new CanvasSegmentsSet(setA: null, setB: new List<CanvasSegment> { sortedCommonCnvSegments[commonSegmentsIndex] }));
                     commonSegmentsIndex++;
+                    continue;
                 }
-                else if (sortedCanvasSegments[canvasSegmentsIndex].CheckOveralp(sortedCommonCnvSegments[commonSegmentsIndex]))
+                // common segment and Canvas segment overlap
+                if (sortedCanvasSegments[canvasSegmentsIndex].SizeOveralp(sortedCommonCnvSegments[commonSegmentsIndex]) > 10)
                 {
-                    var newSegments =
-                        sortedCanvasSegments[canvasSegmentsIndex].Split(sortedCanvasSegments[canvasSegmentsIndex - 1],
-                            sortedCommonCnvSegments[commonSegmentsIndex], sortedCanvasSegments[canvasSegmentsIndex + 1],
-                            ref canvasSegmentsIndex,
-                            ref commonSegmentsIndex);
-                    if (newSegments == null)
-                        unmergedcanvasSegmentsIndex++;
-                    mergedSegments.AddRange(newSegments);
+                    var newSegmentsHaplotype = Split(sortedCanvasSegments, sortedCommonCnvSegments, defaultAlleleCountThreshold,
+                        ref canvasSegmentsIndex, ref commonSegmentsIndex);
+                    mergedSegments.Add(newSegmentsHaplotype);
                 }
                 else
                 {
-                    unaccountedcommonSegmentsIndex++;
-                    unaccountedcanvasSegmentsIndex++;
+                    mergedSegments.Add(new CanvasSegmentsSet(setA: new List<CanvasSegment> { sortedCanvasSegments[canvasSegmentsIndex] }, setB: null));
+                    canvasSegmentsIndex++;
+                    commonSegmentsIndex++;
                 }
                 Console.WriteLine($"Chromosome {chr} canvasSegmentsIndex: {canvasSegmentsIndex} out of {sortedCanvasSegments.Count}");
                 Console.WriteLine($"Chromosome {chr} commonSegmentsIndex: {commonSegmentsIndex} out of {sortedCommonCnvSegments.Count} ");
-                Console.WriteLine($"Chromosome {chr} unmergedcanvasSegmentsIndex: {unmergedcanvasSegmentsIndex}");
-                Console.WriteLine($"Chromosome {chr} unaccountedcommonSegmentsIndex: {unaccountedcommonSegmentsIndex}");
-                Console.WriteLine($"Chromosome {chr} unaccountedcanvasSegmentsIndex: {unaccountedcanvasSegmentsIndex}");
             }
+
             if (canvasSegmentsIndex < sortedCanvasSegments.Count)
-                mergedSegments.AddRange(sortedCanvasSegments.Skip(canvasSegmentsIndex));
-            if (commonSegmentsIndex < sortedCommonCnvSegments.Count)
-                mergedSegments.AddRange(sortedCommonCnvSegments.Skip(commonSegmentsIndex));
+            {
+                while (canvasSegmentsIndex < sortedCanvasSegments.Count)
+                {
+                    mergedSegments.Add(new CanvasSegmentsSet(setA: new List<CanvasSegment> { sortedCanvasSegments[canvasSegmentsIndex] }, setB: null));
+                    canvasSegmentsIndex++;
+                }
+            }
 
             return mergedSegments;
         }

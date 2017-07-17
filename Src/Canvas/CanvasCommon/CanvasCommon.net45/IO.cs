@@ -186,15 +186,21 @@ namespace CanvasCommon
                 {
                     foreach (var genotype in allelesByChromosome[chr][index])
                     {
-                        float MAF = genotype.CountsB / (float) (genotype.CountsA + genotype.CountsB);
-                        int totalCoverage = genotype.CountsA + genotype.CountsB;
-                        var counts = new Tuple<int, int>(genotype.CountsA, genotype.CountsB);
-                        var allele = new Allele(genotype.Pos, MAF, totalCoverage, counts);
+                        var allele = GetAllele(genotype);
                         segmentsByChromosome[chr][index].Alleles.Balleles.Add(allele);
                     }
                 }
             }
             return meanCoverage;
+        }
+
+        public static Allele GetAllele(Genotype genotype)
+        {
+            float MAF = genotype.CountsB / (float) (genotype.CountsA + genotype.CountsB);
+            int totalCoverage = genotype.CountsA + genotype.CountsB;
+            var counts = new Tuple<int, int>(genotype.CountsA, genotype.CountsB);
+            var allele = new Allele(genotype.Pos, MAF, totalCoverage, counts);
+            return allele;
         }
 
         public static HashSet<string> LoadChromosomeNames(string referenceFolder)
@@ -239,6 +245,9 @@ namespace CanvasCommon
                         continue;
                     }
                     string chr = bits[0];
+                    if (intervalByChromosome.Keys.All(chromosome => chromosome != chr))
+                        continue;
+
                     int position = int.Parse(bits[1]); // 1-based (from the input VCF to Canvas SNV)
 
                     if (!chromosomeNames.Contains(chr.ToLowerInvariant()))
