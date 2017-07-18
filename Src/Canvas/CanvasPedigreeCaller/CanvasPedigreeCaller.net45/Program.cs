@@ -58,7 +58,7 @@ namespace CanvasPedigreeCaller
                 { "c|config=",        $"parameter configuration path (default {parameterconfigPath})",                                  v => parameterconfigPath = v}
             };
 
-            var extraArgs = p.Parse(args.Skip(24));
+            var extraArgs = p.Parse(args);
 
             if (extraArgs.Count > 0)
             {
