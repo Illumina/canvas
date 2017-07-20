@@ -21,7 +21,7 @@ namespace CanvasTest
             }, result);
         }
         
-        [Fact(Skip = "Single sample SPW is broken")]
+        [Fact]
         public void TestGetGenotypeCombinationsSingleSample()
         {
             int numSamples = 1;

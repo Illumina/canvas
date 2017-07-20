@@ -14,9 +14,9 @@
       <dependency id="ClassicBioinfoTools" version="[0.3.0.114,1.0.0)" />
       <dependency id="Isas.Manifests" version="[3.0.1.64,4.0.0)" />
       <dependency id="Isas.Ploidy" version="[2.2.0.63,3.0.0)" />
-      <dependency id="Isas.SequencingFiles" version="[4.2.1.300,5.0.0)" />
-      <dependency id="Isas.Framework" version="[6.10.0.354,7.0.0)" />
-      <dependency id="Illumina.Common" version="[3.9.0.2226,4.0.0)" />
+      <dependency id="Isas.SequencingFiles" version="[4.2.1.304,5.0.0)" />
+      <dependency id="Isas.Framework" version="[6.16.0.449,7.0.0)" />
+      <dependency id="Illumina.Common" version="[3.12.0.238,4.0.0)" />
       <dependency id="MathNet.Numerics.Core" version="[3.17.0,4.0.0)" />
     </dependencies>
   </metadata>
