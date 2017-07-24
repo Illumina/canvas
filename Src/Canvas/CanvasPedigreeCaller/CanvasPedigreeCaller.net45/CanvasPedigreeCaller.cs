@@ -108,6 +108,7 @@ namespace CanvasPedigreeCaller
                 interval =>
                 {
                     Console.WriteLine($"{DateTime.Now} Launching SPW task for segment {interval.Start} - {interval.End}");
+                    long counter = 0;
                     for (int segmentIndex = interval.Start; segmentIndex <= interval.End; segmentIndex++)
                     {
                         CallVariantInPedigree(pedigreeMembers, parents, offsprings, segmentIndex,
@@ -153,7 +154,7 @@ namespace CanvasPedigreeCaller
                     .Balleles.Select(y => y.Counts).ToList());
             var alleleCounts = alleles.Select(allele => allele.Count).ToList();
             bool lowAlleleCounts = alleleCounts.Select(x => x < CallerParameters.DefaultAlleleCountThreshold).Any(c => c == true);
-            var coverageCounts = pedigreeMembers.Select(x => x.SegmentSets[segmentSetIndex].GetSet(segmentsSet)[segmentIndex].TruncatedMedianCount(CallerParameters.NumberOfTrimmedBins)).ToList();
+            var coverageCounts = pedigreeMembers.Select(x => x.SegmentSets[segmentSetIndex].GetSet(segmentsSet)[segmentIndex].MedianCount).ToList();
             var isSkewedHetHomRatio = false;
             if (false)
             {
@@ -323,10 +324,10 @@ namespace CanvasPedigreeCaller
             pedigreeMember.Variance = GetCoverageVariance(numberOfTrimmedBins, segments);
             pedigreeMember.MafVariance = GetMafVariance(segments);
             pedigreeMember.MeanCoverage = segments.Any()
-                ? segments.Select(x => x.TruncatedMedianCount(numberOfTrimmedBins)).Average()
+                ? segments.Select(x => x.MedianCount).Average()
                 : 0;
             pedigreeMember.MaxCoverage = segments.Any()
-                ? (int) (segments.Select(x => x.TruncatedMedianCount(numberOfTrimmedBins)).Max() + 10)
+                ? (int) (segments.Select(x => x.MedianCount).Max() + 10)
                 : 0;
             if (!ploidyBedPath.IsNullOrEmpty() && File.Exists(ploidyBedPath))
                 pedigreeMember.Ploidy = PloidyInfo.LoadPloidyFromVcfFile(ploidyBedPath, pedigreeMember.Name);
@@ -395,7 +396,7 @@ namespace CanvasPedigreeCaller
             return
                 Math.Pow(
                     Utilities.StandardDeviation(
-                        segments.Select(x => x.TruncatedMedianCount(numberOfTrimmedBins)).ToArray()), 2);
+                        segments.Select(x => x.MedianCount).ToArray()), 2);
         }
 
         private static double GetMafVariance(List<CanvasSegment> segments)

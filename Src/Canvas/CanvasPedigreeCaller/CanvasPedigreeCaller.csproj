@@ -24,6 +24,7 @@
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <OutputPath>..\x64\CanvasCore\</OutputPath>
+    <Optimize>True</Optimize>
   </PropertyGroup>
 
   <ItemGroup>
