@@ -108,7 +108,6 @@ namespace CanvasPedigreeCaller
                 interval =>
                 {
                     Console.WriteLine($"{DateTime.Now} Launching SPW task for segment {interval.Start} - {interval.End}");
-                    long counter = 0;
                     for (int segmentIndex = interval.Start; segmentIndex <= interval.End; segmentIndex++)
                     {
                         CallVariantInPedigree(pedigreeMembers, parents, offsprings, segmentIndex,
@@ -204,8 +203,7 @@ namespace CanvasPedigreeCaller
             {
                 var coverageOutputPath = SingleSampleCallset.GetCoverageAndVariantFrequencyOutput(outputFolder,
                     member.Name);
-                CanvasSegment.WriteCoveragePlotData(member.Segments, member.MeanCoverage, member.Ploidy,
-                    coverageOutputPath.FullName, referenceFolder);
+                // CanvasSegment.WriteCoveragePlotData(member.Segments, member.MeanCoverage, member.Ploidy, coverageOutputPath.FullName, referenceFolder);
             }
             return names;
         }

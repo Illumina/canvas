@@ -153,6 +153,7 @@ namespace CanvasCommon
         public bool IsCommonCnv;
         public bool IsHeterogeneous;
         private const int NumberVariantFrequencyBins = 100;
+        private const int OverlapWindowThreshold = 500;
         public string Filter = "PASS";
         public Tuple<int, int> StartConfidenceInterval; // if not null, this is a confidence interval around Start, reported in the CIPOS tag
         public Tuple<int, int> EndConfidenceInterval; // if not null, this is a confidence interval around End, reported in the CIEND tag
@@ -806,11 +807,28 @@ namespace CanvasCommon
             // iterate over two CanvasSegment lists and merge using various scenarious 
             while (canvasSegmentsIndex < sortedCanvasSegments.Count - 1 && commonSegmentsIndex < sortedCommonCnvSegments.Count - 1)
             {
+
+                // skip small common CNV variants (less then 1kb)
+                if (sortedCommonCnvSegments[commonSegmentsIndex].Length < OverlapWindowThreshold * 2)
+                {
+                    commonSegmentsIndex++;
+                    continue;
+                }
                 // Canvas segment and common segment have the same coordinates
                 if (sortedCanvasSegments[canvasSegmentsIndex].Begin == sortedCommonCnvSegments[commonSegmentsIndex].Begin &&
                     sortedCanvasSegments[canvasSegmentsIndex].End == sortedCommonCnvSegments[commonSegmentsIndex].End)
                 {
-                    mergedSegments.Add(new CanvasSegmentsSet(setA: new List<CanvasSegment> { sortedCanvasSegments[canvasSegmentsIndex] }, setB: null));
+                    mergedSegments.Add(new CanvasSegmentsSet(setA: null, setB: new List<CanvasSegment> { sortedCommonCnvSegments[commonSegmentsIndex] }));
+                    canvasSegmentsIndex++;
+                    commonSegmentsIndex++;
+                    continue;
+                }
+                // Canvas segment and common segment have coordinates within segmentation margin of error
+                if (Math.Abs(sortedCanvasSegments[canvasSegmentsIndex].Begin - sortedCommonCnvSegments[commonSegmentsIndex].Begin) < OverlapWindowThreshold &&
+                    Math.Abs(sortedCanvasSegments[canvasSegmentsIndex].End - sortedCommonCnvSegments[commonSegmentsIndex].End) < OverlapWindowThreshold &&
+                    sortedCommonCnvSegments[commonSegmentsIndex].Length > OverlapWindowThreshold*4)
+                {
+                    mergedSegments.Add(new CanvasSegmentsSet(setA: null, setB: new List<CanvasSegment> { sortedCommonCnvSegments[commonSegmentsIndex] }));
                     canvasSegmentsIndex++;
                     commonSegmentsIndex++;
                     continue;
@@ -1124,25 +1142,20 @@ namespace CanvasCommon
         /// </summary>
         private static int? RemapIndex(uint[] startPos, uint[] endPos, int value, int length, ref int index)
         {
-            const int distanceThreshold = 10000;
             int bestMinDistanceStart = Int32.MaxValue;
             var remappedIndex = 0;
             while (index < length)
             {
-                int tmpMinDistanceStart = Math.Abs(Convert.ToInt32(startPos[index] + (endPos[index] - startPos[index])) - value);
+                int tmpMinDistanceStart = Math.Abs(Convert.ToInt32(startPos[index] + (endPos[index] - startPos[index])/2.0) - value);
                 index++;
                 if (tmpMinDistanceStart < bestMinDistanceStart)
                 {
                     bestMinDistanceStart = tmpMinDistanceStart;
                     remappedIndex = index - 1;
                 }
-                else if (bestMinDistanceStart < distanceThreshold)
-                {
-                    return remappedIndex;
-                }
                 else
                 {
-                    return null;
+                    return remappedIndex;
                 }
             }
             return null;
