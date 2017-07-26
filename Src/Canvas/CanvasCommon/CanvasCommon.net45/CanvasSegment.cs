@@ -303,17 +303,11 @@ namespace CanvasCommon
 
                 haplotypebSegments.Add(commonSegments[commonSegmentsIndex]);
 
-                countsSubRange = canvasSegments[canvasSegmentsIndex].GetSampleGenomicBinSubrange(commonSegments[commonSegmentsIndex].End, canvasSegments[canvasSegmentsIndex].End);
-                allelesSubRange = canvasSegments[canvasSegmentsIndex].GetAllelesSubrange(commonSegments[commonSegmentsIndex].End, canvasSegments[canvasSegmentsIndex].End, defaultAlleleCountThreshold);
-                if (!countsSubRange.Empty())
-                    haplotypebSegments.Add(new CanvasSegment(commonSegments[commonSegmentsIndex].Chr, commonSegments[commonSegmentsIndex].End, canvasSegments[canvasSegmentsIndex].End, countsSubRange, allelesSubRange));
-
-                // scenario: Canvas segment spans more than one common segment
+                // subscenario: Canvas segment spans more than one common segment
                 // canvasSegment:   ------------------------------------------------
-                // commonSegment:            ------------     -----------------
+                // commonSegment:            ------------     -------------------
                 if (commonSegments.Count > commonSegmentsIndex + 1 && commonSegments[commonSegmentsIndex + 1].Begin < canvasSegments[canvasSegmentsIndex].End)
                 {
-                    haplotypebSegments.Add(commonSegments[commonSegmentsIndex]);
                     commonSegmentsIndex++;
 
                     while (commonSegments.Count > commonSegmentsIndex && commonSegments[commonSegmentsIndex].Begin < canvasSegments[canvasSegmentsIndex].End)
@@ -325,6 +319,11 @@ namespace CanvasCommon
                     canvasSegmentsIndex++;
                     return new CanvasSegmentsSet(setA: haplotypeaSegments, setB: haplotypebSegments);
                 }
+
+                countsSubRange = canvasSegments[canvasSegmentsIndex].GetSampleGenomicBinSubrange(commonSegments[commonSegmentsIndex].End, canvasSegments[canvasSegmentsIndex].End);
+                allelesSubRange = canvasSegments[canvasSegmentsIndex].GetAllelesSubrange(commonSegments[commonSegmentsIndex].End, canvasSegments[canvasSegmentsIndex].End, defaultAlleleCountThreshold);
+                if (!countsSubRange.Empty())
+                    haplotypebSegments.Add(new CanvasSegment(commonSegments[commonSegmentsIndex].Chr, commonSegments[commonSegmentsIndex].End, canvasSegments[canvasSegmentsIndex].End, countsSubRange, allelesSubRange));
 
                 haplotypeaSegments.Add(canvasSegments[canvasSegmentsIndex]);
                 canvasSegmentsIndex++;
@@ -351,9 +350,9 @@ namespace CanvasCommon
                 // commonSegment:            ------------------
                 if (canvasSegments[canvasSegmentsIndex].End == commonSegments[commonSegmentsIndex].End)
                 {
+                    haplotypebSegments.Add(commonSegments[commonSegmentsIndex]);
                     canvasSegmentsIndex++;
                     commonSegmentsIndex++;
-                    haplotypebSegments.Add(commonSegments[commonSegmentsIndex]);
                     return new CanvasSegmentsSet(setA: haplotypeaSegments, setB: haplotypebSegments);
                 }
 
@@ -376,12 +375,11 @@ namespace CanvasCommon
 
                 haplotypebSegments.Add(commonSegments[commonSegmentsIndex]);
                 canvasSegmentsIndex++;
-                countsSubRange = canvasSegments[canvasSegmentsIndex].GetSampleGenomicBinSubrange(commonSegments[commonSegmentsIndex].End, canvasSegments[canvasSegmentsIndex].End);
-                allelesSubRange = canvasSegments[canvasSegmentsIndex].GetAllelesSubrange(commonSegments[commonSegmentsIndex].End, canvasSegments[canvasSegmentsIndex].End, defaultAlleleCountThreshold);
+                countsSubRange = canvasSegments[canvasSegmentsIndex].GetSampleGenomicBinSubrange(canvasSegments[canvasSegmentsIndex].Begin, commonSegments[commonSegmentsIndex].End);
+                allelesSubRange = canvasSegments[canvasSegmentsIndex].GetAllelesSubrange(canvasSegments[canvasSegmentsIndex].Begin, commonSegments[commonSegmentsIndex].End, defaultAlleleCountThreshold);
                 if (!countsSubRange.Empty())
-                    haplotypebSegments.Add(new CanvasSegment(commonSegments[commonSegmentsIndex].Chr, canvasSegments[canvasSegmentsIndex].Begin, commonSegments[commonSegmentsIndex].Begin, countsSubRange, allelesSubRange));
-                haplotypeaSegments.Add(canvasSegments[canvasSegmentsIndex]);
-                canvasSegmentsIndex++;
+                    haplotypeaSegments.Add(new CanvasSegment(commonSegments[commonSegmentsIndex].Chr, canvasSegments[canvasSegmentsIndex].Begin, commonSegments[commonSegmentsIndex].Begin, countsSubRange, allelesSubRange));
+                canvasSegments[commonSegmentsIndex].Begin = commonSegments[commonSegmentsIndex].End + 1; 
                 return new CanvasSegmentsSet(setA: haplotypeaSegments, setB: haplotypebSegments);
             }
 
@@ -398,6 +396,7 @@ namespace CanvasCommon
                     haplotypebSegments.Add(new CanvasSegment(commonSegments[commonSegmentsIndex].Chr, canvasSegments[canvasSegmentsIndex].Begin, commonSegments[commonSegmentsIndex].Begin, countsSubRange, allelesSubRange));
 
                 haplotypeaSegments.Add(canvasSegments[canvasSegmentsIndex]);
+
                 canvasSegmentsIndex++;
                 commonSegmentsIndex++;
                 return new CanvasSegmentsSet(setA: haplotypeaSegments, setB: haplotypebSegments);
