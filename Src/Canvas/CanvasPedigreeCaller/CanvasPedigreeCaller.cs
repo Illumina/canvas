@@ -298,35 +298,65 @@ namespace CanvasPedigreeCaller
             var names = parents.Concat(offsprings).Select(x => x.Name).ToList();
             var probands = GetProbands(offsprings);
             var singleSampleQualityScores = GetSingleSampleQualityScores(copyNumberLikelihoods, cnStates, names);
-
-            var parent1Index = names.IndexOf(parents.First().Name);
-            var parent2Index = names.IndexOf(parents.Last().Name);
-
-            foreach (PedigreeMember proband in probands)
-            {
-                var probandIndex = names.IndexOf(proband.Name);
-                var remainingProbandIndex = probands.Except(proband.ToEnumerable()).Select(x => names.IndexOf(x.Name));
-
-                if (cnStates[probandIndex] != 2 && cnStates[parent1Index] == 2 && cnStates[parent2Index] == 2 &&
-                    remainingProbandIndex.All(index => cnStates[index] == 2) && singleSampleQualityScores[probandIndex] > QualityFilterThreshold &&
-                    singleSampleQualityScores[parent1Index] > QualityFilterThreshold && singleSampleQualityScores[parent2Index] > QualityFilterThreshold)
-                {
-                    var deNovoQualityScore = GetConditionalDeNovoQualityScore(copyNumberLikelihoods, probandIndex,
-                        cnStates[probandIndex], names[probandIndex], parent1Index, parent2Index, remainingProbandIndex.ToList());
-                    if (Double.IsInfinity(deNovoQualityScore) | deNovoQualityScore > CallerParameters.MaxQscore)
-                        deNovoQualityScore = CallerParameters.MaxQscore;
-                    proband.Segments[segmentIndex].DQScore = deNovoQualityScore;
-                }
-            }
-
             var counter = 0;
-            foreach (PedigreeMember sample in parents.Concat(offsprings))
+            foreach (var sample in parents.Concat(offsprings))
             {
                 sample.Segments[segmentIndex].QScore = singleSampleQualityScores[counter];
                 if (sample.Segments[segmentIndex].QScore < QualityFilterThreshold)
                     sample.Segments[segmentIndex].Filter = $"q{QualityFilterThreshold}";
                 counter++;
             }
+            SetDenovoQualityScores(parents, segmentIndex, copyNumberLikelihoods, names, probands, cnStates, singleSampleQualityScores);
+        }
+
+        private void SetDenovoQualityScores(List<PedigreeMember> parents, int segmentIndex, CopyNumberDistribution copyNumberLikelihoods,
+            List<string> names, List<PedigreeMember> probands, List<int> cnStates, List<double> singleSampleQualityScores)
+        {
+            int parent1Index = names.IndexOf(parents.First().Name);
+            int parent2Index = names.IndexOf(parents.Last().Name);
+
+            foreach (var proband in probands)
+            {
+                int probandIndex = names.IndexOf(proband.Name);
+                var remainingProbandIndex = probands.Except(proband.ToEnumerable()).Select(x => names.IndexOf(x.Name));
+                if (cnStates[probandIndex] != proband.GetPloidy(segmentIndex) && // targeted proband is ALT
+                    (ParentsRefCheck(parents, segmentIndex, cnStates, parent1Index, parent2Index) ||
+                     // either parent are REF or 
+                     IsNotCommonCnv(parents, proband, cnStates, parent1Index,  parent2Index, probandIndex, segmentIndex)) &&
+                    // or a common variant 
+                    remainingProbandIndex.All(index => cnStates[index] == probands[index].GetPloidy(segmentIndex) ||
+                                                       IsNotCommonCnv(parents, probands[index], cnStates, parent1Index,
+                                                           parent2Index, index, segmentIndex)) &&
+                    // and other probands are REF or common variant 
+                    singleSampleQualityScores[probandIndex] > QualityFilterThreshold &&
+                    singleSampleQualityScores[parent1Index] > QualityFilterThreshold &&
+                    singleSampleQualityScores[parent2Index] > QualityFilterThreshold)
+                    // and all q-scores are above the threshold
+                {
+                    double deNovoQualityScore = GetConditionalDeNovoQualityScore(copyNumberLikelihoods, probandIndex,
+                        cnStates[probandIndex], names[probandIndex], parent1Index, parent2Index, remainingProbandIndex.ToList());
+                    if (Double.IsInfinity(deNovoQualityScore) | deNovoQualityScore > CallerParameters.MaxQscore)
+                        deNovoQualityScore = CallerParameters.MaxQscore;
+                    proband.Segments[segmentIndex].DQScore = deNovoQualityScore;
+                }
+            }
+        }
+
+        private static bool IsNotCommonCnv(List<PedigreeMember> parents, PedigreeMember proband, List<int> cnStates, int parent1Index, int parent2Index,
+            int probandIndex, int segmentIndex)
+        {
+            var parent1Genotypes = GenerateCnAlleles(cnStates[parent1Index]);
+            var parent2Genotypes = GenerateCnAlleles(cnStates[parent2Index]);
+            var probandGenotypes = GenerateCnAlleles(cnStates[probandIndex]);
+
+            bool isCommoCnv = (parent1Genotypes.Intersect(probandGenotypes).Any() && parents.First().GetPloidy(segmentIndex) == proband.GetPloidy(segmentIndex)) || 
+                (parent2Genotypes.Intersect(probandGenotypes).Any() && parents.Last().GetPloidy(segmentIndex) == proband.GetPloidy(segmentIndex));
+            return !isCommoCnv;
+        }
+
+        private static bool ParentsRefCheck(List<PedigreeMember> parents, int segmentIndex, List<int> cnStates, int parent1Index, int parent2Index)
+        {
+            return cnStates[parent1Index] == parents.First().GetPloidy(segmentIndex) && cnStates[parent2Index] == parents.Last().GetPloidy(segmentIndex);
         }
 
         private void EstimateQScoresNoPedigreeInfo(LinkedList<PedigreeMember> samples, int segmentIndex, double[][] copyNumberLikelihoods)
@@ -706,16 +736,21 @@ namespace CanvasPedigreeCaller
         /// <summary>
         /// Generate all possible copy number genotype combinations with the maximal number of alleles per segment set to maxAlleleNumber.
         /// </summary>
-        /// <param name="numberOfCnStates"></param>
+        /// <param name="copyNumber"></param>
         /// <returns> </returns>
-        public List<Tuple<int, int>> GenerateGenotypes(int numberOfCnStates)
+        public static List<int> GenerateCnAlleles(int copyNumber)
         {
-            var genotypes = new List<Tuple<int, int>>();
-            for (int gt = 0; gt <= numberOfCnStates; gt++)
-            {
-                genotypes.Add(new Tuple<int, int>(gt, numberOfCnStates - gt));
-            }
-            return genotypes;
+            if (copyNumber == 0)
+                return new List<int>{0};
+
+            if (copyNumber == 1)
+                return new List<int> { 0, 1 };
+
+            var alleles = new List<int>();
+            for (int allele = 1; allele <= copyNumber; allele++)
+                alleles.Add(allele);
+
+            return alleles;
         }
 
         /// <summary>
@@ -752,7 +787,7 @@ namespace CanvasPedigreeCaller
             }
         }
 
-        private List<SegmentIndexRange> GetParallelIntervals(int nSegments, int nCores)
+        private static List<SegmentIndexRange> GetParallelIntervals(int nSegments, int nCores)
         {
 
             var segmentIndexRanges = new List<SegmentIndexRange>();

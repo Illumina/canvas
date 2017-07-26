@@ -125,7 +125,9 @@ namespace Canvas.Wrapper
 
         internal PloidyCorrector GetPloidyCorrector()
         {
-            return new PloidyCorrector(_logger, _workManager, new PloidyEstimator(_logger, _workManager, _executableProcessor.GetExecutable("samtools"), false), new Isas.ClassicBioinfoTools.Tabix.TabixWrapper(_logger, _workManager, _executableProcessor.GetExecutable("tabix")), true);
+            var factory = new Isas.ClassicBioinfoTools.Tabix.TabixWrapperFactory();
+            var tabixWrapper = factory.GetTabixWrapper(_logger, _workManager, _executableProcessor);
+            return new PloidyCorrector(_logger, _workManager, new PloidyEstimator(_logger, _workManager, _executableProcessor.GetExecutable("samtools"), false), tabixWrapper, true);
         }
 
         public bool RequireNormalVcf()

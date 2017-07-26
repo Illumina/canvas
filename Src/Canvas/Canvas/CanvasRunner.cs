@@ -113,22 +113,9 @@ namespace Canvas
         /// </summary>
         private string GetExecutablePath(string canvasExecutableStub, StringBuilder commandLineBuilder)
         {
-#if DotNetCore
             commandLineBuilder.Append(Path.Combine(_canvasFolder, string.Format("{0}.dll", canvasExecutableStub)));
             commandLineBuilder.Append(" ");
             return _runtimeExecutable.FullName;
-#else
-            if (CrossPlatform.IsThisLinux())
-            {
-                commandLineBuilder.Append(Path.Combine(_canvasFolder, string.Format("{0}.exe", canvasExecutableStub)));
-                commandLineBuilder.Append(" ");
-                return _runtimeExecutable.FullName;
-            }
-            else
-            {
-                return Path.Combine(_canvasFolder, string.Format("{0}.exe", canvasExecutableStub));
-            }
-#endif
         }
 
         private int GetBinSize(CanvasCallset callset, IFileLocation bamPath, IReadOnlyList<IFileLocation> intermediateDataPaths,
@@ -233,7 +220,7 @@ namespace Canvas
 
             // read bams 
             var intermediateDataPathsByBamPath = GetIntermediateBinnedFilesByBamPath(callset.AnalysisDetails.GenomeMetadata, callset.SingleSampleCallset.Bam.IsPairedEnd, new List<string>() { callset.SingleSampleCallset.SampleName }, callset.AnalysisDetails.TempDirectory,
-                canvasReferencePath, canvasBedPath, bamPaths, commandLine, callset.TempManifestPath);
+                canvasReferencePath, canvasBedPath, bamPaths, commandLine, callset.IsEnrichment ? callset.TempManifestPath : null);
 
             int binSize = -1;
             if (bamPaths.Count > 1)
@@ -354,8 +341,7 @@ namespace Canvas
 
                 var intermediateDataPaths = new List<IFileLocation>();
                 intermediateDataPathsByBamPath[bamPath] = intermediateDataPaths;
-                foreach (
-                    GenomeMetadata.SequenceMetadata sequenceMetadata in
+                foreach (GenomeMetadata.SequenceMetadata sequenceMetadata in
                         genomeMetadata.Sequences.OrderByDescending(sequence => sequence.Length))
                 {
                     // Only invoke CanvasBin for autosomes + allosomes;
@@ -392,8 +378,7 @@ namespace Canvas
                     binJobs.Add(binJob);
                 }
             }
-
-            _workManager.DoWorkParallelThreads(binJobs);
+            _workManager.DoWorkParallel(binJobs, new TaskResourceRequirements(1, 10));
             return intermediateDataPathsByBamPath;
         }
 
@@ -687,7 +672,7 @@ namespace Canvas
 
             // Invoke CanvasSNV jobs:
             Console.WriteLine($"CanvasSNV start for sample {callset.SingleSampleCallset.SampleName}");
-            _workManager.DoWorkParallelThreads(jobList);
+            _workManager.DoWorkParallel(jobList, new TaskResourceRequirements(1, 10));
             Console.WriteLine($"CanvasSNV complete for sample {callset.SingleSampleCallset.SampleName}");
 
             // Concatenate CanvasSNV results:

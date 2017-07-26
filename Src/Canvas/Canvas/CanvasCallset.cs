@@ -59,6 +59,7 @@ namespace Canvas
         {
             SingleSampleCallset = new SingleSampleCallset(new Bam(bam), sampleName, normalVcfPath, isDbSnpVcf, analysisDetails.OutputFolder, outputVcfPath);
             Manifest = manifest;
+            
             SomaticVcfPath = somaticVcfPath;
             AnalysisDetails = analysisDetails;
             NormalBamPaths = normalBamPaths.Select(file => new Bam(file));

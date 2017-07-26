@@ -37,5 +37,11 @@ namespace CanvasPedigreeCaller
         {
             return Segments[segmentIndex].Alleles.Counts;
         }
+
+        public int GetPloidy(int segmentIndex)
+        {
+            return Ploidy?.GetReferenceCopyNumber(Segments[segmentIndex]) ?? 2;
+        }
+
     }
 }

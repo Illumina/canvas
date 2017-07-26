@@ -202,6 +202,7 @@ namespace CanvasCommon
 
             if (segment.IsHeterogeneous)
                 writer.Write("SUBCLONAL;");
+
             writer.Write($"END={segment.End}");
 
             if (cnvType != CnvType.Reference)
