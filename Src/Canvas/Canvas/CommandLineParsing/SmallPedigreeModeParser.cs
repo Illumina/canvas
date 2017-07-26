@@ -11,15 +11,15 @@ namespace Canvas.CommandLineParsing
         {
         }
 
-        public override ParsingResult<SmallPedigreeInput> GetResult(SuccessfulResultCollection result, CommonOptions commonOptions)
+        public override ParsingResult<SmallPedigreeInput> GetSerializedResult(SuccessfulResultCollection result, CommonOptions commonOptions)
         {
             var smallPedigreeOptions = result.Get(SmallPedigreeOptionsParser);
             return ParsingResult<SmallPedigreeInput>.SuccessfulResult(new SmallPedigreeInput(commonOptions, smallPedigreeOptions));
         }
 
-        public override ParsingResult<IModeRunner> GetRunner(SmallPedigreeInput result)
+        public override IModeRunner GetRunner(SmallPedigreeInput result)
         {
-            return ParsingResult<IModeRunner>.SuccessfulResult(new SmallPedigreeWgsRunner(result));
+            return new SmallPedigreeWgsRunner(result);
         }
 
         public override OptionCollection<IModeLauncher> GetModeOptions()

@@ -21,6 +21,15 @@ namespace CanvasCommon.CommandLineParsing.OptionProcessing
             Success = success;
             ErrorMessage = errorMessage;
         }
+        public static ParsingResult<T> FailedResult<U>(ParsingResult<U> failedResult)
+        {
+            if (failedResult.Success)
+            {
+                throw new ArgumentException($"{nameof(failedResult)} must not be successful");
+            }
+            return FailedResult(failedResult.ErrorMessage);
+        }
+
         public static ParsingResult<T> FailedResult(string errorMessage)
         {
             if (errorMessage.IsNullOrWhiteSpace())

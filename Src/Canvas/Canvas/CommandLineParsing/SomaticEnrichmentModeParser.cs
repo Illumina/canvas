@@ -16,7 +16,7 @@ namespace Canvas.CommandLineParsing
         {
         }
 
-        public override ParsingResult<SomaticEnrichmentInput> GetResult(SuccessfulResultCollection result, CommonOptions commonOptions)
+        public override ParsingResult<SomaticEnrichmentInput> GetSerializedResult(SuccessfulResultCollection result, CommonOptions commonOptions)
         {
             SomaticEnrichmentOptions somaticEnrichmentOptions = result.Get(SomaticEnrichmentOptionsParser);
             SingleSampleCommonOptions singleSampleCommonOptions = result.Get(SingleSampleCommonOptionsParser);
@@ -24,9 +24,9 @@ namespace Canvas.CommandLineParsing
                 new SomaticEnrichmentInput(commonOptions, somaticEnrichmentOptions, singleSampleCommonOptions));
         }
 
-        public override ParsingResult<IModeRunner> GetRunner(SomaticEnrichmentInput result)
+        public override IModeRunner GetRunner(SomaticEnrichmentInput result)
         {
-            return ParsingResult<IModeRunner>.SuccessfulResult(new SomaticEnrichmentRunner(result));
+            return new SomaticEnrichmentRunner(result);
         }
 
         public override OptionCollection<IModeLauncher> GetModeOptions()

@@ -26,21 +26,20 @@ namespace Canvas
     public class ModeLauncher : IModeLauncher
     {
         private readonly FrameworkServices _frameworkServices;
-        private readonly CommonOptions _commonOptions;
         private readonly IModeRunner _modeRunner;
         private readonly IEnumerable<string> _args;
         private readonly string _version;
         private readonly string _mode;
 
-        public ModeLauncher(FrameworkServices frameworkServices, CommonOptions commonOptions, IModeRunner modeRunner, IEnumerable<string> args, string version, string mode)
+        public ModeLauncher(FrameworkServices frameworkServices, IModeRunner modeRunner, IEnumerable<string> args, string version, string mode)
         {
             _frameworkServices = frameworkServices;
-            _commonOptions = commonOptions;
             _modeRunner = modeRunner;
             _args = args;
             _version = version;
             _mode = mode;
         }
+
         public int Launch()
         {
             var logger = _frameworkServices.Logger;

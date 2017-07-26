@@ -19,16 +19,16 @@ namespace Canvas.CommandLineParsing
             return new OptionCollection<IModeLauncher> { Bam, SingleSampleCommonOptionsParser };
         }
 
-        public override ParsingResult<GermlineWgsInput> GetResult(SuccessfulResultCollection result, CommonOptions commonOptions)
+        public override ParsingResult<GermlineWgsInput> GetSerializedResult(SuccessfulResultCollection result, CommonOptions commonOptions)
         {
             var singleSampleCommonOptions = result.Get(SingleSampleCommonOptionsParser);
             var bam = result.Get(Bam);
             return ParsingResult<GermlineWgsInput>.SuccessfulResult(new GermlineWgsInput(commonOptions, singleSampleCommonOptions, bam));
         }
 
-        public override ParsingResult<IModeRunner> GetRunner(GermlineWgsInput input)
+        public override IModeRunner GetRunner(GermlineWgsInput input)
         {
-            return ParsingResult<IModeRunner>.SuccessfulResult(new GermlineWgsRunner(input));
+            return new GermlineWgsRunner(input);
         }
     }
 

@@ -16,7 +16,7 @@ namespace Canvas.CommandLineParsing
         {
         }
 
-        public override ParsingResult<TumorNormalEnrichmentInput> GetResult(SuccessfulResultCollection result, CommonOptions commonOptions)
+        public override ParsingResult<TumorNormalEnrichmentInput> GetSerializedResult(SuccessfulResultCollection result, CommonOptions commonOptions)
         {
             SingleSampleCommonOptions singleSampleCommonOptions = result.Get(SingleSampleCommonOptionsParser);
             TumorNormalOptions tumorNormalOptions = result.Get(TumorNormalOptionsParser);
@@ -26,9 +26,9 @@ namespace Canvas.CommandLineParsing
                 new TumorNormalEnrichmentInput(commonOptions, singleSampleCommonOptions, tumorNormalOptions, normalBam, manifest));
         }
 
-        public override ParsingResult<IModeRunner> GetRunner(TumorNormalEnrichmentInput result)
+        public override IModeRunner GetRunner(TumorNormalEnrichmentInput result)
         {
-            return ParsingResult<IModeRunner>.SuccessfulResult(new TumorNormalEnrichmentRunner(result));
+            return new TumorNormalEnrichmentRunner(result);
         }
 
         public override OptionCollection<IModeLauncher> GetModeOptions()

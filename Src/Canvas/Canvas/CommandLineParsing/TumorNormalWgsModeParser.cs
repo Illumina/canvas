@@ -14,7 +14,7 @@ namespace Canvas.CommandLineParsing
         {
         }
 
-        public override ParsingResult<TumorNormalWgsInput> GetResult(SuccessfulResultCollection result, CommonOptions commonOptions)
+        public override ParsingResult<TumorNormalWgsInput> GetSerializedResult(SuccessfulResultCollection result, CommonOptions commonOptions)
         {
             var singleSampleCommonOptions = result.Get(SingleSampleCommonOptionsParser);
             TumorNormalOptions tumorNormalOptions = result.Get(TumorNormalOptionsParser);
@@ -22,10 +22,10 @@ namespace Canvas.CommandLineParsing
                 new TumorNormalWgsInput(commonOptions, singleSampleCommonOptions, tumorNormalOptions));
 
         }
-
-        public override ParsingResult<IModeRunner> GetRunner(TumorNormalWgsInput result)
+        
+        public override IModeRunner GetRunner(TumorNormalWgsInput result)
         {
-            return ParsingResult<IModeRunner>.SuccessfulResult(new TumorNormalWgsRunner(result));
+            return new TumorNormalWgsRunner(result);
         }
 
         public override OptionCollection<IModeLauncher> GetModeOptions()
