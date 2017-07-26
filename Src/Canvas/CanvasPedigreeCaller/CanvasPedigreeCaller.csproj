@@ -27,6 +27,10 @@
     <Optimize>True</Optimize>
   </PropertyGroup>
 
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <Optimize>True</Optimize>
+  </PropertyGroup>
+
   <ItemGroup>
     <ProjectReference Include="..\CanvasCommon\CanvasCommon.csproj" />
   </ItemGroup>

@@ -861,8 +861,6 @@ namespace CanvasCommon
                     canvasSegmentsIndex++;
                     commonSegmentsIndex++;
                 }
-                Console.WriteLine($"Chromosome {chr} canvasSegmentsIndex: {canvasSegmentsIndex} out of {sortedCanvasSegments.Count}");
-                Console.WriteLine($"Chromosome {chr} commonSegmentsIndex: {commonSegmentsIndex} out of {sortedCommonCnvSegments.Count} ");
             }
 
             if (canvasSegmentsIndex < sortedCanvasSegments.Count)
