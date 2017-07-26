@@ -17,9 +17,9 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" />
 
   <ItemGroup>
-    <PackageReference Include="Illumina.Common" Version="3.12.0.238" />
-    <PackageReference Include="Isas.Framework.UnitTestUtilities" Version="6.16.0.449" />
-    <PackageReference Include="Isas.SequencingFiles" Version="4.2.1.304" />
+    <PackageReference Include="Illumina.Common" Version="3.12.1.242" />
+    <PackageReference Include="Isas.Framework.UnitTestUtilities" Version="6.16.0.464" />
+    <PackageReference Include="Isas.SequencingFiles" Version="4.3.1.315" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="15.0.0" />
     <PackageReference Include="xunit" Version="2.2.0" />
     <PackageReference Include="xunit.runner.visualstudio" Version="2.2.0" />
