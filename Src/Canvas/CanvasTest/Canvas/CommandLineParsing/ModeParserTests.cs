@@ -125,7 +125,7 @@ namespace CanvasTest.Canvas.CommandLineParsing
         [Fact]
         public void Parse_ModeWithMissingRequiredArgument_DisplaysError()
         {
-            _checkpointer.RunCheckpoint("name", () => (GermlineWgsInput)null).ReturnsForAnyArgs(info => info.ArgAt<Func<GermlineWgsInput>>(1)());
+            _checkpointer.RunCheckpoint("name", () => (IParsingResult<GermlineWgsInput>)null).ReturnsForAnyArgs(info => info.ArgAt<Func<IParsingResult<GermlineWgsInput>>>(1)());
             string messageToDisplay = "required";
             StringWriter standardWriter = new StringWriter();
             StringWriter errorWriter = new StringWriter();
@@ -218,7 +218,7 @@ namespace CanvasTest.Canvas.CommandLineParsing
             string inputArgument1 = "input";
             string inputArgument2 = "input2";
             string inputArgument3 = "input3";
-            Func<string, string, string, ParsingResult<Tuple<string, string, string>>> parse = (value1, value2, value3) => ParsingResult<Tuple<string, string, string>>.SuccessfulResult(Tuple.Create(value1, value2, value3));
+            Func<string, string, string, IParsingResult<Tuple<string, string, string>>> parse = (value1, value2, value3) => ParsingResult<Tuple<string, string, string>>.SuccessfulResult(Tuple.Create(value1, value2, value3));
             var option1 = StringOption.CreateRequired("value1 option", "value1");
             var option2 = StringOption.CreateRequired("value2 option", "value2");
             var option3 = StringOption.CreateRequired("value3 option", "value2");
@@ -244,7 +244,7 @@ namespace CanvasTest.Canvas.CommandLineParsing
             // arrange
             string inputArgument1 = "input";
             string inputArgument2 = "input2";
-            Func<string, string, string, ParsingResult<Tuple<string, string, string>>> parse = (value1, value2, value3) => ParsingResult<Tuple<string, string, string>>.SuccessfulResult(Tuple.Create(value1, value2, value3));
+            Func<string, string, string, IParsingResult<Tuple<string, string, string>>> parse = (value1, value2, value3) => ParsingResult<Tuple<string, string, string>>.SuccessfulResult(Tuple.Create(value1, value2, value3));
             var option1 = StringOption.CreateRequired("value1 option", "value1");
             var option2 = StringOption.CreateRequired("value2 option", "value2");
             var option3 = StringOption.Create("value3 option", "value2");
@@ -269,7 +269,7 @@ namespace CanvasTest.Canvas.CommandLineParsing
         {
             // arrange
             string inputArgument1 = "input";
-            Func<string, string, string, ParsingResult<Tuple<string, string, string>>> parse = (value1, value2, value3) => ParsingResult<Tuple<string, string, string>>.SuccessfulResult(Tuple.Create(value1, value2, value3));
+            Func<string, string, string, IParsingResult<Tuple<string, string, string>>> parse = (value1, value2, value3) => ParsingResult<Tuple<string, string, string>>.SuccessfulResult(Tuple.Create(value1, value2, value3));
             var option1 = StringOption.CreateRequired("value1 option", "value1");
             var option2 = StringOption.CreateRequired("value2 option", "value2");
             var option3 = StringOption.Create("value3 option", "value2");
@@ -289,7 +289,7 @@ namespace CanvasTest.Canvas.CommandLineParsing
         [Fact]
         public void ParseRequiredPositionalOption_WithNoInputArguments_ReturnsFailedResult()
         {
-            Func<string, string, string, ParsingResult<Tuple<string, string, string>>> parse = (value1, value2, value3) => ParsingResult<Tuple<string, string, string>>.SuccessfulResult(Tuple.Create(value1, value2, value3));
+            Func<string, string, string, IParsingResult<Tuple<string, string, string>>> parse = (value1, value2, value3) => ParsingResult<Tuple<string, string, string>>.SuccessfulResult(Tuple.Create(value1, value2, value3));
             var option1 = StringOption.Create("value1 option", "value1");
             var option2 = StringOption.Create("value2 option", "value2");
             var option3 = StringOption.Create("value3 option", "value2");
@@ -308,7 +308,7 @@ namespace CanvasTest.Canvas.CommandLineParsing
         [Fact]
         public void ParsePositionalOption_WithTooManyInputArguments_ReturnsFailedResult()
         {
-            Func<string, string, string, ParsingResult<Tuple<string, string, string>>> parse = (value1, value2, value3) => ParsingResult<Tuple<string, string, string>>.SuccessfulResult(Tuple.Create(value1, value2, value3));
+            Func<string, string, string, IParsingResult<Tuple<string, string, string>>> parse = (value1, value2, value3) => ParsingResult<Tuple<string, string, string>>.SuccessfulResult(Tuple.Create(value1, value2, value3));
             var option1 = StringOption.Create("value1 option", "value1");
             var option2 = StringOption.Create("value2 option", "value2");
             var option3 = StringOption.Create("value3 option", "value2");
@@ -325,7 +325,7 @@ namespace CanvasTest.Canvas.CommandLineParsing
             var result = collection.Parse(stringInputArgument);
 
             // assert
-            ParsingResult<Tuple<Tuple<string, string, string>, string>> failedResult;
+            IParsingResult<Tuple<Tuple<string, string, string>, string>> failedResult;
             Assert.False(result.Validate(out failedResult));
         }
 
@@ -353,7 +353,7 @@ namespace CanvasTest.Canvas.CommandLineParsing
             };
 
             // act
-            ParsingResult<string> result = valueOption.Parse(stringInputArgument);
+            IParsingResult<string> result = valueOption.Parse(stringInputArgument);
 
             // assert
             Assert.False(result.Success);
@@ -377,7 +377,7 @@ namespace CanvasTest.Canvas.CommandLineParsing
             };
 
                 // act
-                ParsingResult<CommonOptions> result = commonOptionsParser.Parse(stringInputArgument);
+                IParsingResult<CommonOptions> result = commonOptionsParser.Parse(stringInputArgument);
 
                 // assert
                 Assert.Equal("", result.ErrorMessage);
@@ -406,7 +406,7 @@ namespace CanvasTest.Canvas.CommandLineParsing
             };
 
                 // act
-                ParsingResult<CommonOptions> result = commonOptionsParser.Parse(stringInputArgument);
+                IParsingResult<CommonOptions> result = commonOptionsParser.Parse(stringInputArgument);
 
                 // assert
                 Assert.False(result.Success);

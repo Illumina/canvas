@@ -21,7 +21,7 @@ namespace Canvas.CommandLineParsing
             };
         }
 
-        public override ParsingResult<CommonOptions> Parse(SuccessfulResultCollection parseInput)
+        public override IParsingResult<CommonOptions> Parse(SuccessfulResultCollection parseInput)
         {
             var output = parseInput.Get(Output);
             var wholeGenomeFasta = parseInput.Get(WholeGenomeFasta);

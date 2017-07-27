@@ -19,7 +19,7 @@ namespace Canvas.CommandLineParsing
             return new OptionCollection<IModeLauncher> { Bam, SingleSampleCommonOptionsParser };
         }
 
-        public override ParsingResult<GermlineWgsInput> GetSerializedResult(SuccessfulResultCollection result, CommonOptions commonOptions)
+        public override IParsingResult<GermlineWgsInput> GetSerializedResult(SuccessfulResultCollection result, CommonOptions commonOptions)
         {
             var singleSampleCommonOptions = result.Get(SingleSampleCommonOptionsParser);
             var bam = result.Get(Bam);

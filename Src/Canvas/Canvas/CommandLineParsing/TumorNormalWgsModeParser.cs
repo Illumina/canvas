@@ -14,7 +14,7 @@ namespace Canvas.CommandLineParsing
         {
         }
 
-        public override ParsingResult<TumorNormalWgsInput> GetSerializedResult(SuccessfulResultCollection result, CommonOptions commonOptions)
+        public override IParsingResult<TumorNormalWgsInput> GetSerializedResult(SuccessfulResultCollection result, CommonOptions commonOptions)
         {
             var singleSampleCommonOptions = result.Get(SingleSampleCommonOptionsParser);
             TumorNormalOptions tumorNormalOptions = result.Get(TumorNormalOptionsParser);
@@ -66,7 +66,7 @@ namespace Canvas.CommandLineParsing
             };
         }
 
-        public override ParsingResult<TumorNormalOptions> Parse(SuccessfulResultCollection parseInput)
+        public override IParsingResult<TumorNormalOptions> Parse(SuccessfulResultCollection parseInput)
         {
             var tumorBam = parseInput.Get(TumorBam);
             var somaticVcf = parseInput.Get(SomaticVcf);

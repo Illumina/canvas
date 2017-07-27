@@ -56,7 +56,7 @@ namespace CanvasCommon.CommandLineParsing.CoreOptionTypes
             };
         }
 
-        public override ParsingResult<ExclusiveFileOptionResult> Parse(SuccessfulResultCollection parseInput)
+        public override IParsingResult<ExclusiveFileOptionResult> Parse(SuccessfulResultCollection parseInput)
         {
             var result1 = parseInput.Get(_option1);
             var result2 = parseInput.Get(_option2);

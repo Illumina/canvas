@@ -14,7 +14,7 @@ namespace CanvasCommon.CommandLineParsing.CoreOptionTypes
     public abstract class Option<TParseOutput> : IOption
     {
         public abstract OptionCollection<TParseOutput> GetOptions();
-        public abstract ParsingResult<TParseOutput> Parse(SuccessfulResultCollection parseInput);
+        public abstract IParsingResult<TParseOutput> Parse(SuccessfulResultCollection parseInput);
         public void ShowHelp(TextWriter writer)
         {
             OptionExtensions.ShowHelp(this, writer);
@@ -33,12 +33,12 @@ namespace CanvasCommon.CommandLineParsing.CoreOptionTypes
 
     public static class OptionExtensions
     {
-        public static ParsingResult<T> Parse<T>(this Option<T> option, IEnumerable<string> args, bool allowUnparsedArguments = false)
+        public static IParsingResult<T> Parse<T>(this Option<T> option, IEnumerable<string> args, bool allowUnparsedArguments = false)
         {
             OptionCollection<T> options = new OptionCollection<T>();
             options.Add(option);
             ResultCollection<T> result = options.Parse(args);
-            ParsingResult<T> failedResult;
+            IParsingResult<T> failedResult;
             if (!result.Validate(out failedResult, allowUnparsedArguments))
             {
                 return failedResult;

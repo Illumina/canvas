@@ -74,7 +74,7 @@ namespace EvaluateCNV
             };
         }
 
-        public override ParsingResult<EvaluateCnvOptions> Parse(SuccessfulResultCollection parseInput)
+        public override IParsingResult<EvaluateCnvOptions> Parse(SuccessfulResultCollection parseInput)
         {
             string baseFileName = parseInput.Get(BaseFileName);
             IFileLocation roiBed = parseInput.Get(RegionOfInterestBed);

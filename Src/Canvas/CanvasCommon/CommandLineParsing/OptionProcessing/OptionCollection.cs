@@ -118,7 +118,7 @@ namespace CanvasCommon.CommandLineParsing.OptionProcessing
 
         private static IParsingResult GetParseResult(OptionInfo<string> optionInfo, OptionData optionData)
         {
-            ParsingResult<string> result = ParsingResult<string>.SuccessfulResult(optionData.Data.FirstOrDefault()?.FirstOrDefault());
+            var result = ParsingResult<string>.SuccessfulResult(optionData.Data.FirstOrDefault()?.FirstOrDefault());
             if (optionData.Data.Count > 1)
                 result = ParsingResult<string>.FailedResult($"Error: {optionInfo.Name} can only be specified once");
             return optionInfo.Parse(new SuccessfulResultCollection(optionInfo, result));

@@ -31,14 +31,14 @@ namespace Canvas.CommandLineParsing
             return args.Empty() || !_modeParsers.ContainsKey(args[0]);
         }
 
-        public ParsingResult<CommonOptions> ParseCommonOptions(string[] args)
+        public IParsingResult<CommonOptions> ParseCommonOptions(string[] args)
         {
             var options = new OptionCollection<IModeLauncher> { CommonOptionsParser };
             var result = options.Parse(args.Skip(1));
             return result.Get(CommonOptionsParser);
         }
 
-        public ParsingResult<IModeLauncher> Parse(FrameworkServices frameworkServices, string[] args, TextWriter standardWriter, TextWriter errorWriter)
+        public IParsingResult<IModeLauncher> Parse(FrameworkServices frameworkServices, string[] args, TextWriter standardWriter, TextWriter errorWriter)
         {
             var mode = _modeParsers[args[0]];
             return mode.Parse(this, frameworkServices, args, standardWriter, errorWriter);
@@ -55,7 +55,7 @@ namespace Canvas.CommandLineParsing
             if (!result.RemainingArgs.Any() && baseOptions.Success && HandleBaseOptions(baseOptions.Result, standardWriter))
                 return 0;
 
-            if (!result.Validate(out ParsingResult<IModeLauncher> failedResult))
+            if (!result.Validate(out IParsingResult<IModeLauncher> failedResult))
             {
                 errorWriter.WriteLine(failedResult.ErrorMessage);
                 errorWriter.WriteLine();

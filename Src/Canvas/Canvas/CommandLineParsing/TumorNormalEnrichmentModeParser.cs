@@ -16,7 +16,7 @@ namespace Canvas.CommandLineParsing
         {
         }
 
-        public override ParsingResult<TumorNormalEnrichmentInput> GetSerializedResult(SuccessfulResultCollection result, CommonOptions commonOptions)
+        public override IParsingResult<TumorNormalEnrichmentInput> GetSerializedResult(SuccessfulResultCollection result, CommonOptions commonOptions)
         {
             SingleSampleCommonOptions singleSampleCommonOptions = result.Get(SingleSampleCommonOptionsParser);
             TumorNormalOptions tumorNormalOptions = result.Get(TumorNormalOptionsParser);

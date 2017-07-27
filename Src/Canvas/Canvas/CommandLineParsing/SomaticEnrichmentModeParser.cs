@@ -16,7 +16,7 @@ namespace Canvas.CommandLineParsing
         {
         }
 
-        public override ParsingResult<SomaticEnrichmentInput> GetSerializedResult(SuccessfulResultCollection result, CommonOptions commonOptions)
+        public override IParsingResult<SomaticEnrichmentInput> GetSerializedResult(SuccessfulResultCollection result, CommonOptions commonOptions)
         {
             SomaticEnrichmentOptions somaticEnrichmentOptions = result.Get(SomaticEnrichmentOptionsParser);
             SingleSampleCommonOptions singleSampleCommonOptions = result.Get(SingleSampleCommonOptionsParser);
@@ -70,7 +70,7 @@ namespace Canvas.CommandLineParsing
             };
         }
 
-        public override ParsingResult<SomaticEnrichmentOptions> Parse(SuccessfulResultCollection parseInput)
+        public override IParsingResult<SomaticEnrichmentOptions> Parse(SuccessfulResultCollection parseInput)
         {
             var bam = parseInput.Get(Bam);
             var manifest = parseInput.Get(Manifest);

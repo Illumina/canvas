@@ -12,7 +12,7 @@ namespace CanvasCommon.CommandLineParsing.CoreOptionTypes
         public RequiredValueOptionInfo(IOptionInfo optionInfo) : this(optionInfo.Description, optionInfo.Names.ToArray())
         { }
 
-        public override ParsingResult<string> Parse(SuccessfulResultCollection parseInput)
+        public override IParsingResult<string> Parse(SuccessfulResultCollection parseInput)
         {
             string value = parseInput.Get(this);
             if (value == null)

@@ -28,7 +28,7 @@
   <ItemGroup>
     <PackageReference Include="ClassicBioinfoTools" Version="1.0.1.148" />
     <PackageReference Include="Illumina.Common" Version="3.12.1.242" />
-    <PackageReference Include="Isas.Framework" Version="6.16.0.464" />
+    <PackageReference Include="Isas.Framework" Version="6.17.1.473" />
     <PackageReference Include="Isas.Manifests" Version="3.0.1.72" />
     <PackageReference Include="Isas.Ploidy" Version="2.2.0.67" />
     <PackageReference Include="Isas.SequencingFiles" Version="4.3.1.315" />

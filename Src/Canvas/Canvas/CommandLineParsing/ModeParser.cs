@@ -1,7 +1,5 @@
-using System;
 using System.IO;
 using System.Linq;
-using CanvasCommon.CommandLineParsing.CoreOptionTypes;
 using CanvasCommon.CommandLineParsing.OptionProcessing;
 using Isas.Framework.FrameworkFactory;
 
@@ -11,7 +9,7 @@ namespace Canvas.CommandLineParsing
     {
         string Name { get; }
         string Description { get; }
-        ParsingResult<IModeLauncher> Parse(MainParser main, FrameworkServices frameworkServices, string[] args, TextWriter standardWriter,
+        IParsingResult<IModeLauncher> Parse(MainParser main, FrameworkServices frameworkServices, string[] args, TextWriter standardWriter,
             TextWriter errorWriter);
         OptionCollection<IModeLauncher> GetModeOptions();
         void ShowHelp(TextWriter writer);
@@ -28,7 +26,7 @@ namespace Canvas.CommandLineParsing
             Description = description;
         }
 
-        public ParsingResult<IModeLauncher> Parse(MainParser main, FrameworkServices frameworkServices, string[] args, TextWriter standardWriter, TextWriter errorWriter)
+        public IParsingResult<IModeLauncher> Parse(MainParser main, FrameworkServices frameworkServices, string[] args, TextWriter standardWriter, TextWriter errorWriter)
         {
             var options = GetModeOptions();
             options.Add(MainParser.BaseOptionsParser);
@@ -42,7 +40,7 @@ namespace Canvas.CommandLineParsing
 
             var parsingResult = frameworkServices.Checkpointer.RunCheckpoint("Validate input", () =>
             {
-                if (!results.Validate(out ParsingResult<IModeLauncher> failedResult))
+                if (!results.Validate(out IParsingResult<IModeLauncher> failedResult))
                 {
                     errorWriter.WriteLine(failedResult.ErrorMessage);
                     errorWriter.WriteLine();
@@ -64,7 +62,7 @@ namespace Canvas.CommandLineParsing
             GetModeOptions().ShowHelp(writer);
         }
 
-        public abstract ParsingResult<T> GetSerializedResult(SuccessfulResultCollection result, CommonOptions commonOptions);
+        public abstract IParsingResult<T> GetSerializedResult(SuccessfulResultCollection result, CommonOptions commonOptions);
 
         public abstract IModeRunner GetRunner(T result);
 
