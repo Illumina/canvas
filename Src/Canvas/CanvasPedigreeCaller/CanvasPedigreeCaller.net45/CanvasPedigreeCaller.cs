@@ -58,6 +58,8 @@ namespace CanvasPedigreeCaller
                     fileCounter,
                     CallerParameters.DefaultAlleleCountThreshold, referenceFolder, CallerParameters.NumberOfTrimmedBins,
                     commonCNVsbedPath);
+                Console.WriteLine($"pedigreeMember for {sampleName} is set");
+
                 pedigreeMember.Kin = kinships[pedigreeMember.Name] == PedigreeMember.Kinship.Parent
                     ? PedigreeMember.Kinship.Parent
                     : PedigreeMember.Kinship.Offspring;
@@ -374,6 +376,7 @@ namespace CanvasPedigreeCaller
                         }
 
                     });
+                Console.WriteLine($"Create SegmentSets for {sampleName} ");
                 pedigreeMember.SegmentSets.AddRange(segmentsSetByChromosome.OrderBy(i => i.Key).Select(x => x.Value).SelectMany(x=>x).ToList());
             }
             else
@@ -1028,7 +1031,8 @@ namespace CanvasPedigreeCaller
                             Math.Max(genotypeset[selectedGtState.Value].CountsA,
                                 genotypeset[selectedGtState.Value].CountsB);
                 }
-            }
+            }				
+
 
 
             private static void InitializeCn(int setPosition, int segmentPosition,
