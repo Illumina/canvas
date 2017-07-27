@@ -667,35 +667,34 @@ namespace CanvasCommon
                                 (majorCopyNumber < 2 && segment.CopyNumber >= 2) ||
                                 (majorCopyNumber > 2 && segment.CopyNumber <= 2))
                                 continue;
-                            float segLength = segment.End - segment.Begin;
 
                             // Add counts to the overall list:
                             int firstIndex = 0;
                             if (pointStartPos > segment.Begin)
                             {
-                                firstIndex = (int)((float)segment.Counts.Count * (pointStartPos - segment.Begin) / segLength);
+                                firstIndex = (int)((float)segment.GenomicBins.Count * (pointStartPos - segment.Begin) / segment.Length);
                             }
                             int lastIndex = segment.Counts.Count;
                             if (pointEndPos < segment.End)
                             {
-                                lastIndex = (int)((float)segment.Counts.Count * (pointEndPos - segment.Begin) / segLength);
+                                lastIndex = (int)((float)segment.GenomicBins.Count * (pointEndPos - segment.Begin) / segment.Length);
                             }
-                            for (int index = firstIndex; index < lastIndex; index++) counts.Add(segment.Counts[index]);
+                            for (int index = firstIndex; index < lastIndex; index++) counts.Add(segment.GenomicBins[index].Count);
 
                             // Add MAF to the overall list:
                             firstIndex = 0;
                             if (pointStartPos > segment.Begin)
                             {
-                                firstIndex = (int)((float)segment.Alleles.Frequencies.Count * (pointStartPos - segment.Begin) / segLength);
+                                firstIndex = (int)((float)segment.Alleles.Frequencies.Count * (pointStartPos - segment.Begin) / segment.Length);
                             }
                             lastIndex = segment.Alleles.Frequencies.Count;
                             if (pointEndPos < segment.End)
                             {
-                                lastIndex = (int)((float)segment.Alleles.Frequencies.Count * (pointEndPos - segment.Begin) / segLength);
+                                lastIndex = (int)((float)segment.Alleles.Frequencies.Count * (pointEndPos - segment.Begin) / segment.Length);
                             }
                             for (int index = firstIndex; index < lastIndex; index++)
                             {
-                                float tempMAF = segment.Alleles.Frequencies[index];
+                                float tempMAF = segment.Alleles.Balleles[index].Frequency;
                                 VF.Add(tempMAF);
                                 if (tempMAF > 0.5) tempMAF = 1 - tempMAF;
                                 MAF.Add(tempMAF);
