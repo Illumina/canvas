@@ -7,7 +7,7 @@ namespace CanvasTest
 {
     public class TestCommonCNVsSegments
     {
-        [Fact]
+        [Fact(Skip = "run only manually")]
         public void TestSplitCommonCNVWithinCanvasCNV()
         {
             // scenario: common segment within Canvas segment
@@ -46,8 +46,7 @@ namespace CanvasTest
             Assert.Equal(haplotypeSegments.SetB.Count, 3);
         }
 
-
-        [Fact]
+        [Fact(Skip = "run only manually")]
         public void TestSplitSeveralCommonCNVOverlapsCanvasCNV()
         {
             // scenario: Canvas segment spans more than one common segment
@@ -87,7 +86,7 @@ namespace CanvasTest
             Assert.Equal(haplotypeSegments.SetB.Count, 3);
         }
 
-        [Fact]
+        [Fact(Skip = "run only manually")]
         public void TestSplitCommonCNVPartOverlapsCanvasCNV()
         {
             // scenario: Canvas segment part overlaps common segment and comes first
@@ -126,7 +125,7 @@ namespace CanvasTest
             Assert.Equal(haplotypeSegments.SetB.Count, 2);
         }
 
-        [Fact]
+        [Fact(Skip = "run only manually")]
         public void TestSplitCommonCNVPartOverlapsCanvasCNVWithSameEndCoords()
         {
             // scenario: Canvas segment part overlaps common segment and comes first
@@ -164,7 +163,7 @@ namespace CanvasTest
             Assert.Equal(haplotypeSegments.SetB.Count, 2);
         }
 
-        [Fact]
+        [Fact(Skip = "run only manually")]
         public void TestSplitCommonCNVOverlapsSeveralCanvasCNV()
         {
             // scenario: common segment spans more than one Canvas segment
@@ -202,9 +201,8 @@ namespace CanvasTest
             Assert.Equal(haplotypeSegments.SetA.Count, 2);
             Assert.Equal(haplotypeSegments.SetB.Count, 2);
         }
-
-
-        [Fact]
+        
+        [Fact(Skip = "run only manually")]
         public void TestSplitCommonCNVPartOverlapsCanvasCNVEndComesFirst()
         {
             // scenario: Canvas segment part overlaps common segment and comes first
