@@ -16,13 +16,13 @@ namespace Canvas
         public CommonOptions CommonOptions { get; }
         public SingleSampleCommonOptions SingleSampleCommonOptions { get; }
 
-        public TumorNormalEnrichmentRunner(CommonOptions commonOptions, SingleSampleCommonOptions singleSampleCommonOptions, TumorNormalOptions tumorNormalOptions, IFileLocation normalBam, IFileLocation manifest)
+        public TumorNormalEnrichmentRunner(TumorNormalEnrichmentInput input)
         {
-            _tumorNormalOptions = tumorNormalOptions;
-            _normalBam = normalBam;
-            _manifest = manifest;
-            CommonOptions = commonOptions;
-            SingleSampleCommonOptions = singleSampleCommonOptions;
+            _tumorNormalOptions = input.TumorNormalOptions;
+            _normalBam = input.NormalBam;
+            _manifest = input.Manifest;
+            CommonOptions = input.CommonOptions;
+            SingleSampleCommonOptions = input.SingleSampleCommonOptions;
         }
 
         public void Run(ILogger logger, ICheckpointRunner checkpointRunner, IWorkManager workManager, IFileLocation runtimeExecutable)

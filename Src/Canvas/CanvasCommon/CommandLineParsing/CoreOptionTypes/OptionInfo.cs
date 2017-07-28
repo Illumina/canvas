@@ -40,7 +40,7 @@ namespace CanvasCommon.CommandLineParsing.CoreOptionTypes
             return new OptionCollection<T>();
         }
 
-        public override ParsingResult<T> Parse(SuccessfulResultCollection parseInput)
+        public override IParsingResult<T> Parse(SuccessfulResultCollection parseInput)
         {
             return ParsingResult<T>.SuccessfulResult(parseInput.Get(this));
         }

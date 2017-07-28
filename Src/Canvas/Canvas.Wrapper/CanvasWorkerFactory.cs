@@ -40,7 +40,6 @@ namespace Canvas.Wrapper
         private IFileLocation GetRuntimeExecutable()
         {
             return new FileLocation(_executableProcessor.GetEnvironmentExecutablePath("dotnet"));
-
         }
 
         public ICanvasWorker<CanvasEnrichmentInput, CanvasEnrichmentOutput> GetCanvasEnrichmentWorker()

@@ -26,7 +26,7 @@ namespace Canvas.CommandLineParsing
         private static readonly FileOption CommonCnvsBed = FileOption.Create(".bed file containing regions of known common CNVs", "common-cnvs-bed");
         private static readonly ExclusiveFileOption BAlleleSites = ExclusiveFileOption.CreateRequired(SampleBAlleleSites, PopulationBAlleleSites);
 
-        private static ParsingResult<SmallPedigreeSampleOptions> Parse(IFileLocation bam, SampleType sampleType, string sampleName)
+        private static IParsingResult<SmallPedigreeSampleOptions> Parse(IFileLocation bam, SampleType sampleType, string sampleName)
         {
             if (sampleName == null)
             {
@@ -54,20 +54,20 @@ namespace Canvas.CommandLineParsing
             };
         }
 
-        public override ParsingResult<SmallPedigreeOptions> Parse(SuccessfulResultCollection parseInput)
+        public override IParsingResult<SmallPedigreeOptions> Parse(SuccessfulResultCollection parseInput)
         {
             var bams = parseInput.Get(Bams);
             var ploidyVcf = parseInput.Get(PloidyVcf);
             var bAlleleSites = parseInput.Get(BAlleleSites);
             var commonCnvsBed = parseInput.Get(CommonCnvsBed);
 
-            ParsingResult<SmallPedigreeOptions> failedResult;
+            IParsingResult<SmallPedigreeOptions> failedResult;
             if (HasMoreThanOneSameSampleType(bams, out failedResult))
                 return failedResult;
             return ParsingResult<SmallPedigreeOptions>.SuccessfulResult(new SmallPedigreeOptions(bams, commonCnvsBed, bAlleleSites.Result, bAlleleSites.MatchedOption.Equals(PopulationBAlleleSites), ploidyVcf));
         }
 
-        private bool HasMoreThanOneSameSampleType(List<SmallPedigreeSampleOptions> bams, out ParsingResult<SmallPedigreeOptions> failedResult)
+        private bool HasMoreThanOneSameSampleType(List<SmallPedigreeSampleOptions> bams, out IParsingResult<SmallPedigreeOptions> failedResult)
         {
             failedResult = null;
             if (HasMoreThanOne(bams, CommandLineParsing.SampleType.Mother, out failedResult) ||
@@ -77,7 +77,7 @@ namespace Canvas.CommandLineParsing
             return false;
         }
 
-        private bool HasMoreThanOne(List<SmallPedigreeSampleOptions> bams, SampleType sampleType, out ParsingResult<SmallPedigreeOptions> failedResult)
+        private bool HasMoreThanOne(List<SmallPedigreeSampleOptions> bams, SampleType sampleType, out IParsingResult<SmallPedigreeOptions> failedResult)
         {
             failedResult = null;
             var sameType = bams.Where(bam => bam.SampleType == sampleType);

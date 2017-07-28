@@ -6,7 +6,7 @@ using CanvasCommon.CommandLineParsing.OptionProcessing;
 
 namespace Canvas.CommandLineParsing
 {
-    public class SomaticEnrichmentModeParser : ModeParser
+    public class SomaticEnrichmentModeParser : ModeParser<SomaticEnrichmentInput>
     {
         private static readonly CommonOptionsParser CommonOptionsParser = new CommonOptionsParser();
         private static readonly SingleSampleCommonOptionsParser SingleSampleCommonOptionsParser = new SingleSampleCommonOptionsParser();
@@ -16,21 +16,40 @@ namespace Canvas.CommandLineParsing
         {
         }
 
-        public override ParsingResult<IModeRunner> Parse(SuccessfulResultCollection parseInput)
+        public override IParsingResult<SomaticEnrichmentInput> GetSerializedResult(SuccessfulResultCollection result, CommonOptions commonOptions)
         {
-            CommonOptions commonOptions = parseInput.Get(CommonOptionsParser);
-            SomaticEnrichmentOptions somaticEnrichmentOptions = parseInput.Get(SomaticEnrichmentOptionsParser);
-            SingleSampleCommonOptions singleSampleCommonOptions = parseInput.Get(SingleSampleCommonOptionsParser);
-            return ParsingResult<IModeRunner>.SuccessfulResult(new SomaticEnrichmentRunner(commonOptions, singleSampleCommonOptions, somaticEnrichmentOptions));
+            SomaticEnrichmentOptions somaticEnrichmentOptions = result.Get(SomaticEnrichmentOptionsParser);
+            SingleSampleCommonOptions singleSampleCommonOptions = result.Get(SingleSampleCommonOptionsParser);
+            return ParsingResult<SomaticEnrichmentInput>.SuccessfulResult(
+                new SomaticEnrichmentInput(commonOptions, somaticEnrichmentOptions, singleSampleCommonOptions));
         }
 
-        public override OptionCollection<IModeRunner> GetOptions()
+        public override IModeRunner GetRunner(SomaticEnrichmentInput result)
         {
-            return new OptionCollection<IModeRunner>
+            return new SomaticEnrichmentRunner(result);
+        }
+
+        public override OptionCollection<IModeLauncher> GetModeOptions()
+        {
+            return new OptionCollection<IModeLauncher>
             {
                 SomaticEnrichmentOptionsParser, CommonOptionsParser, SingleSampleCommonOptionsParser
             };
         }
+    }
+
+    public class SomaticEnrichmentInput
+    {
+        public SomaticEnrichmentInput(CommonOptions commonOptions, SomaticEnrichmentOptions somaticEnrichmentOptions, SingleSampleCommonOptions singleSampleCommonOptions)
+        {
+            CommonOptions = commonOptions;
+            SomaticEnrichmentOptions = somaticEnrichmentOptions;
+            SingleSampleCommonOptions = singleSampleCommonOptions;
+        }
+
+        public CommonOptions CommonOptions { get; }
+        public SomaticEnrichmentOptions SomaticEnrichmentOptions { get; }
+        public SingleSampleCommonOptions SingleSampleCommonOptions { get; }
     }
 
     internal class SomaticEnrichmentOptionsParser : Option<SomaticEnrichmentOptions>
@@ -51,7 +70,7 @@ namespace Canvas.CommandLineParsing
             };
         }
 
-        public override ParsingResult<SomaticEnrichmentOptions> Parse(SuccessfulResultCollection parseInput)
+        public override IParsingResult<SomaticEnrichmentOptions> Parse(SuccessfulResultCollection parseInput)
         {
             var bam = parseInput.Get(Bam);
             var manifest = parseInput.Get(Manifest);

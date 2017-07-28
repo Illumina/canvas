@@ -30,12 +30,12 @@ namespace CanvasCommon.CommandLineParsing.CoreOptionTypes
             return new ValueOption<T>(new ValueOptionInfo<string>(false, description, names), defaultValue);
         }
 
-        public override ParsingResult<T> Parse(SuccessfulResultCollection value)
+        public override IParsingResult<T> Parse(SuccessfulResultCollection value)
         {
             return Parse(value.Get(Info));
         }
 
-        public virtual ParsingResult<T> Parse(string value)
+        public virtual IParsingResult<T> Parse(string value)
         {
             if (value == null) return ParsingResult<T>.SuccessfulResult(_defaultValue);
             try

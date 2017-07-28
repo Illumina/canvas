@@ -22,7 +22,7 @@ namespace Canvas.CommandLineParsing
             };
         }
 
-        public override ParsingResult<SingleSampleCommonOptions> Parse(SuccessfulResultCollection parseInput)
+        public override IParsingResult<SingleSampleCommonOptions> Parse(SuccessfulResultCollection parseInput)
         {
             var bAlleleSites = parseInput.Get(BAlleleSites);
             bool isDbSnpVcf = bAlleleSites.MatchedOption.Equals(PopulationBAlleleSites);

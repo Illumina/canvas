@@ -10,20 +10,16 @@ namespace Canvas
 {
     public class GermlineWgsRunner : IModeRunner
     {
-        private readonly IFileLocation _bam;
-        public CommonOptions CommonOptions { get; }
-        public SingleSampleCommonOptions SingleSampleCommonOptions { get; }
+        private readonly GermlineWgsInput _input;
 
-        public GermlineWgsRunner(CommonOptions commonOptions, SingleSampleCommonOptions singleSampleCommonOptions, IFileLocation bam)
+        public GermlineWgsRunner(GermlineWgsInput input)
         {
-            _bam = bam;
-            CommonOptions = commonOptions;
-            SingleSampleCommonOptions = singleSampleCommonOptions;
+            _input = input;
         }
 
         public void Run(ILogger logger, ICheckpointRunner checkpointRunner, IWorkManager workManager, IFileLocation runtimeExecutable)
         {
-            CanvasRunner runner = new CanvasRunner(logger, workManager, checkpointRunner, runtimeExecutable, false, CanvasCoverageMode.TruncatedDynamicRange, 100, CommonOptions.CustomParams);
+            CanvasRunner runner = new CanvasRunner(logger, workManager, checkpointRunner, runtimeExecutable, false, CanvasCoverageMode.TruncatedDynamicRange, 100, _input.CommonOptions.CustomParams);
             var callset = GetCallset();
             logger.Info($"Normal Vcf path: {callset.SingleSampleCallset.NormalVcfPath}");
             runner.CallSample(callset);
@@ -31,19 +27,19 @@ namespace Canvas
 
         private CanvasCallset GetCallset()
         {
-            IFileLocation outputVcfPath = CommonOptions.OutputDirectory.GetFileLocation("CNV.vcf.gz");
+            IFileLocation outputVcfPath = _input.CommonOptions.OutputDirectory.GetFileLocation("CNV.vcf.gz");
             AnalysisDetails analysisDetails = new AnalysisDetails(
-                CommonOptions.OutputDirectory,
-                CommonOptions.WholeGenomeFasta,
-                CommonOptions.KmerFasta,
-                CommonOptions.FilterBed,
-                SingleSampleCommonOptions.PloidyBed,
+                _input.CommonOptions.OutputDirectory,
+                _input.CommonOptions.WholeGenomeFasta,
+                _input.CommonOptions.KmerFasta,
+                _input.CommonOptions.FilterBed,
+                _input.SingleSampleCommonOptions.PloidyBed,
                 null);
             CanvasCallset callSet = new CanvasCallset(
-                _bam,
-                SingleSampleCommonOptions.SampleName,
-                SingleSampleCommonOptions.BAlleleSites,
-                SingleSampleCommonOptions.IsDbSnpVcf,
+                _input.Bam,
+                _input.SingleSampleCommonOptions.SampleName,
+                _input.SingleSampleCommonOptions.BAlleleSites,
+                _input.SingleSampleCommonOptions.IsDbSnpVcf,
                 Enumerable.Empty<IFileLocation>(),
                 null,
                 null,

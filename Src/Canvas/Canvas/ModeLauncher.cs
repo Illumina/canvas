@@ -20,19 +20,20 @@ namespace Canvas
 
     public interface IModeRunner
     {
-        CommonOptions CommonOptions { get; }
         void Run(ILogger logger, ICheckpointRunner checkpointRunner, IWorkManager workManager, IFileLocation runtimeExecutable);
     }
 
     public class ModeLauncher : IModeLauncher
     {
+        private readonly FrameworkServices _frameworkServices;
         private readonly IModeRunner _modeRunner;
         private readonly IEnumerable<string> _args;
         private readonly string _version;
         private readonly string _mode;
 
-        public ModeLauncher(IModeRunner modeRunner, IEnumerable<string> args, string version, string mode)
+        public ModeLauncher(FrameworkServices frameworkServices, IModeRunner modeRunner, IEnumerable<string> args, string version, string mode)
         {
+            _frameworkServices = frameworkServices;
             _modeRunner = modeRunner;
             _args = args;
             _version = version;
@@ -41,41 +42,23 @@ namespace Canvas
 
         public int Launch()
         {
-            CommonOptions commonOptions = _modeRunner.CommonOptions;
-            IDirectoryLocation outFolder = commonOptions.OutputDirectory;
-            var log = outFolder.GetFileLocation("CanvasLog.txt");
-            var error = outFolder.GetFileLocation("CanvasError.txt");
-            IsasConfiguration config = IsasConfiguration.GetConfiguration();
-            // From $Root/Homo_sapiens/NCBI/GRCh38Decoy/Sequence/WholeGenomeFasta to $Root
-            IDirectoryLocation genomeRoot = commonOptions.WholeGenomeFasta?.Parent?.Parent?.Parent?.Parent?.Parent;
-            int returnValue = 0;
-            IsasFrameworkFactory.RunWithIsasFramework(outFolder, log, error, commonOptions.StartCheckpoint, commonOptions.StopCheckpoint, 0,
-                config.MaximumMemoryGB, config.MaximumHoursPerProcess, false, genomeRoot,
-                frameworkServices =>
-                {
-                    var logger = frameworkServices.Logger;
-                    try
-                    {
-                        var workerDirectory = new DirectoryLocation(Isas.Framework.Utilities.Utilities.GetAssemblyFolder(typeof(ModeLauncher)));
-                        SettingsProcessor processor = new SettingsProcessor();
-                        ISettings settings = (ISettings)processor;
-                        var executableProcessor = new ExecutableProcessor(settings, logger, workerDirectory);
-                        var runtimeExecutable = new FileLocation(executableProcessor.GetEnvironmentExecutablePath("dotnet"));
-                        frameworkServices.Logger.Info($"Running Canvas {_mode} {_version}");
-                        logger.Info($"Command-line arguments: {string.Join(" ", _args)}");
-                        _modeRunner.Run(logger, frameworkServices.Checkpointer, frameworkServices.WorkManager, runtimeExecutable);
-                        returnValue = 0;
-                    }
-                    catch (Exception e)
-                    {
-                        logger.Error($"Canvas workflow error: {e}");
-                        returnValue = -1;
-                    }
-                });
-            return returnValue;
+            var logger = _frameworkServices.Logger;
+            try
+            {
+                var executableProcessor = new ExecutableProcessor(new SettingsProcessor(), logger);
+                var runtimeExecutable = new FileLocation(executableProcessor.GetEnvironmentExecutablePath("dotnet"));
+                _frameworkServices.Logger.Info($"Running Canvas {_mode} {_version}");
+                logger.Info($"Command-line arguments: {string.Join(" ", _args)}");
+                _modeRunner.Run(logger, _frameworkServices.Checkpointer, _frameworkServices.WorkManager, runtimeExecutable);
+                return 0;
+            }
+            catch (Exception e)
+            {
+                logger.Error($"Canvas workflow error: {e}");
+                return -1;
+            }
         }
     }
-
 
     public class NullModeLauncher : IModeLauncher
     {

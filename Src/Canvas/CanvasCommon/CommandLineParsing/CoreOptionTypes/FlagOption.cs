@@ -11,7 +11,7 @@ namespace CanvasCommon.CommandLineParsing.CoreOptionTypes
             _info = new OptionInfo<string>(description, names);
         }
 
-        public ParsingResult<bool> Parse(string value)
+        public IParsingResult<bool> Parse(string value)
         {
             return ParsingResult<bool>.SuccessfulResult(value != null);
         }
@@ -21,7 +21,7 @@ namespace CanvasCommon.CommandLineParsing.CoreOptionTypes
             return new OptionCollection<bool> { _info };
         }
 
-        public override ParsingResult<bool> Parse(SuccessfulResultCollection parseInput)
+        public override IParsingResult<bool> Parse(SuccessfulResultCollection parseInput)
         {
             return Parse(parseInput.Get(_info));
         }

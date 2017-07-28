@@ -14,7 +14,7 @@ namespace CanvasCommon.CommandLineParsing.CoreOptionTypes
         { }
 
 
-        public override ParsingResult<List<string>> Parse(SuccessfulResultCollection parseInput)
+        public override IParsingResult<List<string>> Parse(SuccessfulResultCollection parseInput)
         {
             List<string> value = parseInput.Get(this);
             if (!value.Any())
