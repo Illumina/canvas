@@ -26,7 +26,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="ClassicBioinfoTools" Version="1.0.1.148" />
+    <PackageReference Include="ClassicBioinfoTools" Version="1.1.0-O00149Mpileup" />
     <PackageReference Include="Illumina.Common" Version="3.13.0.253" />
     <PackageReference Include="Isas.Framework" Version="6.17.1.473" />
     <PackageReference Include="Isas.Manifests" Version="3.0.1.72" />
