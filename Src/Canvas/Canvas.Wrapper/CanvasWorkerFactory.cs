@@ -23,9 +23,7 @@ namespace Canvas.Wrapper
         private readonly DbSnpVcfProcessor _dbSnpVcfProcessor;
         private readonly bool _detectCnvDefault;
         private readonly TabixWrapper _tabixWrapper;
-        public static string CanvasCountPerBinSetting = "CanvasCountsPerBin";
         public static string CanvasCoverageModeSetting = "CanvasCoverageMode";
-        public static string CanvasQualityScoreThresholdSetting = "CanvasQualityScoreThreshold";
 
         public CanvasWorkerFactory(
             ISampleSettings sampleSettings,
@@ -194,8 +192,14 @@ namespace Canvas.Wrapper
 
         internal bool IncludeIntermediateResults()
         {
-            return _sampleSettings.GetSetting("RetainIntermediateCNVFiles", false);
+            return _sampleSettings.GetSetting(RetainIntermediateCnvFilesSetting);
         }
+
+        public static Setting<bool> RetainIntermediateCnvFilesSetting => SampleSettings
+            .CreateSetting(
+                "RetainIntermediateCNVFiles",
+                "Include intermediate CNV files in the workflow output.",
+                false);
 
         internal IFileLocation GetCanvasExe()
         {
@@ -251,32 +255,47 @@ namespace Canvas.Wrapper
 
         private void UpdateWithSomaticQualityThreshold(Dictionary<string, string> allCustomParams)
         {
-            Setting<int?> qualityScoreThresholdSetting = SampleSettings
-                .CreateSetting<int?>(
-                    CanvasQualityScoreThresholdSetting,
-                    "Quality score threshold for PASSing variant call",
-                    null,
-                    nullableInt => nullableInt.HasValue && nullableInt.Value >= 0,
-                    value =>
-                    {
-                        if (value == null) return null;
-                        return int.Parse(value);
-                    }
-                   );
-           int? qualityScoreThreshold = _sampleSettings.GetSetting(qualityScoreThresholdSetting);
-
+            int? qualityScoreThreshold = _sampleSettings.GetSetting(QualityScoreThresholdSetting);
             if (qualityScoreThreshold.HasValue)
             {
                 UpdateCustomParametersWithSetting(allCustomParams, "CanvasSomaticCaller", $" --qualitythreshold {qualityScoreThreshold.Value}");
             }
         }
 
+        public static Setting<int?> QualityScoreThresholdSetting
+        {
+            get
+            {
+                return SampleSettings
+                    .CreateSetting<int?>(
+                        "CanvasQualityScoreThreshold",
+                        "Quality score threshold for PASSing variant call",
+                        null,
+                        nullableInt => nullableInt.HasValue && nullableInt.Value >= 1,
+                        value => int.Parse(value));
+            }
+        }
+
         private void UpdateWithCanvasCountsPerBin(Dictionary<string, string> allCustomParams)
         {
-            int? canvasCountsPerBin = _sampleSettings.GetSetting(CanvasCountPerBinSetting, (int?)null);
+            int? canvasCountsPerBin = _sampleSettings.GetSetting(CountsPerBinSetting);
             if (canvasCountsPerBin.HasValue)
             {
                 UpdateCustomParametersWithSetting(allCustomParams, "CanvasBin", $" -d {canvasCountsPerBin.Value}");
+            }
+        }
+
+        public static Setting<int?> CountsPerBinSetting
+        {
+            get
+            {
+                return SampleSettings
+                    .CreateSetting<int?>(
+                        "CanvasCountsPerBin",
+                        "Median number of read counts per bin",
+                        null,
+                        nullableInt => nullableInt.HasValue && nullableInt.Value >= 1,
+                        value => int.Parse(value));
             }
         }
 
