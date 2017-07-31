@@ -1,8 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
+using Illumina.Common;
 using Illumina.Common.FileSystem;
 using Illumina.SecondaryAnalysis.VariantCalling;
+using Isas.ClassicBioinfoTools.Tabix;
 using Isas.Framework;
+using Isas.Framework.FrameworkFactory;
 using Isas.Framework.Logging;
 using Isas.Framework.Settings;
 using Isas.Framework.WorkManagement;
@@ -18,6 +22,7 @@ namespace Canvas.Wrapper
         private readonly ExecutableProcessor _executableProcessor;
         private readonly DbSnpVcfProcessor _dbSnpVcfProcessor;
         private readonly bool _detectCnvDefault;
+        private readonly TabixWrapper _tabixWrapper;
         public static string CanvasCountPerBinSetting = "CanvasCountsPerBin";
         public static string CanvasCoverageModeSetting = "CanvasCoverageMode";
         public static string CanvasQualityScoreThresholdSetting = "CanvasQualityScoreThreshold";
@@ -28,7 +33,8 @@ namespace Canvas.Wrapper
             ILogger logger,
             ExecutableProcessor executableProcessor,
             DbSnpVcfProcessor dbSnpVcfProcessor,
-            bool detectCnvDefault)
+            bool detectCnvDefault,
+            TabixWrapper tabixWrapper)
         {
             _workManager = workManager;
             _sampleSettings = sampleSettings;
@@ -36,6 +42,7 @@ namespace Canvas.Wrapper
             _executableProcessor = executableProcessor;
             _dbSnpVcfProcessor = dbSnpVcfProcessor;
             _detectCnvDefault = detectCnvDefault;
+            _tabixWrapper = tabixWrapper;
         }
         private IFileLocation GetRuntimeExecutable()
         {
@@ -125,9 +132,7 @@ namespace Canvas.Wrapper
 
         internal PloidyCorrector GetPloidyCorrector()
         {
-            var factory = new Isas.ClassicBioinfoTools.Tabix.TabixWrapperFactory();
-            var tabixWrapper = factory.GetTabixWrapper(_logger, _workManager, _executableProcessor);
-            return new PloidyCorrector(_logger, _workManager, new PloidyEstimator(_logger, _workManager, _executableProcessor.GetExecutable("samtools"), false), tabixWrapper, true);
+            return new PloidyCorrector(_logger, _workManager, new PloidyEstimator(_logger, _workManager, _executableProcessor.GetExecutable("samtools"), false), _tabixWrapper, true);
         }
 
         public bool RequireNormalVcf()
@@ -142,13 +147,20 @@ namespace Canvas.Wrapper
 
         private bool RunCnvDetection(bool detectCnvDefault)
         {
-            bool detectCnvs = detectCnvDefault;
-            string settingString = _sampleSettings.GetStringSetting("RunCNVDetection", null);
-            if (!string.IsNullOrEmpty(settingString))
-            {
-                detectCnvs = DetectCnvs(settingString);
-            }
-            return detectCnvs;
+            return _sampleSettings.GetSetting(GetRunCnvDetectionSetting(detectCnvDefault));
+        }
+
+        public Setting<bool> RunCnvDetectionSetting => GetRunCnvDetectionSetting(_detectCnvDefault);
+
+
+        public static Setting<bool> GetRunCnvDetectionSetting(bool detectCnvDefault)
+        {
+            return SampleSettings.CreateSetting(
+                "RunCNVDetection",
+                "Enable/disable CNV Detection step",
+                detectCnvDefault,
+                null,
+                DetectCnvs);
         }
 
         private static bool DetectCnvs(string name)
@@ -239,7 +251,20 @@ namespace Canvas.Wrapper
 
         private void UpdateWithSomaticQualityThreshold(Dictionary<string, string> allCustomParams)
         {
-            int? qualityScoreThreshold = _sampleSettings.GetSetting(CanvasQualityScoreThresholdSetting, (int?)null);
+            Setting<int?> qualityScoreThresholdSetting = SampleSettings
+                .CreateSetting<int?>(
+                    CanvasQualityScoreThresholdSetting,
+                    "Quality score threshold for PASSing variant call",
+                    null,
+                    nullableInt => nullableInt.HasValue && nullableInt.Value >= 0,
+                    value =>
+                    {
+                        if (value == null) return null;
+                        return int.Parse(value);
+                    }
+                   );
+           int? qualityScoreThreshold = _sampleSettings.GetSetting(qualityScoreThresholdSetting);
+
             if (qualityScoreThreshold.HasValue)
             {
                 UpdateCustomParametersWithSetting(allCustomParams, "CanvasSomaticCaller", $" --qualitythreshold {qualityScoreThreshold.Value}");
