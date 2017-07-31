@@ -14,11 +14,14 @@ namespace Canvas.Wrapper
 
         public IFileLocation GetDbSnpVcfPath()
         {
-            string dbSnpVcfPath = _sampleSettings.GetStringSetting("dbsnpvcfpath", null);
-            IFileLocation dbSnpVcf = null;
-            if (dbSnpVcfPath != null)
-                dbSnpVcf = new FileLocation(dbSnpVcfPath);
-            return dbSnpVcf;
+            return _sampleSettings.GetSetting(DbSnpVcfPathSetting);
         }
+
+        public Setting<IFileLocation> DbSnpVcfPathSetting = SampleSettings.CreateSetting<IFileLocation>(
+            "DBSnpVcfPath",
+            "Path to a vcf file containing SNP sites to use for calculating B-allele frequencies during CNV calling",
+            null,
+            null,
+            path => new FileLocation(path));
     }
 }

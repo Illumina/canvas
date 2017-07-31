@@ -8,6 +8,7 @@ using Illumina.Common;
 using Illumina.Common.FileSystem;
 using Isas.Framework.FrameworkFactory;
 using Isas.Framework.Settings;
+using Isas.Framework.WorkManagement;
 
 namespace Canvas.CommandLineParsing
 {
@@ -164,8 +165,12 @@ namespace Canvas.CommandLineParsing
             IsasConfiguration config = IsasConfiguration.GetConfiguration();
             IDirectoryLocation genomeRoot = commonOptions.WholeGenomeFasta?.Parent?.Parent?.Parent?.Parent?.Parent;
             int returnValue = 0;
-            IsasFrameworkFactory.RunWithIsasFramework(outFolder, log, error, commonOptions.StartCheckpoint, commonOptions.StopCheckpoint, 0,
-                config.MaximumMemoryGB, config.MaximumHoursPerProcess, false, genomeRoot,
+            var settings = new SettingsProcessor();
+            var maximumMemoryGB = settings.GetSetting(WorkManagerFactory.SampleSheetSettings.MaximumMemoryGB);
+            var maximumHoursPerProcess = settings.GetSetting(WorkManagerFactory.SampleSheetSettings.MaximumHoursPerProcess);
+            var maximumThreadCount = settings.GetSetting(WorkManagerFactory.SampleSheetSettings.MaximumThreadCount);
+            IsasFrameworkFactory.RunWithIsasFramework(outFolder, log, error, commonOptions.StartCheckpoint, commonOptions.StopCheckpoint, maximumThreadCount,
+                maximumMemoryGB, maximumHoursPerProcess, true, false, true, genomeRoot,
                 frameworkServices =>
                 {
                     var result = Parse(frameworkServices, args, standardOutput, standardError);

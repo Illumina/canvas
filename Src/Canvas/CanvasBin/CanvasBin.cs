@@ -451,7 +451,7 @@ namespace CanvasBin
                 }
             }
 
-            using (FastaReader reader = new FastaReader(referenceFile))
+            using (FastaReader reader = new FastaReader(new FileLocation(referenceFile)))
             {
                 GenericRead fastaEntry = new GenericRead();
 

@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Text;
+using Illumina.Common.FileSystem;
 using Isas.SequencingFiles;
 
 namespace FlagUniqueKmers
@@ -202,8 +203,8 @@ namespace FlagUniqueKmers
         private void WriteOutputs(string fastaPath, string outputPath)
         {
             int chromosomeIndex = -1;
-            using (FastaReader reader = new FastaReader(fastaPath))
-            using (FastaWriter writer = new FastaWriter(outputPath))
+            using (FastaReader reader = new FastaReader(new FileLocation(fastaPath)))
+            using (FastaWriter writer = new FastaWriter(new FileLocation(outputPath)))
             {
                 GenericRead fastaEntry = new GenericRead();
                 while (reader.GetNextEntry(ref fastaEntry))
@@ -245,7 +246,7 @@ namespace FlagUniqueKmers
                 Kmers.Clear();
                 this.GenomePosition = 0;
                 int chromosomeIndex = -1;
-                using (FastaReader reader = new FastaReader(fastaPath))
+                using (FastaReader reader = new FastaReader(new FileLocation(fastaPath)))
                 {
                     GenericRead fastaEntry = new GenericRead();
                     while (reader.GetNextEntry(ref fastaEntry))
