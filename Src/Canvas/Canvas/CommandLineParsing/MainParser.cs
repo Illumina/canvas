@@ -165,7 +165,7 @@ namespace Canvas.CommandLineParsing
             IDirectoryLocation genomeRoot = commonOptions.WholeGenomeFasta?.Parent?.Parent?.Parent?.Parent?.Parent;
             int returnValue = 0;
             IsasFrameworkFactory.RunWithIsasFramework(outFolder, log, error, commonOptions.StartCheckpoint, commonOptions.StopCheckpoint, 0,
-                config.MaximumMemoryGB, config.MaximumHoursPerProcess, false, genomeRoot,
+                config.MaximumMemoryGB, config.MaximumHoursPerProcess, true, false, true, genomeRoot,
                 frameworkServices =>
                 {
                     var result = Parse(frameworkServices, args, standardOutput, standardError);

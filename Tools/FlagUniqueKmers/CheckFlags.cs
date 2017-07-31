@@ -1,4 +1,5 @@
 ﻿using System;
+using Illumina.Common.FileSystem;
 using Isas.Framework.Utilities;
 using Isas.SequencingFiles;
 
@@ -21,7 +22,7 @@ namespace FlagUniqueKmers
                 "TTTTTTCCTATACATACATACCCATGATAAAGTTT"  // 30763880 A
             };
 
-            using (FastaReader readerA = new FastaReader(fastaPath))
+            using (FastaReader readerA = new FastaReader(new FileLocation(fastaPath)))
             {
                 GenericRead chrA = new GenericRead();
                 while (true)
@@ -64,8 +65,8 @@ namespace FlagUniqueKmers
             long CountA = 0;
             long CountB = 0;
             long CountNeither = 0;
-            using (FastaReader readerA = new FastaReader(fastaPathA))
-            using (FastaReader readerB = new FastaReader(fastaPathB))
+            using (FastaReader readerA = new FastaReader(new FileLocation(fastaPathA)))
+            using (FastaReader readerB = new FastaReader(new FileLocation(fastaPathB)))
             {
                 readerA.GetNextEntry(ref chrA); // Discard chrM from new output
                 while (true)
