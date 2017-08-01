@@ -125,7 +125,8 @@ namespace CanvasCommon
             GenomicBins = new List<SampleGenomicBin>(counts);
             CopyNumber = -1;
             SecondBestCopyNumber = -1;
-            Balleles = balleles;
+            if (balleles == null)
+                Balleles = new Balleles();
         }
 
         #region Members
@@ -146,7 +147,7 @@ namespace CanvasCommon
         public string Filter = "PASS";
         public Tuple<int, int> StartConfidenceInterval; // if not null, this is a confidence interval around Start, reported in the CIPOS tag
         public Tuple<int, int> EndConfidenceInterval; // if not null, this is a confidence interval around End, reported in the CIEND tag
-        public Balleles Balleles = new Balleles();
+        public Balleles Balleles;
         public string Chr { get; private set; }
         /// <summary>
         /// bed format start position
