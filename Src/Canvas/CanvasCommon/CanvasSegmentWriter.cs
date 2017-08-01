@@ -150,7 +150,7 @@ namespace CanvasCommon
         private static void WriteSingleSampleInfo(BgzipOrStreamWriter writer, CanvasSegment segment)
         {
             writer.Write("\tRC:BC:CN:MCC", segment.End);
-            writer.Write($"\t{segment.MeanCount:F2}:{segment.BinCount}:{segment.CopyNumber}");
+            writer.Write($"\t{segment.MedianCount:F2}:{segment.BinCount}:{segment.CopyNumber}");
             writer.Write(segment.MajorChromosomeCount.HasValue ? $":{segment.MajorChromosomeCount}" : ":.");
             writer.WriteLine();
         }

@@ -671,7 +671,7 @@ namespace CanvasPedigreeCaller
             foreach (PedigreeMember sample in samples)
             {
                 int copyNumber = sample.Segments[segmentPosition].CopyNumber;
-                if (copyNumber > 2)
+                if (copyNumber <= 2)
                 {
                     sample.Segments[segmentPosition].MajorChromosomeCount = copyNumber == 2 ? 1 : copyNumber;
                     return;
