@@ -126,16 +126,16 @@ namespace CanvasCommon
                     return Utilities.CoefficientOfVariation(this.Counts);
 
                 case QScorePredictor.MafCount:
-                    return Alleles.Frequencies.Count;
+                    return Balleles.Frequencies.Count;
 
                 case QScorePredictor.MafMean:
-                    if (Alleles.Frequencies.Count == 0) return 0;
-                    return Alleles.Frequencies.Average();
+                    if (Balleles.Frequencies.Count == 0) return 0;
+                    return Balleles.Frequencies.Average();
 
                 case QScorePredictor.MafCv:
-                    if (Alleles.Frequencies.Count == 0) return 0;
-                    if (Alleles.Frequencies.Average() == 0) return 0;
-                    return Utilities.CoefficientOfVariation(Alleles.Frequencies);
+                    if (Balleles.Frequencies.Count == 0) return 0;
+                    if (Balleles.Frequencies.Average() == 0) return 0;
+                    return Utilities.CoefficientOfVariation(Balleles.Frequencies);
 
                 case QScorePredictor.LogMafCv:
                     return Math.Log10(1 + GetQScorePredictor(QScorePredictor.MafCv));

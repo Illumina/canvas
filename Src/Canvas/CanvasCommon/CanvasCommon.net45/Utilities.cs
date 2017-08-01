@@ -961,13 +961,13 @@ namespace CanvasCommon
                 foreach (CanvasSegment segment in segments)
                 {
                     writer.Write(String.Format("{0}\t{1}\t{2}", segment.Chr, segment.Begin, segment.End));
-                    float[] mafs = new float[segment.Alleles.Frequencies.Count];
+                    float[] mafs = new float[segment.Balleles.Frequencies.Count];
                     List<int> zeroIndices = new List<int>();
                     List<int> nonZeroIndices = new List<int>();
                     bool isGreaterThan20 = false;
                     for (int i = 0; i < mafs.Length; i++)
                     {
-                        float f = segment.Alleles.Frequencies[i];
+                        float f = segment.Balleles.Frequencies[i];
                         mafs[i] = f > 0.5 ? 1 - f : f;
                         if (mafs[i] == 0)
                         {
@@ -984,11 +984,11 @@ namespace CanvasCommon
                     //  (2) At least one of the alleles have a MAF >= 0.2
                     if ((float)nonZeroIndices.Count / (float)mafs.Length > 0.1 || isGreaterThan20)
                     {
-                        var tmpVFs = segment.Alleles.Balleles.Where(v => v.Frequency > 0.1).ToList(); // heuristic to use only the right mode
-                        if (tmpVFs.Count > 0) { segment.Alleles.Balleles = tmpVFs; }
+                        var tmpVFs = segment.Balleles.BAlleles.Where(v => v.Frequency > 0.1).ToList(); // heuristic to use only the right mode
+                        if (tmpVFs.Count > 0) { segment.Balleles.BAlleles = tmpVFs; }
                         if (mafs.Length >= MinimumVariantFrequenciesForInformativeSegment) // adjust MinimumVariantFrequenciesForInformativeSegment
                         {
-                            MinimumVariantFrequenciesForInformativeSegment = Math.Min(MinimumVariantFrequenciesForInformativeSegment, segment.Alleles.Frequencies.Count);
+                            MinimumVariantFrequenciesForInformativeSegment = Math.Min(MinimumVariantFrequenciesForInformativeSegment, segment.Balleles.Frequencies.Count);
                         }
                         writer.Write("\tTrue");
                     }

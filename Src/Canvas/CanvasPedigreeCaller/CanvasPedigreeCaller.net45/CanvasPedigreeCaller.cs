@@ -151,8 +151,8 @@ namespace CanvasPedigreeCaller
         {
             const double copyNumberCoverageOneAndHalfNormalizer = 0.75;
             var alleles = pedigreeMembers.Select(
-                x => x.SegmentSets[segmentSetIndex].GetSet(segmentsSet)[segmentIndex].Alleles
-                    .Balleles.Select(y => y.Counts).ToList());
+                x => x.SegmentSets[segmentSetIndex].GetSet(segmentsSet)[segmentIndex].Balleles
+                    .BAlleles.Select(y => y.Counts).ToList());
             var alleleCounts = alleles.Select(allele => allele.Count).ToList();
             bool lowAlleleCounts = alleleCounts.Select(x => x < CallerParameters.DefaultAlleleCountThreshold).Any(c => c == true);
             var coverageCounts = pedigreeMembers.Select(x => x.SegmentSets[segmentSetIndex].GetSet(segmentsSet)[segmentIndex].MedianCount).ToList();
@@ -161,7 +161,7 @@ namespace CanvasPedigreeCaller
             {
                 var minorMeanMAF =
                     alleles.Select(allele => allele.Select(y => Math.Min(y.Item1, y.Item2)).ToList().Average());
-                var minorMedianMAF = pedigreeMembers.Select(x =>x.SegmentSets[segmentSetIndex].GetSet(segmentsSet)[segmentIndex]?.Alleles.MedianCounts.Item2);
+                var minorMedianMAF = pedigreeMembers.Select(x =>x.SegmentSets[segmentSetIndex].GetSet(segmentsSet)[segmentIndex]?.Balleles.MedianCounts.Item2);
                 var isHighCoverageCounts = pedigreeMembers.Select(x => x.MeanCoverage).Zip(coverageCounts,
                     (meanCoverage, segmenCoverage) =>
                         segmenCoverage > meanCoverage * copyNumberCoverageOneAndHalfNormalizer);
@@ -319,8 +319,8 @@ namespace CanvasPedigreeCaller
             pedigreeMember.MeanMafCoverage = CanvasIO.LoadFrequenciesBySegment(variantFrequencyFiles[fileCounter],
                 segments, referenceFolder);
             foreach (var segment in segments)
-                if (segment.Alleles.Balleles.Count > defaultAlleleCountThreshold)
-                    segment.Alleles.SetMedianCounts();
+                if (segment.Balleles.BAlleles.Count > defaultAlleleCountThreshold)
+                    segment.Balleles.MedianCounts = Balleles.SetMedianCounts(segment.Balleles);
             pedigreeMember.Variance = GetCoverageVariance(numberOfTrimmedBins, segments);
             pedigreeMember.MafVariance = GetMafVariance(segments);
             pedigreeMember.MeanCoverage = segments.Any()
@@ -361,9 +361,9 @@ namespace CanvasPedigreeCaller
                             for (var index = 0; index < commonCnvCanvasSegments.Count; index++)
                             {
                                 foreach (var genotype in allelesByChromosome[chr][index])
-                                    commonCnvCanvasSegments[index].Alleles.Balleles.Add(CanvasIO.GetAllele(genotype));
-                                if (commonCnvCanvasSegments[index].Alleles.Balleles.Count > defaultAlleleCountThreshold)
-                                    commonCnvCanvasSegments[index].Alleles.SetMedianCounts();
+                                    commonCnvCanvasSegments[index].Balleles.BAlleles.Add(CanvasIO.GetAllele(genotype));
+                                if (commonCnvCanvasSegments[index].Balleles.BAlleles.Count > defaultAlleleCountThreshold)
+                                    commonCnvCanvasSegments[index].Balleles.MedianCounts = Balleles.SetMedianCounts(commonCnvCanvasSegments[index].Balleles);
                             }
                             segmentsSetByChromosome[chr] =
                                 CanvasSegment.MergeCommonCnvSegments(segmentsByChromosome[chr],
@@ -404,8 +404,8 @@ namespace CanvasPedigreeCaller
         {
             return Math.Pow(
                 Utilities.StandardDeviation(
-                    segments.Where(x => x.Alleles.TotalCoverage.Count > 0)
-                        .Select(x => x.Alleles.TotalCoverage.Average())
+                    segments.Where(x => x.Balleles.TotalCoverage.Count > 0)
+                        .Select(x => x.Balleles.TotalCoverage.Average())
                         .ToArray()), 2);
         }
 
@@ -564,7 +564,7 @@ namespace CanvasPedigreeCaller
 
         public static int AggregateVariantCoverage(ref List<CanvasSegment> segments)
         {
-            var variantCoverage = segments.SelectMany(segment => segment.Alleles.TotalCoverage).ToList();
+            var variantCoverage = segments.SelectMany(segment => segment.Balleles.TotalCoverage).ToList();
             return variantCoverage.Any() ? Utilities.Median(variantCoverage) : 0;
         }
 

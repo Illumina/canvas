@@ -187,7 +187,7 @@ namespace CanvasCommon
                     foreach (var genotype in allelesByChromosome[chr][index])
                     {
                         var allele = GetAllele(genotype);
-                        segmentsByChromosome[chr][index].Alleles.Balleles.Add(allele);
+                        segmentsByChromosome[chr][index].Balleles.BAlleles.Add(allele);
                     }
                 }
             }
@@ -198,8 +198,7 @@ namespace CanvasCommon
         {
             float MAF = genotype.CountsB / (float) (genotype.CountsA + genotype.CountsB);
             int totalCoverage = genotype.CountsA + genotype.CountsB;
-            var counts = new Tuple<int, int>(genotype.CountsA, genotype.CountsB);
-            var allele = new Allele(genotype.Pos, MAF, totalCoverage, counts);
+            var allele = new Allele(genotype.Pos, MAF, totalCoverage, genotype.CountsA, genotype.CountsB);
             return allele;
         }
 

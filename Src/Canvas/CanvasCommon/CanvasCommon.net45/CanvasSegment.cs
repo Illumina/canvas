@@ -2,10 +2,10 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.IO;
-using System.Net.Http.Headers;
 using Illumina.Common;
 using Illumina.Common.FileSystem;
 using Isas.SequencingFiles;
+
 
 namespace CanvasCommon
 {
@@ -14,59 +14,59 @@ namespace CanvasCommon
         public int Position { get; set; }
         public float Frequency;
         public int TotalCoverage;
-        public Tuple<int, int> Counts;
+        public (int AlleleACounts, int AlleleBCounts) Counts { get; private set; }
 
-        public Allele(int position, float frequency, int totalCoverage, Tuple<int, int> counts)
+        public Allele(int position, float frequency, int totalCoverage, int alleleACounts, int alleleBCounts)
         {
             Position = position;
             Frequency = frequency;
             TotalCoverage = totalCoverage;
-            Counts = counts;
+            Counts = (AlleleACounts: alleleACounts, AlleleBCounts: alleleBCounts); 
         }
     }
 
-    public class Alleles
+    public class Balleles
     {
 
-        public List<Allele> Balleles;
+        public List<Allele> BAlleles;
 
-        public Alleles()
+        public Balleles()
         {
-            Balleles = new List<Allele>();
+            BAlleles = new List<Allele>();
         }
-        public Alleles(List<Allele> alleles)
+        public Balleles(List<Allele> alleles)
         {
-            Balleles = alleles;
+            BAlleles = alleles;
         }
 
         public Tuple<int, int> MedianCounts;
 
         public List<float> Frequencies
         {
-            get { return Balleles.Select(allele => allele.Frequency).ToList(); }
+            get { return BAlleles.Select(allele => allele.Frequency).ToList(); }
         }
 
-        public void SetMedianCounts()
+        public static Tuple<int, int> SetMedianCounts(Balleles balleles)
         {
-            var item1 = Utilities.Median(Balleles.Select(allele => Math.Max(allele.Counts.Item1, allele.Counts.Item2)).ToList());
-            var item2 = Utilities.Median(Balleles.Select(allele => Math.Min(allele.Counts.Item1, allele.Counts.Item2)).ToList());
-            MedianCounts = new Tuple<int, int>(item1, item2);
+            var item1 = Utilities.Median(balleles.BAlleles.Select(allele => Math.Max(allele.Counts.AlleleACounts, allele.Counts.AlleleBCounts)).ToList());
+            var item2 = Utilities.Median(balleles.BAlleles.Select(allele => Math.Min(allele.Counts.AlleleACounts, allele.Counts.AlleleBCounts)).ToList());
+            return new Tuple<int, int>(item1, item2);
         }
         public double? MeanMAF
         {
             get
             {
-                if (Balleles.Count <= 5)
+                if (BAlleles.Count <= 5)
                     return null;
 
-                return Balleles.Select(allele => allele.Frequency > 0.5 ? 1 - allele.Frequency : allele.Frequency).Average();
+                return BAlleles.Select(allele => allele.Frequency > 0.5 ? 1 - allele.Frequency : allele.Frequency).Average();
             }
         }
         public List<int> TotalCoverage
         {
             get
             {
-                return Balleles.Select(allele => allele.TotalCoverage).ToList();
+                return BAlleles.Select(allele => allele.TotalCoverage).ToList();
             }
         }
     }
@@ -116,7 +116,7 @@ namespace CanvasCommon
     public partial class CanvasSegment
         {
 
-        public CanvasSegment(string chr, int begin, int end, List<SampleGenomicBin> counts)
+        public CanvasSegment(string chr, int begin, int end, List<SampleGenomicBin> counts, Balleles balleles = null)
         {
             Chr = chr;
             GenomicBins = new List<SampleGenomicBin>();
@@ -125,18 +125,7 @@ namespace CanvasCommon
             GenomicBins = new List<SampleGenomicBin>(counts);
             CopyNumber = -1;
             SecondBestCopyNumber = -1;
-        }
-
-        public CanvasSegment(string chr, int begin, int end, List<SampleGenomicBin> counts, Alleles alleles)
-        {
-            Chr = chr;
-            GenomicBins = new List<SampleGenomicBin>();
-            Begin = begin;
-            End = end;
-            GenomicBins = new List<SampleGenomicBin>(counts);
-            CopyNumber = -1;
-            SecondBestCopyNumber = -1;
-            Alleles = alleles;
+            Balleles = balleles;
         }
 
         #region Members
@@ -157,7 +146,7 @@ namespace CanvasCommon
         public string Filter = "PASS";
         public Tuple<int, int> StartConfidenceInterval; // if not null, this is a confidence interval around Start, reported in the CIPOS tag
         public Tuple<int, int> EndConfidenceInterval; // if not null, this is a confidence interval around End, reported in the CIEND tag
-        public Alleles Alleles = new Alleles();
+        public Balleles Balleles = new Balleles();
         public string Chr { get; private set; }
         /// <summary>
         /// bed format start position
@@ -182,12 +171,12 @@ namespace CanvasCommon
         {
             return this.GenomicBins.Where(x => x.Start >= start && x.Stop <= end).ToList();
         }
-        public Alleles GetAllelesSubrange(int start, int end, int defaultAlleleCountThreshold)
+        public Balleles GetAllelesSubrange(int start, int end, int defaultAlleleCountThreshold)
         {
-            var array = Alleles.Balleles.Where(x => x.Position >= start && x.Position <= end).ToList();
-            var allele = new Alleles(array);
+            var array = Balleles.BAlleles.Where(x => x.Position >= start && x.Position <= end).ToList();
+            var allele = new Balleles(array);
             if (array.Count > defaultAlleleCountThreshold)
-                allele.SetMedianCounts();
+                Balleles.MedianCounts = Balleles.SetMedianCounts(allele);
             return allele;
         }
         /// <summary>
@@ -263,7 +252,7 @@ namespace CanvasCommon
                 this.End = s.End;
             }
             this.GenomicBins.AddRange(s.GenomicBins);
-            Alleles.Balleles.AddRange(s.Alleles.Balleles);
+            Balleles.BAlleles.AddRange(s.Balleles.BAlleles);
         }
 
         public int SizeOveralp(CanvasSegment segment)
@@ -685,16 +674,16 @@ namespace CanvasCommon
                             firstIndex = 0;
                             if (pointStartPos > segment.Begin)
                             {
-                                firstIndex = (int)((float)segment.Alleles.Frequencies.Count * (pointStartPos - segment.Begin) / segment.Length);
+                                firstIndex = (int)((float)segment.Balleles.Frequencies.Count * (pointStartPos - segment.Begin) / segment.Length);
                             }
-                            lastIndex = segment.Alleles.Frequencies.Count;
+                            lastIndex = segment.Balleles.Frequencies.Count;
                             if (pointEndPos < segment.End)
                             {
-                                lastIndex = (int)((float)segment.Alleles.Frequencies.Count * (pointEndPos - segment.Begin) / segment.Length);
+                                lastIndex = (int)((float)segment.Balleles.Frequencies.Count * (pointEndPos - segment.Begin) / segment.Length);
                             }
                             for (int index = firstIndex; index < lastIndex; index++)
                             {
-                                float tempMAF = segment.Alleles.Balleles[index].Frequency;
+                                float tempMAF = segment.Balleles.BAlleles[index].Frequency;
                                 VF.Add(tempMAF);
                                 if (tempMAF > 0.5) tempMAF = 1 - tempMAF;
                                 MAF.Add(tempMAF);

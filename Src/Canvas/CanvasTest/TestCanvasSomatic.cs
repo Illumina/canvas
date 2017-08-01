@@ -31,11 +31,11 @@ namespace CanvasTest
                 for (int countIndex = 0; countIndex < length / 100; countIndex++) counts.Add(new SampleGenomicBin("1", 2, 3, RNG.Next(1000)));
                 CanvasSegment segment = new CanvasSegment("chr1", currentPosition, currentPosition + length, counts)
                 {
-                    Alleles = new Alleles()
+                    Balleles = new Balleles()
                 };
                 for (int varIndex = 0; varIndex < variantCount; varIndex++)
                 {
-                    segment.Alleles.Balleles.Add(new Allele(0, RNG.Next(), 100, new Tuple<int, int>(50, 50)));
+                    segment.Balleles.BAlleles.Add(new Allele(0, RNG.Next(), 100, 50, 50));
                 }
                 segments.Add(segment);
             }
