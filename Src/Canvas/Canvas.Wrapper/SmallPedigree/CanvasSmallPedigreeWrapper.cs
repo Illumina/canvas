@@ -95,9 +95,6 @@ namespace Canvas.Wrapper.SmallPedigree
             if (ploidyVcf != null)
                 commandLine.Append($" --{SmallPedigreeOptionsParser.PloidyVcfOptionName} \"{ploidyVcf.VcfFile}\"");
 
-
-            //var canvasPartitionParam = $@"--commoncnvs {_annotationFileProvider.GetCanvasAnnotationFile(input.GenomeMetadata, "commoncnvs.bed")}";
-            //var moreCustomParameters = new Dictionary<string, string> { ["CanvasPartition"] = canvasPartitionParam };
             commandLine.Append(_singleSampleInputCommandLineBuilder.GetCustomParameters());
             commandLine = _singleSampleInputCommandLineBuilder.MergeCustomCanvasParameters(commandLine);
             // use Proband or, when proband is not available, first sample as pedigree id

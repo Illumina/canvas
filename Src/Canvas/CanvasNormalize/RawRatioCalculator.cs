@@ -40,7 +40,6 @@ namespace CanvasNormalize
                     // It would be better to just drop these bins so we don't introduce too much noise into segmentation and CNV calling.
                     if (referenceBin.Count < _minReferenceCount) { continue; } // skip the bin
                     if (referenceBin.Count > _maxReferenceCount) { continue; } // skip the bin
-                    double sampleCount = eSampleBins.Current.Count;
                     double ratio = sampleBin.Count / referenceBin.Count;
                     yield return new SampleGenomicBin(sampleBin.GenomicBin.Chromosome, sampleBin.Start, sampleBin.Stop, sampleBin.GenomicBin.GC, (float)ratio);
                 }

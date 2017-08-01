@@ -166,7 +166,6 @@ namespace CanvasCommon
                 {
                     tmpHigh = distanceThreshold;
                 }
-                neighborRateTmp = 0;
                 iterations++;
                 if (iterations > maxIterations)
                     break;
@@ -360,9 +359,8 @@ namespace CanvasCommon
 
 
             // sort list and return indices
-            List<int> runOrder = new List<int>();
             var sortedScores = Rho.Select((x, i) => new KeyValuePair<double, int>(x, i)).OrderByDescending(x => x.Key).ToList();
-            runOrder = sortedScores.Select(x => x.Value).ToList();
+            var runOrder = sortedScores.Select(x => x.Value).ToList();
 
             foreach (int runOrderIndex in runOrder)
             {

@@ -52,8 +52,6 @@ namespace CanvasPartition
                 { "h|help", "show this message and exit", v => needHelp = v != null }
             };
 
-            List<string> extraArgs = p.Parse(args);//
-
             if (needHelp)
             {
                 ShowHelp(p);

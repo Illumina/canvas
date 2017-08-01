@@ -28,44 +28,11 @@ namespace CanvasClean
         }
 
         /// <summary>
-        /// Debugging option - save off a table of counts by GC bin.  
-        /// </summary>
-        static void DebugPrintCountsByGC(List<SampleGenomicBin> bins, string filePath)
-        {
-            int[][] HistogramByGC = new int[EnrichmentUtilities.numberOfGCbins][];
-            for (int GC = 0; GC < HistogramByGC.Length; GC++) HistogramByGC[GC] = new int[1024];
-            foreach (SampleGenomicBin bin in bins)
-            {
-                if (bin.Count < 0 || bin.Count >= 1024) continue;
-                HistogramByGC[bin.GenomicBin.GC][(int)bin.Count]++;
-            }
-            using (FileStream stream = new FileStream(filePath, FileMode.Create, FileAccess.Write))
-            using (StreamWriter writer = new StreamWriter(stream))
-            {
-                // Header line:
-                writer.Write("#Bin\\GC");
-                for (int GC = 0; GC < HistogramByGC.Length; GC++)
-                    writer.Write("GC{0}\t", GC);
-                writer.WriteLine();
-                // Body:
-                for (int count = 0; count < 1024; count++)
-                {
-                    writer.Write("{0}\t", count);
-                    for (int GC = 0; GC < HistogramByGC.Length; GC++)
-                        writer.Write("{0}\t", HistogramByGC[GC][count]);
-                    writer.WriteLine();
-                }
-            }
-            Console.WriteLine("Wrote counts-by-GC histogram to {0}", filePath);
-        }
-
-        /// <summary>
         /// Perform variance stabilization by GC bins.
         /// </summary>
         /// <param name="bins">Bins whose counts are to be normalized.</param>
         static bool NormalizeVarianceByGC(List<SampleGenomicBin> bins, NexteraManifest manifest = null)
         {
-            // DebugPrintCountsByGC(bins, "CountsByGCVariance-Before.txt");
             // An array of lists. Each array element (0-100) will hold a list of counts whose bins have the same GC content.
             List<float>[] countsByGC;
             // Will hold all of the autosomal counts present in 'bins'
@@ -126,7 +93,6 @@ namespace CanvasClean
                 bin.Count = medianGCCount + (bin.Count - medianGCCount) / iqrRatio;
             }
 
-            // DebugPrintCountsByGC(bins, "CountsByGCVariance-After.txt");
             return true;
         }
 
@@ -196,7 +162,6 @@ namespace CanvasClean
         /// <param name="manifest"></param>
         static void NormalizeByGC(List<SampleGenomicBin> bins, NexteraManifest manifest = null)
         {
-            // DebugPrintCountsByGC(bins, "CountsByGC-Before.txt");
             // An array of lists. Each array element (0-100) will hold a list of counts whose bins have the same GC content.
             List<float>[] countsByGC;
 
@@ -228,7 +193,6 @@ namespace CanvasClean
                 if (median != null && median > 0)
                     bins[gcBinIndex].Count = (float)(globalMedian * (double)bins[gcBinIndex].Count / median);
             }
-            // DebugPrintCountsByGC(bins, "CountsByGC-After.txt");
         }
 
         /// <summary>
@@ -477,8 +441,6 @@ namespace CanvasClean
                 { "m|mode=",          modeDescription,                                    v => gcNormalizationMode = Utilities.ParseCanvasGCNormalizationMode(v) },
                 { "h|help",           "show this message and exit",                       v => needHelp = v != null },
             };
-
-            List<string> extraArgs = p.Parse(args);
 
             if (needHelp)
             {

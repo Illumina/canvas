@@ -100,8 +100,6 @@ namespace CanvasBin
 
             Console.WriteLine("CanvasBin {0}", System.Reflection.Assembly.GetEntryAssembly().GetName().Version.ToString());
 
-            List<string> extraArgs = p.Parse(args);
-
             // Check for required arguments. Display the help message if any of them are missing.
             if (string.IsNullOrEmpty(parameters.referenceFile))
             {

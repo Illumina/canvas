@@ -145,7 +145,6 @@ namespace CanvasPartition
             }
 
             Parallel.ForEach(tasks, task => task.Invoke());
-            // segmentation.SegmentationResults = new Segmentation.GenomeSegmentationResults(segmentByChr);
             Console.WriteLine("{0} Completed CBS tasks", DateTime.Now);
             Console.WriteLine("{0} Segmentation results complete", DateTime.Now);
             return segmentByChr;

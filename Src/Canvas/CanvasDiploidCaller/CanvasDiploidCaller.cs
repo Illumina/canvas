@@ -41,7 +41,7 @@ namespace CanvasDiploidCaller
         {
             Console.WriteLine("{0} Initialize ploidy models...", DateTime.Now);
             this.AllPloidies = new List<SegmentPloidy>();
-            double diploidPredictedMAF = CanvasCommon.Utilities.EstimateDiploidMAF(2, this.MeanCoverage);
+            CanvasCommon.Utilities.EstimateDiploidMAF(2, this.MeanCoverage);
             for (int copyNumber = 0; copyNumber <= MaximumCopyNumber; copyNumber++)
             {
                 for (int majorCount = copyNumber; majorCount * 2 >= copyNumber; majorCount--)
@@ -86,7 +86,6 @@ namespace CanvasDiploidCaller
             List<ModelPoint> modelPoints = new List<ModelPoint>();
 
             double[] mu = GetProjectedMeanCoverage(model.DiploidCoverage);
-            double diploidMAF = this.AllPloidies[3].MinorAlleleFrequency; /// %%% Magic number!
             // Refine our estimate of diploid MAF:
             //double diploidMAF = this.EstimateDiploidMAF(2, model.DiploidCoverage);
 
@@ -174,8 +173,6 @@ namespace CanvasDiploidCaller
                 foreach (float VF in segment.Alleles.Frequencies) MAF.Add(VF > 0.5 ? 1 - VF : VF);
                 int expectedSnpDensityCutoff = (segment.End - segment.Begin) / MedianHetSnpsDistance / 2;
 
-
-                List<Tuple<float, float>> weightedFrequencies = new List<Tuple<float, float>>();
                 double medianCoverage = CanvasCommon.Utilities.Median(segment.Counts);
 
                 double medianMAF = -1;
@@ -331,9 +328,7 @@ namespace CanvasDiploidCaller
                     }
                     MAF.Sort();
                     float MedianMAF = -1;
-                    if (MAF.Count > 0)
-                        MedianMAF = MAF[MAF.Count / 2];
-                    double medianCoverage = CanvasCommon.Utilities.Median(segment.Counts);
+                    CanvasCommon.Utilities.Median(segment.Counts);
                     string accurateFlag = "N";
                     if (CN == segment.CopyNumber) accurateFlag = "Y";
                     string directionAccurateFlag = "N";

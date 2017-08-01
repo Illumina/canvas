@@ -94,12 +94,6 @@ namespace CanvasNormalize
                 Axes = axes.Select(a => a.ToArray()).ToArray();
             }
 
-            public PCAModel(SampleGenomicBin[] mu, double[][] axes)
-            {
-                Mu = mu;
-                Axes = axes;
-            }
-
             private static void LoadModel(IFileLocation modelFile, out List<SampleGenomicBin> mu, out List<double[]> axes)
             {
                 mu = new List<SampleGenomicBin>();

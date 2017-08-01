@@ -79,9 +79,6 @@ namespace Canvas.Wrapper
 
             AddPloidyBed(commandLine, input, sampleSandbox);
 
-            //var canvasPartitionParam = $@"--commoncnvs {_annotationFileProvider.GetCanvasAnnotationFile(input.GenomeMetadata, "commoncnvs.bed")}";
-            //var moreCustomParameters = new Dictionary<string, string>();
-            //moreCustomParameters["CanvasPartition"] = canvasPartitionParam;
             commandLine.Append(_singleSampleInputCommandLineBuilder.GetCustomParameters());
             commandLine = _singleSampleInputCommandLineBuilder.MergeCustomCanvasParameters(commandLine);
 

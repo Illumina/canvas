@@ -194,8 +194,7 @@ namespace CanvasBin
                 usableFragmentCount = 0;
                 using (BamReader reader = new BamReader(Bam.BamFile.FullName))
                 {
-                    int desiredRefIndex = -1;
-                    desiredRefIndex = reader.GetReferenceIndex(Chromosome);
+                    int desiredRefIndex = reader.GetReferenceIndex(Chromosome);
                     if (desiredRefIndex == -1)
                     {
                         throw new Illumina.Common.IlluminaException(

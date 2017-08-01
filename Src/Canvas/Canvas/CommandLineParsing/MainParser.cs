@@ -162,7 +162,6 @@ namespace Canvas.CommandLineParsing
             IDirectoryLocation outFolder = commonOptions.OutputDirectory;
             var log = outFolder.GetFileLocation("CanvasLog.txt");
             var error = outFolder.GetFileLocation("CanvasError.txt");
-            IsasConfiguration config = IsasConfiguration.GetConfiguration();
             IDirectoryLocation genomeRoot = commonOptions.WholeGenomeFasta?.Parent?.Parent?.Parent?.Parent?.Parent;
             int returnValue = 0;
             var settings = new SettingsProcessor();

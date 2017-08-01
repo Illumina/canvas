@@ -201,7 +201,7 @@ namespace CanvasCommon
             Tuple<int, int> segmentStartCI = null;
             using (GzipReader reader = new GzipReader(infile))
             {
-                string row = null;
+                string row;
 
                 while ((row = reader.ReadLine()) != null)
                 {

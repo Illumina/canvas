@@ -6,10 +6,8 @@ using Isas.Framework.Logging;
 using Isas.Framework.WorkManagement;
 using Isas.Ploidy;
 using Isas.SequencingFiles;
-using Isas.SequencingFiles.Vcf;
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 
 namespace Canvas.Wrapper
@@ -17,8 +15,6 @@ namespace Canvas.Wrapper
     [Obsolete("We plan to switch to providing (and consuming) the ploidy information in vcf format, as we do for Strelka and Manta")]
     public class CanvasPloidyBedCreator
     {
-        private const string ExpectedSexChromosomeKaryotypeHeader = "##ExpectedSexChromosomeKaryotype";
-        private const string PredictedSexChromosomeKaryotypeHeader = "##PredictedSexChromosomeKaryotype";
         public const string ReferenceSexChromosomeKaryotype = "##ReferenceSexChromosomeKaryotype";
         private readonly IWorkManager _workManager;
         private readonly ILogger _logger;
@@ -93,7 +89,6 @@ namespace Canvas.Wrapper
                 if (!string.IsNullOrEmpty(headerLine)) writer.WriteLine(headerLine); // Include ##ReferenceSexChromosomeKaryotype line!
                 WritePloidyBedFile(ploidyInfo, genome, parIntervals, writer, includePloidy);
             }
-            //_tabixWrapper.BuildTabixIndex(new FileLocation(bedPath), TabixFileType.Bed);
         }
 
         private int GetChromosomeIndex(GenomeMetadata genome, string chr)

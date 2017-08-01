@@ -1,11 +1,9 @@
 using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.IO;
 using System.Linq;
 using Illumina.Common.FileSystem;
 using Isas.SequencingFiles;
-//using MathNet.Numerics.Statistics;
 
 namespace CanvasCommon
 {
@@ -193,8 +191,7 @@ namespace CanvasCommon
                 ? segment.Begin
                 : segment.Begin + 1;
             writer.Write($"{segment.Chr}\t{position}\tCanvas:{cnvType.ToVcfId()}:{segment.Chr}:{segment.Begin + 1}-{segment.End}\t");
-            string qScore = "";
-            qScore = isMultisample ? "." : $"{segment.QScore:F2}";
+            string qScore = isMultisample ? "." : $"{segment.QScore:F2}";
             writer.Write($"N\t{alternateAllele}\t{qScore}\t{segment.Filter}\t");
 
             if (cnvType != CnvType.Reference)
