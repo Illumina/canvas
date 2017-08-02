@@ -94,15 +94,6 @@ namespace CanvasSNV
             return processor.Run();
         }
 
-        static void OnLog(string message)
-        {
-            Console.WriteLine(message);
-        }
-        static void OnError(string message)
-        {
-            Console.Error.WriteLine(message);
-        }
-
         static int BuildEmpiricalHistograms(string oracleVCFPath, string empiricalVariantFrequencyFolder, string outputPath)
         {
             HistogramVF builder = new HistogramVF();

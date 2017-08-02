@@ -21,7 +21,6 @@ namespace Combinatorics.Collections
         /// </summary>
         private SmallPrimeUtility()
         {
-            ;
         }
 
         /// <summary>

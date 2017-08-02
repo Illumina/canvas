@@ -81,13 +81,6 @@ namespace CanvasPartition
                 LoadVAFInput(referenceFolder);
         }
 
-        private SegmentationInput.GenomeSegmentationResults GetDummySegmentationResults()
-        {
-            var results = new SegmentationInput.GenomeSegmentationResults(new Dictionary<string, SegmentationInput.Segment[]>());
-            return results;
-        }
-
-
         public static SegmentationInput.Segment[] DeriveSegments(List<int> breakpoints, int segmentsLength, uint[] startByChr, uint[] endByChr)
         {
             var startBreakpointsPos = new List<int>();
