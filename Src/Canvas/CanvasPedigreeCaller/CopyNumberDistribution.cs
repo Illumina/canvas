@@ -57,7 +57,6 @@ namespace CanvasPedigreeCaller
                     }
                 }
             }
-            marginalProbability.Select(x => {x = x/normalizationFactor; return x;});
             return marginalProbability;
         }
 

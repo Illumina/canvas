@@ -442,6 +442,13 @@ namespace CanvasClean
                 { "h|help",           "show this message and exit",                       v => needHelp = v != null },
             };
 
+            List<string> extraArgs = p.Parse(args);
+
+            if (extraArgs.Any())
+            {
+                throw new IlluminaException($"Unknown arguments: {string.Join(",", extraArgs)}");
+            }
+
             if (needHelp)
             {
                 ShowHelp(p);

@@ -71,6 +71,13 @@ namespace CanvasNormalize
 
             Console.WriteLine("CanvasNormalize {0}", System.Reflection.Assembly.GetEntryAssembly().GetName().Version.ToString());
 
+            List<string> extraArgs = p.Parse(args);
+
+            if (extraArgs.Any())
+            {
+                throw new IlluminaException($"Unknown arguments: {string.Join(",", extraArgs)}");
+            }
+
             // Check for required arguments. Display the help message if any of them are missing.
             if (parameters.tumorBedFile == null)
             {

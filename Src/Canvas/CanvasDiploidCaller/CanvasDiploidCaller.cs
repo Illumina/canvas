@@ -321,14 +321,6 @@ namespace CanvasDiploidCaller
                     int CN = this.GetKnownCNForSegment(segment);
                     if (CN < 0) continue;
                     if (segment.End - segment.Begin < 5000) continue;
-                    List<float> MAF = new List<float>();
-                    foreach (float VF in segment.Alleles.Frequencies)
-                    {
-                        MAF.Add(VF > 0.5 ? 1 - VF : VF);
-                    }
-                    MAF.Sort();
-                    float MedianMAF = -1;
-                    CanvasCommon.Utilities.Median(segment.Counts);
                     string accurateFlag = "N";
                     if (CN == segment.CopyNumber) accurateFlag = "Y";
                     string directionAccurateFlag = "N";
@@ -383,7 +375,7 @@ namespace CanvasDiploidCaller
             if (this.Segments.Count == 0)
             {
                 Console.WriteLine("CanvasDiploidCaller: No segments loaded; no CNV calls will be made.");
-                CanvasSegmentWriter.WriteSegments(outFile, this.Segments, Model?.DiploidCoverage, referenceFolder, 
+                CanvasSegmentWriter.WriteSegments(outFile, this.Segments, Model?.DiploidCoverage, referenceFolder,
                     sampleName, null, null, QualityFilterThreshold, isPedigreeInfoSupplied: false);
                 return 0;
             }
@@ -469,7 +461,7 @@ namespace CanvasDiploidCaller
 
             if (ploidy != null && !string.IsNullOrEmpty(ploidy.HeaderLine)) extraHeaders.Add(ploidy.HeaderLine);
 
-            CanvasSegmentWriter.WriteSegments(outFile, this.Segments, Model.DiploidCoverage, referenceFolder, sampleName, 
+            CanvasSegmentWriter.WriteSegments(outFile, this.Segments, Model.DiploidCoverage, referenceFolder, sampleName,
                 extraHeaders, ploidy, QualityFilterThreshold, isPedigreeInfoSupplied: false);
             return 0;
         }
