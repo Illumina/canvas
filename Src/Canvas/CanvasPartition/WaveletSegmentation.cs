@@ -67,7 +67,7 @@ namespace CanvasPartition
             List<int> indexVector = new List<int>();
             for (int i = 0; i < ipi.Length; i++)
             {
-                if (Math.Abs(ipi[i]) == max_abs_ipi)
+                if (CanvasCommon.Utilities.EpsilonEqual(Math.Abs(ipi[i]), max_abs_ipi))
                 {
                     indexVector.Add(i + 1);
                 }
@@ -186,7 +186,7 @@ namespace CanvasPartition
             breakpoints.Add(0);
             for (int i = 1; i < (int)recontr_seq.Length; i++)
             {
-                if (recontr_seq[i] - recontr_seq[i - 1] != 0)
+                if (!CanvasCommon.Utilities.EpsilonEqual(recontr_seq[i] - recontr_seq[i - 1], 0))
                 {
                     breakpoints.Add(i);
                 }
@@ -254,7 +254,7 @@ namespace CanvasPartition
                 bpSum += tree[j][5 + i * 5 - 1] - tree[j][3 + i * 5 - 1] - 1.0;
             }
 
-            while (bpSum != 0)
+            while (!CanvasCommon.Utilities.EpsilonEqual(bpSum, 0))
             {
                 int no_parent_coeffs = (int)Math.Floor((double)tree[j].Count() / 5);
                 int no_child_coeffs = 0;

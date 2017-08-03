@@ -365,7 +365,7 @@ namespace CanvasClean
 
             double mu = ((double)a + (double)b) / 2;
 
-            if (a + b == 0)
+            if (Utilities.EpsilonEqual(a + b, 0))
                 return false;
 
             // Calculate Chi-Squared statistic

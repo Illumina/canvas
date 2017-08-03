@@ -161,8 +161,7 @@ namespace CanvasCommon
                 counter += weight[i];
             }
 
-            if (counter == 0) return 0;
-            else return (sum / counter);
+            return EpsilonEqual(counter, 0) ? 0 : sum / counter;
         }
 
         // calculate mean of non-zero byte values
@@ -643,7 +642,7 @@ namespace CanvasCommon
         {
             double[] normalized = new double[v.Length];
             double size = TwoNorm(v);
-            if (size == 0)
+            if (EpsilonEqual(size, 0))
             {
                 Array.Copy(v, normalized, v.Length);
             }
@@ -797,7 +796,7 @@ namespace CanvasCommon
                     string[] bits = fileLine.Split('\t');
                     string chr = bits[0];
                     if (!excludedIntervals.ContainsKey(chr)) excludedIntervals[chr] = new List<SampleGenomicBin>();
-                    
+
                     SampleGenomicBin interval = new SampleGenomicBin(chr, int.Parse(bits[1]), int.Parse(bits[2]), 0);
                     if (interval.Start < 0)
                     {
@@ -962,7 +961,7 @@ namespace CanvasCommon
                     {
                         float f = segment.Alleles.Frequencies[i];
                         mafs[i] = f > 0.5 ? 1 - f : f;
-                        if (mafs[i] == 0)
+                        if (EpsilonEqual(mafs[i], 0))
                         {
                             zeroIndices.Add(i);
                         }
@@ -1076,6 +1075,14 @@ namespace CanvasCommon
                 list[k] = list[n];
                 list[n] = value;
             }
+        }
+
+        public static bool EpsilonEqual(double x, double y)
+        {
+            double maxAbs = Math.Max(Math.Abs(x), Math.Abs(y));
+            double epsilon = maxAbs > 1 ? maxAbs * 1E-15 : 1E-15;
+            return Math.Abs(x - y) <= epsilon;
+            //return Math.Abs(x - y) <= Math.Max(Math.Abs(x), Math.Abs(y)) * 1E-15;
         }
     }
 

@@ -253,7 +253,7 @@ namespace CanvasDiploidCaller
                     }
                 }
 
-                if (bestProbability == 0)
+                if (Utilities.EpsilonEqual(bestProbability, 0))
                 {
                     // Sanity-check: If we didn't find anything with probability > 0, then fall back to the simplest possible
                     // thing: Call purely on coverage.

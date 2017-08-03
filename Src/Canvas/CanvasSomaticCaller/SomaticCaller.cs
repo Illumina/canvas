@@ -197,7 +197,8 @@ namespace CanvasSomaticCaller
             {
                 float total = 0;
                 foreach (int value in CNHistogram[CN]) total += value;
-                if (total == 0) continue;
+                if (Utilities.EpsilonEqual(total, 0))
+                    continue;
                 int runningTotal = 0;
                 int median = -1;
                 float mean = 0;
@@ -287,7 +288,7 @@ namespace CanvasSomaticCaller
                     int count = (int)Math.Round(tempCount);
                     if (count >= histogramBinCount || count < 0)
                         continue;
-                    
+
                     CNHistogram[CN][count]++;
                 }
             }
@@ -297,7 +298,8 @@ namespace CanvasSomaticCaller
             {
                 float total = 0;
                 foreach (int value in CNHistogram[CN]) total += value;
-                if (total == 0) continue;
+                if (Utilities.EpsilonEqual(total, 0))
+                    continue;
                 int runningTotal = 0;
                 int median = -1;
                 float mean = 0;
@@ -378,7 +380,7 @@ namespace CanvasSomaticCaller
             if (this.IsDbsnpVcf)
             {
                 int tmpMinimumVariantFreq = somaticCallerParameters.MinimumVariantFrequenciesForInformativeSegment;
-                CanvasCommon.Utilities.PruneFrequencies(this.Segments, this.TempFolder, ref tmpMinimumVariantFreq);
+                Utilities.PruneFrequencies(this.Segments, this.TempFolder, ref tmpMinimumVariantFreq);
                 somaticCallerParameters.MinimumVariantFrequenciesForInformativeSegment = tmpMinimumVariantFreq;
             }
 
@@ -546,7 +548,7 @@ namespace CanvasSomaticCaller
                 totalWeight++;
             }
             Console.WriteLine("Reviewed {0} informative segments (attempted segments {1})", informativeSegmentCount, attemptedSegmentCount);
-            if (totalWeight == 0 || allPurities.Count == 0)
+            if (Utilities.EpsilonEqual(totalWeight, 0) || Utilities.EpsilonEqual(allPurities.Count, 0))
             {
                 Console.Error.WriteLine("Warning: DerivePurityEstimateFromVF unable to model tumor purity from this data-set and truth set");
             }
@@ -2150,7 +2152,7 @@ namespace CanvasSomaticCaller
 
                 // Sanity-check: If we didn't find anything with probability > 1, then fall back to the simplest possible
                 // thing: Call purely on coverage.
-                if (bestProbability == 0)
+                if (Utilities.EpsilonEqual(bestProbability, 0))
                 {
                     segment.CopyNumber = (int)Math.Round(2 * medianCoverage / Model.DiploidCoverage);
                     segment.MajorChromosomeCount = segment.CopyNumber / 2;
@@ -2265,8 +2267,7 @@ namespace CanvasSomaticCaller
                 weight += baseCountByCopyNumber[CN];
                 weightedMean += baseCountByCopyNumber[CN] * CN;
             }
-            if (weight == 0) return 0;
-            return weightedMean / weight;
+            return Utilities.EpsilonEqual(weight, 0) ? 0 : weightedMean / weight;
         }
 
 
@@ -2842,7 +2843,7 @@ namespace CanvasSomaticCaller
                     float count = 0;
                     for (int index2 = 0; index2 < 8; index2++)
                         count += ConfusionMatrix[index, index2];
-                    if (count == 0) count = 1;
+                    if (Utilities.EpsilonEqual(count, 0)) count = 1;
                     for (int index2 = 0; index2 < 8; index2++)
                         writer.Write("{0}\t", 100 * ConfusionMatrix[index, index2] / count);
                     writer.WriteLine();
