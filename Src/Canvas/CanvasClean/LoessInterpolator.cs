@@ -160,8 +160,7 @@ namespace CanvasClean
                 // Recompute the robustness weights.
                 double medianResidual = Utilities.Median(residuals); // Find the median residual
 
-                if (Utilities.EpsilonEqual(medianResidual, 0))
-                    break;
+                if (medianResidual == 0) { break; }
 
                 for (int i = 0; i < n; ++i)
                 {
@@ -236,10 +235,19 @@ namespace CanvasClean
             double meanXY = sumXY / sumWeights;
             double meanXSquared = sumXSquared / sumWeights;
 
-            double beta = Utilities.EpsilonEqual(meanXSquared, meanX * meanX) ? 0 : (meanXY - meanX * meanY) / (meanXSquared - meanX * meanX);
+            double beta;
+            if (meanXSquared == meanX * meanX)
+            {
+                beta = 0;
+            }
+            else
+            {
+                beta = (meanXY - meanX * meanY) / (meanXSquared - meanX * meanX);
+            }
+
             double alpha = meanY - beta * meanX;
 
-            return new[] { alpha, beta };
+            return new double[] { alpha, beta };
         }
 
         private static double predict(double x, double[] coefficients)

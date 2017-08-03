@@ -4,7 +4,7 @@ using System.Linq;
 
 namespace CanvasCommon
 {
-
+    
     public class GaussianMixtureModel
     {
         #region Members
@@ -22,7 +22,7 @@ namespace CanvasCommon
         #endregion
 
         public GaussianMixtureModel(List<ModelPoint> modelPoints, List<SegmentInfo> segments,
-            double meanCoverage, double coverageWeightingFactor, double knearestNeighbourCutoff)
+            double meanCoverage, double coverageWeightingFactor, double knearestNeighbourCutoff) 
         {
             ModelPoints = modelPoints;
             Segments = segments;
@@ -31,7 +31,7 @@ namespace CanvasCommon
             KnearestNeighbourCutoff = knearestNeighbourCutoff;
         }
 
-        public double Fit()
+        public double Fit() 
         {
             EMComputeGaussianMeans(this.ModelPoints, this.Segments);
             foreach (var modelPoint in this.ModelPoints) { modelPoint.Ploidy.Sigma = null; }
@@ -86,7 +86,7 @@ namespace CanvasCommon
         /// <returns></returns>
         private static double Sigma(double intensityX, double intensityY, double[] mu, double[][] sigma)
         {
-            if (Utilities.EpsilonEqual(intensityX, -1)) // dummy MAF
+            if (intensityX == -1 ) // dummy MAF
             {
                 Sigma(intensityY, mu[1], sigma[1][1]);
             }
@@ -129,8 +129,7 @@ namespace CanvasCommon
             foreach (var modelPoint in modelPoints)
             {
                 segment.PosteriorProbs[modelPoint] = temp[modelPoint] / tempsum1;
-                if (segment.PosteriorProbs[modelPoint] > bestProb)
-                {
+                if (segment.PosteriorProbs[modelPoint] > bestProb) { 
                     bestCluster = modelPoint.ClusterId.Value;
                     bestProb = temp[modelPoint] / tempsum1;
                 }
@@ -367,7 +366,7 @@ namespace CanvasCommon
         {
             foreach (var modelPoint in modelPoints)
             {
-                if (modelPoint.Ploidy.Omega < omegaThres) { continue; }
+               if (modelPoint.Ploidy.Omega < omegaThres) { continue; }
 
                 double[] tempsum = new double[modelPoint.Ploidy.Mu.Length];
                 for (int i = 0; i < tempsum.Length; i++) { tempsum[i] = 0; }
@@ -435,7 +434,7 @@ namespace CanvasCommon
                     // update model parameters //
                     EMComputeOmegas(modelPoints, segments);
 
-                    EMComputeGaussianCovariances(modelPoints, segments);
+                    EMComputeGaussianCovariances(modelPoints, segments); 
                     /////////////////////////////
 
                     // calculate overall likelihood
@@ -481,7 +480,7 @@ namespace CanvasCommon
                     EMComputeOmegas(this.ModelPoints, this.Segments);
                     EMComputeGaussianMeans(this.ModelPoints, this.Segments);
                     EMComputeGaussianCovariances(this.ModelPoints, this.Segments); // update covariance matrix
-
+                    
 
                     // calculate overall likelihood
                     likelihood = EMComputeLikelihood(this.ModelPoints, this.Segments);

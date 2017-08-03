@@ -45,7 +45,7 @@ namespace CanvasPedigreeCaller
             var pedigreeMembers = new LinkedList<PedigreeMember>();
             foreach (string sampleName in sampleNames)
             {
-                var pedigreeMember = SetPedigreeMember(variantFrequencyFiles, segmentFiles, ploidyBedPath, sampleName, fileCounter, CallerParameters.DefaultAlleleCountThreshold, referenceFolder, CallerParameters.NumberOfTrimmedBins);
+                var pedigreeMember = SetPedigreeMember(variantFrequencyFiles, segmentFiles, ploidyBedPath, sampleName, fileCounter, CallerParameters.DefaultAlleleCountThreshold, referenceFolder, CallerParameters.NumberOfTrimmedBins );
                 pedigreeMember.Kin = kinships[pedigreeMember.Name] == PedigreeMember.Kinship.Parent ?
                     PedigreeMember.Kinship.Parent : PedigreeMember.Kinship.Offspring;
                 if (kinships[pedigreeMember.Name] == PedigreeMember.Kinship.Proband)
@@ -187,7 +187,7 @@ namespace CanvasPedigreeCaller
             var pedigreeMembers = new LinkedList<PedigreeMember>();
             foreach (string sampleName in sampleNames)
             {
-                var pedigreeMember = SetPedigreeMember(variantFrequencyFiles, segmentFiles, ploidyBedPath, sampleName, fileCounter, CallerParameters.DefaultAlleleCountThreshold,
+                var pedigreeMember = SetPedigreeMember(variantFrequencyFiles, segmentFiles, ploidyBedPath, sampleName, fileCounter, CallerParameters.DefaultAlleleCountThreshold, 
                     referenceFolder, CallerParameters.NumberOfTrimmedBins);
                 pedigreeMembers.AddLast(pedigreeMember);
                 fileCounter++;
@@ -197,7 +197,7 @@ namespace CanvasPedigreeCaller
             const int maxCoreNumber = 30;
             var segmentIntervals = GetParallelIntervals(numberOfSegments, Math.Min(Environment.ProcessorCount, maxCoreNumber));
             var genotypes = GenerateGenotypeCombinations(CallerParameters.MaximumCopyNumber);
-            int maxAlleleNumber = Math.Min(CallerParameters.MaxAlleleNumber, pedigreeMembers.Count);
+            int maxAlleleNumber = Math.Min(CallerParameters.MaxAlleleNumber, pedigreeMembers.Count);         
             var copyNumberCombinations = GenerateCopyNumberCombinations(CallerParameters.MaximumCopyNumber, maxAlleleNumber);
 
             foreach (PedigreeMember pedigreeMember in pedigreeMembers)
@@ -322,7 +322,7 @@ namespace CanvasPedigreeCaller
                 if (cnStates[probandIndex] != proband.GetPloidy(segmentIndex) && // targeted proband is ALT
                     (ParentsRefCheck(parents, segmentIndex, cnStates, parent1Index, parent2Index) ||
                      // either parent are REF or 
-                     IsNotCommonCnv(parents, proband, cnStates, parent1Index, parent2Index, probandIndex, segmentIndex)) &&
+                     IsNotCommonCnv(parents, proband, cnStates, parent1Index,  parent2Index, probandIndex, segmentIndex)) &&
                     // or a common variant 
                     remainingProbandIndex.All(index => cnStates[index] == probands[index].GetPloidy(segmentIndex) ||
                                                        IsNotCommonCnv(parents, probands[index], cnStates, parent1Index,
@@ -331,7 +331,7 @@ namespace CanvasPedigreeCaller
                     singleSampleQualityScores[probandIndex] > QualityFilterThreshold &&
                     singleSampleQualityScores[parent1Index] > QualityFilterThreshold &&
                     singleSampleQualityScores[parent2Index] > QualityFilterThreshold)
-                // and all q-scores are above the threshold
+                    // and all q-scores are above the threshold
                 {
                     double deNovoQualityScore = GetConditionalDeNovoQualityScore(copyNumberLikelihoods, probandIndex,
                         cnStates[probandIndex], names[probandIndex], parent1Index, parent2Index, remainingProbandIndex.ToList());
@@ -349,7 +349,7 @@ namespace CanvasPedigreeCaller
             var parent2Genotypes = GenerateCnAlleles(cnStates[parent2Index]);
             var probandGenotypes = GenerateCnAlleles(cnStates[probandIndex]);
 
-            bool isCommoCnv = (parent1Genotypes.Intersect(probandGenotypes).Any() && parents.First().GetPloidy(segmentIndex) == proband.GetPloidy(segmentIndex)) ||
+            bool isCommoCnv = (parent1Genotypes.Intersect(probandGenotypes).Any() && parents.First().GetPloidy(segmentIndex) == proband.GetPloidy(segmentIndex)) || 
                 (parent2Genotypes.Intersect(probandGenotypes).Any() && parents.Last().GetPloidy(segmentIndex) == proband.GetPloidy(segmentIndex));
             return !isCommoCnv;
         }
@@ -505,7 +505,7 @@ namespace CanvasPedigreeCaller
                         bool isInheritedCnv = !child.Segments[segmentPosition].DQScore.HasValue;
                         double bestLikelihood = Double.MinValue;
                         Genotype bestGtState = null;
-                        bestLikelihood = GetProbandLikelihood(segmentPosition, genotypes, childCopyNumber, parent1GtStates, parent2GtStates,
+                        bestLikelihood = GetProbandLikelihood(segmentPosition, genotypes, childCopyNumber, parent1GtStates, parent2GtStates, 
                             isInheritedCnv, child, bestLikelihood, ref bestGtState);
                         bestChildGtStates.Add(bestGtState);
                         currentLikelihood *= bestLikelihood;
@@ -741,7 +741,7 @@ namespace CanvasPedigreeCaller
         public static List<int> GenerateCnAlleles(int copyNumber)
         {
             if (copyNumber == 0)
-                return new List<int> { 0 };
+                return new List<int>{0};
 
             if (copyNumber == 1)
                 return new List<int> { 0, 1 };

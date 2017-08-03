@@ -821,7 +821,8 @@ namespace CanvasCommon
 
                 case QScorePredictor.BinCv:
                     if (this.Counts.Count == 0) return 0;
-                    return Utilities.EpsilonEqual(this.Counts.Average(), 0) ? 0 : Utilities.CoefficientOfVariation(this.Counts);
+                    if (this.Counts.Average() == 0) return 0;
+                    return Utilities.CoefficientOfVariation(this.Counts);
 
                 case QScorePredictor.MafCount:
                     return Alleles.Frequencies.Count;
@@ -845,7 +846,8 @@ namespace CanvasCommon
                     return this.RunnerUpModelDistance;
 
                 case QScorePredictor.DistanceRatio:
-                    return Utilities.EpsilonEqual(this.RunnerUpModelDistance, 0) ? 0 : this.ModelDistance / this.RunnerUpModelDistance;
+                    if (this.RunnerUpModelDistance == 0) return 0;
+                    return this.ModelDistance / this.RunnerUpModelDistance;
 
                 case QScorePredictor.CopyNumber:
                     return (double)this.CopyNumber;

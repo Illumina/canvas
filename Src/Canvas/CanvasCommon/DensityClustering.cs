@@ -262,64 +262,6 @@ namespace CanvasCommon
         public void FindCentroids()
         {
             int segmentsLength = this.Segments.Count;
-            this.Centroids = Enumerable.Repeat(0D, segmentsLength).ToList();
-            var maximum = Enumerable.Repeat(0D, segmentsLength).ToList();
-
-            int i = 0;
-            for (int col = 0; col < segmentsLength; col++)
-            {
-                for (int row = col + 1; row < segmentsLength; row++)
-                {
-                    if (!this.Distance[i].HasValue)
-                    {
-                        i++;
-                        continue;
-                    }
-                    double newValue = this.Distance[i];
-                    double rhoRow = this.Rho[row];
-                    double rhoCol = this.Rho[col];
-
-                    if (rhoRow > rhoCol)
-                    {
-                        double CentroidsCol = this.Centroids[col];
-                        if (newValue < CentroidsCol || Utilities.EpsilonEqual(CentroidsCol, 0))
-                        {
-                            this.Centroids[col] = newValue;
-                        }
-                    }
-                    else if (newValue > maximum[col])
-                    {
-                        maximum[col] = newValue;
-                    }
-
-                    if (rhoCol > rhoRow)
-                    {
-                        double CentroidsRow = this.Centroids[row];
-                        if (newValue < CentroidsRow || Utilities.EpsilonEqual(CentroidsRow, 0))
-                        {
-                            this.Centroids[row] = newValue;
-                        }
-                    }
-                    else if (newValue > maximum[row])
-                    {
-                        maximum[row] = newValue;
-                    }
-                    i++;
-                }
-            }
-            for (int j = 0; j < segmentsLength; j++)
-            {
-                if (Utilities.EpsilonEqual(this.Centroids[j], 0))
-                {
-                    this.Centroids[j] = maximum[j];
-                }
-            }
-        }
-
-
-        public void oldFindCentroids()
-        {
-            int segmentsLength = this.Segments.Count;
             this.Centroids = new List<double>(segmentsLength);
             for (int iCentroids = 0; iCentroids < segmentsLength; iCentroids++)
                 this.Centroids.Add(0);
@@ -343,7 +285,7 @@ namespace CanvasCommon
                     if (rhoRow > rhoCol)
                     {
                         double CentroidsCol = this.Centroids[col];
-                        if (newValue < CentroidsCol || Utilities.EpsilonEqual(CentroidsCol, 0))
+                        if (newValue < CentroidsCol || CentroidsCol == 0)
                         {
                             this.Centroids[col] = newValue;
                         }
@@ -356,7 +298,7 @@ namespace CanvasCommon
                     if (rhoCol > rhoRow)
                     {
                         double CentroidsRow = this.Centroids[row];
-                        if (newValue < CentroidsRow || Utilities.EpsilonEqual(CentroidsRow, 0))
+                        if (newValue < CentroidsRow || CentroidsRow == 0)
                         {
                             this.Centroids[row] = newValue;
                         }
@@ -370,7 +312,7 @@ namespace CanvasCommon
             }
             for (int j = 0; j < segmentsLength; j++)
             {
-                if (Utilities.EpsilonEqual(this.Centroids[j], 0))
+                if (this.Centroids[j] == 0)
                 {
                     this.Centroids[j] = maximum[j];
                 }
