@@ -1,10 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using Illumina.Common;
+using MathNet.Numerics.LinearAlgebra.Double;
 
 namespace CanvasCommon
 {
-
     ///<summary>
     /// This class implements Density Clustering algorithm introduced in 
     /// Rodriguez, Alex, and Alessandro Laio. "Clustering by fast search and find of density peaks." Science 344.6191 (2014): 1492-1496.
@@ -16,6 +17,7 @@ namespace CanvasCommon
     public class DensityClusteringModel
     {
         #region Members
+
         public List<SegmentInfo> Segments;
         public List<double?> Distance;
         public List<double> Centroids;
@@ -30,9 +32,11 @@ namespace CanvasCommon
         // RhoCutoff and CentroidsCutoff estimated from running density clustering on 70 HapMix tumour samples https://git.illumina.com/Bioinformatics/HapMix/
         // and visually inspecting validity of clusters
         public const double RhoCutoff = 2.0;
+
         public const int MaxClusterNumber = 7; // too many clusters suggest incorrect cluster partitioning 
         private const double NeighborRateLow = 0.02;
         private const double NeighborRateHigh = 0.03;
+
         #endregion
 
 
@@ -108,7 +112,6 @@ namespace CanvasCommon
         }
 
 
-
         /// <summary>
         /// Return the squared euclidean distance between (coverage, maf) and (coverage2, maf2) in scaled coverage/MAF space.
         /// https://en.wikipedia.org/wiki/Euclidean_distance
@@ -127,15 +130,14 @@ namespace CanvasCommon
         /// </summary>
         public double EstimateDc(double neighborRateLow = NeighborRateLow, double neighborRateHigh = NeighborRateHigh)
         {
-
             double tmpLow = Double.MaxValue;
             double tmpHigh = Double.MinValue;
             foreach (double? element in this.Distance)
             {
                 if (element.HasValue && element < tmpLow && element > 0)
-                    tmpLow = (double)element;
+                    tmpLow = (double) element;
                 else if (element.HasValue && element > tmpHigh)
-                    tmpHigh = (double)element;
+                    tmpHigh = (double) element;
             }
 
             double neighborRate = 0;
@@ -209,7 +211,7 @@ namespace CanvasCommon
             {
                 if (this.Distance[index].HasValue)
                 {
-                    double combOver = (double)this.Distance[index] / distanceThreshold;
+                    double combOver = (double) this.Distance[index] / distanceThreshold;
                     double negSq = Math.Pow(combOver, 2) * -1;
                     half[index] = Math.Exp(negSq);
                 }
@@ -278,7 +280,7 @@ namespace CanvasCommon
                         i++;
                         continue;
                     }
-                    double newValue = (double)this.Distance[i];
+                    double newValue = (double) this.Distance[i];
                     double rhoRow = this.Rho[row];
                     double rhoCol = this.Rho[col];
 
@@ -386,7 +388,7 @@ namespace CanvasCommon
                                 if (tmpDistance < minDistance)
                                 {
                                     minRhoElementIndex = tmpIndex;
-                                    minDistance = (double)tmpDistance;
+                                    minDistance = (double) tmpDistance;
                                 }
                             }
                         }
@@ -394,7 +396,8 @@ namespace CanvasCommon
                     // populate clusters
                     if (this.Segments[runOrderIndex].MAF >= 0)
                         this.Segments[runOrderIndex].ClusterId = this.Segments[minRhoElementIndex].ClusterId;
-                    if (!this.Segments[runOrderIndex].ClusterId.HasValue || this.Segments[runOrderIndex].MAF < 0 || this.Segments[runOrderIndex].KnearestNeighbour > this._knearestNeighbourCutoff)
+                    if (!this.Segments[runOrderIndex].ClusterId.HasValue || this.Segments[runOrderIndex].MAF < 0 ||
+                        this.Segments[runOrderIndex].KnearestNeighbour > this._knearestNeighbourCutoff)
                         this.Segments[runOrderIndex].ClusterId = CanvasCommon.PloidyInfo.OutlierClusterFlag;
                 }
             }
