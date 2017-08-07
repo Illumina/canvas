@@ -26,12 +26,12 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="ClassicBioinfoTools" Version="1.1.0-O00149Mpileup" />
-    <PackageReference Include="Illumina.Common" Version="3.13.0.253" />
-    <PackageReference Include="Isas.Framework" Version="6.17.1.473" />
-    <PackageReference Include="Isas.Manifests" Version="3.0.1.72" />
-    <PackageReference Include="Isas.Ploidy" Version="2.2.0.67" />
-    <PackageReference Include="Isas.SequencingFiles" Version="4.3.3.321" />
+    <PackageReference Include="ClassicBioinfoTools" Version="2.1.2.161" />
+    <PackageReference Include="Illumina.Common" Version="4.0.0.267" />
+    <PackageReference Include="Isas.Framework" Version="7.4.1.500" />
+    <PackageReference Include="Isas.Manifests" Version="4.0.0.90" />
+    <PackageReference Include="Isas.Ploidy" Version="3.0.0.73" />
+    <PackageReference Include="Isas.SequencingFiles" Version="5.0.2.334" />
   </ItemGroup>
 
 </Project>
