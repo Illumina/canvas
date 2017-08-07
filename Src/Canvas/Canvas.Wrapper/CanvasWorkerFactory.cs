@@ -10,6 +10,7 @@ using Isas.Framework.FrameworkFactory;
 using Isas.Framework.Logging;
 using Isas.Framework.Settings;
 using Isas.Framework.WorkManagement;
+using Isas.Framework.WorkManagement.CommandBuilding;
 using Isas.SequencingFiles;
 
 namespace Canvas.Wrapper
@@ -24,6 +25,7 @@ namespace Canvas.Wrapper
         private readonly bool _detectCnvDefault;
         private readonly TabixWrapper _tabixWrapper;
         public static string CanvasCoverageModeSetting = "CanvasCoverageMode";
+        private readonly ICommandManager _commandManager;
 
         public CanvasWorkerFactory(
             ISampleSettings sampleSettings,
@@ -32,7 +34,7 @@ namespace Canvas.Wrapper
             ExecutableProcessor executableProcessor,
             DbSnpVcfProcessor dbSnpVcfProcessor,
             bool detectCnvDefault,
-            TabixWrapper tabixWrapper)
+            TabixWrapper tabixWrapper, ICommandManager commandManager)
         {
             _workManager = workManager;
             _sampleSettings = sampleSettings;
@@ -41,6 +43,7 @@ namespace Canvas.Wrapper
             _dbSnpVcfProcessor = dbSnpVcfProcessor;
             _detectCnvDefault = detectCnvDefault;
             _tabixWrapper = tabixWrapper;
+            _commandManager = commandManager;
         }
         private IFileLocation GetRuntimeExecutable()
         {
@@ -130,7 +133,7 @@ namespace Canvas.Wrapper
 
         internal PloidyCorrector GetPloidyCorrector()
         {
-            return new PloidyCorrector(_logger, _workManager, new PloidyEstimator(_logger, _workManager, _executableProcessor.GetExecutable("samtools"), false), _tabixWrapper, true);
+            return new PloidyCorrector(_logger, _workManager, new PloidyEstimator(_logger, _workManager, _executableProcessor.GetExecutable("samtools"), false, _commandManager), _tabixWrapper, true);
         }
 
         public bool RequireNormalVcf()
