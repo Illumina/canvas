@@ -49,7 +49,6 @@ namespace CanvasPartition
             double undoPrune = 0.05, double undoSD = 3, int verbose = 1,
             int nGrid = 100, double tol = 1E-6)
         {
-            //int n = genomeData.Length;
             if (trimmedSD <= 0)
             {
                 trimmedSD = Helper.MedianAbsoluteDeviation(Helper.Diff(genomeData)) / Math.Sqrt(2);

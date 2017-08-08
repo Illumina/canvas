@@ -70,24 +70,13 @@ namespace CanvasPartition
             uint sbdryOffset)
         {
             uint i, k;
-            //double dn;
             double tProb;
 
             double dn = nPerm - n1s; // Hypergeometric parameterizes differently
             k = 0;
             for (i = 1; i <= nPerm; i++)
             {
-                // Hypergeometric(total # of balls, # white balls, # balls drawn)
-                //var hyper = new Hypergeometric(Convert.ToInt32(nPerm), Convert.ToInt32(n1s),
-                //    Convert.ToInt32(i)); // Hypergeometric distribution
-                // P(X < k + 0.1) == P(X <= k): k = # of white balls drawn
-                //tProb = hyper.CumulativeDistribution(k + 0.1);
-                //Console.WriteLine("Hypergeometric({0}, {1}, {2}, {3}) = {4}", nPerm, n1s, i, k, tProb);
                 tProb = R.phyper(k, n1s, dn, i, true, false);
-                //Console.WriteLine("phyper({0}, {1}, {2}, {3}) = {4}", k, n1s, dn, i, tProb);
-                //var hyper = new HypergeometricDistribution(Convert.ToInt32(n1s),
-                //    Convert.ToInt32(dn), Convert.ToInt32(i));
-                //tProb = hyper.DistributionFunction(Convert.ToInt32(k));
                 if (tProb <= eta0)
                 {
                     sbdry[sbdryOffset + k] = i;

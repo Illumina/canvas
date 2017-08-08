@@ -18,7 +18,6 @@ namespace CanvasPartition
         public static double ErrorSumOfSquares(int[] lengthSeg, double[] segmentSums, int k,
             int[] locations)
         {
-            double[] sx = segmentSums; // TODO: remove sx
             double segsx;
             int segnx, i, j;
 

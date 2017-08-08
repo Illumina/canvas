@@ -33,10 +33,9 @@ namespace CanvasCommon
 
         public double Fit() 
         {
-            double likelihood = FitGaussians(this.ModelPoints, this.Segments);
             EMComputeGaussianMeans(this.ModelPoints, this.Segments);
             foreach (var modelPoint in this.ModelPoints) { modelPoint.Ploidy.Sigma = null; }
-            likelihood = FitGaussians(this.ModelPoints, this.Segments);
+            double likelihood = FitGaussians(this.ModelPoints, this.Segments);
             return likelihood;
         }
 
@@ -414,52 +413,6 @@ namespace CanvasCommon
 
             return likelihood / segments.Select(s => s.Weight).Sum();
         }
-
-        /// <summary>
-        /// http://en.wikipedia.org/wiki/Bayesian_information_criterion
-        /// </summary>
-        /// <param name="modelPoints"></param>
-        /// <param name="segments"></param>
-        /// <param name="omegaThres"></param>
-        /// <returns></returns>
-        private double EMComputeBIC(List<ModelPoint> modelPoints, List<SegmentInfo> segments,
-            double omegaThres = 1E-10, double sigmaThres = 1E-7)
-        {
-            double likelihood = 0; // log likelihood
-
-            foreach (var segment in segments)
-            {
-                if (segment.ClusterId == CanvasCommon.PloidyInfo.OutlierClusterFlag) { continue; }
-                double temp = 0;
-                foreach (var modelPoint in modelPoints)
-                {
-                    if (modelPoint.Ploidy.Omega <= omegaThres) { continue; }
-                    temp += modelPoint.Ploidy.Omega * Sigma(segment.MAF, segment.Coverage, modelPoint.Ploidy.Mu, modelPoint.Ploidy.Sigma);
-                }
-                likelihood += Math.Log(temp) * segment.Weight; // each segment represents segment.Weight points
-            }
-
-            int k = 0;
-            foreach (var modelPoint in modelPoints) 
-            {
-                if (modelPoint.Ploidy.Omega <= omegaThres) { continue; }
-                k += 6; // number of parameters: omega 1, mu 2, sigma 3
-                if (modelPoint.Ploidy.Sigma[0][0] <= sigmaThres || modelPoint.Ploidy.Sigma[1][1] <= sigmaThres) // omega 1, mu 1, sigma 1
-                {   // modelPoint.Ploidy.Sigma[0][0] <= sigmaThres && modelPoint.Ploidy.Sigma[1][1] <= sigmaThres: omega 1, mu 2
-                    k -= 3;
-                }
-                else if (Math.Abs(modelPoint.Ploidy.Sigma[0][1]) <= sigmaThres) 
-                { // omega 1, mu 2, sigma 2
-                    k -= 1;
-                }
-            }
-
-            double n = segments.Select(s => s.Weight).Sum(); // number of data points
-            double bic = -2 * likelihood + k * (Math.Log(n) - Math.Log(2 * Math.PI));
-
-            return bic / n;
-        }
-
 
         private double FitGaussians(List<ModelPoint> modelPoints, List<SegmentInfo> segments)
         {

@@ -41,7 +41,7 @@ namespace CanvasDiploidCaller
         {
             Console.WriteLine("{0} Initialize ploidy models...", DateTime.Now);
             this.AllPloidies = new List<SegmentPloidy>();
-            double diploidPredictedMAF = CanvasCommon.Utilities.EstimateDiploidMAF(2, this.MeanCoverage);
+            CanvasCommon.Utilities.EstimateDiploidMAF(2, this.MeanCoverage);
             for (int copyNumber = 0; copyNumber <= MaximumCopyNumber; copyNumber++)
             {
                 for (int majorCount = copyNumber; majorCount * 2 >= copyNumber; majorCount--)
@@ -86,7 +86,6 @@ namespace CanvasDiploidCaller
             List<ModelPoint> modelPoints = new List<ModelPoint>();
 
             double[] mu = GetProjectedMeanCoverage(model.DiploidCoverage);
-            double diploidMAF = this.AllPloidies[3].MinorAlleleFrequency; /// %%% Magic number!
             // Refine our estimate of diploid MAF:
             //double diploidMAF = this.EstimateDiploidMAF(2, model.DiploidCoverage);
 
@@ -174,8 +173,6 @@ namespace CanvasDiploidCaller
                 foreach (float VF in segment.Alleles.Frequencies) MAF.Add(VF > 0.5 ? 1 - VF : VF);
                 int expectedSnpDensityCutoff = (segment.End - segment.Begin) / MedianHetSnpsDistance / 2;
 
-
-                List<Tuple<float, float>> weightedFrequencies = new List<Tuple<float, float>>();
                 double medianCoverage = CanvasCommon.Utilities.Median(segment.Counts);
 
                 double medianMAF = -1;
@@ -324,16 +321,6 @@ namespace CanvasDiploidCaller
                     int CN = this.GetKnownCNForSegment(segment);
                     if (CN < 0) continue;
                     if (segment.End - segment.Begin < 5000) continue;
-                    List<float> MAF = new List<float>();
-                    foreach (float VF in segment.Alleles.Frequencies)
-                    {
-                        MAF.Add(VF > 0.5 ? 1 - VF : VF);
-                    }
-                    MAF.Sort();
-                    float MedianMAF = -1;
-                    if (MAF.Count > 0)
-                        MedianMAF = MAF[MAF.Count / 2];
-                    double medianCoverage = CanvasCommon.Utilities.Median(segment.Counts);
                     string accurateFlag = "N";
                     if (CN == segment.CopyNumber) accurateFlag = "Y";
                     string directionAccurateFlag = "N";
@@ -388,7 +375,7 @@ namespace CanvasDiploidCaller
             if (this.Segments.Count == 0)
             {
                 Console.WriteLine("CanvasDiploidCaller: No segments loaded; no CNV calls will be made.");
-                CanvasSegmentWriter.WriteSegments(outFile, this.Segments, Model?.DiploidCoverage, referenceFolder, 
+                CanvasSegmentWriter.WriteSegments(outFile, this.Segments, Model?.DiploidCoverage, referenceFolder,
                     sampleName, null, null, QualityFilterThreshold, isPedigreeInfoSupplied: false);
                 return 0;
             }
@@ -474,7 +461,7 @@ namespace CanvasDiploidCaller
 
             if (ploidy != null && !string.IsNullOrEmpty(ploidy.HeaderLine)) extraHeaders.Add(ploidy.HeaderLine);
 
-            CanvasSegmentWriter.WriteSegments(outFile, this.Segments, Model.DiploidCoverage, referenceFolder, sampleName, 
+            CanvasSegmentWriter.WriteSegments(outFile, this.Segments, Model.DiploidCoverage, referenceFolder, sampleName,
                 extraHeaders, ploidy, QualityFilterThreshold, isPedigreeInfoSupplied: false);
             return 0;
         }

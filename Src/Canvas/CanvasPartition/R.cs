@@ -93,14 +93,6 @@ namespace CanvasPartition
             double ss = (double)sum;
             return logP ? log1p(ss) : 1 + ss;
         }
-        /*
-                public static double dbinom_raw(double x, double n, double p, double q, bool log)
-                {
-                    int k = (int)(x);
-                    var binom = new Binomial(p, (int)(n));
-                    return log ? binom.ProbabilityLn(k) : binom.Probability(k);
-                }
-        */
 
         public static double dbinom_raw(double x, double n, double p, double q, bool giveLog)
         {
@@ -813,7 +805,6 @@ namespace CanvasPartition
             Console.Error.Write(fmt, x);
         }
 
-        private const int ME_NONE = 0;
         /*	no error */
         private const int ME_DOMAIN = 1;
         /*	argument out of domain */

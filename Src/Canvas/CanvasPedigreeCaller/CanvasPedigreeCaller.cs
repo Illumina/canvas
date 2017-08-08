@@ -862,7 +862,6 @@ namespace CanvasPedigreeCaller
             var probandMarginalProbabilities = density.GetMarginalProbability(nSamples, CallerParameters.MaximumCopyNumber, sampleName);
             double normalization = probandMarginalProbabilities[sampleValue] + probandMarginalProbabilities[diploidState];
             double probandMarginalAlt = probandMarginalProbabilities[sampleValue] / normalization;
-            //density.SetConditionalProbability(density.Count, MaximumCopyNumber, sampleName, sampleValue, probandMarginalProbabilities[sampleValue]);
 
             var parentNames = parents.Select(x => x.Name).ToList();
             var firstParentMarginalProbabilities = density.GetMarginalProbability(nSamples, CallerParameters.MaximumCopyNumber, parentNames.First());

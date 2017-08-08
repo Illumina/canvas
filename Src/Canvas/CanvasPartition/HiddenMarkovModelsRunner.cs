@@ -96,21 +96,6 @@ namespace CanvasPartition
             return segmentByChr;
         }
 
-        private static List<int> MergeBreakpoint(List<int> breakpointsForward, List<int> breakpointsReverse)
-        {
-            var expandedReverseBreakpoints = breakpointsReverse.Select(x => x - 1).Union(breakpointsReverse.Select(x => x + 1)).Union(breakpointsReverse);
-            var truncatedBreakpointsForward = breakpointsForward.Except(expandedReverseBreakpoints);
-            var breakpointsMerged = truncatedBreakpointsForward.Union(breakpointsReverse).ToList();
-            breakpointsMerged.Sort();
-            var breakpointsMergeFiltered = new List<int>(breakpointsMerged.Count) {breakpointsMerged.First()};
-            for (int i = 1; i < breakpointsMerged.Count; i++)
-            {
-                if (breakpointsMerged[i]!= breakpointsMerged[i-1]+1)
-                    breakpointsMergeFiltered.Add(breakpointsMerged[i]);
-            }
-            return breakpointsMergeFiltered;
-        }
-
         public List<MultivariateGaussianDistribution> InitializeEmission(List<List<double>> data ,string chromosome, int nHiddenStates)
         {
             int nDimensions = _nSamples;

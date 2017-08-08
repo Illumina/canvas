@@ -174,21 +174,6 @@ namespace CanvasBin
         }
 
         /// <summary>
-        /// Scale fragment sizes to a 0 .. 255 byte range
-        /// </summary>
-        /// <param name="fragmentLength">Int fragment length.</param>
-        /// <param name="max">Maximal input fragment length.</param>
-        /// <param name="min">Minimal input  fragment length.</param>
-        /// <returns>Fragment length scaled to 0 .. 255 byte range.</returns>
-        static byte ScaleIntToByte(int fragmentLength, int max, int min)
-        {
-            double result = (fragmentLength - min) * 255 / (double)(max - min);
-            if (result > 255) return 255;
-            if (result < 0) return 0;
-            return (byte)result;
-        }
-
-        /// <summary>
         /// Sets up two Dictionaries holding BitArrays, one BitArray for each chromosome in a fasta file. One bit for each nucleotide.
         /// </summary>
         /// <param name="fastaFile">Fasta file containing uniquemer-marked reference genome.</param>
@@ -230,8 +215,7 @@ namespace CanvasBin
 
             using (BamReader reader = new BamReader(bamFile))
             {
-                int desiredRefIndex = -1;
-                desiredRefIndex = reader.GetReferenceIndex(chromosome);
+                int desiredRefIndex = reader.GetReferenceIndex(chromosome);
                 if (desiredRefIndex == -1)
                 {
                     throw new Illumina.Common.IlluminaException(
@@ -247,7 +231,6 @@ namespace CanvasBin
                 }
                 int readCount = 0;
                 int keptReadCount = 0;
-                string header = reader.GetHeader();
                 BamAlignment alignment = new BamAlignment();
                 while (reader.GetNextAlignment(ref alignment, true))
                 {
@@ -983,7 +966,6 @@ namespace CanvasBin
             Dictionary<string, HitArray> observedAlignments, Dictionary<string, short[]> fragmentLengths)
         {
             Object semaphore = new object(); // control access to possibleAlignments, observedAlignments, fragmentLengths
-            // int processorCoreCount = Environment.ProcessorCount;
             int processorCoreCount = 1; // Limit # of deserialization threads to avoid (rare) protobuf issue.
             List<Thread> threads = new List<Thread>();
             var inputFiles = readOnlyInputFiles.ToList();
@@ -1017,7 +999,6 @@ namespace CanvasBin
         private static void LoadIntermediateMultiSampleData(CanvasCoverageMode coverageMode, List<IntermediateDataHolder> intermediateData)
         {
             Object semaphore = new object(); // control access to possibleAlignments, observedAlignments, fragmentLengths
-            // int processorCoreCount = Environment.ProcessorCount;
             int processorCoreCount = 1; // Limit # of deserialization threads to avoid (rare) protobuf issue.
             List<Thread> threads = new List<Thread>();
             Console.WriteLine("Start deserialization:");

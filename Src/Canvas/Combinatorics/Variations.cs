@@ -33,7 +33,6 @@ namespace Combinatorics.Collections
         /// </summary>
         protected Variations()
         {
-            ;
         }
 
         /// <summary>
@@ -198,7 +197,6 @@ namespace Combinatorics.Collections
             /// </summary>
             public void Dispose()
             {
-                ;
             }
 
             #endregion
@@ -312,7 +310,6 @@ namespace Combinatorics.Collections
             /// </summary>
             public void Dispose()
             {
-                ;
             }
 
             #endregion
@@ -476,10 +473,6 @@ namespace Combinatorics.Collections
                     }
                 }
                 myPermutations = new Permutations<int>(myMap);
-            }
-            else
-            {
-                ; // myPermutations isn't used.
             }
         }
 

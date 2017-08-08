@@ -167,7 +167,6 @@ namespace CanvasPartition
                         branch[i] = tree[j][skip + i];
                     List<double> unbal_haar_vector = GetUnbalHaarVector(branch);
 
-                    // for (unsigned i=3; i<=5;i++)
                     for (int i = (int)tree[j][3 - 1 + k * 5] - 1; i < tree[j][5 - 1 + k * 5]; i++)
                     {
                         rec[i] = rec[i] + unbal_haar_vector[i - (int)tree[j][3 - 1 + k * 5] + 1] * tree[j][k * 5 + 2 - 1];

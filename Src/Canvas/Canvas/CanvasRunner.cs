@@ -195,7 +195,6 @@ namespace Canvas
         protected IFileLocation InvokeCanvasBin35Mers(CanvasCallset callset, string canvasReferencePath, string canvasBedPath, string ploidyBedPath)
         {
             StringBuilder commandLine = new StringBuilder();
-            string executablePath = GetExecutablePath("CanvasBin", commandLine);
 
             //use bam as input
             if (callset.SingleSampleCallset.Bam == null)
@@ -252,7 +251,6 @@ namespace Canvas
         protected List<IFileLocation> InvokeCanvasBin(SmallPedigreeCallset callset, string canvasReferencePath, string canvasBedPath)
         {
             StringBuilder commandLine = new StringBuilder();
-            string executablePath = GetExecutablePath("CanvasBin", commandLine);
 
             //use bam as input
             var bamPaths = callset.PedigreeSample.Select(sample => sample.Sample.Bam.BamFile).ToList();
@@ -620,12 +618,13 @@ namespace Canvas
         /// <summary>
         /// Invoke CanvasSNV on SmallPedigreeCallset callsets.  Return null if this fails and we need to abort CNV calling for this sample.
         /// </summary>
+        
         protected void InvokeCanvasSnv(SmallPedigreeCallset callsets)
         {
             foreach (PedigreeSample callset in callsets.PedigreeSample)
             {
                 var canvasCallset = new CanvasCallset(callset.Sample, callsets.AnalysisDetails, null, null, null);
-                var snvPath = InvokeCanvasSnv(canvasCallset, false, callset.Sample.SampleName);
+                InvokeCanvasSnv(canvasCallset, false, callset.Sample.SampleName);
             }
         }
 

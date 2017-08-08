@@ -38,7 +38,6 @@ namespace Combinatorics.Collections
         /// </summary>
         protected Combinations()
         {
-            ;
         }
 
         /// <summary>
@@ -164,7 +163,6 @@ namespace Combinatorics.Collections
             /// </summary>
             public void Dispose()
             {
-                ;
             }
 
             #endregion

@@ -55,9 +55,6 @@ namespace CanvasSomaticCaller
 
 
         public bool FFPEMode; // Assume MAF and Coverage are independent/uncorrelated in FFPEMode (always false for now)
-        private const double EMPosteriorProbThres = 0.01; // Controls whether a segment contributes to Mu and Sigma estimates
-        private const double EMOmegaThres = 0.01; // Controls when to update means
-        private const double EMLikelihoodThres = 1; // Controls when to update means
         public int QualityFilterThreshold { get; set; } = 10;
 
         #endregion
@@ -79,7 +76,6 @@ namespace CanvasSomaticCaller
         {
             Console.WriteLine("{0} Initialize ploidy models...", DateTime.Now);
             this.AllPloidies = new List<SegmentPloidy>();
-            double diploidPredictedMAF = CanvasCommon.Utilities.EstimateDiploidMAF(2, this.MeanCoverage);
             for (int copyNumber = 0; copyNumber <= somaticCallerParameters.MaximumCopyNumber; copyNumber++)
             {
                 for (int majorCount = copyNumber; majorCount * 2 >= copyNumber; majorCount--)
@@ -289,16 +285,9 @@ namespace CanvasSomaticCaller
                 foreach (float tempCount in segment.Counts)
                 {
                     int count = (int)Math.Round(tempCount);
-                    if (count >= histogramBinCount)
-                    {
-                        //Console.Error.WriteLine("Skipping count {0} >= histogram bin count {1}.", count, histogramBinCount);
+                    if (count >= histogramBinCount || count < 0)
                         continue;
-                    }
-                    else if (count < 0)
-                    {
-                        //Console.Error.WriteLine("Skipping count {0} < 0.", count);
-                        continue;
-                    }
+                    
                     CNHistogram[CN][count]++;
                 }
             }
@@ -691,7 +680,6 @@ namespace CanvasSomaticCaller
             }
             // sort list and return indices
             var sortedScores = modelPointsScore.Select((x, i) => new KeyValuePair<double, int>(x, i)).OrderBy(x => x.Key).ToList();
-            List<double> scoresValue = sortedScores.Select(x => x.Key).ToList();
             List<int> scoresIndex = sortedScores.Select(x => x.Value).ToList();
 
             List<ModelPoint> selectedModelPoints = new List<ModelPoint>();
@@ -1459,7 +1447,6 @@ namespace CanvasSomaticCaller
         {
             double bestSilhouette = double.MinValue;
             List<ModelPoint> bestModelPoints = new List<ModelPoint>();
-            int bestNumClusters = 0;
             int maxNumClusters = 8;
 
             // find distanceThreshold, use it in InitializeModelPoints
@@ -1485,12 +1472,11 @@ namespace CanvasSomaticCaller
                 {
                     List<ModelPoint> tempModelPoints = InitializeModelPoints(usableSegments, numClusters, distanceThreshold);
                     GaussianMixtureModel tempgmm = new GaussianMixtureModel(tempModelPoints, usableSegments, medianCoverageLevel, bestCoverageWeightingFactor, knearestNeighbourCutoff);
-                    double currentLikelihood = tempgmm.runExpectationMaximization(); // return BIC rather than raw likelihood
+                    tempgmm.runExpectationMaximization(); // return BIC rather than raw likelihood
                     double currentSilhouette = ComputeSilhouette(usableSegments, numClusters);
                     if (bestSilhouette < currentSilhouette)
                     {
                         bestSilhouette = currentSilhouette;
-                        bestNumClusters = numClusters;
                         if (bestModelPoints.Count > 0)
                             bestModelPoints.Clear();
                         foreach (ModelPoint tempModelPoint in tempModelPoints)
@@ -1602,14 +1588,12 @@ namespace CanvasSomaticCaller
             // If we already knew the diploid coverage, then we'd know just how to scale things (catch-22).
             // Let's assume that the median coverage is a sane thing to use for scaling:
             List<float> tempCoverageList = new List<float>();
-            List<double> knearestNeighbourList = new List<double>();
 
             // Segments clustering using Gaussian Expectation Maximisation
 
             // Step0: Prepare model parameters
             foreach (SegmentInfo info in usableSegments) tempCoverageList.Add(Convert.ToSingle(info.Coverage));
             Tuple<float, float, float> coverageQuartiles = CanvasCommon.Utilities.Quartiles(tempCoverageList);
-            int minCoverageLevel = Convert.ToInt32(coverageQuartiles.Item1);
             int maxCoverageLevel = Convert.ToInt32(coverageQuartiles.Item3);
             int medianCoverageLevel = Convert.ToInt32(coverageQuartiles.Item2);
             if (evennessScore.HasValue && evennessScore.Value < somaticCallerParameters.EvennessScoreThreshold)
@@ -1633,18 +1617,18 @@ namespace CanvasSomaticCaller
             }
 
             int bestNumClusters = 0;
-            double knearestNeighbourCutoff = 0;
             List<double> centroidsMAF = new List<double>();
             List<double> centroidsCoverage = new List<double>();
 
             // Need  large number of segments for cluster analysis
             if (usableSegments.Count > 100 && validMAFCount > 100 && !this.IsEnrichment)
             {
+                // Step1: Find outliers
+                double knearestNeighbourCutoff = KnearestNeighbourCutoff(usableSegments);
+
                 switch (clusteringMode)
                 {
                     case CanvasSomaticClusteringMode.GaussianMixture:
-                        // Step1: Find outliers
-                        knearestNeighbourCutoff = KnearestNeighbourCutoff(usableSegments);
 
                         // Step2: Find the best CoverageWeightingFactor 
                         double bestCoverageWeightingFactor = BestCoverageWeightingFactor(usableSegments, maxCoverageLevel, medianCoverageLevel, knearestNeighbourCutoff);
@@ -1655,12 +1639,10 @@ namespace CanvasSomaticCaller
 
                         // Step4: Find segment clusters using the final model
                         GaussianMixtureModel gmm = new GaussianMixtureModel(modelPoints, usableSegments, medianCoverageLevel, bestCoverageWeightingFactor, knearestNeighbourCutoff);
-                        double likelihood = gmm.runExpectationMaximization();
+                        gmm.runExpectationMaximization();
                         break;
 
                     case CanvasSomaticClusteringMode.Density:
-                        // Step1: Find outliers
-                        knearestNeighbourCutoff = KnearestNeighbourCutoff(usableSegments);
 
                         // Density clustering 
                         // Step2: Find best parameters for density clustering by performing parameter sweep
@@ -1678,7 +1660,7 @@ namespace CanvasSomaticCaller
                         List<SegmentInfo> remainingSegments = new List<SegmentInfo>();
                         foreach (double centoridCutoff in centroidCutoffs)
                         {
-                            DensityClusteringModel densityClustering = RunDensityClustering(usableSegments, CoverageWeightingFactor, knearestNeighbourCutoff, centoridCutoff, out clusterCount);
+                            RunDensityClustering(usableSegments, CoverageWeightingFactor, knearestNeighbourCutoff, centoridCutoff, out clusterCount);
                             numOfClusters.Add(clusterCount);
                             Console.WriteLine(">>> Running density clustering for cutoff {0:F5} , number of clusters {1}", centoridCutoff, clusterCount);
                         }
@@ -1908,7 +1890,6 @@ namespace CanvasSomaticCaller
             }
             // sort list and return indices
             var sortedScores = scores.Select((x, i) => new KeyValuePair<double, int>(x, i)).OrderBy(x => x.Key).ToList();
-            List<double> scoresValue = sortedScores.Select(x => x.Key).ToList();
             List<int> scoresIndex = sortedScores.Select(x => x.Value).ToList();
 
             // interModelDistance shows genome edit distance between the best model and other top models (defined by MaximumRelatedModels). 
@@ -1944,7 +1925,6 @@ namespace CanvasSomaticCaller
                 minPercentPurity = Math.Max(20, (int)Math.Round(bestModel.Purity * 100) - 10);
                 maxPercentPurity = Math.Min(100, (int)Math.Round(bestModel.Purity * 100) + 10); // %%% magic numbers
             }
-            bestDeviation = double.MaxValue;
             bestModel = null;
             for (int coverage = minCoverage; coverage <= maxCoverage; coverage++)
             {
@@ -2196,8 +2176,7 @@ namespace CanvasSomaticCaller
             }
 
             // Get genome length.
-            GenomeMetadata genomeMetaData = null;
-            genomeMetaData = new GenomeMetadata();
+            var genomeMetaData = new GenomeMetadata();
             genomeMetaData.Deserialize(new FileLocation(Path.Combine(referenceFolder, "GenomeSize.xml")));
 
             // Derive a model of diploid coverage, and overall tumor purity:
@@ -2210,7 +2189,6 @@ namespace CanvasSomaticCaller
             if (AllPloidies.First().Sigma == null)
             {
                 AssignPloidyCalls();
-                List<CanvasSegment> sizeFilteredSegment = this.Segments.Where(segment => segment.End - segment.Begin > 5000).ToList();
 
                 // Do not run heterogeneity adjustment on enrichment data
                 if (!this.IsEnrichment && evennessScore.HasValue && evennessScore.Value >= somaticCallerParameters.EvennessScoreThreshold)
@@ -2324,7 +2302,6 @@ namespace CanvasSomaticCaller
         /// </summary>
         protected double EstimatePurityFromSomaticSNVs()
         {
-            Dictionary<string, List<CanvasSegment>> segmentsByChromosome = CanvasSegment.GetSegmentsByChromosome(Segments);
             int recordCount = 0;
             List<float> Frequencies = new List<float>();
             using (VcfReader reader = new VcfReader(this.SomaticVCFPath))
@@ -2406,8 +2383,6 @@ namespace CanvasSomaticCaller
                     score += model.Deviation * somaticCallerParameters.ModelDeviation;
                     score = Math.Exp(score);
                     score = score / (score + 1.0);
-                    long segmentHashKey = info.Segment.Chr.GetHashCode() + info.Segment.Begin + info.Segment.End +
-                                          info.Segment.Counts.Count + info.Segment.CopyNumber;
                     if (!this.HeterogeneousSegmentsSignature.ContainsKey(info.Segment))
                         this.HeterogeneousSegmentsSignature.Add(info.Segment, score);
                 }
@@ -2507,16 +2482,6 @@ namespace CanvasSomaticCaller
                     double Heterogeneity = this.GetKnownClonalityForSegment(segment);
                     if (CN < 0) continue;
                     if (segment.End - segment.Begin < 5000) continue;
-                    List<float> MAF = new List<float>();
-                    foreach (float VF in segment.Alleles.Frequencies)
-                    {
-                        MAF.Add(VF > 0.5 ? 1 - VF : VF);
-                    }
-                    MAF.Sort();
-                    float MedianMAF = -1;
-                    if (MAF.Count > 0)
-                        MedianMAF = MAF[MAF.Count / 2];
-                    double medianCoverage = CanvasCommon.Utilities.Median(segment.Counts);
                     string accurateFlag = "N";
                     if (CN == segment.CopyNumber) accurateFlag = "Y";
                     string directionAccurateFlag = "N";

@@ -49,15 +49,6 @@ namespace CanvasCommon
         public float Count { get; set; }
         public double CountDeviation { get; set; }
 
-        //public SampleGenomicBin()
-        //{
-        //    _genomicBin = new GenomicBin();
-        //    GenomicBin.Chromosome = null;
-        //    GenomicBin.Interval = new Interval();
-        //    GenomicBin.GC = -1;
-        //    this.CountDeviation = -1;
-        //}
-
         public SampleGenomicBin(string chr, int start, int stop, int gc, float count, double MadOfDIffs)
         {
             _genomicBin = new GenomicBin();
@@ -92,12 +83,10 @@ namespace CanvasCommon
         public int Start
         {
             get { return GenomicBin.Interval.OneBasedStart; }
-            //set { GenomicBin.Interval.OneBasedStart = value; }
         }
         public int Stop
         {
             get { return GenomicBin.Interval.OneBasedEnd; }
-            //set { GenomicBin.Interval.OneBasedEnd = value; }
         }
 
         public GenomicBin GenomicBin
