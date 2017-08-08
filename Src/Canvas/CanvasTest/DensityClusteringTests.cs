@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using CanvasCommon;
 using Xunit;
 
@@ -19,9 +20,9 @@ namespace CanvasTest
 
             var segments = new List<SegmentInfo>
             {
-                segmentOne,
                 segmentTwo,
-                segmentTwo
+                segmentTwo,
+                segmentOne
             };
             var clustering = new DensityClusteringModel(segments, .5, 2, 2);
             clustering.EstimateDistance();
@@ -29,7 +30,29 @@ namespace CanvasTest
             clustering.GaussianLocalDensity(distanceThreshold);
             clustering.FindCentroids();
             var clusterCount = clustering.FindClusters(2);
-            Assert.Equal(2, clusterCount);
+            Assert.Equal(0, clusterCount);
+        }
+
+        [Fact]
+        public void EstimateDc_tmpHigh_wrong()
+        {
+            List<double> distances = new List<double> { 6, 5, 4, 3, 2, 1 };
+            double tmpLow = Double.MaxValue;
+            double tmpHigh = Double.MinValue;
+            /** SK: The logic is incorrect
+                for Distance = {6,5,4,3,2,1}, tmpLow and tmpHigh would 1 and Double.MinValue, respectively
+            **/
+
+            foreach (double? element in distances)
+            {
+                if (element.HasValue && element < tmpLow && element > 0)
+                    tmpLow = (double)element;
+                else if (element.HasValue && element > tmpHigh)
+                    tmpHigh = (double)element;
+            }
+
+            Assert.Equal(tmpLow, 1D);
+            Assert.Equal(tmpHigh, Double.MinValue);
         }
     }
 }
