@@ -56,7 +56,7 @@ namespace CanvasPedigreeCaller
             {
                 var pedigreeMember = SetPedigreeMember(variantFrequencyFiles, segmentFiles, ploidyBedPath, sampleName,
                     fileCounter,
-                    CallerParameters.DefaultAlleleCountThreshold, referenceFolder, CallerParameters.NumberOfTrimmedBins,
+                    CallerParameters.DefaultReadCountsThreshold, referenceFolder, CallerParameters.NumberOfTrimmedBins,
                     commonCNVsbedPath);
                 Console.WriteLine($"pedigreeMember for {sampleName} is set");
 
@@ -154,7 +154,7 @@ namespace CanvasPedigreeCaller
                 x => x.SegmentSets[segmentSetIndex].GetSet(segmentsSet)[segmentIndex].Balleles
                     .BAlleles.Select(y => y.Counts).ToList());
             var alleleCounts = alleles.Select(allele => allele.Count).ToList();
-            bool lowAlleleCounts = alleleCounts.Select(x => x < CallerParameters.DefaultAlleleCountThreshold).Any(c => c == true);
+            bool lowAlleleCounts = alleleCounts.Select(x => x < CallerParameters.DefaultReadCountsThreshold).Any(c => c == true);
             var coverageCounts = pedigreeMembers.Select(x => x.SegmentSets[segmentSetIndex].GetSet(segmentsSet)[segmentIndex].MedianCount).ToList();
             var isSkewedHetHomRatio = false;
             if (false)
@@ -221,7 +221,7 @@ namespace CanvasPedigreeCaller
             {
                 var pedigreeMember = SetPedigreeMember(variantFrequencyFiles, segmentFiles, ploidyBedPath, sampleName,
                     fileCounter,
-                    CallerParameters.DefaultAlleleCountThreshold, referenceFolder, CallerParameters.NumberOfTrimmedBins,
+                    CallerParameters.DefaultReadCountsThreshold, referenceFolder, CallerParameters.NumberOfTrimmedBins,
                     commonCNVsbedPath);
                 pedigreeMembers.AddLast(pedigreeMember);
                 fileCounter++;

@@ -36,8 +36,8 @@ namespace CanvasTest
             };
             var canvasSegmentsIndex = 0;
             var commonSegmentsIndex = 0;
-            const int defaultAlleleCountThreshold = 4;
-            var haplotypeSegments = CanvasSegment.Split(canvasSegments, commonSegments, defaultAlleleCountThreshold, ref canvasSegmentsIndex, ref commonSegmentsIndex);
+            const int defaultReadCountsThreshold = 4;
+            var haplotypeSegments = CanvasSegment.Split(canvasSegments, commonSegments, defaultReadCountsThreshold, ref canvasSegmentsIndex, ref commonSegmentsIndex);
 
             // transform into "haplotype" segments
             // canvasSegment:   ----------------------------------
@@ -76,8 +76,8 @@ namespace CanvasTest
             };
             var canvasSegmentsIndex = 0;
             var commonSegmentsIndex = 0;
-            const int defaultAlleleCountThreshold = 4;
-            var haplotypeSegments = CanvasSegment.Split(canvasSegments, commonSegments, defaultAlleleCountThreshold, ref canvasSegmentsIndex, ref commonSegmentsIndex);
+            const int defaultReadCountsThreshold = 4;
+            var haplotypeSegments = CanvasSegment.Split(canvasSegments, commonSegments, defaultReadCountsThreshold, ref canvasSegmentsIndex, ref commonSegmentsIndex);
 
             // transform into "haplotype" segments
             // canvasSegment:   ------------------------------------------------
@@ -115,8 +115,8 @@ namespace CanvasTest
             };
             var canvasSegmentsIndex = 0;
             var commonSegmentsIndex = 0;
-            const int defaultAlleleCountThreshold = 4;
-            var haplotypeSegments = CanvasSegment.Split(canvasSegments, commonSegments, defaultAlleleCountThreshold, ref canvasSegmentsIndex, ref commonSegmentsIndex);
+            const int defaultReadCountsThreshold = 4;
+            var haplotypeSegments = CanvasSegment.Split(canvasSegments, commonSegments, defaultReadCountsThreshold, ref canvasSegmentsIndex, ref commonSegmentsIndex);
 
             // transform into "haplotype" segments
             // canvasSegment:   --------------  --------
@@ -153,8 +153,8 @@ namespace CanvasTest
             };
             var canvasSegmentsIndex = 0;
             var commonSegmentsIndex = 0;
-            const int defaultAlleleCountThreshold = 4;
-            var haplotypeSegments = CanvasSegment.Split(canvasSegments, commonSegments, defaultAlleleCountThreshold, ref canvasSegmentsIndex, ref commonSegmentsIndex);
+            const int defaultReadCountsThreshold = 4;
+            var haplotypeSegments = CanvasSegment.Split(canvasSegments, commonSegments, defaultReadCountsThreshold, ref canvasSegmentsIndex, ref commonSegmentsIndex);
 
             // transform into "haplotype" segments
             // canvasSegment:   ----------------------
@@ -192,8 +192,8 @@ namespace CanvasTest
             };
             var canvasSegmentsIndex = 0;
             var commonSegmentsIndex = 0;
-            const int defaultAlleleCountThreshold = 4;
-            var haplotypeSegments = CanvasSegment.Split(canvasSegments, commonSegments, defaultAlleleCountThreshold, ref canvasSegmentsIndex, ref commonSegmentsIndex);
+            const int defaultReadCountsThreshold = 4;
+            var haplotypeSegments = CanvasSegment.Split(canvasSegments, commonSegments, defaultReadCountsThreshold, ref canvasSegmentsIndex, ref commonSegmentsIndex);
 
             // transform into "haplotype" segments
             // canvasSegment:   -------------------      --------
@@ -230,8 +230,8 @@ namespace CanvasTest
             };
             var canvasSegmentsIndex = 0;
             var commonSegmentsIndex = 0;
-            const int defaultAlleleCountThreshold = 4;
-            var haplotypeSegments = CanvasSegment.Split(canvasSegments, commonSegments, defaultAlleleCountThreshold, ref canvasSegmentsIndex, ref commonSegmentsIndex);
+            const int defaultReadCountsThreshold = 4;
+            var haplotypeSegments = CanvasSegment.Split(canvasSegments, commonSegments, defaultReadCountsThreshold, ref canvasSegmentsIndex, ref commonSegmentsIndex);
 
             // transform into "haplotype" segments
             // canvasSegment:             --------------
