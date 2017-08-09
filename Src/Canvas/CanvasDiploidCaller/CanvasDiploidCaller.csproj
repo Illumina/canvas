@@ -5,8 +5,6 @@
     <AssemblyName>CanvasDiploidCaller</AssemblyName>
     <OutputType>Exe</OutputType>
     <PackageId>CanvasDiploidCaller</PackageId>
-    <RuntimeFrameworkVersion>1.1.0</RuntimeFrameworkVersion>
-    <PackageTargetFallback>$(PackageTargetFallback);dnxcore50</PackageTargetFallback>
     <GenerateAssemblyTitleAttribute>false</GenerateAssemblyTitleAttribute>
     <GenerateAssemblyDescriptionAttribute>false</GenerateAssemblyDescriptionAttribute>
     <GenerateAssemblyConfigurationAttribute>false</GenerateAssemblyConfigurationAttribute>
@@ -32,7 +30,7 @@
 
   <ItemGroup>
     <PackageReference Include="Illumina.Common" Version="4.3.0.280" />
-    <PackageReference Include="Isas.Framework" Version="7.4.3.508" />
+    <PackageReference Include="Isas.Framework" Version="7.4.4.511" />
     <PackageReference Include="Isas.SequencingFiles" Version="5.0.4.343" />
   </ItemGroup>
 

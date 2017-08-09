@@ -2,7 +2,6 @@
 
   <PropertyGroup>    
     <TargetFramework>netcoreapp1.1</TargetFramework>
-    <RuntimeFrameworkVersion>1.1.0</RuntimeFrameworkVersion>
     <GenerateAssemblyTitleAttribute>false</GenerateAssemblyTitleAttribute>
     <GenerateAssemblyDescriptionAttribute>false</GenerateAssemblyDescriptionAttribute>
     <GenerateAssemblyConfigurationAttribute>false</GenerateAssemblyConfigurationAttribute>
@@ -18,7 +17,7 @@
 
   <ItemGroup>
     <PackageReference Include="Illumina.Common" Version="4.3.0.280" />
-    <PackageReference Include="Isas.Framework.UnitTestUtilities" Version="7.4.3.508" />
+    <PackageReference Include="Isas.Framework.UnitTestUtilities" Version="7.4.4.511" />
     <PackageReference Include="Isas.SequencingFiles" Version="5.0.4.343" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="15.0.0" />
     <PackageReference Include="NSubstitute" Version="2.0.3" />
