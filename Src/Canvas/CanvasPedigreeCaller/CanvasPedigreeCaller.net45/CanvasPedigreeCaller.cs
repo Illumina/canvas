@@ -365,9 +365,8 @@ namespace CanvasPedigreeCaller
                                 if (commonCnvCanvasSegments[index].Balleles.BAlleles.Count > defaultAlleleCountThreshold)
                                     commonCnvCanvasSegments[index].Balleles.MedianCounts = Balleles.SetMedianCounts(commonCnvCanvasSegments[index].Balleles);
                             }
-                            segmentsSetByChromosome[chr] =
-                                CanvasSegment.MergeCommonCnvSegments(segmentsByChromosome[chr],
-                                    commonCnvCanvasSegments, chr, defaultAlleleCountThreshold);
+                            segmentsSetByChromosome[chr] = CanvasSegment.MergeCommonCnvSegments(segmentsByChromosome[chr], commonCnvCanvasSegments, chr, defaultAlleleCountThreshold) ?? 
+                            segmentsByChromosome[chr].Select(segment => new CanvasSegmentsSet(setA: new List<CanvasSegment> {segment}, setB: null)).ToList();
                         }
                         else
                         {
