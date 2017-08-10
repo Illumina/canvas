@@ -43,7 +43,7 @@ namespace CanvasCommon
 
         public List<float> Frequencies
         {
-            get { return BAlleles.Select(allele => allele.Frequency).ToList(); }
+            get { return BAlleles?.Select(allele => allele.Frequency).ToList(); }
         }
 
         public static Tuple<int, int> SetMedianCounts(Balleles balleles)
@@ -253,7 +253,7 @@ namespace CanvasCommon
                 this.End = s.End;
             }
             this.GenomicBins.AddRange(s.GenomicBins);
-            Balleles.BAlleles.AddRange(s.Balleles.BAlleles);
+            if (this.Balleles != null && s.Balleles != null) this.Balleles.BAlleles.AddRange(s.Balleles.BAlleles);
         }
 
         public int SizeOveralp(CanvasSegment segment)
@@ -672,22 +672,24 @@ namespace CanvasCommon
                             for (int index = firstIndex; index < lastIndex; index++) counts.Add(segment.GenomicBins[index].Count);
 
                             // Add MAF to the overall list:
-                            firstIndex = 0;
-                            if (pointStartPos > segment.Begin)
-                            {
-                                firstIndex = (int)((float)segment.Balleles.Frequencies.Count * (pointStartPos - segment.Begin) / segment.Length);
-                            }
-                            lastIndex = segment.Balleles.Frequencies.Count;
-                            if (pointEndPos < segment.End)
-                            {
-                                lastIndex = (int)((float)segment.Balleles.Frequencies.Count * (pointEndPos - segment.Begin) / segment.Length);
-                            }
-                            for (int index = firstIndex; index < lastIndex; index++)
-                            {
-                                float tempMAF = segment.Balleles.BAlleles[index].Frequency;
-                                VF.Add(tempMAF);
-                                if (tempMAF > 0.5) tempMAF = 1 - tempMAF;
-                                MAF.Add(tempMAF);
+                            if (segment.Balleles != null) { 
+                                firstIndex = 0;
+                                if (pointStartPos > segment.Begin)
+                                {
+                                    firstIndex = (int)((float)segment.Balleles.Frequencies.Count * (pointStartPos - segment.Begin) / segment.Length);
+                                }
+                                lastIndex = segment.Balleles.Frequencies.Count;
+                                if (pointEndPos < segment.End)
+                                {
+                                    lastIndex = (int)((float)segment.Balleles.Frequencies.Count * (pointEndPos - segment.Begin) / segment.Length);
+                                }
+                                for (int index = firstIndex; index < lastIndex; index++)
+                                {
+                                    float tempMAF = segment.Balleles.BAlleles[index].Frequency;
+                                    VF.Add(tempMAF);
+                                    if (tempMAF > 0.5) tempMAF = 1 - tempMAF;
+                                    MAF.Add(tempMAF);
+                                }
                             }
                         }
 

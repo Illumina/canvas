@@ -151,9 +151,9 @@ namespace CanvasPedigreeCaller
         {
             const double copyNumberCoverageOneAndHalfNormalizer = 0.75;
             var alleles = pedigreeMembers.Select(
-                x => x.SegmentSets[segmentSetIndex].GetSet(segmentsSet)[segmentIndex].Balleles
+                x => x.SegmentSets[segmentSetIndex].GetSet(segmentsSet)[segmentIndex].Balleles?
                     .BAlleles.Select(y => y.Counts).ToList());
-            var alleleCounts = alleles.Select(allele => allele.Count).ToList();
+            var alleleCounts = alleles.Select(allele => allele?.Count ?? 0).ToList();
             bool lowAlleleCounts = alleleCounts.Select(x => x < CallerParameters.DefaultReadCountsThreshold).Any(c => c == true);
             var coverageCounts = pedigreeMembers.Select(x => x.SegmentSets[segmentSetIndex].GetSet(segmentsSet)[segmentIndex].MedianCount).ToList();
             var isSkewedHetHomRatio = false;
