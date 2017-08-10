@@ -6,8 +6,6 @@
     <AssemblyName>Canvas</AssemblyName>
     <OutputType>Exe</OutputType>
     <PackageId>Canvas</PackageId>
-    <RuntimeFrameworkVersion>1.1.0</RuntimeFrameworkVersion>
-    <PackageTargetFallback>$(PackageTargetFallback);dnxcore50</PackageTargetFallback>
     <GenerateAssemblyTitleAttribute>false</GenerateAssemblyTitleAttribute>
     <GenerateAssemblyDescriptionAttribute>false</GenerateAssemblyDescriptionAttribute>
     <GenerateAssemblyConfigurationAttribute>false</GenerateAssemblyConfigurationAttribute>
@@ -33,10 +31,10 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Illumina.Common" Version="4.0.0.267" />
-    <PackageReference Include="Isas.Framework" Version="7.4.1.500" />
-    <PackageReference Include="Isas.Manifests" Version="4.0.0.90" />
-    <PackageReference Include="Isas.SequencingFiles" Version="5.0.2.334" />
+    <PackageReference Include="Illumina.Common" Version="4.3.0.280" />
+    <PackageReference Include="Isas.Framework" Version="7.4.4.511" />
+    <PackageReference Include="Isas.Manifests" Version="4.2.0.106" />
+    <PackageReference Include="Isas.SequencingFiles" Version="5.0.4.343" />
     <PackageReference Include="System.ComponentModel.TypeConverter" Version="4.3.0" />
   </ItemGroup>
 
