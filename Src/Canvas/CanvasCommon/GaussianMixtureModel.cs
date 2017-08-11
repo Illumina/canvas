@@ -147,7 +147,7 @@ namespace CanvasCommon
         {
             foreach (var segment in segments)
             {
-                if (segment.KnearestNeighbour > this.KnearestNeighbourCutoff) segment.ClusterId = CanvasCommon.PloidyInfo.OutlierClusterFlag;
+                if (segment.DistToKnn > this.KnearestNeighbourCutoff) segment.ClusterId = CanvasCommon.PloidyInfo.OutlierClusterFlag;
                 else EMComputePosteriorProbs(modelPoints, segment);
             }
         }

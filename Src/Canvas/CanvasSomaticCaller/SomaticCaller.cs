@@ -1511,7 +1511,7 @@ namespace CanvasSomaticCaller
                 {
                     distance += tempModelDistanceList[k];
                 }
-                usableSegments[i].KnearestNeighbour = distance;
+                usableSegments[i].DistToKnn = distance;
                 knearestNeighbourList.Add(distance);
             }
 

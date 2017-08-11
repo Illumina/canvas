@@ -23,7 +23,7 @@ namespace CanvasCommon
         private List<double> _centroidsMafs;
         private List<double> _centroidsCoverage;
         private readonly double _coverageWeightingFactor;
-        private readonly double _knearestNeighbourCutoff;
+        private readonly double _DistToKnnCutoff;
         private readonly double _deltaCutoff; // used to define the centroids
 
         // parameters
@@ -38,11 +38,11 @@ namespace CanvasCommon
 
         #endregion
 
-        public DensityClusteringModel(List<SegmentInfo> segments, double coverageWeightingFactor, double knearestNeighbourCutoff, double deltaCutoff)
+        public DensityClusteringModel(List<SegmentInfo> segments, double coverageWeightingFactor, double distToKnnCutoff, double deltaCutoff)
         {
             Segments = segments;
             _coverageWeightingFactor = coverageWeightingFactor;
-            _knearestNeighbourCutoff = knearestNeighbourCutoff;
+            _DistToKnnCutoff = distToKnnCutoff;
             _deltaCutoff = deltaCutoff;
         }
 
@@ -88,7 +88,7 @@ namespace CanvasCommon
         /// </summary>
         private Tuple<DensityClusteringModel, List<int>> GetFilteredModelWithIndex()
         {
-            var filteredModel = new DensityClusteringModel(GenSegmentsWithMaf(), _coverageWeightingFactor, _knearestNeighbourCutoff, _deltaCutoff);
+            var filteredModel = new DensityClusteringModel(GenSegmentsWithMaf(), _coverageWeightingFactor, _DistToKnnCutoff, _deltaCutoff);
             return new Tuple<DensityClusteringModel, List<int>>(filteredModel, GenIndexSegmentsWithMaf());
         }
 
@@ -139,6 +139,7 @@ namespace CanvasCommon
                 i = j;
                 j = tmp;
             }
+            // similar code in original version is incorrect
             return (Segments.Count * i + j - (i + 2) * (i + 1) / 2); // all indice 0-based
         }
 
@@ -361,7 +362,7 @@ namespace CanvasCommon
                     clusterId++;
                     //this.Segments[index].ClusterId = CentroidsIndex.FindIndex(x => x == index) + 1;
                 }
-                else if (Segments[index].KnearestNeighbour > _knearestNeighbourCutoff)
+                else if (Segments[index].DistToKnn > _DistToKnnCutoff)
                 {
                     Segments[index].ClusterId = PloidyInfo.OutlierClusterFlag;
                 }

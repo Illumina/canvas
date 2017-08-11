@@ -214,7 +214,7 @@ namespace CanvasCommon
         public int CN;
         public int? ClusterId;
         public int? FinalClusterId;
-        public double? KnearestNeighbour;
+        public double? DistToKnn;
         public SegmentPloidy Ploidy;
         public double EmpiricalMAF;
         public double EmpiricalCoverage;
