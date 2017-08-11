@@ -1,34 +1,30 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection.Metadata.Ecma335;
-using Illumina.Common;
-using MathNet.Numerics.LinearAlgebra.Double;
 
 namespace CanvasCommon
 {
     ///<summary>
     /// This class implements Density Clustering algorithm introduced in 
     /// Rodriguez, Alex, and Alessandro Laio. "Clustering by fast search and find of density peaks." Science 344.6191 (2014): 1492-1496.
-    /// The principle class members are Centroids (Delta in paper) and Rho that are defined as follows:
+    /// The principle class members are DeltaList (Delta in paper) and RhoList that are defined as follows:
     /// given distance matric d[i,j] and distanceThreshold, for each data point i compure 
-    /// Rho(i) = total number of data points within distanceThreshold
-    /// Centroids(i) = distance	of the closes data point of	higher density (min(d[i,j] for all j:=Rho(j)>Rho(i)))
+    /// RhoList(i) = total number of data points within distanceThreshold
+    /// DeltaList(i) = distance	of the closes data point of	higher density (min(d[i,j] for all j:=RhoList(j)>RhoList(i)))
     ///</summary>
     public class DensityClusteringModel
     {
         #region Members
 
         public List<SegmentInfo> Segments;
-        public double[] DistanceArray;
-        public List<double> Centroids;
-        public List<double> Rho;
-        private List<SegmentInfo> _filteredSegments;
+        private double[] _distanceArray;
+        private List<double> _deltaList;
+        private List<double> _rhoList;
         private List<double> _centroidsMafs;
         private List<double> _centroidsCoverage;
         private readonly double _coverageWeightingFactor;
         private readonly double _knearestNeighbourCutoff;
-        private readonly double _centroidsCutoff;
+        private readonly double _deltaCutoff; // used to define the centroids
 
         // parameters
         // RhoCutoff and CentroidsCutoff estimated from running density clustering on 70 HapMix tumour samples https://git.illumina.com/Bioinformatics/HapMix/
@@ -42,33 +38,68 @@ namespace CanvasCommon
 
         #endregion
 
-        public DensityClusteringModel(List<SegmentInfo> segments, double coverageWeightingFactor, double knearestNeighbourCutoff, double centroidsCutoff)
+        public DensityClusteringModel(List<SegmentInfo> segments, double coverageWeightingFactor, double knearestNeighbourCutoff, double deltaCutoff)
         {
             Segments = segments;
             _coverageWeightingFactor = coverageWeightingFactor;
             _knearestNeighbourCutoff = knearestNeighbourCutoff;
-            _centroidsCutoff = centroidsCutoff;
+            _deltaCutoff = deltaCutoff;
         }
 
-        public static DensityClusteringModel RunDensityClustering(List<SegmentInfo> segments, double coverageWeightingFactor, double knearestNeighbourCutoff, double centoridCutoff, out int clusterCount, double rhoCutoff = RhoCutoff)
+        public static DensityClusteringModel RunDensityClustering(List<SegmentInfo> segments, double coverageWeightingFactor, double knearestNeighbourCutoff, double deltaCutoff, out int clusterCount, double rhoCutoff = RhoCutoff)
         {
-            var densityClustering = new DensityClusteringModel(segments, coverageWeightingFactor, knearestNeighbourCutoff, centoridCutoff);
-            densityClustering.SegmentsFiltering();
-            densityClustering.CoverageScaling();
-            densityClustering.GenDistanceArray();
-            var distanceThreshold = densityClustering.EstimateDc();
-            densityClustering.GaussianLocalDensity(distanceThreshold);
-            densityClustering.FindCentroids();
-            clusterCount = densityClustering.FindClusters(rhoCutoff);
+            var densityClustering = new DensityClusteringModel(segments, coverageWeightingFactor, knearestNeighbourCutoff, deltaCutoff);
+            densityClustering.SetDefaultClusterId(PloidyInfo.OutlierClusterFlag);
+            // Find clusters using only segments wit MAF
+            var filteredModelWithIndex = densityClustering.GetFilteredModelWithIndex();
+            var filteredDensityClustering = filteredModelWithIndex.Item1;
+            var indexFilteredModel = filteredModelWithIndex.Item2;
+            filteredDensityClustering.CoverageScaling();
+            filteredDensityClustering.GenDistanceArray();
+            var distanceThreshold = filteredDensityClustering.EstimateDc();
+            filteredDensityClustering.GaussianLocalDensity(distanceThreshold);
+            var nearestNeighborHigherRho = filteredDensityClustering.CalDelta();
+            clusterCount = filteredDensityClustering.FindClusters(nearestNeighborHigherRho, rhoCutoff);
+            // Update original model
+            densityClustering.ModelUpdate(filteredDensityClustering, indexFilteredModel);
             return densityClustering;
+        }
+
+        private void SetDefaultClusterId(int? defaultClusterId)
+        {
+            Segments = Segments.Select(x =>
+            {
+                x.ClusterId = defaultClusterId;
+                return x;
+            }).ToList();
+        }
+
+        private void ModelUpdate(DensityClusteringModel filteredModel, List<int> indexFiltered)
+        {
+            foreach (int i in Enumerable.Range(0, filteredModel.Segments.Count))
+            {
+                int indexInOrigModel = indexFiltered[i];
+                Segments[indexInOrigModel].ClusterId = filteredModel.Segments[i].ClusterId;
+            }
         }
 
         /// <summary>
         /// Only use segments with non-null MAF values
         /// </summary>
-        private void SegmentsFiltering()
+        private Tuple<DensityClusteringModel, List<int>> GetFilteredModelWithIndex()
         {
-            Segments = Segments.Where(segment => segment.MAF >= 0).ToList();
+            var filteredModel = new DensityClusteringModel(GenSegmentsWithMaf(), _coverageWeightingFactor, _knearestNeighbourCutoff, _deltaCutoff);
+            return new Tuple<DensityClusteringModel, List<int>>(filteredModel, GenIndexSegmentsWithMaf());
+        }
+
+        private List<SegmentInfo> GenSegmentsWithMaf()
+        {
+            return Segments.Where(segment => segment.MAF >= 0).ToList();
+        }
+
+        private List<int> GenIndexSegmentsWithMaf()
+        {
+            return Enumerable.Range(0, Segments.Count).Where(i => Segments[i].MAF >= 0).ToList();
         }
 
         /// <summary>
@@ -88,12 +119,12 @@ namespace CanvasCommon
         /// </summary>
         private void GenDistanceArray()
         {
-            DistanceArray = new double[Segments.Count * (Segments.Count - 1) / 2];
+            _distanceArray = new double[Segments.Count * (Segments.Count - 1) / 2];
             for (int i = 0; i < Segments.Count; i++)
             {
                 for (int j = i + 1; j < Segments.Count; j++)
                 {
-                    DistanceArray[IndexMappingPointsToDistance(i, j)] = CalEuclideanDistance(Segments[i], Segments[j]);
+                    _distanceArray[IndexMappingPointsToDistance(i, j)] = CalEuclideanDistance(Segments[i], Segments[j]);
                 }
             }
         }
@@ -108,7 +139,7 @@ namespace CanvasCommon
                 i = j;
                 j = tmp;
             }
-            return (i * (Segments.Count - 2) + j - 1); // all indice 0-based
+            return (Segments.Count * i + j - (i + 2) * (i + 1) / 2); // all indice 0-based
         }
 
         /// <summary>
@@ -118,18 +149,18 @@ namespace CanvasCommon
         {
             var clusterVariance = new List<double>();
 
-            for (int clusterID = 0; clusterID < nClusters; clusterID++)
+            for (int clusterId = 0; clusterId < nClusters; clusterId++)
             {
                 List<double> tmpDistance = new List<double>();
                 foreach (SegmentInfo segment in this.Segments)
                 {
                     // SK: 1-based CluserId v.s. 0-based clusterID??
-                    if (segment.ClusterId.HasValue && clusterID + 1 == segment.ClusterId.Value)
+                    if (segment.ClusterId.HasValue && clusterId + 1 == segment.ClusterId.Value)
                     {
                         // SK: distane between the segment and corresponding centriod
                         var centroid = new SegmentInfo();
-                        centroid.Coverage = centroidsCoverage[clusterID];
-                        centroid.MAF = centroidsMaFs[clusterID];
+                        centroid.Coverage = centroidsCoverage[clusterId];
+                        centroid.MAF = centroidsMaFs[clusterId];
                         tmpDistance.Add(CalEuclideanDistance(segment, centroid));
                     }
                 }
@@ -145,7 +176,7 @@ namespace CanvasCommon
         {
             List<int> clustersSize = Enumerable.Repeat(0, nClusters).ToList();
 
-            foreach (SegmentInfo segment in this.Segments)
+            foreach (SegmentInfo segment in Segments)
             {
                 if (segment.ClusterId.HasValue && segment.ClusterId.Value > 0)
                 {
@@ -171,7 +202,7 @@ namespace CanvasCommon
         /// </summary>
         private static double CalEuclideanDistance(SegmentInfo segment1, SegmentInfo segment2)
         {
-            return Math.Sqrt(Math.Pow(segment1.Coverage - segment2.Coverage, 2)+ 
+            return Math.Sqrt(Math.Pow(segment1.Coverage - segment2.Coverage, 2) +
                 Math.Pow(segment1.MAF - segment2.MAF, 2));
         }
 
@@ -180,10 +211,10 @@ namespace CanvasCommon
         /// </summary>
         private double EstimateDc(double neighborRateLow = NeighborRateLow, double neighborRateHigh = NeighborRateHigh)
         {
-            if (DistanceArray.Length == 0)
+            if (_distanceArray.Length == 0)
                 throw new Exception("Empty DistanceArray!");
-            var tmpLow = DistanceArray.Where(x => x > 0).Min(); // translated from old code. Why exclude zero??
-            var tmpHigh = DistanceArray.Max();
+            var tmpLow = _distanceArray.Where(x => x > 0).Min(); // translated from old code. Why exclude zero??
+            var tmpHigh = _distanceArray.Max();
 
             int segmentsLength = Segments.Count;
             double distanceThreshold = 0;
@@ -192,7 +223,7 @@ namespace CanvasCommon
             while (true)
             {
                 distanceThreshold = (tmpLow + tmpHigh) / 2;
-                double neighborRateTmp = DistanceArray.Where(x => x < distanceThreshold).Count();
+                double neighborRateTmp = _distanceArray.Where(x => x < distanceThreshold).Count();
                 // this part is really confusing !!!!
                 if (distanceThreshold > 0) // SK: can this value <= 0?
                     neighborRateTmp = neighborRateTmp + segmentsLength; // ?
@@ -222,18 +253,18 @@ namespace CanvasCommon
         {
             int ncol = Segments.Count;
             int nrow = Segments.Count;
-            Rho = new List<double>(nrow);
+            _rhoList = new List<double>(nrow);
             for (int iRho = 0; iRho < nrow; iRho++)
-                this.Rho.Add(0);
+                this._rhoList.Add(0);
             int i = 0;
             for (int col = 0; col < ncol; col++)
             {
                 for (int row = col + 1; row < nrow; row++)
                 {
-                    if (this.DistanceArray[i] < distanceThreshold)
+                    if (this._distanceArray[i] < distanceThreshold)
                     {
-                        this.Rho[row] += 1;
-                        this.Rho[col] += 1;
+                        this._rhoList[row] += 1;
+                        this._rhoList[col] += 1;
                     }
                     i++;
                 }
@@ -242,136 +273,106 @@ namespace CanvasCommon
 
         public void GaussianLocalDensity(double distanceThreshold)
         {
-            int distanceLength = DistanceArray.Length;
+            int distanceLength = _distanceArray.Length;
             var half = new List<double>(new double[distanceLength]);
 
             for (int index = 0; index < distanceLength; index++)
             {
-                double combOver = DistanceArray[index] / distanceThreshold;
+                double combOver = _distanceArray[index] / distanceThreshold;
                 double negSq = Math.Pow(combOver, 2) * -1;
                 half[index] = Math.Exp(negSq);
             }
 
-            Rho = new List<double>(new double[Segments.Count]);
+            _rhoList = new List<double>(new double[Segments.Count]);
             for (int i = 0; i < Segments.Count; i++)
             {
                 for (int j = i + 1; j < Segments.Count; j++)
                 {
                     double temp = half[IndexMappingPointsToDistance(i, j)];
-                    Rho[j] += temp;
-                    Rho[i] += temp;
+                    _rhoList[j] += temp;
+                    _rhoList[i] += temp;
                 }
             }
         }
 
         /// <summary>
-        /// Estimate Centroids value as
-        /// Centroids(i) = distance	of the closes data point of	higher density (min(d[i,j] for all j:=Rho(j)>Rho(i)))
+        /// Estimate DeltaList value as
+        /// DeltaList(i) = distance	of the closes data point of	higher density (min(d[i,j] for all j:=RhoList(j)>RhoList(i)))
         /// </summary>
-        public void FindCentroids()
+        public Dictionary<int, int> CalDelta()
         {
-            Centroids = Enumerable.Repeat(double.MaxValue, Segments.Count).ToList();
-            //var maximum = new List<double>(new double[Segments.Count]);
+            // Delta value for each segment
+            _deltaList = Enumerable.Repeat(double.MaxValue, Segments.Count).ToList();
+            // the index of nearest segment with higher density value
+            var nearestNeighborHigherRho = new Dictionary<int, int>();
             // index of segments with the highest density
-            int maxDensityIndex = Rho.IndexOf(Rho.Max());
-            // Centroids[maxDensityIndex] = max distance between it and other points
-            Centroids[maxDensityIndex] = Enumerable.Range(0, Segments.Count)
+            int maxDensityIndex = _rhoList.IndexOf(_rhoList.Max());
+            // DeltaList[maxDensityIndex] = max distance between it and other points
+            _deltaList[maxDensityIndex] = Enumerable.Range(0, Segments.Count)
                 .Where(x => x != maxDensityIndex)
                 .Select(x => IndexMappingPointsToDistance(x, maxDensityIndex))
-                .Select(x => DistanceArray[x])
+                .Select(x => _distanceArray[x])
                 .Max();
+            nearestNeighborHigherRho.Add(maxDensityIndex, -1); // alredy the one with highest density
             for (int i = 0; i < Segments.Count; i++)
             {
                 for (int j = i + 1; j < Segments.Count; j++)
                 {
-                    double distance = DistanceArray[IndexMappingPointsToDistance(i, j)];
-                    int indexLowerRho = Rho[i] < Rho[j] ? i : j;
-                    if (distance < Centroids[indexLowerRho]) Centroids[indexLowerRho] = distance;
+                    double distance = _distanceArray[IndexMappingPointsToDistance(i, j)];
+                    (int indexLowerRho, int indexHigherRho) = _rhoList[i] < _rhoList[j] ? (i, j) : (j, i);
+                    if (distance >= _deltaList[indexLowerRho]) continue;
+                    _deltaList[indexLowerRho] = distance;
+                    nearestNeighborHigherRho[indexLowerRho] = indexHigherRho;
                 }
             }
+            return nearestNeighborHigherRho;
         }
 
-
-        /// <summary>
-        /// Helper method for FindClusters
-        /// </summary>
-        private double? GetDistance(int segmentsLength, int tmpIndex, int runOrderIndex)
+        private int FindClusters(Dictionary<int, int> nearestNeighborHigherRho, double rhoCutoff = RhoCutoff)
         {
-            if (tmpIndex < runOrderIndex)
-            {
-                // the dissimilarity between (column) i and j is retrieved from index [n*i - i*(i+1)/2 + j-i-1].
-                return this.DistanceArray[segmentsLength * tmpIndex - (tmpIndex * (tmpIndex + 1)) / 2 + runOrderIndex - tmpIndex - 1];
-            }
-            else if (tmpIndex > runOrderIndex)
-            {
-                return this.DistanceArray[segmentsLength * runOrderIndex - (runOrderIndex * (runOrderIndex + 1)) / 2 + tmpIndex - runOrderIndex - 1];
-            }
-            else
-            {
-                return null;
-            }
-        }
+            // the indice of centroids
+            List<int> centroidsIndex = Enumerable.Range(0, Segments.Count)
+                .Where(i => _rhoList[i] > rhoCutoff && _deltaList[i] > _deltaCutoff)
+                .ToList();
 
-
-        public int FindClusters(double rhoCutoff = RhoCutoff)
-        {
-            _centroidsMafs = new List<double>();
-            _centroidsCoverage = new List<double>();
-            int segmentsLength = this.Segments.Count;
-            List<int> CentroidsIndex = new List<int>(segmentsLength);
-            for (int segmentIndex = 0; segmentIndex < segmentsLength; segmentIndex++)
+            if (!centroidsIndex.Any())
             {
-                if (this.Rho[segmentIndex] > rhoCutoff && this.Centroids[segmentIndex] > _centroidsCutoff && this.Segments[segmentIndex].MAF >= 0)
+                Segments = Segments.Select(x =>
                 {
-                    CentroidsIndex.Add(segmentIndex);
-                    _centroidsMafs.Add(this.Segments[segmentIndex].MAF);
-                    _centroidsCoverage.Add(this.Segments[segmentIndex].Coverage);
-                }
+                    x.ClusterId = PloidyInfo.OutlierClusterFlag;
+                    return x;
+                }).ToList();
+                return 0;
             }
 
+            _centroidsMafs = centroidsIndex.Select(x => Segments[x].MAF).ToList();
+            _centroidsCoverage = centroidsIndex.Select(x => Segments[x].Coverage).ToList();
 
             // sort list and return indices
-            var sortedScores = Rho.Select((x, i) => new KeyValuePair<double, int>(x, i)).OrderByDescending(x => x.Key).ToList();
-            var runOrder = sortedScores.Select(x => x.Value).ToList();
-
-            foreach (int runOrderIndex in runOrder)
+            var sortedRhoValues = _rhoList.Select((x, i) => new KeyValuePair<int, double>(i, x)).OrderByDescending(x => x.Value).ToList();
+            var segmentIndexSortedByRho = sortedRhoValues.Select(x => x.Key).ToList();
+            int clusterId = 1;
+            foreach (int index in segmentIndexSortedByRho)
             {
                 // set segment cluster value to the cluster centroid 
-                if (CentroidsIndex.Contains(runOrderIndex))
+                if (centroidsIndex.Contains(index))
                 {
-                    this.Segments[runOrderIndex].ClusterId = CentroidsIndex.FindIndex(x => x == runOrderIndex) + 1;
+                    Segments[index].ClusterId = clusterId;
+                    clusterId++;
+                    //this.Segments[index].ClusterId = CentroidsIndex.FindIndex(x => x == index) + 1;
+                }
+                else if (Segments[index].KnearestNeighbour > _knearestNeighbourCutoff)
+                {
+                    Segments[index].ClusterId = PloidyInfo.OutlierClusterFlag;
                 }
                 // set segment cluster value to the closest cluster segment 
                 else
                 {
-                    double? tmpDistance = null;
-                    double minDistance = Double.MaxValue;
-                    int minRhoElementIndex = 0;
-                    for (int tmpIndex = 0; tmpIndex < segmentsLength; tmpIndex++)
-                    {
-                        if (Rho[tmpIndex] > Rho[runOrderIndex] && this.Segments[tmpIndex].MAF >= 0)
-                        {
-                            tmpDistance = GetDistance(segmentsLength, tmpIndex, runOrderIndex);
-
-                            if (tmpDistance.HasValue)
-                            {
-                                if (tmpDistance < minDistance)
-                                {
-                                    minRhoElementIndex = tmpIndex;
-                                    minDistance = (double)tmpDistance;
-                                }
-                            }
-                        }
-                    }
-                    // populate clusters
-                    if (this.Segments[runOrderIndex].MAF >= 0)
-                        this.Segments[runOrderIndex].ClusterId = this.Segments[minRhoElementIndex].ClusterId;
-                    if (!this.Segments[runOrderIndex].ClusterId.HasValue || this.Segments[runOrderIndex].MAF < 0 ||
-                        this.Segments[runOrderIndex].KnearestNeighbour > this._knearestNeighbourCutoff)
-                        this.Segments[runOrderIndex].ClusterId = CanvasCommon.PloidyInfo.OutlierClusterFlag;
+                    // SK: could it be possible that the nearest neighbor is marked as an outlier?
+                    Segments[index].ClusterId = Segments[nearestNeighborHigherRho[index]].ClusterId;
                 }
             }
-            return CentroidsIndex.Count;
+            return centroidsIndex.Count;
         }
     }
 }

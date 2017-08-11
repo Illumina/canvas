@@ -22,18 +22,21 @@ namespace CanvasTest
             {
                 segmentTwo,
                 segmentTwo,
+                segmentTwo,
+                segmentTwo,
+                segmentTwo,
                 segmentOne
             };
             int clusterCount;
-            var clusters = DensityClusteringModel.RunDensityClustering(segments, .5, 2, 2, out clusterCount);
+            var clusters = DensityClusteringModel.RunDensityClustering(segments, .5, 2, 0.3, out clusterCount);
             /*
             clustering.EstimateDistance();
             double distanceThreshold = clustering.EstimateDc();
             clustering.GaussianLocalDensity(distanceThreshold);
-            clustering.FindCentroids();
+            clustering.CalDelta();
             var clusterCount = clustering.FindClusters(2);
             */
-            Assert.Equal(0, clusterCount);
+            Assert.Equal(1, clusterCount);
         }
 
         [Fact]
