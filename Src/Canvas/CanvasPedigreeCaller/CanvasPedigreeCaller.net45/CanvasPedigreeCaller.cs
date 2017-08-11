@@ -367,12 +367,14 @@ namespace CanvasPedigreeCaller
                             }
                             segmentsSetByChromosome[chr] = CanvasSegment.MergeCommonCnvSegments(segmentsByChromosome[chr], commonCnvCanvasSegments, chr, defaultAlleleCountThreshold) ?? 
                             segmentsByChromosome[chr].Select(segment => new CanvasSegmentsSet(setA: new List<CanvasSegment> {segment}, setB: null)).ToList();
+                            Console.WriteLine($"SegmentsFromCommonCnvs for {chr} returned");
                         }
                         else
                         {
                             segmentsSetByChromosome[chr] = segmentsByChromosome[chr].Select(segment => 
                             new CanvasSegmentsSet(setA: new List<CanvasSegment> { segment }, setB: null)).ToList();
                         }
+                        Console.WriteLine($"SegmentsFromCommonCnvs for {chr} finished");
 
                     });
                 Console.WriteLine($"Create SegmentSets for {sampleName} ");
