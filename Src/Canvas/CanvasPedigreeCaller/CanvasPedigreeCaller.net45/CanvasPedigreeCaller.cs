@@ -374,21 +374,21 @@ namespace CanvasPedigreeCaller
                             segmentsSetByChromosome[chr] = segmentsByChromosome[chr].Select(segment => 
                             new CanvasSegmentsSet(setA: new List<CanvasSegment> { segment }, setB: null)).ToList();
                         }
-                        Console.WriteLine($"SegmentsFromCommonCnvs for {chr} finished");
-
                     });
                 Console.WriteLine($"Create SegmentSets for {sampleName} ");
                 pedigreeMember.SegmentSets.AddRange(segmentsSetByChromosome.OrderBy(i => i.Key).Select(x => x.Value).SelectMany(x=>x).ToList());
             }
             else
             {
+                Console.WriteLine($"Alternative");
+
                 pedigreeMember.SegmentSets =
                     segments.Select(
                             segment =>
                                 new CanvasSegmentsSet(setA: new List<CanvasSegment> {segment}, setB: null))
                         .ToList();
             }
-
+            Console.WriteLine($"Done");
             return pedigreeMember;
         }
 
