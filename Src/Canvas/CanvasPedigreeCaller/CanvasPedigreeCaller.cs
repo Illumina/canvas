@@ -375,6 +375,7 @@ namespace CanvasPedigreeCaller
                         {
                             segmentsSetByChromosome[chr] = segmentsByChromosome[chr].Select(segment => 
                             new CanvasSegmentsSet(setA: new List<CanvasSegment> { segment }, setB: null)).ToList();
+                            Console.WriteLine($"SegmentsFromCommonCnvs for {chr} returned");
                         }
                         Console.WriteLine($"SegmentsFromCommonCnvs for {chr} finished");
 
