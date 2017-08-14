@@ -6,8 +6,6 @@
     <AssemblyName>CanvasSmooth</AssemblyName>
     <OutputType>Exe</OutputType>
     <PackageId>CanvasSmooth</PackageId>
-    <RuntimeFrameworkVersion>1.1.0</RuntimeFrameworkVersion>
-    <PackageTargetFallback>$(PackageTargetFallback);dnxcore50</PackageTargetFallback>
     <GenerateAssemblyTitleAttribute>false</GenerateAssemblyTitleAttribute>
     <GenerateAssemblyDescriptionAttribute>false</GenerateAssemblyDescriptionAttribute>
     <GenerateAssemblyConfigurationAttribute>false</GenerateAssemblyConfigurationAttribute>
@@ -24,10 +22,10 @@
     <ProjectReference Include="..\CanvasCommon\CanvasCommon.csproj" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="Illumina.Common" Version="3.9.0.226" />
-    <PackageReference Include="Isas.Framework" Version="6.10.0.354" />
-    <PackageReference Include="Isas.Manifests" Version="3.0.1.64" />
-    <PackageReference Include="Isas.SequencingFiles" Version="4.2.1.300" />
+    <PackageReference Include="Illumina.Common" Version="4.3.0.280" />
+    <PackageReference Include="Isas.Framework" Version="7.4.4.511" />
+    <PackageReference Include="Isas.Manifests" Version="4.2.0.106" />
+    <PackageReference Include="Isas.SequencingFiles" Version="5.0.4.343" />
   </ItemGroup>
 
 </Project>

@@ -39,7 +39,6 @@ namespace Combinatorics.Collections
         /// </summary>
         protected Permutations()
         {
-            ;
         }
 
         /// <summary>
@@ -210,7 +209,6 @@ namespace Combinatorics.Collections
             /// </summary>
             public virtual void Dispose()
             {
-                ;
             }
 
             #endregion
