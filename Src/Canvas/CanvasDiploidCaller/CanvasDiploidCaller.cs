@@ -321,16 +321,6 @@ namespace CanvasDiploidCaller
                     int CN = this.GetKnownCNForSegment(segment);
                     if (CN < 0) continue;
                     if (segment.End - segment.Begin < 5000) continue;
-                    List<float> MAF = new List<float>();
-                    foreach (float VF in segment.Balleles.Frequencies)
-                    {
-                        MAF.Add(VF > 0.5 ? 1 - VF : VF);
-                    }
-                    MAF.Sort();
-                    float MedianMAF = -1;
-                    if (MAF.Count > 0)
-                        MedianMAF = MAF[MAF.Count / 2];
-                    double medianCoverage = CanvasCommon.Utilities.Median(segment.Counts);
                     string accurateFlag = "N";
                     if (CN == segment.CopyNumber) accurateFlag = "Y";
                     string directionAccurateFlag = "N";
