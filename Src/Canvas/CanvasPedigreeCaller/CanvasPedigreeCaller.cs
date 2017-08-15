@@ -200,9 +200,15 @@ namespace CanvasPedigreeCaller
             int maxAlleleNumber = Math.Min(CallerParameters.MaxAlleleNumber, pedigreeMembers.Count);         
             var copyNumberCombinations = GenerateCopyNumberCombinations(CallerParameters.MaximumCopyNumber, maxAlleleNumber);
 
+            // for single samlple case high variance leads to “flat” density across CN models and the resulting low Q-scores
+            // set the variance to a derivative of the mean (i.e. 2.5 times the mean) 
             foreach (PedigreeMember pedigreeMember in pedigreeMembers)
-                pedigreeMember.CnModel = new CopyNumberModel(CallerParameters.MaximumCopyNumber, pedigreeMember.MeanCoverage / 2.0, pedigreeMember.MeanMafCoverage / 2.0,
-                    pedigreeMember.MeanCoverage * 2.5, pedigreeMember.MeanMafCoverage * 2.5, pedigreeMember.MaxCoverage);
+                pedigreeMember.CnModel = new CopyNumberModel(CallerParameters.MaximumCopyNumber, 
+                    pedigreeMember.MeanCoverage / 2.0, 
+                    pedigreeMember.MeanMafCoverage / 2.0,
+                    pedigreeMembers.Count > 1 ? pedigreeMember.Variance: pedigreeMember.MeanCoverage * 2.5,
+                    pedigreeMembers.Count > 1 ? pedigreeMember.MafVariance : pedigreeMember.MeanMafCoverage * 2.5, 
+                    pedigreeMember.MaxCoverage);
 
             Parallel.ForEach(
                 segmentIntervals,
