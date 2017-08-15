@@ -202,7 +202,7 @@ namespace CanvasPedigreeCaller
 
             foreach (PedigreeMember pedigreeMember in pedigreeMembers)
                 pedigreeMember.CnModel = new CopyNumberModel(CallerParameters.MaximumCopyNumber, pedigreeMember.MeanCoverage / 2.0, pedigreeMember.MeanMafCoverage / 2.0,
-                    pedigreeMember.Variance, pedigreeMember.MafVariance, pedigreeMember.MaxCoverage);
+                    pedigreeMember.MeanCoverage * 2.5, pedigreeMember.MeanMafCoverage * 2.5, pedigreeMember.MaxCoverage);
 
             Parallel.ForEach(
                 segmentIntervals,
