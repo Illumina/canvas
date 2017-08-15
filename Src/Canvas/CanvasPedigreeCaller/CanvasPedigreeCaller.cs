@@ -369,12 +369,16 @@ namespace CanvasPedigreeCaller
                             }
                             segmentsSetByChromosome[chr] = CanvasSegment.MergeCommonCnvSegments(segmentsByChromosome[chr], commonCnvCanvasSegments, chr, defaultAlleleCountThreshold) ?? 
                             segmentsByChromosome[chr].Select(segment => new CanvasSegmentsSet(setA: new List<CanvasSegment> {segment}, setB: null)).ToList();
+                            
+                            Console.WriteLine($"SegmentsFromCommonCnvs for {chr} count {segmentsByChromosome[chr].Count}");
+
                             Console.WriteLine($"SegmentsFromCommonCnvs for {chr} returned");
                         }
                         else
                         {
                             segmentsSetByChromosome[chr] = segmentsByChromosome[chr].Select(segment => 
                             new CanvasSegmentsSet(setA: new List<CanvasSegment> { segment }, setB: null)).ToList();
+                            Console.WriteLine($"SegmentsFromCommonCnvs for {chr} count {segmentsByChromosome[chr].Count}");
                             Console.WriteLine($"SegmentsFromCommonCnvs for {chr} returned");
                         }
                         Console.WriteLine($"SegmentsFromCommonCnvs for {chr} finished");
@@ -522,9 +526,7 @@ namespace CanvasPedigreeCaller
             foreach (PedigreeMember sample in samples)
             {
                 double normalizationConstant = copyNumberLikelihoods[counter].Sum();
-                double qscore = -10.0 *
-                                Math.Log10((normalizationConstant - copyNumberLikelihoods[counter][cnStates[counter]]) /
-                                           normalizationConstant);
+                double qscore = -10.0 * Math.Log10((normalizationConstant - copyNumberLikelihoods[counter][cnStates[counter]]) /normalizationConstant);
                 if (Double.IsInfinity(qscore) | qscore > CallerParameters.MaxQscore)
                     qscore = CallerParameters.MaxQscore;
                 sample.SegmentSets[setPosition].GetSet(segmentsSet)[segmentPosition].QScore = qscore;
