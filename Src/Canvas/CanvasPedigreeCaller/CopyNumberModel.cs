@@ -16,13 +16,17 @@ namespace CanvasPedigreeCaller
             for (int copyNumber = 0; copyNumber  < numCnStates; copyNumber ++)
             {
                 var multiplier = copyNumber * 1.0;
+                // lower haploid mean by 10% to offset FP CN=1 calls 
                 if (copyNumber == 1)
                     multiplier *= 0.9;
+                // allow for low bin counts for CN=0, i.e. due to imprecise breakpoints  
                 if (copyNumber == 0)
                     multiplier = 0.1;
+                // increase triploid mean by 10% to offset FP CN=3 calls 
                 if (copyNumber == 3)
                     multiplier *= 1.1;
-                CnDistribution.Add(DistributionUtilities.NegativeBinomialWrapper(haploidMean * multiplier, variance, maxValue, adjustR: true));
+                CnDistribution.Add(DistributionUtilities.NegativeBinomialWrapper(haploidMean * multiplier, variance, maxValue, 
+                    adjustClumpingParameter: true));
             }
 
             _alleleDistribution = new Tuple<List<double>, List<double>>[numCnStates][];
