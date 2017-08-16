@@ -41,23 +41,16 @@ namespace CanvasPedigreeCaller
             // load files
             // initialize data structures and classes
             int fileCounter = 0;
-            var kinships = ReadPedigreeFile(pedigreeFile);
             var pedigreeMembers = new LinkedList<PedigreeMember>();
             foreach (string sampleName in sampleNames)
             {
-                var pedigreeMember = SetPedigreeMember(variantFrequencyFiles, segmentFiles, ploidyBedPath, sampleName, fileCounter, CallerParameters.DefaultAlleleCountThreshold, referenceFolder, CallerParameters.NumberOfTrimmedBins );
-                pedigreeMember.Kin = kinships[pedigreeMember.Name] == PedigreeMember.Kinship.Parent ?
-                    PedigreeMember.Kinship.Parent : PedigreeMember.Kinship.Offspring;
-                if (kinships[pedigreeMember.Name] == PedigreeMember.Kinship.Proband)
-                {
-                    pedigreeMember.Kin = PedigreeMember.Kinship.Proband;
-                    pedigreeMembers.AddFirst(pedigreeMember);
-                }
-                else
-                {
-                    pedigreeMembers.AddLast(pedigreeMember);
+                var pedigreeMember = SetPedigreeMember(variantFrequencyFiles[fileCounter], segmentFiles[fileCounter], ploidyBedPath, sampleName, 
+                    CallerParameters.DefaultAlleleCountThreshold, referenceFolder, CallerParameters.NumberOfTrimmedBins, pedigreeFile);
 
-                }
+                if (pedigreeMember.Kin == PedigreeMember.Kinship.Proband)
+                    pedigreeMembers.AddFirst(pedigreeMember);              
+                else
+                    pedigreeMembers.AddLast(pedigreeMember);
 
                 fileCounter++;
             }
@@ -264,15 +257,23 @@ namespace CanvasPedigreeCaller
                 CanvasSegment.MergeSegments(ref pedigreeMember.Segments, minimumCallSize, 10000, copyNumbers, qscores);
         }
 
-        private static PedigreeMember SetPedigreeMember(List<string> variantFrequencyFiles, List<string> segmentFiles, string ploidyBedPath,
-            string sampleName, int fileCounter, int defaultAlleleCountThreshold, string referenceFolder, int numberOfTrimmedBins)
+        private static PedigreeMember SetPedigreeMember(string variantFrequencyFile, string segmentFile, string ploidyBedPath,
+            string sampleName,int defaultAlleleCountThreshold, string referenceFolder, int numberOfTrimmedBins, string pedigreeFile = null)
         {
             var pedigreeMember = new PedigreeMember
             {
                 Name = sampleName,
-                Segments = CanvasSegment.ReadSegments(segmentFiles[fileCounter])
+                Segments = CanvasSegment.ReadSegments(segmentFile)
             };
-            pedigreeMember.MeanMafCoverage = CanvasIO.LoadFrequenciesBySegment(variantFrequencyFiles[fileCounter],
+
+            if (pedigreeFile != null)
+            {
+                var kinships = ReadPedigreeFile(pedigreeFile);
+                pedigreeMember.Kin = kinships[pedigreeMember.Name] == PedigreeMember.Kinship.Parent ?
+                    PedigreeMember.Kinship.Parent : PedigreeMember.Kinship.Proband;
+            }
+
+            pedigreeMember.MeanMafCoverage = CanvasIO.LoadFrequenciesBySegment(variantFrequencyFile,
                 pedigreeMember.Segments, referenceFolder);
             foreach (var segment in pedigreeMember.Segments)
                 if (segment.Alleles.Counts.Count > defaultAlleleCountThreshold)
@@ -813,7 +814,7 @@ namespace CanvasPedigreeCaller
         }
 
 
-        public Dictionary<string, PedigreeMember.Kinship> ReadPedigreeFile(string pedigreeFile)
+        public static Dictionary<string, PedigreeMember.Kinship> ReadPedigreeFile(string pedigreeFile)
         {
             Dictionary<string, PedigreeMember.Kinship> kinships = new Dictionary<string, PedigreeMember.Kinship>();
             using (FileStream stream = new FileStream(pedigreeFile, FileMode.Open, FileAccess.Read))
@@ -828,10 +829,8 @@ namespace CanvasPedigreeCaller
                     string proband = fields[5];
                     if (maternalId == "0" && paternallId == "0")
                         kinships.Add(fields[1], PedigreeMember.Kinship.Parent);
-                    else if (proband == "affected")
-                        kinships.Add(fields[1], PedigreeMember.Kinship.Proband);
                     else
-                        kinships.Add(fields[1], PedigreeMember.Kinship.Offspring);
+                        kinships.Add(fields[1], PedigreeMember.Kinship.Proband);
                 }
             }
             return kinships;

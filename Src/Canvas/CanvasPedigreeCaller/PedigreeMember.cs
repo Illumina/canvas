@@ -8,7 +8,7 @@ namespace CanvasPedigreeCaller
     {
         public enum Kinship
         {
-            Parent, Offspring, Proband
+            Parent, Proband
         }
         public List<CanvasSegment> Segments = new List<CanvasSegment>();
         public double MeanCoverage { get; set; }
