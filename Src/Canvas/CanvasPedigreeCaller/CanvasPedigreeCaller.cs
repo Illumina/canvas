@@ -55,9 +55,8 @@ namespace CanvasPedigreeCaller
                 fileCounter++;
             }
 
-            var numberOfSegments = pedigreeMembers.First().Segments.Count;
-            var maxCoreNumber = 30;
-            var segmentIntervals = GetParallelIntervals(numberOfSegments, Math.Min(Environment.ProcessorCount, maxCoreNumber));
+            int numberOfSegments = pedigreeMembers.First().Segments.Count;
+            var segmentIntervals = GetParallelIntervals(numberOfSegments, Math.Min(Environment.ProcessorCount, CallerParameters.MaxCoreNumber));
 
             var parents = GetParents(pedigreeMembers);
             var offsprings = GetChildren(pedigreeMembers);
@@ -180,15 +179,14 @@ namespace CanvasPedigreeCaller
             var pedigreeMembers = new LinkedList<PedigreeMember>();
             foreach (string sampleName in sampleNames)
             {
-                var pedigreeMember = SetPedigreeMember(variantFrequencyFiles, segmentFiles, ploidyBedPath, sampleName, fileCounter, CallerParameters.DefaultAlleleCountThreshold, 
-                    referenceFolder, CallerParameters.NumberOfTrimmedBins);
+                var pedigreeMember = SetPedigreeMember(variantFrequencyFiles[fileCounter], segmentFiles[fileCounter], ploidyBedPath, 
+                    sampleName, CallerParameters.DefaultAlleleCountThreshold, referenceFolder, CallerParameters.NumberOfTrimmedBins);
                 pedigreeMembers.AddLast(pedigreeMember);
                 fileCounter++;
             }
 
             int numberOfSegments = pedigreeMembers.First().Segments.Count;
-            const int maxCoreNumber = 30;
-            var segmentIntervals = GetParallelIntervals(numberOfSegments, Math.Min(Environment.ProcessorCount, maxCoreNumber));
+            var segmentIntervals = GetParallelIntervals(numberOfSegments, Math.Min(Environment.ProcessorCount, CallerParameters.MaxCoreNumber));
             var genotypes = GenerateGenotypeCombinations(CallerParameters.MaximumCopyNumber);
             int maxAlleleNumber = Math.Min(CallerParameters.MaxAlleleNumber, pedigreeMembers.Count);         
             var copyNumberCombinations = GenerateCopyNumberCombinations(CallerParameters.MaximumCopyNumber, maxAlleleNumber);
@@ -689,7 +687,8 @@ namespace CanvasPedigreeCaller
         }
 
 
-        private static void InitializeLikelihood(out double maximalLikelihood, int segmentPosition, List<PedigreeMember> parents, List<PedigreeMember> children)
+        private static void InitializeLikelihood(out double maximalLikelihood, int segmentPosition, List<PedigreeMember> parents, 
+            List<PedigreeMember> children)
         {
             maximalLikelihood = 0;
             int defaultCn = 2;

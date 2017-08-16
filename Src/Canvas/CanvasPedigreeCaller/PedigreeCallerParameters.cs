@@ -12,5 +12,6 @@ namespace CanvasPedigreeCaller
         public double DeNovoRate { get; set; } = 0.00001;
         public int MinimumCallSize { get; set; } = 2000;
         public int NumberOfTrimmedBins { get; set; } = 2;
+        public int MaxCoreNumber { get; set; } = 30;
     }
 }
