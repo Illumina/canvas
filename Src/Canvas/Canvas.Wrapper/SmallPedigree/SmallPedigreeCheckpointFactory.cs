@@ -31,7 +31,6 @@ namespace Canvas.Wrapper.SmallPedigree
             _canvasWorkerFactory = canvasWorkerFactory;
         }
 
-
         public ISmallPedigreeCheckpoint GetSmallPedigreeCheckpoint()
         {
             if (!_canvasWorkerFactory.RunCnvDetection()) return new NullSmallPedigreeCheckpoint(_logger);
