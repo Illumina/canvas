@@ -1,17 +1,13 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using Illumina.Common;
-using Illumina.Common.FileSystem;
+﻿using Illumina.Common.FileSystem;
 using Illumina.SecondaryAnalysis.VariantCalling;
 using Isas.ClassicBioinfoTools.Tabix;
-using Isas.Framework;
-using Isas.Framework.FrameworkFactory;
 using Isas.Framework.Logging;
 using Isas.Framework.Settings;
 using Isas.Framework.WorkManagement;
 using Isas.Framework.WorkManagement.CommandBuilding;
 using Isas.SequencingFiles;
+using System;
+using System.Collections.Generic;
 
 namespace Canvas.Wrapper
 {
