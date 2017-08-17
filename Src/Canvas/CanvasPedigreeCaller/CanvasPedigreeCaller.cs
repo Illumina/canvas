@@ -618,7 +618,7 @@ namespace CanvasPedigreeCaller
                 double maximalLikelihood = 0;
                 density[counter] = new double[CallerParameters.MaximumCopyNumber];
                 counter++;
-                foreach (var copyNumber in Enumerable.Range(0, CallerParameters.MaximumCopyNumber).ToList())
+                foreach (var copyNumber in Enumerable.Range(0, CallerParameters.MaximumCopyNumber))
                 {
                     double currentLikelihood = sample.CnModel.GetCnLikelihood(Math.Min(sample.GetCoverage(segmentPosition, CallerParameters.NumberOfTrimmedBins), sample.MeanCoverage * maxCoverageMultiplier))[copyNumber];
                     currentLikelihood = Double.IsNaN(currentLikelihood) || Double.IsInfinity(currentLikelihood) ? 0 : currentLikelihood;
