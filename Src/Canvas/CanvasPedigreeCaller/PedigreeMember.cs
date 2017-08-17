@@ -21,7 +21,7 @@ namespace CanvasPedigreeCaller
         public double Variance { get; internal set; }
         public double MafVariance { get; internal set; }
         public CopyNumberModel CnModel { get; set; }
-        public Kinship Kin { get; set; };
+        public Kinship Kin { get; set; }
 
         public double GetCoverage(int segmentIndex, int numberOfTrimmedBins)
         {
