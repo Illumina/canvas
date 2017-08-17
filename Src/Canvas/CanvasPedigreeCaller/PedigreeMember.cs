@@ -8,7 +8,7 @@ namespace CanvasPedigreeCaller
     {
         public enum Kinship
         {
-            Parent, Proband
+            Other, Parent, Proband
         }
         public List<CanvasSegment> Segments = new List<CanvasSegment>();
         public double MeanCoverage { get; set; }
@@ -21,7 +21,7 @@ namespace CanvasPedigreeCaller
         public double Variance { get; internal set; }
         public double MafVariance { get; internal set; }
         public CopyNumberModel CnModel { get; set; }
-        public Kinship Kin { get; set; }
+        public Kinship Kin { get; set; };
 
         public double GetCoverage(int segmentIndex, int numberOfTrimmedBins)
         {
