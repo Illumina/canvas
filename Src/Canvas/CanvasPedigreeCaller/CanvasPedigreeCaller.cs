@@ -825,8 +825,10 @@ namespace CanvasPedigreeCaller
                     string proband = fields[5];
                     if (maternalId == "0" && paternallId == "0")
                         kinships.Add(fields[1], PedigreeMember.Kinship.Parent);
+                    else if (proband == "affected")
+                         kinships.Add(fields[1], PedigreeMember.Kinship.Proband);
                     else
-                        kinships.Add(fields[1], PedigreeMember.Kinship.Proband);
+                        Console.WriteLine($"Unused pedigree member: {row}");
                 }
             }
             return kinships;
