@@ -11,6 +11,8 @@ namespace CanvasPedigreeCaller
         {
             Other, Parent, Proband
         }
+
+        public Segments SegmentsByChromosome;
         public List<CanvasSegment> Segments = new List<CanvasSegment>();
         public List<CanvasSegmentsSet> SegmentSets = new List<CanvasSegmentsSet>();
         public double MeanCoverage { get; set; }

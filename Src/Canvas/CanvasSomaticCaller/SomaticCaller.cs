@@ -7,6 +7,7 @@ using Isas.SequencingFiles;
 using Isas.SequencingFiles.Vcf;
 using CanvasCommon;
 using Illumina.Common.FileSystem;
+using Isas.Framework.Logging;
 
 namespace CanvasSomaticCaller
 {
@@ -17,6 +18,7 @@ namespace CanvasSomaticCaller
         // Static:
 
         // Data:
+        private Segments SegmentsByChromosome;
         List<CanvasSegment> Segments;
         List<SegmentPloidy> AllPloidies;
         CopyNumberOracle CNOracle = null;
@@ -55,6 +57,13 @@ namespace CanvasSomaticCaller
 
 
         public bool FFPEMode; // Assume MAF and Coverage are independent/uncorrelated in FFPEMode (always false for now)
+        private readonly ILogger _logger;
+
+        public SomaticCaller(ILogger logger)
+        {
+            _logger = logger;
+        }
+
         public int QualityFilterThreshold { get; set; } = 10;
 
         #endregion
@@ -287,7 +296,7 @@ namespace CanvasSomaticCaller
                     int count = (int)Math.Round(tempCount);
                     if (count >= histogramBinCount || count < 0)
                         continue;
-                    
+
                     CNHistogram[CN][count]++;
                 }
             }
@@ -356,7 +365,8 @@ namespace CanvasSomaticCaller
             this.OutputFolder = Path.GetDirectoryName(outputVCFPath);
             this.TempFolder = Path.GetDirectoryName(inFile);
             Console.WriteLine("{0} CallVariants start:", DateTime.Now);
-            this.Segments = CanvasSegment.ReadSegments(inFile);
+            SegmentsByChromosome = CanvasCommon.Segments.ReadSegments(_logger, new FileLocation(inFile));
+            Segments = SegmentsByChromosome.AllSegments.ToList();
 
             // Special logic: Increase the allowed model deviation for targeted data.
             if (this.Segments.Count < 500)
@@ -438,14 +448,14 @@ namespace CanvasSomaticCaller
             // jump across non-manifest intervals.
             if (this.IsEnrichment)
             {
-                CanvasSegment.MergeSegments(ref this.Segments, somaticCallerParameters.MinimumCallSize, 1);
+                CanvasSegment.MergeSegments(ref Segments, somaticCallerParameters.MinimumCallSize, 1);
             }
             else
             {
-                CanvasSegment.MergeSegmentsUsingExcludedIntervals(ref this.Segments, somaticCallerParameters.MinimumCallSize, ExcludedIntervals);
+                CanvasSegment.MergeSegmentsUsingExcludedIntervals(ref Segments, somaticCallerParameters.MinimumCallSize, ExcludedIntervals);
             }
             // recalculating quality scores doesn't seem to have any effect, but we do it for consistency with the diploid caller where it seems to matter
-            CanvasSegment.AssignQualityScores(this.Segments, CanvasSegment.QScoreMethod.Logistic, this.somaticCallerQscoreParameters);
+            CanvasSegment.AssignQualityScores(Segments, CanvasSegment.QScoreMethod.Logistic, this.somaticCallerQscoreParameters);
             CanvasSegment.FilterSegments(QualityFilterThreshold, Segments);
 
             if (this.CNOracle != null)

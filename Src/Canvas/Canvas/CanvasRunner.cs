@@ -879,7 +879,7 @@ namespace Canvas
                     {
                         foreach (MultiSampleGenomicBin genomicBin in normalizedCanvasClean[chr])
                         {
-                            string outLine = string.Format($"{genomicBin.Bin.Chromosome}\t{genomicBin.Bin.Interval.OneBasedStart}\t{genomicBin.Bin.Interval.OneBasedEnd}");
+                            string outLine = string.Format($"{genomicBin.Bin.Chromosome}\t{genomicBin.Bin.Interval.Start}\t{genomicBin.Bin.Interval.End}");
                             outLine += string.Format($"\t{genomicBin.Counts[fileCounter]}");
                             writer.WriteLine(outLine);
                         }

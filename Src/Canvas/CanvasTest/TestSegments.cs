@@ -1,6 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
+using System.Linq;
 using CanvasCommon;
+using Isas.SequencingFiles.Vcf;
+using JetBrains.Annotations;
 using Xunit;
 
 namespace CanvasTest
@@ -143,5 +147,45 @@ namespace CanvasTest
             Assert.Equal(segmentsByChromosome["chr3"].Count, 1);
         }
 
+        [Fact]
+        public void TestReadSegments()
+        {
+            var partitioned = "";
+            partitioned += "chr22\t1\t10\t14.00\t0\n";
+            partitioned += "chr22\t10\t30\t31.00\t1\n";
+            partitioned += "chr22\t30\t40\t6.00\t2\n";
+            var stringReader = new StringReader(partitioned);
+            Segments segments;
+            using (var reader = new GzipOrTextReader(stringReader))
+            {
+                segments = Segments.ReadSegments(reader);
+            }
+
+            Assert.Equal(segments.GetSegmentsForChromosome("chr22"), segments.AllSegments);
+            var confidenceInterval = segments.AllSegments.First().StartConfidenceInterval;
+            AssertConfidenceInterval(-5, 5, confidenceInterval);
+
+            confidenceInterval = segments.AllSegments.First().EndConfidenceInterval;
+            AssertConfidenceInterval(-5, 10, confidenceInterval);
+
+            confidenceInterval = segments.AllSegments[1].StartConfidenceInterval;
+            AssertConfidenceInterval(-5, 10, confidenceInterval);
+
+            confidenceInterval = segments.AllSegments[1].EndConfidenceInterval;
+            AssertConfidenceInterval(-10, 5, confidenceInterval);
+
+            confidenceInterval = segments.AllSegments.Last().StartConfidenceInterval;
+            AssertConfidenceInterval(-10, 5, confidenceInterval);
+
+            confidenceInterval = segments.AllSegments.Last().EndConfidenceInterval;
+            AssertConfidenceInterval(-5, 5, confidenceInterval);
+        }
+
+        [AssertionMethod]
+        private void AssertConfidenceInterval(int expectedLower, int expectedUpper, Tuple<int, int> interval)
+        {
+            Assert.Equal(expectedLower, interval.Item1);
+            Assert.Equal(expectedUpper, interval.Item2);
+        }
     }
 }

@@ -4,6 +4,8 @@ using System.Text;
 using System.IO;
 using System.Linq;
 using CanvasCommon;
+using Illumina.Common.FileSystem;
+using Isas.Framework.Logging;
 
 namespace CanvasDiploidCaller
 {
@@ -32,6 +34,14 @@ namespace CanvasDiploidCaller
         // File paths:
         public string TempFolder;
         CoverageModel Model;
+        private readonly ILogger _logger;
+        private Segments _segments;
+
+        public CanvasDiploidCaller(ILogger logger)
+        {
+            _logger = logger;
+        }
+
         #endregion
 
         /// <summary>
@@ -370,7 +380,8 @@ namespace CanvasDiploidCaller
                 this.CNOracle.LoadKnownCN(truthDataPath);
             }
 
-            this.Segments = CanvasSegment.ReadSegments(inFile);
+            _segments = CanvasCommon.Segments.ReadSegments(_logger, new FileLocation(inFile));
+            Segments = _segments.AllSegments.ToList();
             this.TempFolder = Path.GetDirectoryName(inFile);
             if (this.Segments.Count == 0)
             {

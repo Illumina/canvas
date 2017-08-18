@@ -22,7 +22,7 @@ namespace CanvasCommon
             Position = position;
             Frequency = frequency;
             TotalCoverage = totalCoverage;
-            Counts = (AlleleACounts: alleleACounts, AlleleBCounts: alleleBCounts); 
+            Counts = (AlleleACounts: alleleACounts, AlleleBCounts: alleleBCounts);
         }
     }
 
@@ -115,7 +115,7 @@ namespace CanvasCommon
     /// Contains information about a genomic interval. Has functions for computing copy numbers and their likelihoods.
     /// </summary>
     public partial class CanvasSegment
-        {
+    {
 
         public CanvasSegment(string chr, int begin, int end, List<SampleGenomicBin> counts, Balleles balleles = null)
         {
@@ -285,7 +285,7 @@ namespace CanvasCommon
             // scenario: common segment within Canvas segment
             // canvasSegment:   ----------------------------------
             // commonSegment:         -----------------
-            if (commonSegments[commonSegmentsIndex].Begin > canvasSegments[canvasSegmentsIndex].Begin && commonSegments[commonSegmentsIndex].End  < canvasSegments[canvasSegmentsIndex].End)
+            if (commonSegments[commonSegmentsIndex].Begin > canvasSegments[canvasSegmentsIndex].Begin && commonSegments[commonSegmentsIndex].End < canvasSegments[canvasSegmentsIndex].End)
             {
                 var countsSubRange = canvasSegments[canvasSegmentsIndex].GetSampleGenomicBinSubrange(canvasSegments[canvasSegmentsIndex].Begin, commonSegments[commonSegmentsIndex].Begin);
                 var allelesSubRange = canvasSegments[canvasSegmentsIndex].GetAllelesSubrange(canvasSegments[canvasSegmentsIndex].Begin, commonSegments[commonSegmentsIndex].Begin, defaultAlleleCountThreshold);
@@ -370,7 +370,7 @@ namespace CanvasCommon
                 allelesSubRange = canvasSegments[canvasSegmentsIndex].GetAllelesSubrange(canvasSegments[canvasSegmentsIndex].Begin, commonSegments[commonSegmentsIndex].End, defaultAlleleCountThreshold);
                 if (!countsSubRange.Empty())
                     haplotypeaSegments.Add(new CanvasSegment(commonSegments[commonSegmentsIndex].Chr, canvasSegments[canvasSegmentsIndex].Begin, commonSegments[commonSegmentsIndex].Begin, countsSubRange, allelesSubRange));
-                canvasSegments[commonSegmentsIndex].Begin = commonSegments[commonSegmentsIndex].End + 1; 
+                canvasSegments[commonSegmentsIndex].Begin = commonSegments[commonSegmentsIndex].End + 1;
                 return new CanvasSegmentsSet(setA: haplotypeaSegments, setB: haplotypebSegments);
             }
 
@@ -414,7 +414,7 @@ namespace CanvasCommon
             {
                 if (GenomeMetadata.SequenceMetadata.IsAutosome(segment.Chr))
                 {
-                    counts.AddRange(segment.Counts.Select(count => (double) count));
+                    counts.AddRange(segment.Counts.Select(count => (double)count));
                 }
             }
             double mu = Utilities.Median(counts);
@@ -422,95 +422,9 @@ namespace CanvasCommon
         }
 
         /// <summary>
-        /// Loads in data produced by CanvasPartition.exe.
-        /// </summary>
-        /// <param name="infile">Input file.</param>
-        /// <returns>A list of segments.</returns>
-        public static List<CanvasSegment> ReadSegments(string infile)
-        {
-            Console.WriteLine("{0} Read segments from {1}", DateTime.Now, infile);
-            var segments = new List<CanvasSegment>();
-
-            string chr = null;
-            int begin = -1;
-
-            int previousSegmentIndex = -1;
-            int previousBinStart = 0;
-            int previousBinEnd = 0;
-            var counts = new List<SampleGenomicBin>();
-            Tuple<int, int> segmentStartCI = null;
-            
-            using (var reader = new GzipReader(infile))
-            {
-                string row;
-
-                while ((row = reader.ReadLine()) != null)
-                {
-                    var fields = row.Split('\t');
-                    int currentSegmentIndex = Convert.ToInt32(fields[4]);
-                    int newBinStart = Convert.ToInt32(fields[1]);
-                    int newBinEnd = Convert.ToInt32(fields[2]);
-
-                    // We've moved to a new segment
-                    if (currentSegmentIndex != previousSegmentIndex)
-                    {
-                        // Make a segment
-                        if (previousSegmentIndex != -1)
-                        {
-                            var segment = new CanvasSegment(chr, begin, previousBinEnd, counts);
-                            // Prepare the confidence interval for the end of the segment that just ended, based on the size of its last bin
-                            // (and, if the segments abut, based on the size of the next segment's first bin):
-                            int CIEnd1 = -(previousBinEnd - previousBinStart) / 2;
-                            int CIEnd2 = -CIEnd1;
-                            if (previousBinEnd == newBinStart)
-                            {
-                                CIEnd2 = (newBinEnd - newBinStart) / 2;
-                            }
-                            segment.EndConfidenceInterval = new Tuple<int, int>(CIEnd1, CIEnd2);
-                            segment.StartConfidenceInterval = segmentStartCI;
-                            segments.Add(segment);
-                            counts.Clear();
-
-                            // Prepare the confidence interval for the start of the segment that just started, based on the size of its first
-                            // bin (and, if the segments abut, based on the size of the previous segment's last bin):
-                            int CIStart2 = (newBinEnd - newBinStart) / 2;
-                            int CIStart1 = -CIStart2;
-                            if (previousBinEnd == newBinStart)
-                            {
-                                CIStart1 = -(previousBinEnd - previousBinStart) / 2;
-                            }
-                            segmentStartCI = new Tuple<int, int>(CIStart1, CIStart2);
-                        }
-                        else
-                        {
-                            int interval = (newBinEnd - newBinStart) / 2;
-                            segmentStartCI = new Tuple<int, int>(-interval, interval);
-                        }
-                        chr = fields[0];
-                        begin = Convert.ToInt32(fields[1]);
-                        previousSegmentIndex = currentSegmentIndex;
-                    }
-                    previousBinStart = newBinStart;
-                    previousBinEnd = newBinEnd;
-                    counts.Add(new SampleGenomicBin(chr, newBinStart, newBinEnd, float.Parse(fields[3])));
-                }
-
-                if (previousSegmentIndex != -1)
-                {
-                    // Add the last segment
-                    var segment = new CanvasSegment(chr, begin, previousBinEnd, counts);
-                    segments.Add(segment);
-                    segment.StartConfidenceInterval = segmentStartCI;
-                }
-            }
-            Console.WriteLine("{0} Loaded {1} segments", DateTime.Now, segments.Count);
-            return segments;
-        }
-   
-        /// <summary>
         /// Apply quality scores.
         /// </summary>
-        public static void AssignQualityScores(List<CanvasSegment> segments, QScoreMethod qscoreMethod, QualityScoreParameters qscoreParameters)
+        public static void AssignQualityScores(IReadOnlyList<CanvasSegment> segments, QScoreMethod qscoreMethod, QualityScoreParameters qscoreParameters)
         {
             foreach (CanvasSegment segment in segments)
             {
@@ -518,7 +432,7 @@ namespace CanvasCommon
             }
         }
 
-        public static ConcurrentDictionary<string, List<CanvasSegment>> GetSegmentsByChromosome(List<CanvasSegment> segments)
+        public static ConcurrentDictionary<string, List<CanvasSegment>> GetSegmentsByChromosome(IReadOnlyList<CanvasSegment> segments)
         {
             var segmentsByChromosome = new ConcurrentDictionary<string, List<CanvasSegment>>();
             foreach (CanvasSegment segment in segments)
@@ -552,7 +466,7 @@ namespace CanvasCommon
         /// Old hard-coded cutoff was 30.
         /// </summary>
         /// <returns></returns>
-        private static int GetMinimumBinsForCoveragePlotPoint(List<CanvasSegment> segments, int pointLength)
+        private static int GetMinimumBinsForCoveragePlotPoint(IReadOnlyList<CanvasSegment> segments, int pointLength)
         {
             long totalBins = 0;
             long totalLength = 0;
@@ -570,7 +484,7 @@ namespace CanvasCommon
         /// Generate a tabular file with information about coverage and allele frequency for each chunk of the genome.
         /// This file can be used to generate a pretty plot of coverage versus MAF.  
         /// </summary>
-        public static void WriteCoveragePlotData(List<CanvasSegment> segments, double? normalDiploidCoverage, PloidyInfo referencePloidy,
+        public static void WriteCoveragePlotData(IReadOnlyList<CanvasSegment> segments, double? normalDiploidCoverage, PloidyInfo referencePloidy,
             string filePath, string referenceFolder)
         {
             int pointLength = 100000;
@@ -673,7 +587,8 @@ namespace CanvasCommon
                             for (int index = firstIndex; index < lastIndex; index++) counts.Add(segment.GenomicBins[index].Count);
 
                             // Add MAF to the overall list:
-                            if (segment.Balleles != null) { 
+                            if (segment.Balleles != null)
+                            {
                                 firstIndex = 0;
                                 if (pointStartPos > segment.Begin)
                                 {
@@ -783,18 +698,18 @@ namespace CanvasCommon
         /// <param name="commonCnvSegments"></param>
         /// <param name="chr"></param>
         /// <returns></returns>
-        public static List<CanvasSegmentsSet> MergeCommonCnvSegments(List<CanvasSegment> canvasSegments,  
+        public static List<CanvasSegmentsSet> MergeCommonCnvSegments(List<CanvasSegment> canvasSegments,
             List<CanvasSegment> commonCnvSegments, string chr, int defaultAlleleCountThreshold)
         {
-            var mergedSegments = new List<CanvasSegmentsSet>(canvasSegments.Count + commonCnvSegments.Count*3);
+            var mergedSegments = new List<CanvasSegmentsSet>(canvasSegments.Count + commonCnvSegments.Count * 3);
             var sortedCanvasSegments = canvasSegments.OrderBy(o => o.Begin).ToList();
             var sortedCommonCnvSegments = commonCnvSegments.OrderBy(o => o.Begin).ToList();
             var canvasSegmentsIndex = 1;
             var commonSegmentsIndex = 0;
             Console.WriteLine($"Start MergeCommonCnvSegments for {chr} ");
 
-            mergedSegments.Add(new CanvasSegmentsSet(setA: new List<CanvasSegment> {sortedCanvasSegments[0]}, setB: null));
-            
+            mergedSegments.Add(new CanvasSegmentsSet(setA: new List<CanvasSegment> { sortedCanvasSegments[0] }, setB: null));
+
             // iterate over two CanvasSegment lists and merge using various scenarious 
             while (canvasSegmentsIndex < sortedCanvasSegments.Count - 1 && commonSegmentsIndex < sortedCommonCnvSegments.Count - 1)
             {
@@ -817,7 +732,7 @@ namespace CanvasCommon
                 // Canvas segment and common segment have coordinates within segmentation margin of error
                 if (Math.Abs(sortedCanvasSegments[canvasSegmentsIndex].Begin - sortedCommonCnvSegments[commonSegmentsIndex].Begin) < OverlapWindowThreshold &&
                     Math.Abs(sortedCanvasSegments[canvasSegmentsIndex].End - sortedCommonCnvSegments[commonSegmentsIndex].End) < OverlapWindowThreshold &&
-                    sortedCommonCnvSegments[commonSegmentsIndex].Length > OverlapWindowThreshold*4)
+                    sortedCommonCnvSegments[commonSegmentsIndex].Length > OverlapWindowThreshold * 4)
                 {
                     mergedSegments.Add(new CanvasSegmentsSet(setA: null, setB: new List<CanvasSegment> { sortedCommonCnvSegments[commonSegmentsIndex] }));
                     canvasSegmentsIndex++;
@@ -826,7 +741,7 @@ namespace CanvasCommon
                 }
                 // Canvas segment comes before common segment and does not overlap it
                 if (sortedCanvasSegments[canvasSegmentsIndex].Begin < sortedCommonCnvSegments[commonSegmentsIndex].Begin &&
-                    sortedCanvasSegments[canvasSegmentsIndex].End   <= sortedCommonCnvSegments[commonSegmentsIndex].Begin)
+                    sortedCanvasSegments[canvasSegmentsIndex].End <= sortedCommonCnvSegments[commonSegmentsIndex].Begin)
                 {
                     mergedSegments.Add(new CanvasSegmentsSet(setA: new List<CanvasSegment> { sortedCanvasSegments[canvasSegmentsIndex] }, setB: null));
                     canvasSegmentsIndex++;
@@ -834,7 +749,7 @@ namespace CanvasCommon
                 }
                 // common segment comes before Canvas segment and does not overlap it
                 if (sortedCanvasSegments[canvasSegmentsIndex].Begin > sortedCommonCnvSegments[commonSegmentsIndex].Begin &&
-                    sortedCanvasSegments[canvasSegmentsIndex].End  >= sortedCommonCnvSegments[commonSegmentsIndex].Begin)
+                    sortedCanvasSegments[canvasSegmentsIndex].End >= sortedCommonCnvSegments[commonSegmentsIndex].Begin)
                 {
                     mergedSegments.Add(new CanvasSegmentsSet(setA: null, setB: new List<CanvasSegment> { sortedCommonCnvSegments[commonSegmentsIndex] }));
                     commonSegmentsIndex++;
@@ -1135,7 +1050,7 @@ namespace CanvasCommon
             var remappedIndex = 0;
             while (index < length)
             {
-                int tmpMinDistanceStart = Math.Abs(Convert.ToInt32(startPos[index] + (endPos[index] - startPos[index])/2.0) - value);
+                int tmpMinDistanceStart = Math.Abs(Convert.ToInt32(startPos[index] + (endPos[index] - startPos[index]) / 2.0) - value);
                 index++;
                 if (tmpMinDistanceStart < bestMinDistanceStart)
                 {
@@ -1212,7 +1127,7 @@ namespace CanvasCommon
                 var counts = coverageInfo.CoverageByChr[chromosome].Skip(interval.OneBasedStart).Take(length).Select(Convert.ToSingle).ToList();
                 var starts = coverageInfo.StartByChr[chromosome].Skip(interval.OneBasedStart).Take(length).Select(Convert.ToInt32).ToList();
                 var ends = coverageInfo.EndByChr[chromosome].Skip(interval.OneBasedStart).Take(length).Select(Convert.ToInt32).ToList();
-                var sampleGenomicBins = Enumerable.Range(0, counts.Count).Select(index => 
+                var sampleGenomicBins = Enumerable.Range(0, counts.Count).Select(index =>
                 new SampleGenomicBin(chromosome, starts[index], ends[index], counts[index])).ToList();
                 var segment = new CanvasSegment(chromosome,
                     Convert.ToInt32(coverageInfo.StartByChr[chromosome][interval.OneBasedStart]),

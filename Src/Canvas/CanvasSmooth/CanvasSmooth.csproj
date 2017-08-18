@@ -25,7 +25,7 @@
     <PackageReference Include="Illumina.Common" Version="4.3.0.280" />
     <PackageReference Include="Isas.Framework" Version="7.4.4.511" />
     <PackageReference Include="Isas.Manifests" Version="4.2.0.106" />
-    <PackageReference Include="Isas.SequencingFiles" Version="5.0.4.343" />
+    <PackageReference Include="Isas.SequencingFiles" Version="5.3.0-O00355GzipOrTextRead" />
   </ItemGroup>
 
 </Project>

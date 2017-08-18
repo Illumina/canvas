@@ -911,7 +911,7 @@ namespace CanvasCommon
                     {
                         throw new Illumina.Common.IlluminaException($"Start must be less than Stop");
                     }
-                    GenomicBin interval = new GenomicBin(chr, new Interval(binStartPosition, stop[chr][binStartPosition]));
+                    GenomicBin interval = new GenomicBin(chr, new BedInterval(binStartPosition, stop[chr][binStartPosition]));
                     multiSampleGenomicBins[chr].Add(new MultiSampleGenomicBin(interval, binCounts[chr][binStartPosition]));
                 }
             }
