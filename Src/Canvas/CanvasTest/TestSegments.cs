@@ -137,7 +137,7 @@ namespace CanvasTest
             allSegments.Add(seg);
 
             CanvasSegment.MergeSegments(ref allSegments, 50000, 10000);
-            Dictionary<string, List<CanvasSegment>> segmentsByChromosome = CanvasSegment.GetSegmentsByChromosome(allSegments);
+            var segmentsByChromosome = CanvasSegment.GetSegmentsByChromosome(allSegments);
             Assert.Equal(segmentsByChromosome["chr1"].Count, 3);
             Assert.Equal(segmentsByChromosome["chr2"].Count, 3);
             Assert.Equal(segmentsByChromosome["chr3"].Count, 1);

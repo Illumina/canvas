@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.IO;
@@ -517,9 +518,9 @@ namespace CanvasCommon
             }
         }
 
-        public static Dictionary<string, List<CanvasSegment>> GetSegmentsByChromosome(List<CanvasSegment> segments)
+        public static ConcurrentDictionary<string, List<CanvasSegment>> GetSegmentsByChromosome(List<CanvasSegment> segments)
         {
-            Dictionary<string, List<CanvasSegment>> segmentsByChromosome = new Dictionary<string, List<CanvasSegment>>();
+            var segmentsByChromosome = new ConcurrentDictionary<string, List<CanvasSegment>>();
             foreach (CanvasSegment segment in segments)
             {
                 if (!segmentsByChromosome.ContainsKey(segment.Chr))
@@ -575,7 +576,7 @@ namespace CanvasCommon
             int pointLength = 100000;
             int minimumBinsToPlot = GetMinimumBinsForCoveragePlotPoint(segments, pointLength);
 
-            Dictionary<string, List<CanvasSegment>> segmentsByChromosome = GetSegmentsByChromosome(segments);
+            var segmentsByChromosome = GetSegmentsByChromosome(segments);
             GenomeMetadata genome = new GenomeMetadata();
             genome.Deserialize(new FileLocation(Path.Combine(referenceFolder, "GenomeSize.xml")));
 
