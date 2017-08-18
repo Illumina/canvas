@@ -33,7 +33,7 @@ namespace CanvasTest
             clustering.EstimateDistance();
             double distanceThreshold = clustering.EstimateDc();
             clustering.GaussianLocalDensity(distanceThreshold);
-            clustering.CalDelta();
+            clustering.CalDistanceToNearestHeavierNeighbor();
             var clusterCount = clustering.FindClusters(2);
             */
             Assert.Equal(1, clusterCount);

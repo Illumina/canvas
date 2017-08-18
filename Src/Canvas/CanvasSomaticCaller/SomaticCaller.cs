@@ -1689,7 +1689,7 @@ namespace CanvasSomaticCaller
                         DensityClusteringModel optimizedDensityClustering = DensityClusteringModel.RunDensityClustering(usableSegments, CoverageWeightingFactor, knearestNeighbourCutoff, centroidCutoff, out bestNumClusters);
                         centroidsMAF = optimizedDensityClustering.GetCentroidsMaf();
                         centroidsCoverage = optimizedDensityClustering.GetCentroidsCoverage();
-                        List<double> clusterVariance = optimizedDensityClustering.GetCentroidsVariance(centroidsMAF, centroidsCoverage, bestNumClusters);
+                        List<double> clusterVariance = optimizedDensityClustering.GetCentroidsEuclideanDistance(centroidsMAF, centroidsCoverage, bestNumClusters);
                         List<int> clustersSize = optimizedDensityClustering.GetClustersSize(bestNumClusters);
 
                         // Step4: Identify which clusters are under-partitioned (largeClusters), extract segments from these clusters (remainingSegments)                     
@@ -1710,7 +1710,7 @@ namespace CanvasSomaticCaller
                             // Step5: Cluster remaining underpartitioned segments (remainingSegments) and merge new clusters with the earlier cluster set
                             int remainingBestNumClusters = 0;
                             DensityClusteringModel remainingDensityClustering = DensityClusteringModel.RunDensityClustering(usableSegments, CoverageWeightingFactor, knearestNeighbourCutoff, centroidCutoff, out remainingBestNumClusters, 1.0);
-                            remainingDensityClustering.CalDelta();
+                            remainingDensityClustering.CalDistanceToNearestHeavierNeighbor();
                             List<double> remainingCentroidsMAF = remainingDensityClustering.GetCentroidsMaf();
                             List<double> remainingCentroidsCoverage = remainingDensityClustering.GetCentroidsCoverage();
                             MergeClusters(remainingSegments, usableSegments, centroidsMAF, remainingCentroidsMAF,
