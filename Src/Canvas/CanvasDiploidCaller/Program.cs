@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using Illumina.Common;
 using Illumina.Common.FileSystem;
+using Isas.Framework.Logging;
 using Isas.Framework.Utilities;
 using Newtonsoft.Json;
 
@@ -93,7 +94,8 @@ namespace CanvasDiploidCaller
             CanvasCommon.QualityScoreParameters qscoreParametersJSON = Deserialize<CanvasCommon.QualityScoreParameters>(qscoreConfigFile);
 
             // Set parameters:
-            CanvasDiploidCaller caller = new CanvasDiploidCaller();
+            var logger = new Logger(new[] { Console.Out }, new[] { Console.Error });
+            CanvasDiploidCaller caller = new CanvasDiploidCaller(logger);
             caller.IsDbsnpVcf = isDbsnpVcf;
             caller.germlineScoreParameters = qscoreParametersJSON;
             return caller.CallVariants(variantFrequencyFile, inFile, outFile, ploidyBedPath, referenceFolder, sampleName, truthDataPath);

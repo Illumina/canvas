@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using Illumina.Common;
 using Illumina.Common.FileSystem;
+using Isas.Framework.Logging;
 using Newtonsoft.Json;
 
 namespace CanvasSomaticCaller
@@ -151,8 +152,8 @@ namespace CanvasSomaticCaller
 
             FileLocation qscoreConfigFile = new FileLocation(qualityScoreConfigPath);
             CanvasCommon.QualityScoreParameters qscoreParametersJSON = Deserialize<CanvasCommon.QualityScoreParameters>(qscoreConfigFile);
-
-            SomaticCaller caller = new SomaticCaller();
+            var logger = new Logger(new[] { Console.Out }, new[] { Console.Error });
+            SomaticCaller caller = new SomaticCaller(logger);
             caller.somaticCallerParameters = somaticCallerParametersJSON;
             caller.somaticCallerQscoreParameters = qscoreParametersJSON;
             caller.TruthDataPath = truthDataPath;

@@ -5,6 +5,7 @@ using Newtonsoft.Json;
 using System.Linq;
 using Illumina.Common;
 using Illumina.Common.FileSystem;
+using Isas.Framework.Logging;
 using Isas.Framework.Utilities;
 
 namespace CanvasPedigreeCaller
@@ -40,7 +41,8 @@ namespace CanvasPedigreeCaller
             int? dqScoreThreshold = null;
             string commonCNVsbedPath = null;
             string parameterconfigPath = Path.Combine(Utilities.GetAssemblyFolder(typeof(Program)), "PedigreeCallerParameters.json");
-            var caller = new CanvasPedigreeCaller();
+            var logger = new Logger(new[] { Console.Out }, new[] { Console.Error });
+            var caller = new CanvasPedigreeCaller(logger);
 
             var p = new OptionSet()
             {

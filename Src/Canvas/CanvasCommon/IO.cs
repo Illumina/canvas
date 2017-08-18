@@ -165,7 +165,7 @@ namespace CanvasCommon
         /// <summary>
         /// Parse the outputs of CanvasSNV, and note these variant frequencies in the appropriate segment.
         /// </summary>
-        public static float LoadFrequenciesBySegment(string variantFrequencyFile, List<CanvasSegment> segments, string referenceFolder)
+        public static float LoadFrequenciesBySegment(string variantFrequencyFile, IReadOnlyList<CanvasSegment> segments, string referenceFolder)
         {
             var segmentsByChromosome = CanvasSegment.GetSegmentsByChromosome(segments);
             var intervalsByChromosome = new Dictionary<string, List<Interval>>();
