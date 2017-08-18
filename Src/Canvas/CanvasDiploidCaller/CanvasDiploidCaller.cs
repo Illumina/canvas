@@ -170,7 +170,7 @@ namespace CanvasDiploidCaller
             {
                 // Compute (MAF, Coverage) for this segment:
                 List<double> MAF = new List<double>();
-                foreach (float VF in segment.Alleles.Frequencies) MAF.Add(VF > 0.5 ? 1 - VF : VF);
+                foreach (float VF in segment.Balleles.Frequencies) MAF.Add(VF > 0.5 ? 1 - VF : VF);
                 int expectedSnpDensityCutoff = (segment.End - segment.Begin) / MedianHetSnpsDistance / 2;
 
                 double medianCoverage = CanvasCommon.Utilities.Median(segment.Counts);
@@ -230,7 +230,7 @@ namespace CanvasDiploidCaller
             {
                 // Compute (MAF, Coverage) for this segment:
                 List<double> MAF = new List<double>();
-                foreach (float VF in segment.Alleles.Frequencies) MAF.Add(VF > 0.5 ? 1 - VF : VF);
+                foreach (float VF in segment.Balleles.Frequencies) MAF.Add(VF > 0.5 ? 1 - VF : VF);
                 double medianCoverage = CanvasCommon.Utilities.Median(segment.Counts);
                 double medianMAF = dummyMAF;
 
@@ -283,7 +283,7 @@ namespace CanvasDiploidCaller
 
         public static int AggregateVariantCoverage(ref List<CanvasSegment> segments)
         {
-            var variantCoverage = segments.SelectMany(segment => segment.Alleles.TotalCoverage).ToList();
+            var variantCoverage = segments.SelectMany(segment => segment.Balleles.TotalCoverage).ToList();
             return variantCoverage.Any() ? Utilities.Median(variantCoverage) : 0;
         }
 
@@ -403,7 +403,7 @@ namespace CanvasDiploidCaller
                 SegmentInfo info = new SegmentInfo();
                 info.Segment = segment;
                 List<double> MAF = new List<double>();
-                foreach (float value in segment.Alleles.Frequencies) MAF.Add(value > 0.5 ? 1 - value : value);
+                foreach (float value in segment.Balleles.Frequencies) MAF.Add(value > 0.5 ? 1 - value : value);
 
                 if (MAF.Count > 0)
                 {
