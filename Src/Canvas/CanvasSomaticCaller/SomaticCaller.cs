@@ -122,7 +122,7 @@ namespace CanvasSomaticCaller
                     int CN = this.GetKnownCNForSegment(segment);
                     if (CN < 0) continue;
                     List<float> MAF = new List<float>();
-                    foreach (float VF in segment.Alleles.Frequencies)
+                    foreach (float VF in segment.Balleles.Frequencies)
                     {
                         MAF.Add(VF > 0.5 ? 1 - VF : VF);
                     }
@@ -483,10 +483,10 @@ namespace CanvasSomaticCaller
                 int CN = this.GetKnownCNForSegment(segment);
                 // Require the segment have a known CN and reasonably large number of variants:
                 if (CN < 0) continue;
-                if (segment.Alleles.Frequencies.Count < somaticCallerParameters.MinimumVariantFrequenciesForInformativeSegment) continue;
+                if (segment.Balleles.Frequencies.Count < somaticCallerParameters.MinimumVariantFrequenciesForInformativeSegment) continue;
 
                 List<float> MAF = new List<float>();
-                foreach (float VF in segment.Alleles.Frequencies)
+                foreach (float VF in segment.Balleles.Frequencies)
                 {
                     MAF.Add(VF > 0.5 ? 1 - VF : VF);
                 }
@@ -1409,14 +1409,14 @@ namespace CanvasSomaticCaller
                 // If the segment has few or no variants, then don't use the MAF for this segment - set to -1 (no frequency)
                 // Typically a segment will have no variants if it's on chrX or chrY and starling knows not to call a
                 // heterozygous variant there (other than in the PAR regions).
-                if (segment.Alleles.Frequencies.Count < MinimumVariantFrequenciesForInformativeSegment)
+                if (segment.Balleles.Frequencies.Count < MinimumVariantFrequenciesForInformativeSegment)
                 {
                     info.MAF = -1;
                 }
                 else
                 {
                     List<double> MAF = new List<double>();
-                    foreach (float value in segment.Alleles.Frequencies) MAF.Add(value > 0.5 ? 1 - value : value);
+                    foreach (float value in segment.Balleles.Frequencies) MAF.Add(value > 0.5 ? 1 - value : value);
                     MAF.Sort();
                     info.MAF = MAF[MAF.Count / 2];
                 }
@@ -1430,9 +1430,9 @@ namespace CanvasSomaticCaller
                 {
                     info.Weight = segment.BinCount;
                 }
-                if (segment.Alleles.Frequencies.Count < 10)
+                if (segment.Balleles.Frequencies.Count < 10)
                 {
-                    info.Weight *= (double)segment.Alleles.Frequencies.Count / 10;
+                    info.Weight *= (double)segment.Balleles.Frequencies.Count / 10;
                 }
                 usableSegments.Add(info);
             }
@@ -2009,7 +2009,7 @@ namespace CanvasSomaticCaller
             {
                 // Compute (MAF, Coverage) for this segment:
                 List<double> MAF = new List<double>();
-                foreach (float VF in segment.Alleles.Frequencies) MAF.Add(VF > 0.5 ? 1 - VF : VF);
+                foreach (float VF in segment.Balleles.Frequencies) MAF.Add(VF > 0.5 ? 1 - VF : VF);
                 double medianCoverage = CanvasCommon.Utilities.Median(segment.Counts);
                 MAF.Sort();
 
@@ -2125,7 +2125,7 @@ namespace CanvasSomaticCaller
             {
                 // Compute (MAF, Coverage) for this segment:
                 List<double> MAF = new List<double>();
-                foreach (float VF in segment.Alleles.Frequencies) MAF.Add(VF > 0.5 ? 1 - VF : VF);
+                foreach (float VF in segment.Balleles.Frequencies) MAF.Add(VF > 0.5 ? 1 - VF : VF);
                 double medianCoverage = CanvasCommon.Utilities.Median(segment.Counts);
                 MAF.Sort();
                 double medianMAF = dummyMAF;
@@ -2482,6 +2482,7 @@ namespace CanvasSomaticCaller
                     double Heterogeneity = this.GetKnownClonalityForSegment(segment);
                     if (CN < 0) continue;
                     if (segment.End - segment.Begin < 5000) continue;
+                    double medianCoverage = CanvasCommon.Utilities.Median(segment.Counts);
                     string accurateFlag = "N";
                     if (CN == segment.CopyNumber) accurateFlag = "Y";
                     string directionAccurateFlag = "N";

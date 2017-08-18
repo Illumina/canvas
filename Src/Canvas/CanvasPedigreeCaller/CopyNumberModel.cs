@@ -63,10 +63,10 @@ namespace CanvasPedigreeCaller
                     for (int j = 0; j < ncols; j++)
                     {
                         if (_alleleDistribution[i][j] != null)
-                            likelihood[i][j] =+ _alleleDistribution[i][j].Item1[gtCount.Item1] *
+                            likelihood[i][j] += _alleleDistribution[i][j].Item1[gtCount.Item1] *
                                                _alleleDistribution[i][j].Item2[gtCount.Item2];
                         else
-                            likelihood[i][j] =+ 0;
+                            likelihood[i][j] += 0;
                     }
                 }
             }
@@ -99,7 +99,7 @@ namespace CanvasPedigreeCaller
             {
                 int rowId = Math.Min(gtCount.Item1, maxCoverage - 1);
                 int colId = Math.Min(gtCount.Item2, maxCoverage - 1);
-                currentLikelihood =+ _alleleDistribution[gtModelCount.CountsA][gtModelCount.CountsB].Item1[rowId] *
+                currentLikelihood += _alleleDistribution[gtModelCount.CountsA][gtModelCount.CountsB].Item1[rowId] *
                                        _alleleDistribution[gtModelCount.CountsA][gtModelCount.CountsB].Item2[colId];
             }
             return currentLikelihood;

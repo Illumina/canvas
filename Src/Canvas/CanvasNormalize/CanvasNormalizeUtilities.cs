@@ -15,7 +15,7 @@ namespace CanvasNormalize
         {
             if (referencePloidy == null) { return defaultPloidy; }
 
-            CanvasSegment segment = new CanvasSegment(chrom, start, end, new List<float>());
+            CanvasSegment segment = new CanvasSegment(chrom, start, end, new List<SampleGenomicBin>());
 
             return referencePloidy.GetReferenceCopyNumber(segment);
         }

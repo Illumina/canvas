@@ -68,6 +68,13 @@ namespace CanvasCommon
             this.CountDeviation = -1;
         }
 
+        public SampleGenomicBin(string chr, int start, int stop, float count)
+        {
+            _genomicBin = new GenomicBin();
+            GenomicBin.Chromosome = chr;
+            GenomicBin.Interval = new Interval(start, stop);
+            this.Count = count;
+        }
 
         public SampleGenomicBin(string chr, int start, int stop, int gc, float count)
         {
