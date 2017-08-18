@@ -58,7 +58,7 @@ namespace CanvasPedigreeCaller
             {
                 var kinship = kinships[sampleName] == PedigreeMember.Kinship.Parent ? PedigreeMember.Kinship.Parent : PedigreeMember.Kinship.Proband;
                 var pedigreeMember = SetPedigreeMember(variantFrequencyFiles[fileCounter], segmentFiles[fileCounter], ploidyBedPath, sampleName, 
-                    CallerParameters.DefaultAlleleCountThreshold, referenceFolder, CallerParameters.NumberOfTrimmedBins, kinship);
+                    CallerParameters.DefaultReadCountsThreshold, referenceFolder, CallerParameters.NumberOfTrimmedBins, kinship, commonCNVsbedPath);
 
                 if (pedigreeMember.Kin == PedigreeMember.Kinship.Proband)
                     pedigreeMembers.AddFirst(pedigreeMember);              
@@ -210,8 +210,8 @@ namespace CanvasPedigreeCaller
             foreach (string sampleName in sampleNames)
             {
                 var pedigreeMember = SetPedigreeMember(variantFrequencyFiles[fileCounter], segmentFiles[fileCounter], ploidyBedPath, 
-                    sampleName, CallerParameters.DefaultAlleleCountThreshold, referenceFolder, CallerParameters.NumberOfTrimmedBins,
-                    PedigreeMember.Kinship.Other);
+                    sampleName, CallerParameters.DefaultReadCountsThreshold, referenceFolder, CallerParameters.NumberOfTrimmedBins,
+                    PedigreeMember.Kinship.Other, commonCNVsbedPath);
                 pedigreeMembers.AddLast(pedigreeMember);
                 fileCounter++;
             }
@@ -298,7 +298,7 @@ namespace CanvasPedigreeCaller
         }
 
         private static PedigreeMember SetPedigreeMember(string variantFrequencyFile, string segmentFile, string ploidyBedPath,
-            string sampleName,int defaultAlleleCountThreshold, string referenceFolder, int numberOfTrimmedBins, PedigreeMember.Kinship kinship)
+            string sampleName,int defaultAlleleCountThreshold, string referenceFolder, int numberOfTrimmedBins, PedigreeMember.Kinship kinship, string commonCNVsbedPath)
         {
             var pedigreeMember = new PedigreeMember
             {
@@ -309,14 +309,14 @@ namespace CanvasPedigreeCaller
             pedigreeMember.MeanMafCoverage = CanvasIO.LoadFrequenciesBySegment(variantFrequencyFile,
                 pedigreeMember.Segments, referenceFolder);
             foreach (var segment in pedigreeMember.Segments)
-                if (segment.Alleles.Counts.Count > defaultAlleleCountThreshold)
-                    segment.Alleles.SetMedianCounts();
+                if (segment.Balleles.BAlleles.Count > defaultAlleleCountThreshold)
+                    segment.Balleles.MedianCounts = Balleles.SetMedianCounts(segment.Balleles);
             pedigreeMember.Variance = Math.Pow(Utilities.StandardDeviation(pedigreeMember.Segments.Select(x => x.TruncatedMedianCount(numberOfTrimmedBins)).ToArray()), 2);
             pedigreeMember.MafVariance =
                 Math.Pow(
                     Utilities.StandardDeviation(
-                        pedigreeMember.Segments.Where(x => x.Alleles.TotalCoverage.Count > 0)
-                            .Select(x => x.Alleles.TotalCoverage.Average())
+                        pedigreeMember.Segments.Where(x => x.Balleles.TotalCoverage.Count > 0)
+                            .Select(x => x.Balleles.TotalCoverage.Average())
                             .ToArray()), 2);
             pedigreeMember.MeanCoverage = pedigreeMember.Segments.Any() ? pedigreeMember.Segments.Select(x => x.TruncatedMedianCount(numberOfTrimmedBins)).Average() : 0;
             pedigreeMember.MaxCoverage = pedigreeMember.Segments.Any() ? (int)(pedigreeMember.Segments.Select(x => x.TruncatedMedianCount(numberOfTrimmedBins)).Max() + 10) : 0;
@@ -325,19 +325,19 @@ namespace CanvasPedigreeCaller
 
             if (commonCNVsbedPath != null)
             {
-                var segmentsByChromosome = CanvasSegment.GetSegmentsByChromosome(segments);
-                var coverage = CanvasSegment.ReadBEDInput(segmentFiles[fileCounter]);
+                var segmentsByChromosome = CanvasSegment.GetSegmentsByChromosome(pedigreeMember.Segments);
+                var coverage = CanvasSegment.ReadBEDInput(segmentFile);
                 var commonRegions = CanvasCommon.Utilities.LoadBedFile(commonCNVsbedPath);
                 CanvasCommon.Utilities.SortAndOverlapCheck(commonRegions, commonCNVsbedPath);
                 if (IdenticalChromosomeNames(commonRegions, coverage) == 0)
                     throw new ArgumentException(
                         $"Chromosome names in a common CNVs bed file {commonCNVsbedPath} does not match " +
-                        $"chromosomes in {segmentFiles[fileCounter]}");
+                        $"chromosomes in {segmentFile}");
 
                 var segmentIntervalsByChromosome = new Dictionary<string, List<Interval>>();
                 Parallel.ForEach(commonRegions.Keys, chr => segmentIntervalsByChromosome[chr] =
                 CanvasSegment.RemapCommonRegions(commonRegions[chr], coverage.StartByChr[chr], coverage.EndByChr[chr]));
-                var allelesByChromosome = CanvasIO.ReadFrequencies(variantFrequencyFiles[fileCounter], segmentIntervalsByChromosome,
+                var allelesByChromosome = CanvasIO.ReadFrequencies(variantFrequencyFile, segmentIntervalsByChromosome,
                     referenceFolder, out float meanCoverage);
 
                 var segmentsSetByChromosome = new ConcurrentDictionary<string, List<CanvasSegmentsSet>>();
@@ -382,7 +382,7 @@ namespace CanvasPedigreeCaller
             else
             {
                 pedigreeMember.SegmentSets =
-                    segments.Select(
+                    pedigreeMember.Segments.Select(
                             segment =>
                                 new CanvasSegmentsSet(setA: new List<CanvasSegment> { segment }, setB: null))
                         .ToList();
