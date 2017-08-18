@@ -397,7 +397,6 @@ namespace CanvasDiploidCaller
             this.MeanCoverage = CanvasIO.LoadFrequenciesBySegment(variantFrequencyFile, this.Segments, referenceFolder);
             int medianVariantCoverage = AggregateVariantCoverage(ref this.Segments);
 
-
             // Create new models for different copy number states
             this.InitializePloidies();
 
