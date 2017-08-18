@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -350,7 +351,7 @@ namespace CanvasPedigreeCaller
                 var allelesByChromosome = CanvasIO.ReadFrequencies(variantFrequencyFiles[fileCounter], segmentIntervalsByChromosome,
                     referenceFolder, out float meanCoverage);
 
-                var segmentsSetByChromosome = new Dictionary<string, List<CanvasSegmentsSet>>();
+                var segmentsSetByChromosome = new ConcurrentDictionary<string, List<CanvasSegmentsSet>>();
                 Parallel.ForEach(
                     segmentsByChromosome.Keys,
                     chr =>
