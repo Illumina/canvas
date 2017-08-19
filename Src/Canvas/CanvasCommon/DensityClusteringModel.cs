@@ -30,7 +30,7 @@ namespace CanvasCommon
         // parameters
         // RhoCutoff and CentroidsCutoff estimated from running density clustering on 70 HapMix tumour samples https://git.illumina.com/Bioinformatics/HapMix/
         // and visually inspecting validity of clusters
-        public const double RhoCutoff = 2.0;
+        public const double DensityCutoff = 2.0;
         public const int MaxClusterNumber = 7; // too many clusters suggest incorrect cluster partitioning 
         private const double NeighborRate = 0.02; // 1-2% is the range of values suggested in the paper
 
@@ -44,60 +44,24 @@ namespace CanvasCommon
             _distanceToNearestHeavierNeighborCutoff = distanceToHeavierNeighborCutoff;
         }
 
-        public static DensityClusteringModel RunDensityClustering(List<SegmentInfo> segments, double coverageWeightingFactor, double knearestNeighbourCutoff, double deltaCutoff, out int clusterCount, double rhoCutoff = RhoCutoff)
+        public static DensityClusteringModel RunDensityClustering(List<SegmentInfo> segments, double coverageWeightingFactor, double outlierDistanceCutoff, double distanceToNearestHeavierNeighborCutoff, out int clusterCount, double densityCutoff = DensityCutoff)
         {
-            var densityClustering = new DensityClusteringModel(segments, coverageWeightingFactor, knearestNeighbourCutoff, deltaCutoff);
-            densityClustering.SetDefaultClusterId(PloidyInfo.OutlierClusterFlag);
+            // use "PloidyInfo.OutlierClusterFlag" as the default ClusterId
+            segments.Select(x =>
+            {
+                x.ClusterId = PloidyInfo.OutlierClusterFlag;
+                return x;
+            });
             // Find clusters using only segments wit MAF
-            var filteredModelWithIndex = densityClustering.GetFilteredModelWithIndex();
-            var filteredDensityClustering = filteredModelWithIndex.Item1;
-            var indexFilteredModel = filteredModelWithIndex.Item2;
+            var filteredDensityClustering = new DensityClusteringModel(segments.Where(segment => segment.MAF >= 0).ToList(), coverageWeightingFactor, outlierDistanceCutoff, distanceToNearestHeavierNeighborCutoff);
             filteredDensityClustering.CoverageScaling();
             filteredDensityClustering.GetDistanceArray();
             var distanceThreshold = filteredDensityClustering.EstimateDc();
             filteredDensityClustering.GaussianLocalDensity(distanceThreshold);
             var nearestNeighborHigherRho = filteredDensityClustering.CalDistanceToNearestHeavierNeighbor();
-            clusterCount = filteredDensityClustering.FindClusters(nearestNeighborHigherRho, rhoCutoff);
-            // Update original model
-            densityClustering.ModelUpdate(filteredDensityClustering, indexFilteredModel);
-            return densityClustering;
-        }
-
-        private void SetDefaultClusterId(int? defaultClusterId)
-        {
-            Segments = Segments.Select(x =>
-            {
-                x.ClusterId = defaultClusterId;
-                return x;
-            }).ToList();
-        }
-
-        private void ModelUpdate(DensityClusteringModel filteredModel, List<int> indexFiltered)
-        {
-            foreach (int i in Enumerable.Range(0, filteredModel.Segments.Count))
-            {
-                int indexInOrigModel = indexFiltered[i];
-                Segments[indexInOrigModel].ClusterId = filteredModel.Segments[i].ClusterId;
-            }
-        }
-
-        /// <summary>
-        /// Only use segments with non-null MAF values
-        /// </summary>
-        private Tuple<DensityClusteringModel, List<int>> GetFilteredModelWithIndex()
-        {
-            var filteredModel = new DensityClusteringModel(GenSegmentsWithMaf(), _coverageWeightingFactor, _outlierDistanceCutoff, _distanceToNearestHeavierNeighborCutoff);
-            return new Tuple<DensityClusteringModel, List<int>>(filteredModel, GenIndexSegmentsWithMaf());
-        }
-
-        private List<SegmentInfo> GenSegmentsWithMaf()
-        {
-            return Segments.Where(segment => segment.MAF >= 0).ToList();
-        }
-
-        private List<int> GenIndexSegmentsWithMaf()
-        {
-            return Enumerable.Range(0, Segments.Count).Where(i => Segments[i].MAF >= 0).ToList();
+            clusterCount = filteredDensityClustering.FindClusters(nearestNeighborHigherRho, densityCutoff);
+            // return DensityClusteringModel including segments with their ClusterId updated
+            return new DensityClusteringModel(segments, coverageWeightingFactor, outlierDistanceCutoff, distanceToNearestHeavierNeighborCutoff);
         }
 
         /// <summary>
@@ -294,7 +258,7 @@ namespace CanvasCommon
             return nearestNeighborHigherRho;
         }
 
-        private int FindClusters(Dictionary<int, int> nearestNeighborHigherRho, double rhoCutoff = RhoCutoff)
+        private int FindClusters(Dictionary<int, int> nearestNeighborHigherRho, double rhoCutoff = DensityCutoff)
         {
             // the indice of centroids
             List<int> centroidsIndex = Enumerable.Range(0, Segments.Count)
