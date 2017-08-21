@@ -310,8 +310,10 @@ namespace CanvasPedigreeCaller
                 Segments = segments.AllSegments.ToList(),
                 Kin = kinship
             };
-            pedigreeMember.MeanMafCoverage = CanvasIO.LoadFrequenciesBySegment(variantFrequencyFile,
-                pedigreeMember.Segments, referenceFolder);
+            var allelesByChromosome = CanvasIO.ReadFrequenciesWrapper(_logger, new FileLocation(variantFrequencyFile), segments.GetIntervalsByChromosome(),
+                referenceFolder, out float meanCoverage);
+            pedigreeMember.SegmentsByChromosome.AddAlleles(allelesByChromosome);
+            pedigreeMember.MeanMafCoverage = meanCoverage;
             foreach (var segment in pedigreeMember.Segments)
                 if (segment.Balleles.BAlleles.Count > defaultAlleleCountThreshold)
                     segment.Balleles.MedianCounts = Balleles.SetMedianCounts(segment.Balleles);
@@ -338,12 +340,11 @@ namespace CanvasPedigreeCaller
                         $"Chromosome names in a common CNVs bed file {commonCNVsbedPath} does not match " +
                         $"chromosomes in {segmentFile}");
 
-                var segmentIntervalsByChromosome = new Dictionary<string, List<Interval>>();
+                var segmentIntervalsByChromosome = new Dictionary<string, List<BedInterval>>();
                 Parallel.ForEach(commonRegions.Keys, chr => segmentIntervalsByChromosome[chr] =
                 CanvasSegment.RemapCommonRegions(commonRegions[chr], coverage.StartByChr[chr], coverage.EndByChr[chr]));
-                var allelesByChromosome = CanvasIO.ReadFrequencies(variantFrequencyFile, segmentIntervalsByChromosome,
-                    referenceFolder, out float meanCoverage);
-
+                var allelesByChromosomeCommonSegs = CanvasIO.ReadFrequenciesWrapper(_logger, new FileLocation(variantFrequencyFile), segmentIntervalsByChromosome,
+                    referenceFolder, out float mean);
                 var segmentsSetByChromosome = new ConcurrentDictionary<string, List<CanvasSegmentsSet>>();
                 Parallel.ForEach(
                     segmentsByChromosome.Keys,
@@ -358,8 +359,8 @@ namespace CanvasPedigreeCaller
                                 segmentIntervalsByChromosome[chr]);
                             for (var index = 0; index < commonCnvCanvasSegments.Count; index++)
                             {
-                                foreach (var genotype in allelesByChromosome[chr][index])
-                                    commonCnvCanvasSegments[index].Balleles.BAlleles.Add(CanvasIO.GetAllele(genotype));
+                                foreach (var genotype in allelesByChromosomeCommonSegs[chr][index])
+                                    commonCnvCanvasSegments[index].Balleles.BAlleles.Add(Genotype.GetAllele(genotype));
                                 if (commonCnvCanvasSegments[index].Balleles.BAlleles.Count > defaultAlleleCountThreshold)
                                     commonCnvCanvasSegments[index].Balleles.MedianCounts = Balleles.SetMedianCounts(commonCnvCanvasSegments[index].Balleles);
                             }

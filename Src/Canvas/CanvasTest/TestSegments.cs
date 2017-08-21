@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using CanvasCommon;
+using Isas.Framework.Logging;
+using Isas.SequencingFiles;
 using Isas.SequencingFiles.Vcf;
 using JetBrains.Annotations;
 using Xunit;
@@ -187,5 +189,34 @@ namespace CanvasTest
             Assert.Equal(expectedLower, interval.Item1);
             Assert.Equal(expectedUpper, interval.Item2);
         }
+
+        [Fact]
+        public void TestReadFrequencies()
+        {
+            ILogger logger = null;
+            var intervals = new List<BedInterval>
+            {
+                new BedInterval(1, 50),
+                new BedInterval(51, 150),
+            };
+            const string chr = "chr22";
+            var intervalsByChromosome = new Dictionary<string, List<BedInterval>> {{chr, intervals}};
+            var chromosomeNames = new HashSet<string>{chr};
+            var variantCounts = "";
+            variantCounts += "chr22\t10\tC\tT\t20\t10\n";
+            variantCounts += "chr22\t20\tC\tT\t30\t20\n";
+            variantCounts += "chr22\t100\tC\tT\t40\t30\n";
+            var stringReader = new StringReader(variantCounts);
+            using (var reader = new GzipOrTextReader(stringReader))
+            {
+                Dictionary<string, List<List<CanvasCommon.Genotype>>>  allelesByChromosome = 
+                    CanvasIO.ReadFrequencies(logger, reader, intervalsByChromosome, chromosomeNames, out float meanCoverage);
+                Assert.Equal(allelesByChromosome[chr].Count, intervals.Count);
+                Assert.Equal(meanCoverage, Convert.ToSingle(allelesByChromosome[chr].SelectMany(x => x).Select(x => x.CountsA + x.CountsA).Average()));
+                Assert.Equal(2, allelesByChromosome[chr].First().Count);
+                Assert.Equal(1, allelesByChromosome[chr].Last().Count);
+            }
+        }
+
     }
 }

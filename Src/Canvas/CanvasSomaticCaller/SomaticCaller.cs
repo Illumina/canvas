@@ -384,7 +384,11 @@ namespace CanvasSomaticCaller
                 this.DebugModelSegmentCoverageByCN();
             }
 
-            this.MeanCoverage = CanvasIO.LoadFrequenciesBySegment(variantFrequencyFile, this.Segments, referenceFolder);
+            var allelesByChromosome = CanvasIO.ReadFrequenciesWrapper(_logger, new FileLocation(variantFrequencyFile), SegmentsByChromosome.GetIntervalsByChromosome(),
+                    referenceFolder, out float meanCoverage);
+            SegmentsByChromosome.AddAlleles(allelesByChromosome);
+            this.MeanCoverage = meanCoverage;
+
             if (this.IsDbsnpVcf)
             {
                 int tmpMinimumVariantFreq = somaticCallerParameters.MinimumVariantFrequenciesForInformativeSegment;
