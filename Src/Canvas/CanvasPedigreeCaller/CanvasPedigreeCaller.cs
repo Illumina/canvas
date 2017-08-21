@@ -144,25 +144,11 @@ namespace CanvasPedigreeCaller
             const double copyNumberCoverageOneAndHalfNormalizer = 0.75;
             var alleles = pedigreeMembers.Select(
                 x => x.SegmentSets[segmentSetIndex].GetSet(segmentsSet)[segmentIndex].Balleles?
-                    .BAlleles.Select(y => y.Counts).ToList());
+                    .BAlleles.Select(y => y.TotalCoverage).ToList());
             var alleleCounts = alleles.Select(allele => allele?.Count ?? 0).ToList();
             bool lowAlleleCounts = alleleCounts.Select(x => x < CallerParameters.DefaultReadCountsThreshold).Any(c => c == true);
             var coverageCounts = pedigreeMembers.Select(x => x.SegmentSets[segmentSetIndex].GetSet(segmentsSet)[segmentIndex].MedianCount).ToList();
             var isSkewedHetHomRatio = false;
-            if (false)
-            {
-                var minorMeanMAF =
-                    alleles.Select(allele => allele.Select(y => Math.Min(y.Item1, y.Item2)).ToList().Average());
-                var minorMedianMAF = pedigreeMembers.Select(x => x.SegmentSets[segmentSetIndex].GetSet(segmentsSet)[segmentIndex]?.Balleles.MedianCounts.Item2);
-                var isHighCoverageCounts = pedigreeMembers.Select(x => x.MeanCoverage).Zip(coverageCounts,
-                    (meanCoverage, segmenCoverage) =>
-                        segmenCoverage > meanCoverage * copyNumberCoverageOneAndHalfNormalizer);
-                var zip = minorMeanMAF.Zip(minorMedianMAF, (mn, md) => new { mn, md })
-                    .Zip(isHighCoverageCounts, (t, cov) =>
-                        new { meanMAF = t.mn, medianMAF = t.md, isHighCoverage = cov });
-                isSkewedHetHomRatio = zip.Any(sample => sample.meanMAF > sample.medianMAF && sample.medianMAF == 0 &&
-                                                        sample.isHighCoverage);
-            }
             double alleleDensity = pedigreeMembers.First().SegmentSets[segmentSetIndex].GetSet(segmentsSet)[segmentIndex].Length /
                                    Math.Max(alleleCounts.Average(), 1.0);
             bool useCnLikelihood = lowAlleleCounts ||
@@ -294,7 +280,7 @@ namespace CanvasPedigreeCaller
                 throw new ArgumentException("Length of copyNumbers list should be equal to the number of segments.");
             if (qscores != null && qscores.Count != pedigreeMembers.First().Segments.Count)
                 throw new ArgumentException("Length of qscores list should be equal to the number of segments.");
-            
+
             foreach (var pedigreeMember in pedigreeMembers)
                 CanvasSegment.MergeSegments(ref pedigreeMember.Segments, minimumCallSize, 10000, copyNumbers, qscores);
         }
@@ -359,8 +345,7 @@ namespace CanvasPedigreeCaller
                                 segmentIntervalsByChromosome[chr]);
                             for (var index = 0; index < commonCnvCanvasSegments.Count; index++)
                             {
-                                foreach (var genotype in allelesByChromosomeCommonSegs[chr][index])
-                                    commonCnvCanvasSegments[index].Balleles.BAlleles.Add(Genotype.GetAllele(genotype));
+                                commonCnvCanvasSegments[index].Balleles.BAlleles.AddRange(allelesByChromosomeCommonSegs[chr][index]);
                                 if (commonCnvCanvasSegments[index].Balleles.BAlleles.Count > defaultAlleleCountThreshold)
                                     commonCnvCanvasSegments[index].Balleles.MedianCounts = Balleles.SetMedianCounts(commonCnvCanvasSegments[index].Balleles);
                             }

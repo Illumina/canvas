@@ -16,8 +16,6 @@ namespace CanvasCommon
     {
         public int CountsA { get; }
         public int CountsB { get; }
-        public int Pos { get; }
-
 
         public Genotype()
         {
@@ -29,21 +27,6 @@ namespace CanvasCommon
         {
             CountsA = countsA;
             CountsB = countsB;
-        }
-
-        public Genotype(int pos, int countsA, int countsB)
-        {
-            Pos = pos;
-            CountsA = countsA;
-            CountsB = countsB;
-        }
-
-        public static Allele GetAllele(Genotype genotype)
-        {
-            float MAF = genotype.CountsB / (float)(genotype.CountsA + genotype.CountsB);
-            int totalCoverage = genotype.CountsA + genotype.CountsB;
-            var allele = new Allele(genotype.Pos, MAF, totalCoverage, genotype.CountsA, genotype.CountsB);
-            return allele;
         }
     }
 
@@ -185,7 +168,7 @@ namespace CanvasCommon
             return chromosomeNames;
         }
 
-        public static Dictionary<string, List<List<Genotype>>> ReadFrequenciesWrapper(ILogger logger,
+        public static Dictionary<string, List<List<Allele>>> ReadFrequenciesWrapper(ILogger logger,
             IFileLocation variantFrequencyFile, Dictionary<string, List<BedInterval>> intervalsByChromosome, string referenceFolder, out float meanCoverage)
         {
             var chromosomeNames = LoadChromosomeNames(referenceFolder);
@@ -197,18 +180,18 @@ namespace CanvasCommon
         }
 
 
-        public static Dictionary<string, List<List<Genotype>>> ReadFrequencies(ILogger logger, GzipOrTextReader variantFrequencyFileReader,
+        public static Dictionary<string, List<List<Allele>>> ReadFrequencies(ILogger logger, GzipOrTextReader variantFrequencyFileReader,
             Dictionary<string, List<BedInterval>> intervalByChromosome, HashSet<string> chromosomeNames, out float meanCoverage)
         {
             long totalCoverage = 0;
             long totalRecords = 0;
             meanCoverage = 0;
-            var alleleCountsByChromosome = new Dictionary<string, List<List<Genotype>>>();
+            var alleleCountsByChromosome = new Dictionary<string, List<List<Allele>>>();
             foreach (string chr in intervalByChromosome.Keys)
             {
-                alleleCountsByChromosome[chr] = new List<List<Genotype>>();
+                alleleCountsByChromosome[chr] = new List<List<Allele>>();
                 for (var index = 0; index < intervalByChromosome[chr].Count; index++)
-                    alleleCountsByChromosome[chr].Add(new List<Genotype>());
+                    alleleCountsByChromosome[chr].Add(new List<Allele>());
             }
 
             while (true)
@@ -234,7 +217,7 @@ namespace CanvasCommon
                 if (countRef + countAlt < 10) continue;
 
                 int index = intervalByChromosome[chr].BinarySearch(new BedInterval(position, position + 1));
-                alleleCountsByChromosome[chr][index].Add(new Genotype(position, countRef, countAlt));
+                alleleCountsByChromosome[chr][index].Add(new Allele(position, countRef, countAlt));
                 totalCoverage += countRef + countAlt; // use only coverage information in segments
                 totalRecords++;
                 break;

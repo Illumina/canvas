@@ -40,7 +40,7 @@ namespace CanvasPedigreeCaller
         public List<Tuple<int, int>> GetAlleleCounts(int setPosition, int segmentPosition, SegmentsSet segmentsSet)
         {
             return SegmentSets[setPosition].GetSet(segmentsSet)[segmentPosition].Balleles.BAlleles.Select(x=> 
-            new Tuple<int, int>(x.Counts.AlleleACounts, x.Counts.AlleleBCounts)).ToList();
+            new Tuple<int, int>(x.CountsA, x.CountsB)).ToList();
         }
 
         public int GetPloidy(int haplotypeIndex, int segmentIndex, SegmentsSet segmentsSet)

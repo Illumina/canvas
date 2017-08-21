@@ -12,17 +12,38 @@ namespace CanvasCommon
 {
     public class Allele
     {
-        public int Position { get; set; }
+        public int Position { get; }
+        public int CountsA { get; }
+        public int CountsB { get; }
         public float Frequency;
         public int TotalCoverage;
-        public (int AlleleACounts, int AlleleBCounts) Counts { get; private set; }
+
+        private static float GetFrequency(int alleleACounts, int alleleBCounts)
+        {
+            return alleleBCounts / (float)GetTotalCoverage(alleleACounts, alleleBCounts);
+        }
+
+        private static int GetTotalCoverage(int alleleACounts, int alleleBCounts)
+        {
+            return alleleACounts + alleleBCounts;
+        }
+
+        public Allele(int position, int alleleACounts, int alleleBCounts)
+        {
+            Position = position;
+            CountsA = alleleACounts;
+            CountsB = alleleBCounts;
+            Frequency = GetFrequency(alleleACounts, alleleBCounts);
+            TotalCoverage = GetTotalCoverage(alleleACounts, alleleBCounts);
+        }
 
         public Allele(int position, float frequency, int totalCoverage, int alleleACounts, int alleleBCounts)
         {
             Position = position;
             Frequency = frequency;
             TotalCoverage = totalCoverage;
-            Counts = (AlleleACounts: alleleACounts, AlleleBCounts: alleleBCounts);
+            CountsA = alleleACounts;
+            CountsB = alleleBCounts;
         }
     }
 
@@ -49,8 +70,8 @@ namespace CanvasCommon
 
         public static Tuple<int, int> SetMedianCounts(Balleles balleles)
         {
-            var item1 = Utilities.Median(balleles.BAlleles.Select(allele => Math.Max(allele.Counts.AlleleACounts, allele.Counts.AlleleBCounts)).ToList());
-            var item2 = Utilities.Median(balleles.BAlleles.Select(allele => Math.Min(allele.Counts.AlleleACounts, allele.Counts.AlleleBCounts)).ToList());
+            var item1 = Utilities.Median(balleles.BAlleles.Select(allele => Math.Max(allele.CountsA, allele.CountsB)).ToList());
+            var item2 = Utilities.Median(balleles.BAlleles.Select(allele => Math.Min(allele.CountsA, allele.CountsB)).ToList());
             return new Tuple<int, int>(item1, item2);
         }
         public double? MeanMAF
@@ -182,14 +203,6 @@ namespace CanvasCommon
             return allele;
         }
 
-        public void AddAlleles(List<Genotype> genotypes)
-        {
-            foreach (var genotype in genotypes)
-            {
-                var allele = Genotype.GetAllele(genotype);
-                Balleles.BAlleles.Add(allele);
-            }
-        }
 
         /// <summary>
         /// Mean of the segment's counts.
