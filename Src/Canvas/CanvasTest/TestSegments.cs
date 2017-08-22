@@ -199,7 +199,7 @@ namespace CanvasTest
                 new BedInterval(51, 150),
             };
             const string chr = "chr22";
-            var intervalsByChromosome = new Dictionary<string, List<BedInterval>> {{chr, intervals}};
+            var intervalsByChromosome = new Dictionary<string, List<BedInterval>> { { chr, intervals } };
             var variantCounts = "";
             variantCounts += "chr22\t10\tC\tT\t20\t10\n";
             variantCounts += "chr22\t20\tC\tT\t30\t20\n";
@@ -207,7 +207,7 @@ namespace CanvasTest
             var stringReader = new StringReader(variantCounts);
             using (var reader = new GzipOrTextReader(stringReader))
             {
-                Dictionary<string, List<Balleles>>  allelesByChromosome = 
+                Dictionary<string, List<Balleles>> allelesByChromosome =
                     CanvasIO.ReadFrequencies(reader, intervalsByChromosome);
                 Assert.Equal(allelesByChromosome[chr].Count, intervals.Count);
                 Assert.Equal(2, allelesByChromosome[chr].First().Size());

@@ -149,7 +149,7 @@ namespace CanvasCommon
                 }
             }
         }
-        public  Dictionary<string, List<BedInterval>> GetIntervalsByChromosome()
+        public Dictionary<string, List<BedInterval>> GetIntervalsByChromosome()
         {
             var intervalsByChromosome = new Dictionary<string, List<BedInterval>>();
             foreach (string chr in GetChromosomes())

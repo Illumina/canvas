@@ -184,7 +184,7 @@ namespace CanvasCommon
             const int minCounts = 10;
             var alleleCountsByChromosome = new Dictionary<string, List<Balleles>>();
             foreach (string chr in intervalByChromosome.Keys)
-                alleleCountsByChromosome[chr] = new List<Balleles>( intervalByChromosome[chr].Select(counter=>new Balleles()));
+                alleleCountsByChromosome[chr] = new List<Balleles>(intervalByChromosome[chr].Select(counter => new Balleles()));
 
             while (true)
             {
