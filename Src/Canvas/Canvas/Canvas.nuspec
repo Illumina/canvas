@@ -18,6 +18,7 @@
       <dependency id="Isas.Framework" version="[7.4.4.511,8.0.0)" />
       <dependency id="Illumina.Common" version="[4.3.0.280,5.0.0)" />
       <dependency id="MathNet.Numerics.Core" version="[3.17.0,4.0.0)" />
+      <dependency id="protobuf-net" version="[2.3.2,3.0.0)" />
     </dependencies>
   </metadata>
   <files>
