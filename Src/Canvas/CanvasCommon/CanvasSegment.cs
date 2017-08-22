@@ -10,7 +10,7 @@ using Isas.SequencingFiles;
 
 namespace CanvasCommon
 {
-    public class Allele
+    public class Ballele
     {
         public int Position { get; }
         public int CountsA { get; }
@@ -28,7 +28,7 @@ namespace CanvasCommon
             return alleleACounts + alleleBCounts;
         }
 
-        public Allele(int position, int alleleACounts, int alleleBCounts)
+        public Ballele(int position, int alleleACounts, int alleleBCounts)
         {
             Position = position;
             CountsA = alleleACounts;
@@ -37,7 +37,7 @@ namespace CanvasCommon
             TotalCoverage = GetTotalCoverage(alleleACounts, alleleBCounts);
         }
 
-        public Allele(int position, float frequency, int totalCoverage, int alleleACounts, int alleleBCounts)
+        public Ballele(int position, float frequency, int totalCoverage, int alleleACounts, int alleleBCounts)
         {
             Position = position;
             Frequency = frequency;
@@ -50,13 +50,13 @@ namespace CanvasCommon
     public class Balleles
     {
 
-        public List<Allele> BAlleles;
+        public List<Ballele> BAlleles;
 
         public Balleles()
         {
-            BAlleles = new List<Allele>();
+            BAlleles = new List<Ballele>();
         }
-        public Balleles(List<Allele> alleles)
+        public Balleles(List<Ballele> alleles)
         {
             BAlleles = alleles;
         }

@@ -168,7 +168,7 @@ namespace CanvasCommon
             return chromosomeNames;
         }
 
-        public static Dictionary<string, List<List<Allele>>> ReadFrequenciesWrapper(ILogger logger,
+        public static Dictionary<string, List<List<Ballele>>> ReadFrequenciesWrapper(ILogger logger,
             IFileLocation variantFrequencyFile, Dictionary<string, List<BedInterval>> intervalsByChromosome)
         {
             using (var reader = new GzipOrTextReader(variantFrequencyFile.FullName))
@@ -179,16 +179,16 @@ namespace CanvasCommon
         }
 
 
-        public static Dictionary<string, List<List<Allele>>> ReadFrequencies(ILogger logger, GzipOrTextReader variantFrequencyFileReader,
+        public static Dictionary<string, List<List<Ballele>>> ReadFrequencies(ILogger logger, GzipOrTextReader variantFrequencyFileReader,
             Dictionary<string, List<BedInterval>> intervalByChromosome)
         {
             long totalRecords = 0;
-            var alleleCountsByChromosome = new Dictionary<string, List<List<Allele>>>();
+            var alleleCountsByChromosome = new Dictionary<string, List<List<Ballele>>>();
             foreach (string chr in intervalByChromosome.Keys)
             {
-                alleleCountsByChromosome[chr] = new List<List<Allele>>();
+                alleleCountsByChromosome[chr] = new List<List<Ballele>>();
                 for (var index = 0; index < intervalByChromosome[chr].Count; index++)
-                    alleleCountsByChromosome[chr].Add(new List<Allele>());
+                    alleleCountsByChromosome[chr].Add(new List<Ballele>());
             }
 
             while (true)
@@ -212,7 +212,7 @@ namespace CanvasCommon
                 if (countRef + countAlt < 10) continue;
                 // as both lists are sorted linear search should achieve an average O(log(n)) complexity
                 int index = intervalByChromosome[chr].FindIndex(interval => interval.Start >= position && interval.End <= position);
-                alleleCountsByChromosome[chr][index].Add(new Allele(position, countRef, countAlt));
+                alleleCountsByChromosome[chr][index].Add(new Ballele(position, countRef, countAlt));
                 totalRecords++;
                 break;
             }

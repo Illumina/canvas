@@ -137,7 +137,7 @@ namespace CanvasCommon
             return row[4];
         }
 
-        public void AddAlleles(Dictionary<string, List<List<Allele>>> allelesByChromosome)
+        public void AddAlleles(Dictionary<string, List<List<Ballele>>> allelesByChromosome)
         {
             foreach (string chr in GetChromosomes())
             {
