@@ -394,10 +394,10 @@ namespace CanvasDiploidCaller
             if (!string.IsNullOrEmpty(ploidyBedPath)) ploidy = PloidyInfo.LoadPloidyFromBedFile(ploidyBedPath);
 
             // load MAF
-            var allelesByChromosome = CanvasIO.ReadFrequenciesWrapper(_logger, new FileLocation(variantFrequencyFile), _segments.GetIntervalsByChromosome(),
-                referenceFolder, out float meanCoverage);
+            var allelesByChromosome = CanvasIO.ReadFrequenciesWrapper(_logger, new FileLocation(variantFrequencyFile), _segments.GetIntervalsByChromosome());
             _segments.AddAlleles(allelesByChromosome);
-            this.MeanCoverage = meanCoverage;
+            this.MeanCoverage = (float)allelesByChromosome.SelectMany(x => x.Value).SelectMany(y => y)
+                .Select(z => z.CountsA + z.CountsB).Average(); 
             int medianVariantCoverage = AggregateVariantCoverage(ref this.Segments);
 
             // Create new models for different copy number states

@@ -169,23 +169,20 @@ namespace CanvasCommon
         }
 
         public static Dictionary<string, List<List<Allele>>> ReadFrequenciesWrapper(ILogger logger,
-            IFileLocation variantFrequencyFile, Dictionary<string, List<BedInterval>> intervalsByChromosome, string referenceFolder, out float meanCoverage)
+            IFileLocation variantFrequencyFile, Dictionary<string, List<BedInterval>> intervalsByChromosome)
         {
-            var chromosomeNames = LoadChromosomeNames(referenceFolder);
             using (var reader = new GzipOrTextReader(variantFrequencyFile.FullName))
             {
                 logger.Info($"Load variant frequencies from {variantFrequencyFile}");
-                return ReadFrequencies(logger, reader, intervalsByChromosome, chromosomeNames, out meanCoverage);
+                return ReadFrequencies(logger, reader, intervalsByChromosome);
             }
         }
 
 
         public static Dictionary<string, List<List<Allele>>> ReadFrequencies(ILogger logger, GzipOrTextReader variantFrequencyFileReader,
-            Dictionary<string, List<BedInterval>> intervalByChromosome, HashSet<string> chromosomeNames, out float meanCoverage)
+            Dictionary<string, List<BedInterval>> intervalByChromosome)
         {
-            long totalCoverage = 0;
             long totalRecords = 0;
-            meanCoverage = 0;
             var alleleCountsByChromosome = new Dictionary<string, List<List<Allele>>>();
             foreach (string chr in intervalByChromosome.Keys)
             {
@@ -209,21 +206,16 @@ namespace CanvasCommon
                 int position = int.Parse(columns[1]); // 1-based (from the input VCF to Canvas SNV)
                 int countRef = int.Parse(columns[4]);
                 int countAlt = int.Parse(columns[5]);
-
-                if (!chromosomeNames.Contains(chr.ToLowerInvariant()))
-                    throw new Exception($"Integrity check error: Variant found at unknown chromosome '{chr}' at position '{position}'");
                 if (intervalByChromosome.Keys.All(chromosome => chromosome != chr))
                     continue;
+
                 if (countRef + countAlt < 10) continue;
                 // as both lists are sorted linear search should achieve an average O(log(n)) complexity
                 int index = intervalByChromosome[chr].FindIndex(interval => interval.Start >= position && interval.End <= position);
                 alleleCountsByChromosome[chr][index].Add(new Allele(position, countRef, countAlt));
-                totalCoverage += countRef + countAlt; // use only coverage information in segments
                 totalRecords++;
                 break;
             }
-            if (totalRecords > 0)
-                meanCoverage = totalCoverage / Math.Max(1f, totalRecords);
             logger.Info($"Loaded a total of {totalRecords} usable variant frequencies");
             return alleleCountsByChromosome;
         }

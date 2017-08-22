@@ -210,9 +210,10 @@ namespace CanvasTest
             using (var reader = new GzipOrTextReader(stringReader))
             {
                 Dictionary<string, List<List<CanvasCommon.Allele>>>  allelesByChromosome = 
-                    CanvasIO.ReadFrequencies(logger, reader, intervalsByChromosome, chromosomeNames, out float meanCoverage);
+                    CanvasIO.ReadFrequencies(logger, reader, intervalsByChromosome);
                 Assert.Equal(allelesByChromosome[chr].Count, intervals.Count);
-                Assert.Equal(meanCoverage, Convert.ToSingle(allelesByChromosome[chr].SelectMany(x => x).Select(x => x.CountsA + x.CountsA).Average()));
+                Assert.Equal((float)allelesByChromosome.SelectMany(x => x.Value).SelectMany(y => y)
+                    .Select(z => z.CountsA + z.CountsB).Average(), Convert.ToSingle(allelesByChromosome[chr].SelectMany(x => x).Select(x => x.CountsA + x.CountsA).Average()));
                 Assert.Equal(2, allelesByChromosome[chr].First().Count);
                 Assert.Equal(1, allelesByChromosome[chr].Last().Count);
             }

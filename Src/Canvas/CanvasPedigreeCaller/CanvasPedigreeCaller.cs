@@ -296,10 +296,10 @@ namespace CanvasPedigreeCaller
                 Segments = segments.AllSegments.ToList(),
                 Kin = kinship
             };
-            var allelesByChromosome = CanvasIO.ReadFrequenciesWrapper(_logger, new FileLocation(variantFrequencyFile), segments.GetIntervalsByChromosome(),
-                referenceFolder, out float meanCoverage);
+            var allelesByChromosome = CanvasIO.ReadFrequenciesWrapper(_logger, new FileLocation(variantFrequencyFile), segments.GetIntervalsByChromosome());
             pedigreeMember.SegmentsByChromosome.AddAlleles(allelesByChromosome);
-            pedigreeMember.MeanMafCoverage = meanCoverage;
+            pedigreeMember.MeanMafCoverage = (float)allelesByChromosome.SelectMany(x => x.Value).SelectMany(y => y)
+                .Select(z => z.CountsA + z.CountsB).Average(); 
             foreach (var segment in pedigreeMember.Segments)
                 if (segment.Balleles.BAlleles.Count > defaultAlleleCountThreshold)
                     segment.Balleles.MedianCounts = Balleles.SetMedianCounts(segment.Balleles);
@@ -329,8 +329,7 @@ namespace CanvasPedigreeCaller
                 var segmentIntervalsByChromosome = new Dictionary<string, List<BedInterval>>();
                 Parallel.ForEach(commonRegions.Keys, chr => segmentIntervalsByChromosome[chr] =
                 CanvasSegment.RemapCommonRegions(commonRegions[chr], coverage.StartByChr[chr], coverage.EndByChr[chr]));
-                var allelesByChromosomeCommonSegs = CanvasIO.ReadFrequenciesWrapper(_logger, new FileLocation(variantFrequencyFile), segmentIntervalsByChromosome,
-                    referenceFolder, out float mean);
+                var allelesByChromosomeCommonSegs = CanvasIO.ReadFrequenciesWrapper(_logger, new FileLocation(variantFrequencyFile), segmentIntervalsByChromosome);
                 var segmentsSetByChromosome = new ConcurrentDictionary<string, List<CanvasSegmentsSet>>();
                 Parallel.ForEach(
                     segmentsByChromosome.Keys,

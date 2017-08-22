@@ -146,7 +146,7 @@ namespace CanvasPartition
                     }
                 }
 
-                var alleleCountsByChromosome = CanvasIO.ReadFrequenciesWrapper(_logger, new FileLocation(this.InputVafPath), intervalsByChromosome, referenceFolder, out float meanCoverage);
+                var alleleCountsByChromosome = CanvasIO.ReadFrequenciesWrapper(_logger, new FileLocation(this.InputVafPath), intervalsByChromosome);
                 foreach (var chr in alleleCountsByChromosome.Keys)
                 {
                     for (int index = 0; index < alleleCountsByChromosome[chr].Count; index++)
