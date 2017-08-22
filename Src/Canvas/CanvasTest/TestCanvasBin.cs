@@ -132,5 +132,15 @@ namespace CanvasTest
             }
             Assert.True(exceptionCaught);
         }
+
+        [Fact]
+        public void TestSerializeIntermediateData()
+        {
+            using (var stream = new MemoryStream())
+            {
+                var data = new CanvasBin.CanvasBin.IntermediateData();
+                ProtoBuf.Serializer.Serialize(stream, data);
+            }
+        }
     }
 }
