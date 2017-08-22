@@ -215,8 +215,8 @@ namespace CanvasCommon
                 if (intervalByChromosome.Keys.All(chromosome => chromosome != chr))
                     continue;
                 if (countRef + countAlt < 10) continue;
-
-                int index = intervalByChromosome[chr].BinarySearch(new BedInterval(position, position + 1));
+                // as both lists are sorted linear search should achieve an average O(log(n)) complexity
+                int index = intervalByChromosome[chr].FindIndex(interval => interval.Start >= position && interval.End <= position);
                 alleleCountsByChromosome[chr][index].Add(new Allele(position, countRef, countAlt));
                 totalCoverage += countRef + countAlt; // use only coverage information in segments
                 totalRecords++;
@@ -227,6 +227,7 @@ namespace CanvasCommon
             logger.Info($"Loaded a total of {totalRecords} usable variant frequencies");
             return alleleCountsByChromosome;
         }
+
     }
 }
 
