@@ -386,8 +386,7 @@ namespace CanvasSomaticCaller
 
             var allelesByChromosome = CanvasIO.ReadFrequenciesWrapper(_logger, new FileLocation(variantFrequencyFile), SegmentsByChromosome.GetIntervalsByChromosome());
             SegmentsByChromosome.AddAlleles(allelesByChromosome);
-            this.MeanCoverage = (float) allelesByChromosome.SelectMany(x => x.Value).SelectMany(y => y)
-                .Select(z => z.CountsA + z.CountsB).Average();
+            this.MeanCoverage = allelesByChromosome.SelectMany(x => x.Value).Select(y => y.MeanCoverage).Average();
 
             if (this.IsDbsnpVcf)
             {

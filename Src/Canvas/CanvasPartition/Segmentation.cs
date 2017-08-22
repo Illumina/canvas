@@ -151,8 +151,7 @@ namespace CanvasPartition
                 {
                     for (int index = 0; index < alleleCountsByChromosome[chr].Count; index++)
                     {
-                        vafByChr[chr][index] = alleleCountsByChromosome[chr][index].Select(genotype =>
-                        Math.Max(genotype.CountsA, genotype.CountsB) / Convert.ToDouble(genotype.CountsA + genotype.CountsB)).ToList();
+                        vafByChr[chr][index] = alleleCountsByChromosome[chr][index].MaxFrequencies;
                     }
                 }
 

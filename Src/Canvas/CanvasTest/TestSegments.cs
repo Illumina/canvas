@@ -193,7 +193,6 @@ namespace CanvasTest
         [Fact]
         public void TestReadFrequencies()
         {
-            ILogger logger = null;
             var intervals = new List<BedInterval>
             {
                 new BedInterval(1, 50),
@@ -201,7 +200,6 @@ namespace CanvasTest
             };
             const string chr = "chr22";
             var intervalsByChromosome = new Dictionary<string, List<BedInterval>> {{chr, intervals}};
-            var chromosomeNames = new HashSet<string>{chr};
             var variantCounts = "";
             variantCounts += "chr22\t10\tC\tT\t20\t10\n";
             variantCounts += "chr22\t20\tC\tT\t30\t20\n";
@@ -209,13 +207,11 @@ namespace CanvasTest
             var stringReader = new StringReader(variantCounts);
             using (var reader = new GzipOrTextReader(stringReader))
             {
-                Dictionary<string, List<List<CanvasCommon.Allele>>>  allelesByChromosome = 
-                    CanvasIO.ReadFrequencies(logger, reader, intervalsByChromosome);
+                Dictionary<string, List<Balleles>>  allelesByChromosome = 
+                    CanvasIO.ReadFrequencies(reader, intervalsByChromosome);
                 Assert.Equal(allelesByChromosome[chr].Count, intervals.Count);
-                Assert.Equal((float)allelesByChromosome.SelectMany(x => x.Value).SelectMany(y => y)
-                    .Select(z => z.CountsA + z.CountsB).Average(), Convert.ToSingle(allelesByChromosome[chr].SelectMany(x => x).Select(x => x.CountsA + x.CountsA).Average()));
-                Assert.Equal(2, allelesByChromosome[chr].First().Count);
-                Assert.Equal(1, allelesByChromosome[chr].Last().Count);
+                Assert.Equal(2, allelesByChromosome[chr].First().Size());
+                Assert.Equal(1, allelesByChromosome[chr].Last().Size());
             }
         }
 

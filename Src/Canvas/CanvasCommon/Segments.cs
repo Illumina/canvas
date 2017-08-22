@@ -137,14 +137,14 @@ namespace CanvasCommon
             return row[4];
         }
 
-        public void AddAlleles(Dictionary<string, List<List<Ballele>>> allelesByChromosome)
+        public void AddAlleles(Dictionary<string, List<Balleles>> allelesByChromosome)
         {
             foreach (string chr in GetChromosomes())
             {
                 var counter = 0;
                 foreach (var segment in GetSegmentsForChromosome(chr))
                 {
-                    segment.Balleles.BAlleles.AddRange(allelesByChromosome[chr][counter]);
+                    segment.Balleles.Add(allelesByChromosome[chr][counter]);
                     counter++;
                 }
             }

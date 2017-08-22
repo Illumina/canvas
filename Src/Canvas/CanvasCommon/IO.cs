@@ -168,28 +168,23 @@ namespace CanvasCommon
             return chromosomeNames;
         }
 
-        public static Dictionary<string, List<List<Ballele>>> ReadFrequenciesWrapper(ILogger logger,
+        public static Dictionary<string, List<Balleles>> ReadFrequenciesWrapper(ILogger logger,
             IFileLocation variantFrequencyFile, Dictionary<string, List<BedInterval>> intervalsByChromosome)
         {
             using (var reader = new GzipOrTextReader(variantFrequencyFile.FullName))
             {
                 logger.Info($"Load variant frequencies from {variantFrequencyFile}");
-                return ReadFrequencies(logger, reader, intervalsByChromosome);
+                return ReadFrequencies(reader, intervalsByChromosome);
             }
         }
 
-
-        public static Dictionary<string, List<List<Ballele>>> ReadFrequencies(ILogger logger, GzipOrTextReader variantFrequencyFileReader,
+        public static Dictionary<string, List<Balleles>> ReadFrequencies(GzipOrTextReader variantFrequencyFileReader,
             Dictionary<string, List<BedInterval>> intervalByChromosome)
         {
-            long totalRecords = 0;
-            var alleleCountsByChromosome = new Dictionary<string, List<List<Ballele>>>();
+            const int minCounts = 10;
+            var alleleCountsByChromosome = new Dictionary<string, List<Balleles>>();
             foreach (string chr in intervalByChromosome.Keys)
-            {
-                alleleCountsByChromosome[chr] = new List<List<Ballele>>();
-                for (var index = 0; index < intervalByChromosome[chr].Count; index++)
-                    alleleCountsByChromosome[chr].Add(new List<Ballele>());
-            }
+                alleleCountsByChromosome[chr] = new List<Balleles>( intervalByChromosome[chr].Select(counter=>new Balleles()));
 
             while (true)
             {
@@ -197,11 +192,6 @@ namespace CanvasCommon
                 if (fileLine == null) break;
                 if (fileLine.Length == 0 || fileLine[0] == '#') continue; // Skip headers
                 var columns = fileLine.Split('\t');
-                if (columns.Length < 6)
-                {
-                    logger.Info($"* Bad line {fileLine}'");
-                    continue;
-                }
                 string chr = columns[0];
                 int position = int.Parse(columns[1]); // 1-based (from the input VCF to Canvas SNV)
                 int countRef = int.Parse(columns[4]);
@@ -209,14 +199,11 @@ namespace CanvasCommon
                 if (intervalByChromosome.Keys.All(chromosome => chromosome != chr))
                     continue;
 
-                if (countRef + countAlt < 10) continue;
+                if (countRef + countAlt < minCounts) continue;
                 // as both lists are sorted linear search should achieve an average O(log(n)) complexity
-                int index = intervalByChromosome[chr].FindIndex(interval => interval.Start >= position && interval.End <= position);
+                int index = intervalByChromosome[chr].FindIndex(interval => interval.Start <= position && interval.End > position);
                 alleleCountsByChromosome[chr][index].Add(new Ballele(position, countRef, countAlt));
-                totalRecords++;
-                break;
             }
-            logger.Info($"Loaded a total of {totalRecords} usable variant frequencies");
             return alleleCountsByChromosome;
         }
 
