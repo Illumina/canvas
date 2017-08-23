@@ -31,7 +31,7 @@ namespace CanvasSomaticCaller
             string somaticVCFPath = null;
             bool needHelp = false;
             string bedPath = null;
-            string ploidyBedPath = null;
+            string ploidyVcfPath = null;
             string ffpeOutliersPath = null;
             bool isEnrichment = false;
             bool isDbsnpVcf = false;
@@ -69,8 +69,8 @@ namespace CanvasSomaticCaller
                 {"s|somaticvcf=", "somatic vcf file - optionally used for purity estimation", v => somaticVCFPath = v},
                 {"b|bedfile=", "bed file containing regions to exclude from calling", v => bedPath = v},
                 {
-                    "p|ploidyBedFile=", "bed file specifying reference ploidy (e.g. for sex chromosomes) (optional)",
-                    v => ploidyBedPath = v
+                    "p|ploidyVcfFile=", "bed file specifying reference ploidy (e.g. for sex chromosomes) (optional)",
+                    v => ploidyVcfPath = v
                 },
                 {
                     "f|localSDFile=", "text file with localSD metric (calculate within CanvasClean) (optional)",
@@ -168,9 +168,9 @@ namespace CanvasSomaticCaller
 
             // Set parameters:
 
-            if (!string.IsNullOrEmpty(ploidyBedPath))
+            if (!string.IsNullOrEmpty(ploidyVcfPath))
             {
-                caller.LoadReferencePloidy(ploidyBedPath);
+                caller.LoadReferencePloidy(ploidyVcfPath); 
             }
 
             double? localSDmetric = null;

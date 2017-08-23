@@ -460,8 +460,10 @@ namespace EvaluateCNV
                 var sampleId = GetSampleIdFromVcfHeader(cnvCalls);
                 return PloidyInfo.LoadPloidyFromVcfFile(ploidyFile.FullName, sampleId);
             }
-
-            return PloidyInfo.LoadPloidyFromBedFile(ploidyFile.FullName);
+            else
+            {
+                throw new NotSupportedException("Ploidy information must be provided in VCF format.");
+            }
         }
 
         private static string GetSampleIdFromVcfHeader(IFileLocation cnvCallsPath)

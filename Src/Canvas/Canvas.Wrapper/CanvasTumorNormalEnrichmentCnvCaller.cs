@@ -20,7 +20,7 @@ namespace Canvas.Wrapper
         private readonly ICanvasAnnotationFileProvider _annotationFileProvider;
         private readonly ICanvasSingleSampleInputCommandLineBuilder _singleSampleInputCommandLineBuilder;
         private readonly CanvasEnrichmentInputCreator<CanvasTumorNormalEnrichmentInput> _enrichmentInputCreator;
-        private readonly CanvasPloidyBedCreator _canvasPloidyBedCreator;
+        private readonly CanvasPloidyVcfCreator _canvasPloidyVcfCreator;
         private readonly IFileLocation _runtimeExecutable;
 
         public CanvasTumorNormalEnrichmentCnvCaller(
@@ -28,7 +28,8 @@ namespace Canvas.Wrapper
             ILogger logger,
             IFileLocation canvasExe, IFileLocation runtimeExecutable,
             ICanvasAnnotationFileProvider annotationFileProvider,
-            ICanvasSingleSampleInputCommandLineBuilder singleSampleInputCommandLineBuilder, CanvasEnrichmentInputCreator<CanvasTumorNormalEnrichmentInput> enrichmentInputCreator, CanvasPloidyBedCreator canvasPloidyBedCreator)
+            ICanvasSingleSampleInputCommandLineBuilder singleSampleInputCommandLineBuilder, CanvasEnrichmentInputCreator<CanvasTumorNormalEnrichmentInput> enrichmentInputCreator, 
+              CanvasPloidyVcfCreator canvasPloidyVcfCreator)
         {
             _workManager = workManager;
             _logger = logger;
@@ -36,7 +37,7 @@ namespace Canvas.Wrapper
             _annotationFileProvider = annotationFileProvider;
             _singleSampleInputCommandLineBuilder = singleSampleInputCommandLineBuilder;
             _enrichmentInputCreator = enrichmentInputCreator;
-            _canvasPloidyBedCreator = canvasPloidyBedCreator;
+            _canvasPloidyVcfCreator = canvasPloidyVcfCreator;
             _runtimeExecutable = runtimeExecutable;
         }
 
@@ -94,7 +95,7 @@ namespace Canvas.Wrapper
 
             commandLine.Append($" --somatic-vcf \"{input.SomaticVcf.VcfFile}\"");
 
-            AddPloidyBed(commandLine, input, sampleSandbox);
+            AddPloidyVcf(commandLine, SingleSampleCommonOptionsParser.PloidyVcfOptionName, input, sampleId, sampleSandbox);
 
             commandLine.Append(_singleSampleInputCommandLineBuilder.GetCustomParameters());
             commandLine = _singleSampleInputCommandLineBuilder.MergeCustomCanvasParameters(commandLine);
@@ -108,15 +109,15 @@ namespace Canvas.Wrapper
             return GetCanvasOutput(sampleId, sampleSandbox);
         }
 
-        private void AddPloidyBed(StringBuilder commandLine, CanvasTumorNormalEnrichmentInput input, IDirectoryLocation sampleSandbox)
+        private void AddPloidyVcf(StringBuilder commandLine, string optionName, CanvasTumorNormalEnrichmentInput input, string sampleId, IDirectoryLocation sampleSandbox)
         {
             if (input.SexPloidy == null)
             {
                 _logger.Warn("Sex chromosome ploidy not available. No ploidy will be provided to Canvas.");
                 return;
             }
-            IFileLocation ploidyBed = _canvasPloidyBedCreator.CreatePloidyBed(input.SexPloidy, input.GenomeMetadata, sampleSandbox);
-            commandLine.Append($" --{SingleSampleCommonOptionsParser.PloidyBedOptionName} \"{ploidyBed}\"");
+            var ploidyVcf = _canvasPloidyVcfCreator.CreatePloidyVcf(sampleId, input.SexPloidy, input.GenomeMetadata, sampleSandbox);
+            commandLine.Append($" --{optionName} \"{ploidyVcf.VcfFile}\"");
         }
 
         private CanvasOutput GetCanvasOutput(string sampleId, IDirectoryLocation sampleSandbox)
