@@ -11,8 +11,12 @@ namespace CanvasPedigreeCaller
         public List<List<double>> CnDistribution = new List<List<double>>();
         readonly Tuple<List<double>, List<double>> [][] _alleleDistribution;
 
-        public CopyNumberModel(int numCnStates, double haploidMean, double haploidMafMean, double variance, double mafVariance, int maxValue)
+        public CopyNumberModel(int numCnStates, PedigreeMemberInfo info)
         {
+            double haploidMafMean = info.MeanMafCoverage / 2.0;
+            double haploidMean = info.MeanCoverage / 2.0;
+
+
             for (int copyNumber = 0; copyNumber  < numCnStates; copyNumber ++)
             {
                 var multiplier = copyNumber * 1.0;
@@ -25,7 +29,7 @@ namespace CanvasPedigreeCaller
                 // increase triploid mean by 10% to offset FP CN=3 calls 
                 if (copyNumber == 3)
                     multiplier *= 1.1;
-                CnDistribution.Add(DistributionUtilities.NegativeBinomialWrapper(haploidMean * multiplier, variance, maxValue, 
+                CnDistribution.Add(DistributionUtilities.NegativeBinomialWrapper(haploidMean * multiplier, info.Variance, info.MaxCoverage, 
                     adjustClumpingParameter: true));
             }
 
@@ -38,8 +42,8 @@ namespace CanvasPedigreeCaller
             {
                 for (int gt2 = 0; gt2 < numCnStates; gt2++)
                 {
-                    var gt1Probabilities = DistributionUtilities.NegativeBinomialWrapper(haploidMafMean * gt1, mafVariance, maxValue);
-                    var gt2Probabilities = DistributionUtilities.NegativeBinomialWrapper(haploidMafMean * gt2, mafVariance, maxValue);
+                    var gt1Probabilities = DistributionUtilities.NegativeBinomialWrapper(haploidMafMean * gt1, info.MafVariance, info.MaxCoverage);
+                    var gt2Probabilities = DistributionUtilities.NegativeBinomialWrapper(haploidMafMean * gt2, info.MafVariance, info.MaxCoverage);
                     _alleleDistribution[gt1][gt2] = new Tuple<List<double>, List<double>>(gt1Probabilities, gt2Probabilities);
                 }
             }

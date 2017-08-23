@@ -90,8 +90,6 @@ namespace CanvasCommon
             Range = Range?.Where(v => v.Frequency > frequencyThreshold).ToList();
         }
 
-        public Tuple<int, int> MedianCounts;
-
         public List<float> Frequencies => Range?.Select(allele => allele.Frequency).ToList();
         public List<double> MaxFrequencies => Range?.Select(allele => allele.GetMaxFrequency()).ToList();
 
@@ -101,7 +99,7 @@ namespace CanvasCommon
             return Range.Select(allele => new Tuple<int, int>(allele.CountsA, allele.CountsB)).ToList();
         }
 
-        public static Tuple<int, int> SetMedianCounts(Balleles balleles)
+        public Tuple<int, int> MedianCounts(Balleles balleles)
         {
             var item1 = Utilities.Median(balleles.Range.Select(allele => Math.Max(allele.CountsA, allele.CountsB)).ToList());
             var item2 = Utilities.Median(balleles.Range.Select(allele => Math.Min(allele.CountsA, allele.CountsB)).ToList());
@@ -111,10 +109,7 @@ namespace CanvasCommon
         public Balleles GetBallelesSubrange(int start, int end, int defaultAlleleCountThreshold)
         {
             var array = Range.Where(x => x.Position >= start && x.Position <= end).ToList();
-            var newBalleles = new Balleles(array);
-            if (newBalleles.Size() > defaultAlleleCountThreshold)
-                newBalleles.MedianCounts = SetMedianCounts(newBalleles);
-            return newBalleles;
+            return new Balleles(array);
         }
 
     }
