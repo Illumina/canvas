@@ -39,7 +39,7 @@ namespace CanvasPedigreeCaller
 
         public Segments SegmentsByChromosome;
         public List<CanvasSegment> Segments = new List<CanvasSegment>();
-        public List<CanvasSegmentsSet> SegmentSets = new List<CanvasSegmentsSet>();
+        public List<SegmentHaplotypes> SegmentSets = new List<SegmentHaplotypes>();
         public PedigreeMemberInfo PedigreeMemberInfo { get; set; }
         public string Name { get; set; }
         public List<string> Parents { get; set; }
@@ -47,18 +47,18 @@ namespace CanvasPedigreeCaller
         public Kinship Kin { get; set; }
 
 
-        public double GetCoverage(int setPosition, int segmentPosition, SegmentsSet segmentsSet, int numberOfTrimmedBins)
+        public double GetCoverage(int setPosition, int segmentPosition, Haplotype haplotype, int numberOfTrimmedBins)
         {
-            return SegmentSets[setPosition].GetSet(segmentsSet)[segmentPosition].MedianCount;
+            return SegmentSets[setPosition].GetSet(haplotype)[segmentPosition].MedianCount;
         }
 
-        public List<Tuple<int, int>> GetAlleleCounts(int setPosition, int segmentPosition, SegmentsSet segmentsSet)
+        public List<Tuple<int, int>> GetAlleleCounts(int setPosition, int segmentPosition, Haplotype haplotype)
         {
-            return SegmentSets[setPosition].GetSet(segmentsSet)[segmentPosition].Balleles.GetAlleleCounts();
+            return SegmentSets[setPosition].GetSet(haplotype)[segmentPosition].Balleles.GetAlleleCounts();
         }
-        public int GetPloidy(int haplotypeIndex, int segmentIndex, SegmentsSet segmentsSet)
+        public int GetPloidy(int haplotypeIndex, int segmentIndex, Haplotype haplotype)
         {
-            return PedigreeMemberInfo.Ploidy?.GetReferenceCopyNumber(SegmentSets[haplotypeIndex].GetSet(segmentsSet)[segmentIndex]) ?? 2;
+            return PedigreeMemberInfo.Ploidy?.GetReferenceCopyNumber(SegmentSets[haplotypeIndex].GetSet(haplotype)[segmentIndex]) ?? 2;
         }
         public PedigreeMemberInfo SetPedigreeMemberInfo(string ploidyBedPath, int numberOfTrimmedBins, Dictionary<string, List<Balleles>> allelesByChromosome, 
             int maximumCopyNumber)

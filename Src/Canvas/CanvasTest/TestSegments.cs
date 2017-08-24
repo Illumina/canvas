@@ -215,5 +215,68 @@ namespace CanvasTest
             }
         }
 
+        [Fact]
+        public void TestRemapGenomicToBinCoordinates()
+        {
+            var sampleGenomicBins = new List<SampleGenomicBin>
+            {
+                new SampleGenomicBin("chr10", 1001, 2000, 0, 80),
+                new SampleGenomicBin("chr10", 2001, 3000, 0, 79),
+                new SampleGenomicBin("chr10", 3001, 4000, 0, 78),
+                new SampleGenomicBin("chr10", 4001, 5000, 0, 77),
+                new SampleGenomicBin("chr10", 5001, 6000, 0, 2),
+                new SampleGenomicBin("chr10", 6001, 7000, 0, 2)
+
+            };
+
+            var intervals = new List<BedEntry>
+            {
+                new BedEntry("chr10\t1500\t3500"),
+                new BedEntry("chr10\t4500\t6500")
+            };
+
+            var remappedIntervals = CanvasSegment.RemapGenomicToBinCoordinates(intervals, sampleGenomicBins);
+            Assert.Equal(remappedIntervals.First().Start, 0);
+            Assert.Equal(remappedIntervals.First().End, 2);
+            Assert.Equal(remappedIntervals.Last().Start, 3);
+            Assert.Equal(remappedIntervals.Last().End, 5);
+
+        }
+
+        [Fact]
+        public void TestCreateSegmentsFromCommonCnvs()
+        {
+            var sampleGenomicBins = new List<SampleGenomicBin>
+            {
+                new SampleGenomicBin("chr10", 1001, 2000, 0, 80),
+                new SampleGenomicBin("chr10", 2001, 3000, 0, 79),
+                new SampleGenomicBin("chr10", 3001, 4000, 0, 78),
+                new SampleGenomicBin("chr10", 4001, 5000, 0, 77),
+                new SampleGenomicBin("chr10", 5001, 6000, 0, 2),
+                new SampleGenomicBin("chr10", 6001, 7000, 0, 2)
+
+            };
+
+            var intervals = new List<BedInterval>
+            {
+                new BedInterval(0,3),
+                new BedInterval(3,5)
+            };
+
+            var balleles = new List<Balleles>
+            {
+                new Balleles(new List<Ballele>()),
+                new Balleles(new List<Ballele>{new Ballele(5501,30,30)})
+            };
+
+            var canvasSegments = CanvasSegment.CreateSegmentsFromCommonCnvs(sampleGenomicBins, intervals, balleles);
+
+            Assert.Equal(canvasSegments.Count, intervals.Count);
+            Assert.Equal(canvasSegments.First().Balleles.Size(), 0);
+            Assert.Equal(canvasSegments.Last().Balleles.Size(), 1);
+            Assert.Equal(canvasSegments.First().Counts.Count, 3);
+            Assert.Equal(canvasSegments.Last().Counts.Count, 2);
+        }
+
     }
 }
