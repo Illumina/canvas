@@ -295,7 +295,7 @@ namespace CanvasPedigreeCaller
             };
             var allelesByChromosome = CanvasIO.ReadFrequenciesWrapper(_logger, new FileLocation(variantFrequencyFile), segments.GetIntervalsByChromosome());
             pedigreeMember.SegmentsByChromosome.AddAlleles(allelesByChromosome);
-            pedigreeMember.MeanMafCoverage = allelesByChromosome.SelectMany(x => x.Value).Select(y => y.MeanCoverage).Average();
+            pedigreeMember.MeanMafCoverage = allelesByChromosome.SelectMany(x => x.Value).SelectMany(y => y.TotalCoverage).Average();
             foreach (var segment in pedigreeMember.Segments)
                 if (segment.Balleles.Size() > defaultAlleleCountThreshold)
                     segment.Balleles.MedianCounts = Balleles.SetMedianCounts(segment.Balleles);
