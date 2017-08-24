@@ -149,18 +149,8 @@ namespace CanvasCommon
                 }
             }
         }
-        public Dictionary<string, List<BedInterval>> GetIntervalsByChromosome()
-        {
-            var intervalsByChromosome = new Dictionary<string, List<BedInterval>>();
-            foreach (string chr in GetChromosomes())
-            {
-                intervalsByChromosome[chr] = new List<BedInterval>();
-                foreach (var canvasSegment in GetSegmentsForChromosome(chr))
-                {
-                    intervalsByChromosome[chr].Add(new BedInterval(canvasSegment.Begin, canvasSegment.End));
-                }
-            }
-            return intervalsByChromosome;
-        }
+        public IReadOnlyDictionary<string, List<BedInterval>> IntervalsByChromosome =>
+            _segments.ToDictionary(kvp => kvp.Key, kvp => kvp.Value.Select(segment => new BedInterval(segment.Begin, segment.End)).ToList());
+
     }
 }

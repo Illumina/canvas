@@ -4,46 +4,23 @@ using System.IO;
 using System.Linq;
 using CanvasCommon;
 using Illumina.Common;
+using Isas.Framework.DataTypes;
 
 namespace CanvasPedigreeCaller
 {
-    public class PedigreeMemberInfo
-    {
-        public PedigreeMemberInfo(double meanCoverage, double meanMafCoverage, double variance, double mafVariance, int maxCoverage, int maximumCopyNumber, PloidyInfo ploidy)
-        {
-            MeanCoverage = meanCoverage;
-            MeanMafCoverage = meanMafCoverage;
-            Variance = variance;
-            MafVariance = mafVariance;
-            MaxCoverage = maxCoverage;
-            Ploidy = ploidy;
-            CnModel = new CopyNumberModel(maximumCopyNumber, this);
-        }
-
-        public double MeanCoverage { get; internal set; }
-        public double MeanMafCoverage { get; internal set; }
-        public double Variance { get; internal set; }
-        public double MafVariance { get; internal set; }
-        public int MaxCoverage { get; internal set; }
-        public PloidyInfo Ploidy { get; internal set; }
-        public CopyNumberModel CnModel { get; set; }
-
-    }
-
     public class PedigreeMember
     {
         public enum Kinship
         {
             Other, Parent, Proband
         }
+        
+        public List<CanvasSegmentsSet> SegmentSets = new List<CanvasSegmentsSet>(); 
+        
 
-        public Segments SegmentsByChromosome;
-        public List<CanvasSegment> Segments = new List<CanvasSegment>();
-        public List<CanvasSegmentsSet> SegmentSets = new List<CanvasSegmentsSet>();
         public PedigreeMemberInfo PedigreeMemberInfo { get; set; }
-        public string Name { get; set; }
-        public List<string> Parents { get; set; }
-        public List<string> Offspring { get; set; }
+        public SampleId Id;
+        public string Name => Id.ToString();
         public Kinship Kin { get; set; }
 
 
@@ -60,15 +37,15 @@ namespace CanvasPedigreeCaller
         {
             return PedigreeMemberInfo.Ploidy?.GetReferenceCopyNumber(SegmentSets[haplotypeIndex].GetSet(segmentsSet)[segmentIndex]) ?? 2;
         }
-        public PedigreeMemberInfo SetPedigreeMemberInfo(string ploidyBedPath, int numberOfTrimmedBins, Dictionary<string, List<Balleles>> allelesByChromosome, 
+        public PedigreeMemberInfo SetPedigreeMemberInfo(Segments segments, string ploidyBedPath, int numberOfTrimmedBins, Dictionary<string, List<Balleles>> allelesByChromosome,
             int maximumCopyNumber)
         {
             float meanMafCoverage = allelesByChromosome.SelectMany(x => x.Value).Select(y => y.MeanCoverage).Average();
-            double variance = Utilities.Variance(Segments.Select(x => x.TruncatedMedianCount(numberOfTrimmedBins)).ToList());
-            double mafVariance = Utilities.Variance(Segments.Where(x => x.Balleles.TotalCoverage.Count > 0)
+            double variance = Utilities.Variance(segments.AllSegments.Select(x => x.TruncatedMedianCount(numberOfTrimmedBins)).ToList());
+            double mafVariance = Utilities.Variance(segments.AllSegments.Where(x => x.Balleles.TotalCoverage.Count > 0)
                 .Select(x => x.Balleles.TotalCoverage.Average()).ToList());
-            double meanCoverage = Segments.Select(x => x.TruncatedMedianCount(numberOfTrimmedBins)).Average();
-            int maxCoverage = Convert.ToInt16(Segments.Select(x => x.TruncatedMedianCount(numberOfTrimmedBins)).Max()) + 10;
+            double meanCoverage = segments.AllSegments.Select(x => x.TruncatedMedianCount(numberOfTrimmedBins)).Average();
+            int maxCoverage = Convert.ToInt16(segments.AllSegments.Select(x => x.TruncatedMedianCount(numberOfTrimmedBins)).Max()) + 10;
             var ploidy = new PloidyInfo();
             if (!ploidyBedPath.IsNullOrEmpty() && File.Exists(ploidyBedPath))
                 ploidy = PloidyInfo.LoadPloidyFromVcfFile(ploidyBedPath, Name);
