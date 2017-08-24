@@ -36,7 +36,7 @@ namespace CanvasPartition
         public string ForbiddenIntervalBedPath = null;
         public int MaxInterBinDistInSegment;
         public CoverageInfo CoverageInfo = new CoverageInfo();
-        ILogger _logger;
+        private readonly ILogger _logger;
         #endregion
 
         public class Segment
@@ -63,9 +63,10 @@ namespace CanvasPartition
         }
 
         public SegmentationInput(string inputBinPath, string inputVafPath, string forbiddenBedPath, int maxInterBinDistInSegment,
-            string referenceFolder, string coverageMetricsFile, string dataType = "logratio")
+            string referenceFolder, string coverageMetricsFile, ILogger logger, string dataType = "logratio")
         {
             CoverageMetricsFile = coverageMetricsFile;
+            _logger = logger;
             InputBinPath = inputBinPath;
             InputVafPath = inputVafPath;
             ForbiddenIntervalBedPath = forbiddenBedPath;
