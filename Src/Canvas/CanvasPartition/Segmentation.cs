@@ -6,6 +6,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using Isas.SequencingFiles;
 using CanvasCommon;
+using Illumina.Common.FileSystem;
+using Isas.Framework.Logging;
 
 namespace CanvasPartition
 {
@@ -34,7 +36,7 @@ namespace CanvasPartition
         public string ForbiddenIntervalBedPath = null;
         public int MaxInterBinDistInSegment;
         public CoverageInfo CoverageInfo = new CoverageInfo();
-
+        ILogger _logger;
         #endregion
 
         public class Segment
@@ -130,26 +132,26 @@ namespace CanvasPartition
             try
             {
                 var vafByChr = new Dictionary<string, List<List<double>>>();
-                var intervalsByChromosome = new Dictionary<string, List<Interval>>();
+                var intervalsByChromosome = new Dictionary<string, List<BedInterval>>();
 
                 foreach (string chr in CoverageInfo.StartByChr.Keys)
                 {
                     vafByChr[chr] = new List<List<double>>(CoverageInfo.StartByChr[chr].Length);
-                    intervalsByChromosome[chr] = new List<Interval>();
+                    intervalsByChromosome[chr] = new List<BedInterval>();
                     for (int index = 0; index < CoverageInfo.StartByChr[chr].Length; index++)
                     {
                         vafByChr[chr].Add(new List<double>());
-                        intervalsByChromosome[chr].Add(new Interval(CoverageInfo.StartByChr[chr][index], CoverageInfo.EndByChr[chr][index]));
+                        intervalsByChromosome[chr].Add(new BedInterval(Convert.ToInt32(CoverageInfo.StartByChr[chr][index]), 
+                            Convert.ToInt32(CoverageInfo.EndByChr[chr][index])));
                     }
                 }
 
-                var alleleCountsByChromosome = CanvasIO.ReadFrequencies(this.InputVafPath, intervalsByChromosome, referenceFolder, out float meanCoverage);
+                var alleleCountsByChromosome = CanvasIO.ReadFrequenciesWrapper(_logger, new FileLocation(this.InputVafPath), intervalsByChromosome);
                 foreach (var chr in alleleCountsByChromosome.Keys)
                 {
                     for (int index = 0; index < alleleCountsByChromosome[chr].Count; index++)
                     {
-                        vafByChr[chr][index] = alleleCountsByChromosome[chr][index].Select(genotype =>
-                        Math.Max(genotype.CountsA, genotype.CountsB) / Convert.ToDouble(genotype.CountsA + genotype.CountsB)).ToList();
+                        vafByChr[chr][index] = alleleCountsByChromosome[chr][index].MaxFrequencies;
                     }
                 }
 
@@ -179,7 +181,7 @@ namespace CanvasPartition
         /// <summary>
         /// Merge segmentation breakpoints with common CNV intervals
         /// </summary>
-        public static List<int> OverlapCommonRegions(List<int> breakpoints, List<Interval> commonCNVintervals)
+        public static List<int> OverlapCommonRegions(List<int> breakpoints, List<BedInterval> commonCNVintervals)
         {
             var newBreakpoints = new List<int>();
             int index = 0;
@@ -189,22 +191,22 @@ namespace CanvasPartition
                 while (index < length)
                 {
 
-                    if (breakpoint <= commonCNVintervals[index].OneBasedStart)
+                    if (breakpoint <= commonCNVintervals[index].Start)
                     {
                         newBreakpoints.Add(breakpoint);
                         break;
                     }
-                    if (breakpoint > commonCNVintervals[index].OneBasedStart && breakpoint < commonCNVintervals[index].OneBasedEnd)
+                    if (breakpoint > commonCNVintervals[index].Start && breakpoint < commonCNVintervals[index].End)
                     {
-                        newBreakpoints.Add(commonCNVintervals[index].OneBasedStart);
-                        newBreakpoints.Add(commonCNVintervals[index].OneBasedEnd);
+                        newBreakpoints.Add(commonCNVintervals[index].Start);
+                        newBreakpoints.Add(commonCNVintervals[index].End);
                         index++;
                         break;
                     }
-                    if (breakpoint >= commonCNVintervals[index].OneBasedEnd)
+                    if (breakpoint >= commonCNVintervals[index].End)
                     {
-                        newBreakpoints.Add(commonCNVintervals[index].OneBasedStart);
-                        newBreakpoints.Add(commonCNVintervals[index].OneBasedEnd);
+                        newBreakpoints.Add(commonCNVintervals[index].Start);
+                        newBreakpoints.Add(commonCNVintervals[index].End);
                         index++;
                     }
                 }

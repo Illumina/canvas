@@ -10,66 +10,113 @@ using Isas.SequencingFiles;
 
 namespace CanvasCommon
 {
-    public class Allele
+    public class Ballele
     {
-        public int Position { get; set; }
+        public int Position { get; }
+        public int CountsA { get; }
+        public int CountsB { get; }
         public float Frequency;
         public int TotalCoverage;
-        public (int AlleleACounts, int AlleleBCounts) Counts { get; private set; }
 
-        public Allele(int position, float frequency, int totalCoverage, int alleleACounts, int alleleBCounts)
+        private static float GetFrequency(int alleleACounts, int alleleBCounts)
+        {
+            return alleleBCounts / (float)GetTotalCoverage(alleleACounts, alleleBCounts);
+        }
+
+        public double GetMaxFrequency()
+        {
+            return Math.Max(CountsA, CountsB) / (double) GetTotalCoverage(CountsA, CountsB);
+        }
+
+        private static int GetTotalCoverage(int alleleACounts, int alleleBCounts)
+        {
+            return alleleACounts + alleleBCounts;
+        }
+
+        public Ballele(int position, int alleleACounts, int alleleBCounts)
+        {
+            Position = position;
+            CountsA = alleleACounts;
+            CountsB = alleleBCounts;
+            Frequency = GetFrequency(alleleACounts, alleleBCounts);
+            TotalCoverage = GetTotalCoverage(alleleACounts, alleleBCounts);
+        }
+
+        public Ballele(int position, float frequency, int totalCoverage, int alleleACounts, int alleleBCounts)
         {
             Position = position;
             Frequency = frequency;
             TotalCoverage = totalCoverage;
-            Counts = (AlleleACounts: alleleACounts, AlleleBCounts: alleleBCounts);
+            CountsA = alleleACounts;
+            CountsB = alleleBCounts;
         }
     }
 
     public class Balleles
     {
 
-        public List<Allele> BAlleles;
+        private List<Ballele> Range;
 
         public Balleles()
         {
-            BAlleles = new List<Allele>();
+            Range = new List<Ballele>();
         }
-        public Balleles(List<Allele> alleles)
+        public Balleles(List<Ballele> alleles)
         {
-            BAlleles = alleles;
+            Range = alleles;
+        }
+
+        public void Add(Balleles alleles)
+        {
+            Range.AddRange(alleles.Range);
+        }
+
+        public void Add(Ballele allele)
+        {
+            Range.Add(allele);
+        }
+
+        public int Size()
+        {
+            return Range.Count;
+        }
+
+        public double? MeanMAF => Frequencies?.Average();
+        public List<int> TotalCoverage => Range?.Select(allele => allele.TotalCoverage).ToList();
+        public float MeanCoverage => (float)TotalCoverage.Average();
+
+        public void PruneBalleles(double frequencyThreshold)
+        {
+            Range = Range?.Where(v => v.Frequency > frequencyThreshold).ToList();
         }
 
         public Tuple<int, int> MedianCounts;
 
-        public List<float> Frequencies
+        public List<float> Frequencies => Range?.Select(allele => allele.Frequency).ToList();
+        public List<double> MaxFrequencies => Range?.Select(allele => allele.GetMaxFrequency()).ToList();
+
+
+        public List<Tuple<int, int>> GetAlleleCounts()
         {
-            get { return BAlleles?.Select(allele => allele.Frequency).ToList(); }
+            return Range.Select(allele => new Tuple<int, int>(allele.CountsA, allele.CountsB)).ToList();
         }
 
         public static Tuple<int, int> SetMedianCounts(Balleles balleles)
         {
-            var item1 = Utilities.Median(balleles.BAlleles.Select(allele => Math.Max(allele.Counts.AlleleACounts, allele.Counts.AlleleBCounts)).ToList());
-            var item2 = Utilities.Median(balleles.BAlleles.Select(allele => Math.Min(allele.Counts.AlleleACounts, allele.Counts.AlleleBCounts)).ToList());
+            var item1 = Utilities.Median(balleles.Range.Select(allele => Math.Max(allele.CountsA, allele.CountsB)).ToList());
+            var item2 = Utilities.Median(balleles.Range.Select(allele => Math.Min(allele.CountsA, allele.CountsB)).ToList());
             return new Tuple<int, int>(item1, item2);
         }
-        public double? MeanMAF
-        {
-            get
-            {
-                if (BAlleles.Count <= 5)
-                    return null;
 
-                return BAlleles.Select(allele => allele.Frequency > 0.5 ? 1 - allele.Frequency : allele.Frequency).Average();
-            }
-        }
-        public List<int> TotalCoverage
+        public Balleles GetBallelesSubrange(int start, int end, int defaultAlleleCountThreshold)
         {
-            get
-            {
-                return BAlleles.Select(allele => allele.TotalCoverage).ToList();
-            }
+            var array = Range.Where(x => x.Position >= start && x.Position <= end).ToList();
+            var newBalleles = new Balleles(array);
+            if (newBalleles.Size() > defaultAlleleCountThreshold)
+                newBalleles.MedianCounts = SetMedianCounts(newBalleles);
+            return newBalleles;
         }
+
     }
 
     public class CoverageInfo
@@ -91,7 +138,6 @@ namespace CanvasCommon
     /// </summary>
     public class CanvasSegmentsSet
     {
-
         public List<CanvasSegment> SetA { get; }
         public List<CanvasSegment> SetB { get; }
 
@@ -173,14 +219,7 @@ namespace CanvasCommon
         {
             return this.GenomicBins.Where(x => x.Start >= start && x.Stop <= end).ToList();
         }
-        public Balleles GetAllelesSubrange(int start, int end, int defaultAlleleCountThreshold)
-        {
-            var array = Balleles.BAlleles.Where(x => x.Position >= start && x.Position <= end).ToList();
-            var allele = new Balleles(array);
-            if (array.Count > defaultAlleleCountThreshold)
-                Balleles.MedianCounts = Balleles.SetMedianCounts(allele);
-            return allele;
-        }
+
         /// <summary>
         /// Mean of the segment's counts.
         /// </summary>
@@ -254,7 +293,7 @@ namespace CanvasCommon
                 this.End = s.End;
             }
             this.GenomicBins.AddRange(s.GenomicBins);
-            if (this.Balleles != null && s.Balleles != null) this.Balleles.BAlleles.AddRange(s.Balleles.BAlleles);
+            if (this.Balleles != null && s.Balleles != null) Balleles.Add(s.Balleles);
         }
 
         public int SizeOveralp(CanvasSegment segment)
@@ -288,7 +327,7 @@ namespace CanvasCommon
             if (commonSegments[commonSegmentsIndex].Begin > canvasSegments[canvasSegmentsIndex].Begin && commonSegments[commonSegmentsIndex].End < canvasSegments[canvasSegmentsIndex].End)
             {
                 var countsSubRange = canvasSegments[canvasSegmentsIndex].GetSampleGenomicBinSubrange(canvasSegments[canvasSegmentsIndex].Begin, commonSegments[commonSegmentsIndex].Begin);
-                var allelesSubRange = canvasSegments[canvasSegmentsIndex].GetAllelesSubrange(canvasSegments[canvasSegmentsIndex].Begin, commonSegments[commonSegmentsIndex].Begin, defaultAlleleCountThreshold);
+                var allelesSubRange = canvasSegments[canvasSegmentsIndex].Balleles.GetBallelesSubrange(canvasSegments[canvasSegmentsIndex].Begin, commonSegments[commonSegmentsIndex].Begin, defaultAlleleCountThreshold);
                 if (!countsSubRange.Empty())
                     haplotypebSegments.Add(new CanvasSegment(commonSegments[commonSegmentsIndex].Chr, canvasSegments[canvasSegmentsIndex].Begin, commonSegments[commonSegmentsIndex].Begin, countsSubRange, allelesSubRange));
 
@@ -312,7 +351,7 @@ namespace CanvasCommon
                 }
 
                 countsSubRange = canvasSegments[canvasSegmentsIndex].GetSampleGenomicBinSubrange(commonSegments[commonSegmentsIndex].End, canvasSegments[canvasSegmentsIndex].End);
-                allelesSubRange = canvasSegments[canvasSegmentsIndex].GetAllelesSubrange(commonSegments[commonSegmentsIndex].End, canvasSegments[canvasSegmentsIndex].End, defaultAlleleCountThreshold);
+                allelesSubRange = canvasSegments[canvasSegmentsIndex].Balleles.GetBallelesSubrange(commonSegments[commonSegmentsIndex].End, canvasSegments[canvasSegmentsIndex].End, defaultAlleleCountThreshold);
                 if (!countsSubRange.Empty())
                     haplotypebSegments.Add(new CanvasSegment(commonSegments[commonSegmentsIndex].Chr, commonSegments[commonSegmentsIndex].End, canvasSegments[canvasSegmentsIndex].End, countsSubRange, allelesSubRange));
 
@@ -330,7 +369,7 @@ namespace CanvasCommon
             {
                 haplotypeaSegments.Add(canvasSegments[canvasSegmentsIndex]);
                 var countsSubRange = canvasSegments[canvasSegmentsIndex].GetSampleGenomicBinSubrange(canvasSegments[canvasSegmentsIndex].Begin, commonSegments[commonSegmentsIndex].Begin);
-                var allelesSubRange = canvasSegments[canvasSegmentsIndex].GetAllelesSubrange(canvasSegments[canvasSegmentsIndex].Begin, commonSegments[commonSegmentsIndex].Begin, defaultAlleleCountThreshold);
+                var allelesSubRange = canvasSegments[canvasSegmentsIndex].Balleles.GetBallelesSubrange(canvasSegments[canvasSegmentsIndex].Begin, commonSegments[commonSegmentsIndex].Begin, defaultAlleleCountThreshold);
                 if (!countsSubRange.Empty())
                 {
                     haplotypebSegments.Add(new CanvasSegment(commonSegments[commonSegmentsIndex].Chr, canvasSegments[canvasSegmentsIndex].Begin, commonSegments[commonSegmentsIndex].Begin, countsSubRange, allelesSubRange));
@@ -367,7 +406,7 @@ namespace CanvasCommon
                 haplotypebSegments.Add(commonSegments[commonSegmentsIndex]);
                 canvasSegmentsIndex++;
                 countsSubRange = canvasSegments[canvasSegmentsIndex].GetSampleGenomicBinSubrange(canvasSegments[canvasSegmentsIndex].Begin, commonSegments[commonSegmentsIndex].End);
-                allelesSubRange = canvasSegments[canvasSegmentsIndex].GetAllelesSubrange(canvasSegments[canvasSegmentsIndex].Begin, commonSegments[commonSegmentsIndex].End, defaultAlleleCountThreshold);
+                allelesSubRange = canvasSegments[canvasSegmentsIndex].Balleles.GetBallelesSubrange(canvasSegments[canvasSegmentsIndex].Begin, commonSegments[commonSegmentsIndex].End, defaultAlleleCountThreshold);
                 if (!countsSubRange.Empty())
                     haplotypeaSegments.Add(new CanvasSegment(commonSegments[commonSegmentsIndex].Chr, canvasSegments[canvasSegmentsIndex].Begin, commonSegments[commonSegmentsIndex].Begin, countsSubRange, allelesSubRange));
                 canvasSegments[commonSegmentsIndex].Begin = commonSegments[commonSegmentsIndex].End + 1;
@@ -382,7 +421,7 @@ namespace CanvasCommon
                 haplotypebSegments.Add(commonSegments[commonSegmentsIndex]);
 
                 var countsSubRange = canvasSegments[canvasSegmentsIndex].GetSampleGenomicBinSubrange(commonSegments[commonSegmentsIndex].End, canvasSegments[canvasSegmentsIndex].End);
-                var allelesSubRange = canvasSegments[canvasSegmentsIndex].GetAllelesSubrange(commonSegments[commonSegmentsIndex].End, canvasSegments[canvasSegmentsIndex].End, defaultAlleleCountThreshold);
+                var allelesSubRange = canvasSegments[canvasSegmentsIndex].Balleles.GetBallelesSubrange(commonSegments[commonSegmentsIndex].End, canvasSegments[canvasSegmentsIndex].End, defaultAlleleCountThreshold);
                 if (!countsSubRange.Empty())
                     haplotypebSegments.Add(new CanvasSegment(commonSegments[commonSegmentsIndex].Chr, canvasSegments[canvasSegmentsIndex].Begin, commonSegments[commonSegmentsIndex].Begin, countsSubRange, allelesSubRange));
 
@@ -530,7 +569,7 @@ namespace CanvasCommon
                             if (segment.End < pointStartPos) continue;
 
                             int weight = Math.Min(segment.End, pointEndPos) - Math.Max(segment.Begin, pointStartPos);
-                            string key = string.Format("{0} {1}", segment.CopyNumber, segment.MajorChromosomeCount);
+                            string key = String.Format("{0} {1}", segment.CopyNumber, segment.MajorChromosomeCount);
                             if (!CopyNumberAndChromCount.ContainsKey(key)) CopyNumberAndChromCount[key] = 0;
                             CopyNumberAndChromCount[key] += weight;
                             if (!basesByCopyNumber.ContainsKey(segment.CopyNumber)) basesByCopyNumber[segment.CopyNumber] = 0;
@@ -557,11 +596,11 @@ namespace CanvasCommon
                         {
                             string[] bits = key.Split();
                             if (bits[1].Length == 0) continue;
-                            if (int.Parse(bits[0]) != majorCopyNumber) continue;
+                            if (Int32.Parse(bits[0]) != majorCopyNumber) continue;
                             long count = CopyNumberAndChromCount[key];
                             if (count < bestCount) continue;
                             bestCount = count;
-                            majorChromosomeCount = int.Parse(bits[1]);
+                            majorChromosomeCount = Int32.Parse(bits[1]);
                         }
 
                         // Note allele frequency and coverage info, for all overlap segments that match (more or less)
@@ -592,20 +631,15 @@ namespace CanvasCommon
                                 firstIndex = 0;
                                 if (pointStartPos > segment.Begin)
                                 {
-                                    firstIndex = (int)((float)segment.Balleles.Frequencies.Count * (pointStartPos - segment.Begin) / segment.Length);
+                                    firstIndex = (int)((float)segment.Balleles.Size() * (pointStartPos - segment.Begin) / segment.Length);
                                 }
-                                lastIndex = segment.Balleles.Frequencies.Count;
+                                lastIndex = segment.Balleles.Size();
                                 if (pointEndPos < segment.End)
                                 {
-                                    lastIndex = (int)((float)segment.Balleles.Frequencies.Count * (pointEndPos - segment.Begin) / segment.Length);
+                                    lastIndex = (int)((float)segment.Balleles.Size() * (pointEndPos - segment.Begin) / segment.Length);
                                 }
-                                for (int index = firstIndex; index < lastIndex; index++)
-                                {
-                                    float tempMAF = segment.Balleles.BAlleles[index].Frequency;
-                                    VF.Add(tempMAF);
-                                    if (tempMAF > 0.5) tempMAF = 1 - tempMAF;
-                                    MAF.Add(tempMAF);
-                                }
+                                VF.AddRange(segment.Balleles.Frequencies.Skip(firstIndex).Take(lastIndex - firstIndex));
+                                MAF.AddRange(segment.Balleles.MaxFrequencies.Select(Convert.ToSingle).Skip(firstIndex).Take(lastIndex - firstIndex));
                             }
                         }
 
@@ -1020,11 +1054,11 @@ namespace CanvasCommon
         /// <summary>
         /// Remap GenomicBin from genome coordiantes into CanvasBin coordiantes
         /// </summary>
-        public static List<Interval> RemapCommonRegions(List<SampleGenomicBin> commonRegions, uint[] startByChr, uint[] endByChr)
+        public static List<BedInterval> RemapCommonRegions(List<SampleGenomicBin> commonRegions, uint[] startByChr, uint[] endByChr)
         {
             int length = startByChr.Length;
             var index = 0;
-            var commonRegionsRemapped = new List<Interval>();
+            var commonRegionsRemapped = new List<BedInterval>();
 
             foreach (var commonRegion in commonRegions)
             {
@@ -1035,7 +1069,7 @@ namespace CanvasCommon
 
                 if (!startSegmentIndex.HasValue || !endSegmentIndex.HasValue) continue;
 
-                var interval = new Interval(startSegmentIndex.Value, endSegmentIndex.Value);
+                var interval = new BedInterval(startSegmentIndex.Value, endSegmentIndex.Value);
                 commonRegionsRemapped.Add(interval);
             }
             return commonRegionsRemapped;
@@ -1116,22 +1150,22 @@ namespace CanvasCommon
             return coverageInfo;
         }
 
-        public static List<CanvasSegment> CreateSegmentsFromCommonCnvs(CoverageInfo coverageInfo, string chromosome, List<Interval> intervals)
+        public static List<CanvasSegment> CreateSegmentsFromCommonCnvs(CoverageInfo coverageInfo, string chromosome, List<BedInterval> intervals)
         {
             var segments = new List<CanvasSegment>();
-            if (intervals.Last().OneBasedEnd > coverageInfo.CoverageByChr[chromosome].Length)
+            if (intervals.Last().End > coverageInfo.CoverageByChr[chromosome].Length)
                 throw new IndexOutOfRangeException("Coverage bin index exceeds chromosome size (in Canvas bins)");
             foreach (var interval in intervals)
             {
-                int length = interval.OneBasedEnd - interval.OneBasedStart;
-                var counts = coverageInfo.CoverageByChr[chromosome].Skip(interval.OneBasedStart).Take(length).Select(Convert.ToSingle).ToList();
-                var starts = coverageInfo.StartByChr[chromosome].Skip(interval.OneBasedStart).Take(length).Select(Convert.ToInt32).ToList();
-                var ends = coverageInfo.EndByChr[chromosome].Skip(interval.OneBasedStart).Take(length).Select(Convert.ToInt32).ToList();
+                int length = interval.End - interval.Start;
+                var counts = coverageInfo.CoverageByChr[chromosome].Skip(interval.Start).Take(length).Select(Convert.ToSingle).ToList();
+                var starts = coverageInfo.StartByChr[chromosome].Skip(interval.Start).Take(length).Select(Convert.ToInt32).ToList();
+                var ends = coverageInfo.EndByChr[chromosome].Skip(interval.Start).Take(length).Select(Convert.ToInt32).ToList();
                 var sampleGenomicBins = Enumerable.Range(0, counts.Count).Select(index =>
                 new SampleGenomicBin(chromosome, starts[index], ends[index], counts[index])).ToList();
                 var segment = new CanvasSegment(chromosome,
-                    Convert.ToInt32(coverageInfo.StartByChr[chromosome][interval.OneBasedStart]),
-                    Convert.ToInt32(coverageInfo.EndByChr[chromosome][interval.OneBasedEnd]), sampleGenomicBins)
+                    Convert.ToInt32(coverageInfo.StartByChr[chromosome][interval.Start]),
+                    Convert.ToInt32(coverageInfo.EndByChr[chromosome][interval.End]), sampleGenomicBins)
                 {
                     IsCommonCnv = true
                 };

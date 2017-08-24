@@ -1,10 +1,14 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.IO;
 using Illumina.Common;
+using Illumina.Common.Collections;
 using Illumina.Common.FileSystem;
+using Isas.Framework.Logging;
 using Isas.SequencingFiles;
+using Isas.SequencingFiles.Vcf;
 
 namespace CanvasCommon
 {
@@ -12,8 +16,6 @@ namespace CanvasCommon
     {
         public int CountsA { get; }
         public int CountsB { get; }
-        public int Pos { get; }
-
 
         public Genotype()
         {
@@ -26,14 +28,8 @@ namespace CanvasCommon
             CountsA = countsA;
             CountsB = countsB;
         }
-
-        public Genotype(int pos, int countsA, int countsB)
-        {
-            Pos = pos;
-            CountsA = countsA;
-            CountsB = countsB;
-        }
     }
+
     public class CanvasIO
     {
         public static void WriteToTextFile(string outfile, IEnumerable<SampleGenomicBin> bins)
@@ -94,7 +90,7 @@ namespace CanvasCommon
                     prevBin = null;
                 }
                 if (prevBin != null && bin.Start < prevBin.Start)
-                    throw new Exception("Bins are not sorted in ascending order by the start position." + 
+                    throw new Exception("Bins are not sorted in ascending order by the start position." +
                         $" First offending bin: {bin.GenomicBin.Chromosome}\t{bin.Start}\t{bin.Stop}");
 
                 binsByChrom[bin.GenomicBin.Chromosome].Add(bin);
@@ -110,14 +106,14 @@ namespace CanvasCommon
             evenness,
         }
         // write localSD metric
-        public static void WriteCoverageMetricToTextFile(string outfile, double coverageMetric, CoverageMetric coverageMetricType) 
+        public static void WriteCoverageMetricToTextFile(string outfile, double coverageMetric, CoverageMetric coverageMetricType)
         {
             using (FileStream stream = new FileStream(outfile, FileMode.Append, FileAccess.Write))
             using (StreamWriter writer = new StreamWriter(stream))
             {
                 writer.Write($"#{coverageMetricType.ToString()}\t" + coverageMetric);
                 writer.WriteLine();
-            }       
+            }
         }
 
         // read localSD metric
@@ -132,12 +128,12 @@ namespace CanvasCommon
                 while ((row = reader.ReadLine()) != null)
                 {
                     int tabs = (int)row.Count(ch => ch == '\t');
-                    if (tabs > 0) 
+                    if (tabs > 0)
                     {
                         string[] fields = row.Split('\t');
                         string localSDstring = fields[0];
                         if (localSDstring == $"#{coverageMetricType}")
-                            coverageMetric = Convert.ToDouble(fields[1]);                   
+                            coverageMetric = Convert.ToDouble(fields[1]);
                     }
                 }
             }
@@ -147,7 +143,7 @@ namespace CanvasCommon
 
         public static Dictionary<string, string> GetChromosomeAlternativeNames(IEnumerable<string> keys)
         {
-            Dictionary<string, string> results = new Dictionary<string,string>();
+            Dictionary<string, string> results = new Dictionary<string, string>();
             foreach (string key in keys)
             {
                 if (key.StartsWith("chr"))
@@ -162,46 +158,6 @@ namespace CanvasCommon
             return results;
         }
 
-        /// <summary>
-        /// Parse the outputs of CanvasSNV, and note these variant frequencies in the appropriate segment.
-        /// </summary>
-        public static float LoadFrequenciesBySegment(string variantFrequencyFile, IReadOnlyList<CanvasSegment> segments, string referenceFolder)
-        {
-            var segmentsByChromosome = CanvasSegment.GetSegmentsByChromosome(segments);
-            var intervalsByChromosome = new Dictionary<string, List<Interval>>();
-            foreach (string chr in segmentsByChromosome.Keys)
-            {
-                intervalsByChromosome[chr] = new List<Interval>();
-                foreach (var canvasSegment in segmentsByChromosome[chr])
-                {
-                    intervalsByChromosome[chr].Add(new Interval(canvasSegment.Begin, canvasSegment.End));
-                }
-            }
-            var allelesByChromosome = ReadFrequencies(variantFrequencyFile, intervalsByChromosome, 
-                referenceFolder, out float meanCoverage);
-
-            foreach (string chr in segmentsByChromosome.Keys)
-            {
-                for (int index = 0; index < segmentsByChromosome[chr].Count; index++)
-                {
-                    foreach (var genotype in allelesByChromosome[chr][index])
-                    {
-                        var allele = GetAllele(genotype);
-                        segmentsByChromosome[chr][index].Balleles.BAlleles.Add(allele);
-                    }
-                }
-            }
-            return meanCoverage;
-        }
-
-        public static Allele GetAllele(Genotype genotype)
-        {
-            float MAF = genotype.CountsB / (float) (genotype.CountsA + genotype.CountsB);
-            int totalCoverage = genotype.CountsA + genotype.CountsB;
-            var allele = new Allele(genotype.Pos, MAF, totalCoverage, genotype.CountsA, genotype.CountsB);
-            return allele;
-        }
-
         public static HashSet<string> LoadChromosomeNames(string referenceFolder)
         {
             GenomeMetadata genomeMetaData = new GenomeMetadata();
@@ -212,79 +168,46 @@ namespace CanvasCommon
             return chromosomeNames;
         }
 
-        public static Dictionary<string, List<List<Genotype>>> ReadFrequencies(string variantFrequencyFile, Dictionary<string, List<Interval>> intervalByChromosome,
-            string referenceFolder, out float meanCoverage)
+        public static Dictionary<string, List<Balleles>> ReadFrequenciesWrapper(ILogger logger,
+            IFileLocation variantFrequencyFile, Dictionary<string, List<BedInterval>> intervalsByChromosome)
         {
-            long totalCoverage = 0;
-            int count = 0;
-            long totalRecords = 0;
-            meanCoverage = 0;
-            Console.WriteLine("{0} Load variant frequencies from {1}", DateTime.Now, variantFrequencyFile);
-            var alleleCountsByChromosome = new Dictionary<string, List<List<Genotype>>>();
-            var chromosomeNames = LoadChromosomeNames(referenceFolder);
+            using (var reader = new GzipOrTextReader(variantFrequencyFile.FullName))
+            {
+                logger.Info($"Load variant frequencies from {variantFrequencyFile}");
+                return ReadFrequencies(reader, intervalsByChromosome);
+            }
+        }
 
+        public static Dictionary<string, List<Balleles>> ReadFrequencies(GzipOrTextReader variantFrequencyFileReader,
+            Dictionary<string, List<BedInterval>> intervalByChromosome)
+        {
+            const int minCounts = 10;
+            var alleleCountsByChromosome = new Dictionary<string, List<Balleles>>();
             foreach (string chr in intervalByChromosome.Keys)
+                alleleCountsByChromosome[chr] = new List<Balleles>(intervalByChromosome[chr].Select(counter => new Balleles()));
+
+            while (true)
             {
-                alleleCountsByChromosome[chr] = new List<List<Genotype>>();
-                for(int index = 0; index < intervalByChromosome[chr].Count; index ++)
-                    alleleCountsByChromosome[chr].Add(new List<Genotype>());
+                string fileLine = variantFrequencyFileReader.ReadLine();
+                if (fileLine == null) break;
+                if (fileLine.Length == 0 || fileLine[0] == '#') continue; // Skip headers
+                var columns = fileLine.Split('\t');
+                string chr = columns[0];
+                int position = int.Parse(columns[1]); // 1-based (from the input VCF to Canvas SNV)
+                int countRef = int.Parse(columns[4]);
+                int countAlt = int.Parse(columns[5]);
+                if (intervalByChromosome.Keys.All(chromosome => chromosome != chr))
+                    continue;
+
+                if (countRef + countAlt < minCounts) continue;
+                // as both lists are sorted linear search should achieve an average O(log(n)) complexity
+                int index = intervalByChromosome[chr].FindIndex(interval => interval.Start <= position && interval.End > position);
+                alleleCountsByChromosome[chr][index].Add(new Ballele(position, countRef, countAlt));
             }
-
-            using (GzipReader reader = new GzipReader(variantFrequencyFile))
-            {
-                while (true)
-                {
-                    string fileLine = reader.ReadLine();
-                    if (fileLine == null) break;
-                    if (fileLine.Length == 0 || fileLine[0] == '#') continue; // Skip headers
-                    string[] bits = fileLine.Split('\t');
-                    if (bits.Length < 6)
-                    {
-                        Console.Error.WriteLine("* Bad line in {0}: '{1}'", variantFrequencyFile, fileLine);
-                        continue;
-                    }
-                    string chr = bits[0];
-                    if (intervalByChromosome.Keys.All(chromosome => chromosome != chr))
-                        continue;
-
-                    int position = int.Parse(bits[1]); // 1-based (from the input VCF to Canvas SNV)
-
-                    if (!chromosomeNames.Contains(chr.ToLowerInvariant()))
-                        throw new Exception($"Integrity check error: Variant found at unknown chromosome '{chr}' at position '{position}'");
-
-                    int countRef = int.Parse(bits[4]);
-                    int countAlt = int.Parse(bits[5]);
-                    if (countRef + countAlt < 10) continue;
-                    // Binary search for the segment this variant hits:
-                    int start = 0;
-                    int end = intervalByChromosome[chr].Count - 1;
-                    int mid = (start + end) / 2;
-                    while (start <= end)
-                    {
-                        if (intervalByChromosome[chr][mid].OneBasedEnd < position) // CanvasSegment.End is already 1-based
-                        {
-                            start = mid + 1;
-                            mid = (start + end) / 2;
-                            continue;
-                        }
-                        if (intervalByChromosome[chr][mid].OneBasedStart + 1 > position) // Convert CanvasSegment.Begin to 1-based by adding 1
-                        {
-                            end = mid - 1;
-                            mid = (start + end) / 2;
-                            continue;
-                        }
-                        alleleCountsByChromosome[chr][mid].Add(new Genotype(position, countRef, countAlt));
-                        count++;
-                        totalCoverage += countRef + countAlt; // use only coverage information in segments
-                        totalRecords++;
-                        break;
-                    }
-                }
-            }
-            if (totalRecords > 0)
-                meanCoverage = totalCoverage / Math.Max(1f, totalRecords);
-            Console.WriteLine("{0} Loaded a total of {1} usable variant frequencies", DateTime.Now, count);
             return alleleCountsByChromosome;
         }
+
     }
 }
+
+

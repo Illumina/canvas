@@ -961,7 +961,7 @@ namespace CanvasCommon
                 foreach (CanvasSegment segment in segments)
                 {
                     writer.Write(String.Format("{0}\t{1}\t{2}", segment.Chr, segment.Begin, segment.End));
-                    float[] mafs = new float[segment.Balleles.Frequencies.Count];
+                    float[] mafs = new float[segment.Balleles.Size()];
                     List<int> zeroIndices = new List<int>();
                     List<int> nonZeroIndices = new List<int>();
                     bool isGreaterThan20 = false;
@@ -984,11 +984,10 @@ namespace CanvasCommon
                     //  (2) At least one of the alleles have a MAF >= 0.2
                     if ((float)nonZeroIndices.Count / (float)mafs.Length > 0.1 || isGreaterThan20)
                     {
-                        var tmpVFs = segment.Balleles.BAlleles.Where(v => v.Frequency > 0.1).ToList(); // heuristic to use only the right mode
-                        if (tmpVFs.Count > 0) { segment.Balleles.BAlleles = tmpVFs; }
+                        segment.Balleles.PruneBalleles(0.1); // heuristic to use only the right mode
                         if (mafs.Length >= MinimumVariantFrequenciesForInformativeSegment) // adjust MinimumVariantFrequenciesForInformativeSegment
                         {
-                            MinimumVariantFrequenciesForInformativeSegment = Math.Min(MinimumVariantFrequenciesForInformativeSegment, segment.Balleles.Frequencies.Count);
+                            MinimumVariantFrequenciesForInformativeSegment = Math.Min(MinimumVariantFrequenciesForInformativeSegment, segment.Balleles.Size());
                         }
                         writer.Write("\tTrue");
                     }
