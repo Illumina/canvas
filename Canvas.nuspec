@@ -22,12 +22,12 @@
     </dependencies>
   </metadata>
   <files>
-    <file src="..\x64\CanvasCore\netcoreapp1.1\publish\**" target="build/Canvas" />
+    <file src="Src\Canvas\x64\CanvasCore\netcoreapp1.1\publish\**" target="build/Canvas" />
     <file src="Canvas.targets" target="build/Canvas.targets" />
-    <file src="..\Canvas.Wrapper\bin\x64\Release\netcoreapp1.1\Canvas.Wrapper.dll" target="lib\netstandard1.6" />
-    <file src="..\Canvas.Wrapper\bin\x64\Release\netcoreapp1.1\Canvas.dll" target="lib\netstandard1.6" />
-    <file src="..\Canvas.Wrapper\bin\x64\Release\netcoreapp1.1\CanvasBin.dll" target="lib\netstandard1.6" />
-    <file src="..\Canvas.Wrapper\bin\x64\Release\netcoreapp1.1\CanvasCommon.dll" target="lib\netstandard1.6" />
-    <file src="..\Canvas.Wrapper\bin\x64\Release\netcoreapp1.1\Combinatorics.dll" target="lib\netstandard1.6" />
+    <file src="Src\Canvas\Canvas.Wrapper\bin\x64\Release\netcoreapp1.1\Canvas.Wrapper.dll" target="lib\netstandard1.6" />
+    <file src="Src\Canvas\Canvas.Wrapper\bin\x64\Release\netcoreapp1.1\Canvas.dll" target="lib\netstandard1.6" />
+    <file src="Src\Canvas\Canvas.Wrapper\bin\x64\Release\netcoreapp1.1\CanvasBin.dll" target="lib\netstandard1.6" />
+    <file src="Src\Canvas\Canvas.Wrapper\bin\x64\Release\netcoreapp1.1\CanvasCommon.dll" target="lib\netstandard1.6" />
+    <file src="Src\Canvas\Canvas.Wrapper\bin\x64\Release\netcoreapp1.1\Combinatorics.dll" target="lib\netstandard1.6" />
   </files>
 </package>
