@@ -83,7 +83,6 @@ namespace CanvasCommon
 
         public double? MeanMAF => Frequencies?.Average();
         public List<int> TotalCoverage => Range?.Select(allele => allele.TotalCoverage).ToList();
-        public float MeanCoverage => (float)TotalCoverage.Average();
 
         public void PruneBalleles(double frequencyThreshold)
         {
