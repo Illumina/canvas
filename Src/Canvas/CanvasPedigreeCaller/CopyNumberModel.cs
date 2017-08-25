@@ -10,11 +10,13 @@ namespace CanvasPedigreeCaller
         public List<Tuple<int,int>> Genotypes = new List<Tuple<int, int>>();
         public List<List<double>> CnDistribution = new List<List<double>>();
         readonly Tuple<List<double>, List<double>> [][] _alleleDistribution;
+        private readonly int _maxCoverage;
 
         public CopyNumberModel(int numCnStates, PedigreeMemberInfo info)
         {
             double haploidMafMean = info.MeanMafCoverage / 2.0;
             double haploidMean = info.MeanCoverage / 2.0;
+            _maxCoverage = info.MaxCoverage;
 
 
             for (int copyNumber = 0; copyNumber  < numCnStates; copyNumber ++)
@@ -77,14 +79,14 @@ namespace CanvasPedigreeCaller
             return likelihood;
         }
 
-        public double GetGtLikelihoodScore(List<Tuple<int, int>> gtObservedCounts, List<Genotype> gtModelCounts, ref int? selectedGtState, int maxCoverage)
+        public double GetGtLikelihoodScore(List<Tuple<int, int>> gtObservedCounts, List<Genotype> gtModelCounts, ref int? selectedGtState)
         {
             const int maxGQscore = 60;
             var gtLikelihoods = Enumerable.Repeat(0.0, gtModelCounts.Count).ToList();
             var gtModelCounter = 0;
             foreach (var gtModelCount in gtModelCounts)
             {
-                gtLikelihoods[gtModelCounter] = GetCurrentGtLikelihood(maxCoverage, gtObservedCounts, gtModelCount);
+                gtLikelihoods[gtModelCounter] = GetCurrentGtLikelihood(gtObservedCounts, gtModelCount);
                 gtModelCounter++;
             }
             if (!selectedGtState.HasValue)
@@ -96,13 +98,13 @@ namespace CanvasPedigreeCaller
             return Double.IsNaN(gqscore) || Double.IsInfinity(gqscore) ? 0 : gqscore;
         }
 
-        public double GetCurrentGtLikelihood(int maxCoverage, List<Tuple<int, int>> gtObservedCounts, Genotype gtModelCount)
+        public double GetCurrentGtLikelihood(List<Tuple<int, int>> gtObservedCounts, Genotype gtModelCount)
         {
             double currentLikelihood = 0;
             foreach (var gtCount in gtObservedCounts)
             {
-                int rowId = Math.Min(gtCount.Item1, maxCoverage - 1);
-                int colId = Math.Min(gtCount.Item2, maxCoverage - 1);
+                int rowId = Math.Min(gtCount.Item1, _maxCoverage - 1);
+                int colId = Math.Min(gtCount.Item2, _maxCoverage - 1);
                 currentLikelihood += _alleleDistribution[gtModelCount.CountsA][gtModelCount.CountsB].Item1[rowId] *
                                        _alleleDistribution[gtModelCount.CountsA][gtModelCount.CountsB].Item2[colId];
             }

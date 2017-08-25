@@ -817,13 +817,13 @@ namespace CanvasCommon
         /// quality score.  Two consecutive segments are considered neighbors if they're on the same chromosome
         /// and the space between them doesn't overlap with any excluded intervals.
         /// </summary>
-        public static void MergeSegmentsUsingExcludedIntervals(ref List<CanvasSegment> segments, int MinimumCallSize,
+        public static List<CanvasSegment> MergeSegmentsUsingExcludedIntervals(List<CanvasSegment> segments, int MinimumCallSize,
             Dictionary<string, List<SampleGenomicBin>> excludedIntervals)
         {
-            if (!segments.Any()) return;
-
             // Assimilate short segments into the *best* available neighbor:
-            List<CanvasSegment> mergedSegments = new List<CanvasSegment>();
+            var mergedSegments = new List<CanvasSegment>();
+            if (!segments.Any()) return mergedSegments;
+
             int segmentIndex = 0;
             while (segmentIndex < segments.Count)
             {
@@ -904,7 +904,7 @@ namespace CanvasCommon
                 mergedSegments.Add(segments[segmentIndex]);
                 segmentIndex++;
             }
-            segments = mergedSegments;
+            return mergedSegments;
         }
 
         /// <summary>
@@ -915,14 +915,14 @@ namespace CanvasCommon
         /// quality score.  Two consecutive segments are considered neighbors if they're on the same chromosome
         /// and the space between them is not too large.
         /// </summary>
-        public static void MergeSegments(ref List<CanvasSegment> segments, int minimumCallSize = 0, int maximumMergeSpan = 10000,
+        public static List<CanvasSegment> MergeSegments(List<CanvasSegment> segments, int minimumCallSize = 0, int maximumMergeSpan = 10000,
             List<List<int>> copyNumbers = null, List<double> qscores = null)
         {
-            if (!segments.Any()) return;
-            var newCopyNumbers = new List<List<int>>();
-
             // Assimilate short segments into the *best* available neighbor:
-            List<CanvasSegment> mergedSegments = new List<CanvasSegment>();
+            var mergedSegments = new List<CanvasSegment>();
+            if (!segments.Any()) return mergedSegments;
+
+            var newCopyNumbers = new List<List<int>>();
             int segmentIndex = 0;
             while (segmentIndex < segments.Count)
             {
@@ -1016,7 +1016,7 @@ namespace CanvasCommon
                 mergedSegments.Add(segments[segmentIndex]);
                 segmentIndex++;
             }
-            segments = mergedSegments;
+            return mergedSegments;
         }
 
         /// <summary>

@@ -142,8 +142,8 @@ namespace CanvasTest
             seg.CopyNumber = 2;
             allSegments.Add(seg);
 
-            CanvasSegment.MergeSegments(ref allSegments, 50000, 10000);
-            var segmentsByChromosome = CanvasSegment.GetSegmentsByChromosome(allSegments);
+            var mergedSegments = CanvasSegment.MergeSegments(allSegments, 50000, 10000);
+            var segmentsByChromosome = CanvasSegment.GetSegmentsByChromosome(mergedSegments);
             Assert.Equal(segmentsByChromosome["chr1"].Count, 3);
             Assert.Equal(segmentsByChromosome["chr2"].Count, 3);
             Assert.Equal(segmentsByChromosome["chr3"].Count, 1);

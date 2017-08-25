@@ -54,33 +54,37 @@ namespace CanvasPedigreeCaller
             // load files
             // initialize data structures and classes
             int fileCounter = 0;
-            var pedigreeMembers = new LinkedList<PedigreeMember>();
             var kinships = ReadPedigreeFile(pedigreeFile);
+            var pedigreeMembers = new SampleList<PedigreeMember>();
+            var pedigreeMembersInfo = new SampleList<PedigreeMemberInfo>();
             var sampleSegments = new SampleList<Segments>();
+            var copyNumberModels = new SampleList<CopyNumberModel>();
+
+
             foreach (string sampleName in sampleNames)
             {
                 var sampleId = new SampleId(sampleName);
-                var kinship = kinships[sampleName] == PedigreeMember.Kinship.Parent ? PedigreeMember.Kinship.Parent : PedigreeMember.Kinship.Proband;
-                sampleSegments.Add(sampleId, Segments.ReadSegments(_logger, new FileLocation(segmentFiles[fileCounter])));
-                var pedigreeMember = SetPedigreeMember(sampleSegments[sampleId], variantFrequencyFiles[fileCounter], segmentFiles[fileCounter], ploidyBedPath, sampleId,
-                    CallerParameters.DefaultReadCountsThreshold, CallerParameters.NumberOfTrimmedBins, kinship, commonCNVsbedPath);
+                var segment = Segments.ReadSegments(_logger, new FileLocation(segmentFiles[fileCounter]));
+                segment.AddAlleles(CanvasIO.ReadFrequenciesWrapper(_logger, new FileLocation(variantFrequencyFiles[fileCounter]), segment.IntervalsByChromosome));
+                sampleSegments.Add(sampleId, segment);
 
-                if (pedigreeMember.Kin == PedigreeMember.Kinship.Proband)
-                    pedigreeMembers.AddFirst(pedigreeMember);
-                else
-                    pedigreeMembers.AddLast(pedigreeMember);
-
+                var pedigreeMember = GetPedigreeMember(sampleSegments[sampleId], variantFrequencyFiles[fileCounter], segmentFiles[fileCounter], sampleId,
+                    CallerParameters.DefaultReadCountsThreshold, kinships[sampleId], commonCNVsbedPath);
+                var pedigreeMemberInfo = PedigreeMemberInfo.GetPedigreeMemberInfo(segment, ploidyBedPath, CallerParameters.NumberOfTrimmedBins, sampleId);
+                var copyNumberModel = new CopyNumberModel(CallerParameters.MaximumCopyNumber, pedigreeMemberInfo);
+                pedigreeMembers.Add(sampleId, pedigreeMember);
+                pedigreeMembersInfo.Add(sampleId, pedigreeMemberInfo);
+                copyNumberModels.Add(sampleId, copyNumberModel);
                 fileCounter++;
             }
 
             int numberOfSegments = sampleSegments.SampleData.First().AllSegments.Count;
             var segmentIntervals = GetParallelIntervals(numberOfSegments, Math.Min(Environment.ProcessorCount, CallerParameters.MaxCoreNumber));
-
-            var parents = GetParents(pedigreeMembers);
-            var offsprings = GetChildren(pedigreeMembers);
+            var parentsIds = kinships.Where(kin=> kin.Value.Equals(PedigreeMember.Kinship.Parent)).Select(kin => kin.Key).ToList();
+            var offspringsIds = kinships.Where(kin => kin.Value.Equals(PedigreeMember.Kinship.Proband)).Select(kin => kin.Key).ToList();
             var parentalGenotypes = GenerateParentalGenotypes(CallerParameters.MaximumCopyNumber);
-            var offspringsGenotypes = new List<List<Genotype>>(Convert.ToInt32(Math.Pow(parentalGenotypes.Count, offsprings.Count)));
-            GenerateOffspringGenotypes(offspringsGenotypes, parentalGenotypes, offsprings.Count, new List<Genotype>());
+            var offspringsGenotypes = new List<List<Genotype>>(Convert.ToInt32(Math.Pow(parentalGenotypes.Count, offspringsIds.Count)));
+            GenerateOffspringGenotypes(offspringsGenotypes, parentalGenotypes, offspringsIds.Count, new List<Genotype>());
             var genotypes = GenerateGenotypeCombinations(CallerParameters.MaximumCopyNumber);
 
             if (offspringsGenotypes.Count > CallerParameters.MaxNumOffspringGenotypes)
@@ -97,31 +101,36 @@ namespace CanvasPedigreeCaller
                     Console.WriteLine($"{DateTime.Now} Launching SPW task for segment {interval.Start} - {interval.End}");
                     for (int segmentIndex = interval.Start; segmentIndex <= interval.End; segmentIndex++)
                     {
-                        CallVariantInPedigree(pedigreeMembers, parents, offsprings, segmentIndex,
-                            transitionMatrix, offspringsGenotypes, genotypes);
+                        CallVariantInPedigree(pedigreeMembers, pedigreeMembersInfo, copyNumberModels, parentsIds, 
+                            offspringsIds, segmentIndex, transitionMatrix, offspringsGenotypes, genotypes);
                     }
                     Console.WriteLine($"{DateTime.Now} Finished SPW task for segment {interval.Start} - {interval.End}");
                 });
 
-            var names = MergeAndExtractSegments(outVcfFile, referenceFolder, pedigreeMembers,
-                out List<double?> diploidCoverage,
-                out List<List<CanvasSegment>> segments);
-            var ploidies = pedigreeMembers.Select(x => x.PedigreeMemberInfo.Ploidy).ToList();
-            CanvasSegmentWriter.WriteMultiSampleSegments(outVcfFile, segments, diploidCoverage, referenceFolder, names,
-                null, ploidies,
-                QualityFilterThreshold, isPedigreeInfoSupplied: true,
-                denovoQualityThreshold: DeNovoQualityFilterThreshold);
+                var mergedSampleSegments = MergeSegments(sampleSegments, CallerParameters.MinimumCallSize);
+                var outputFolder = new FileLocation(outVcfFile).Directory;
+                foreach (var sampleId in offspringsIds.Union(parentsIds))
+                {
+                    var coverageOutputPath = SingleSampleCallset.GetCoverageAndVariantFrequencyOutput(outputFolder,
+                        sampleId.ToString());
+                    CanvasSegment.WriteCoveragePlotData(mergedSampleSegments[sampleId].AllSegments, pedigreeMembersInfo[sampleId].MeanCoverage,
+                        pedigreeMembersInfo[sampleId].Ploidy, coverageOutputPath.FullName, referenceFolder);
+                }
 
-            var outputFolder = new FileLocation(outVcfFile).Directory;
-            foreach (var pedigreeMember in pedigreeMembers)
-            {
-                var outputVcfPath = SingleSampleCallset.GetSingleSamplePedigreeVcfOutput(outputFolder,
-                    pedigreeMember.Name.ToString());
-                CanvasSegmentWriter.WriteSegments(outputVcfPath.FullName, pedigreeMember.Segments,
-                    pedigreeMember.PedigreeMemberInfo.MeanCoverage, referenceFolder,
-                    pedigreeMember.Name.ToString(), null, pedigreeMember.PedigreeMemberInfo.Ploidy, QualityFilterThreshold,
-                    isPedigreeInfoSupplied: true,
-                    denovoQualityThreshold: DeNovoQualityFilterThreshold);
+                var ploidies = offspringsIds.Union(parentsIds).Select(id => pedigreeMembersInfo[id].Ploidy).ToList();
+                var diploidCoverage = offspringsIds.Union(parentsIds).Select(id => pedigreeMembersInfo[id].MeanCoverage).ToList();
+                var names = offspringsIds.Union(parentsIds).Select(x=>ToString()).ToList();
+                CanvasSegmentWriter.WriteMultiSampleSegments(outVcfFile, mergedSampleSegments, diploidCoverage, referenceFolder, names, 
+                    null, ploidies, QualityFilterThreshold, isPedigreeInfoSupplied: true, denovoQualityThreshold: DeNovoQualityFilterThreshold);
+
+             outputFolder = new FileLocation(outVcfFile).Directory;
+             foreach (var sampleId in offspringsIds.Union(parentsIds))
+             {
+                var outputVcfPath = SingleSampleCallset.GetSingleSamplePedigreeVcfOutput(outputFolder, sampleId.ToString());
+                CanvasSegmentWriter.WriteSegments(outputVcfPath.FullName, mergedSampleSegments[sampleId].AllSegments.ToList(),
+                    pedigreeMembersInfo[sampleId].MeanCoverage, referenceFolder, sampleId.ToString(), null,
+                    pedigreeMembersInfo[sampleId].Ploidy, QualityFilterThreshold,
+                    isPedigreeInfoSupplied: true, denovoQualityThreshold: DeNovoQualityFilterThreshold);
             }
             return 0;
         }
@@ -132,14 +141,14 @@ namespace CanvasPedigreeCaller
         /// <param name="pedigreeMembers"></param>
         /// <param name="segmentIndex"></param>
         /// <returns></returns>
-        private bool UseMafInformation(LinkedList<PedigreeMember> pedigreeMembers, int segmentSetIndex, int segmentIndex, SegmentsSet segmentsSet)
+        private bool UseMafInformation(SampleList<PedigreeMember> pedigreeMembers, int segmentSetIndex, int segmentIndex, SegmentsSet segmentsSet)
         {
-            var alleles = pedigreeMembers.Select(x => x.SegmentSets[segmentSetIndex].GetSet(segmentsSet)[segmentIndex].Balleles?.TotalCoverage);
+            var alleles = pedigreeMembers.SampleData.Select(x => x.SegmentSets[segmentSetIndex].GetSet(segmentsSet)[segmentIndex].Balleles?.TotalCoverage);
             var alleleCounts = alleles.Select(allele => allele?.Count ?? 0).ToList();
             bool lowAlleleCounts = alleleCounts.Select(x => x < CallerParameters.DefaultReadCountsThreshold).Any(c => c == true);
-            var coverageCounts = pedigreeMembers.Select(x => x.SegmentSets[segmentSetIndex].GetSet(segmentsSet)[segmentIndex].MedianCount).ToList();
+            var coverageCounts = pedigreeMembers.SampleData.Select(x => x.SegmentSets[segmentSetIndex].GetSet(segmentsSet)[segmentIndex].MedianCount).ToList();
             var isSkewedHetHomRatio = false;
-            double alleleDensity = pedigreeMembers.First().SegmentSets[segmentSetIndex].GetSet(segmentsSet)[segmentIndex].Length /
+            double alleleDensity = pedigreeMembers.SampleData.First().SegmentSets[segmentSetIndex].GetSet(segmentsSet)[segmentIndex].Length /
                                    Math.Max(alleleCounts.Average(), 1.0);
             bool useCnLikelihood = lowAlleleCounts ||
                                    alleleDensity < CallerParameters.DefaultAlleleDensityThreshold ||
@@ -150,33 +159,6 @@ namespace CanvasPedigreeCaller
             return lowAlleleCounts;
         }
 
-        /// <summary>
-        /// Merges segments and extracts coverage / segments and pedigreeMembers
-        /// </summary>
-        /// <param name="outVcfFile"></param>
-        /// <param name="referenceFolder"></param>
-        /// <param name="pedigreeMembers"></param>
-        /// <param name="meanCoverage"></param>
-        /// <param name="segments"></param>
-        /// <returns></returns>
-        private List<string> MergeAndExtractSegments(string outVcfFile, string referenceFolder,
-            LinkedList<PedigreeMember> pedigreeMembers, out List<double?> meanCoverage,
-            out List<List<CanvasSegment>> segments)
-        {
-            MergeSegments(pedigreeMembers, CallerParameters.MinimumCallSize);
-            var names = pedigreeMembers.Select(x => x.Name).ToList();
-            meanCoverage = pedigreeMembers.Select(x => (double?)x.PedigreeMemberInfo.MeanCoverage).ToList();
-            segments = pedigreeMembers.Select(x => x.Segments).ToList();
-
-            var outputFolder = new FileLocation(outVcfFile).Directory;
-            foreach (var member in pedigreeMembers)
-            {
-                var coverageOutputPath = SingleSampleCallset.GetCoverageAndVariantFrequencyOutput(outputFolder,
-                    member.Name.ToString());
-                CanvasSegment.WriteCoveragePlotData(member.Segments, member.PedigreeMemberInfo.MeanCoverage, member.PedigreeMemberInfo.Ploidy, coverageOutputPath.FullName, referenceFolder);
-            }
-            return names;
-        }
 
         internal int CallVariants(List<string> variantFrequencyFiles, List<string> segmentFiles, string outVcfFile,
             string ploidyBedPath, string referenceFolder, List<string> sampleNames, string commonCNVsbedPath)
@@ -184,23 +166,32 @@ namespace CanvasPedigreeCaller
             // load files
             // initialize data structures and classes
             var fileCounter = 0;
-            var pedigreeMembers = new LinkedList<PedigreeMember>();
+            const PedigreeMember.Kinship kinship = PedigreeMember.Kinship.Other;
+            var pedigreeMembers = new SampleList<PedigreeMember>();
+            var pedigreeMembersInfo = new SampleList<PedigreeMemberInfo>();
             var sampleSegments = new SampleList<Segments>();
+            var copyNumberModels = new SampleList<CopyNumberModel>();
+
             foreach (string sampleName in sampleNames)
             {
                 var sampleId = new SampleId(sampleName);
-                sampleSegments.Add(sampleId, Segments.ReadSegments(_logger, new FileLocation(segmentFiles[fileCounter])));
-                var pedigreeMember = SetPedigreeMember(sampleSegments[sampleId], variantFrequencyFiles[fileCounter], segmentFiles[fileCounter], ploidyBedPath,
-                    sampleId, CallerParameters.DefaultReadCountsThreshold, CallerParameters.NumberOfTrimmedBins,
-                    PedigreeMember.Kinship.Other, commonCNVsbedPath);
-                pedigreeMembers.AddLast(pedigreeMember);
+                var segment = Segments.ReadSegments(_logger, new FileLocation(segmentFiles[fileCounter]));
+                segment.AddAlleles(CanvasIO.ReadFrequenciesWrapper(_logger, new FileLocation(variantFrequencyFiles[fileCounter]), segment.IntervalsByChromosome));
+                sampleSegments.Add(sampleId, segment);
+                var pedigreeMember = GetPedigreeMember(sampleSegments[sampleId], variantFrequencyFiles[fileCounter], segmentFiles[fileCounter], sampleId,
+                    CallerParameters.DefaultReadCountsThreshold, kinship, commonCNVsbedPath);
+                var pedigreeMemberInfo = PedigreeMemberInfo.GetPedigreeMemberInfo(segment, ploidyBedPath, CallerParameters.NumberOfTrimmedBins, sampleId);
+                var copyNumberModel = new CopyNumberModel(CallerParameters.MaximumCopyNumber, pedigreeMemberInfo);
+                pedigreeMembers.Add(sampleId, pedigreeMember);
+                pedigreeMembersInfo.Add(sampleId, pedigreeMemberInfo);
+                copyNumberModels.Add(sampleId, copyNumberModel);
                 fileCounter++;
             }
 
-            int numberOfSegments = pedigreeMembers.First().Segments.Count;
+            int numberOfSegments = sampleSegments.SampleData.First().AllSegments.Count;
             var segmentIntervals = GetParallelIntervals(numberOfSegments, Math.Min(Environment.ProcessorCount, CallerParameters.MaxCoreNumber));
             var genotypes = GenerateGenotypeCombinations(CallerParameters.MaximumCopyNumber);
-            int maxAlleleNumber = Math.Min(CallerParameters.MaxAlleleNumber, pedigreeMembers.Count);
+            int maxAlleleNumber = Math.Min(CallerParameters.MaxAlleleNumber, pedigreeMembers.Count());
             var copyNumberCombinations = GenerateCopyNumberCombinations(CallerParameters.MaximumCopyNumber,
                 maxAlleleNumber);
 
@@ -211,79 +202,59 @@ namespace CanvasPedigreeCaller
                     Console.WriteLine($"{DateTime.Now} Launching SPW task for segment {interval.Start} - {interval.End}");
                     for (int segmentIndex = interval.Start; segmentIndex <= interval.End; segmentIndex++)
                     {
-                        CallVariant(pedigreeMembers, segmentIndex, copyNumberCombinations, genotypes);
+                        CallVariant(pedigreeMembers, pedigreeMembersInfo, copyNumberModels,segmentIndex, copyNumberCombinations, genotypes);
                     }
                     Console.WriteLine($"{DateTime.Now} Finished SPW task for segment {interval.Start} - {interval.End}");
                 });
 
-            var names = MergeAndExtractSegments(outVcfFile, referenceFolder, pedigreeMembers,
-                out List<double?> diploidCoverage,
-                out List<List<CanvasSegment>> segments);
-            var ploidies = pedigreeMembers.Select(x => x.PedigreeMemberInfo.Ploidy).ToList();
-
-            CanvasSegmentWriter.WriteMultiSampleSegments(outVcfFile, segments, diploidCoverage, referenceFolder, names,
-                null, ploidies,
-                QualityFilterThreshold, isPedigreeInfoSupplied: false);
-
+            var mergedSampleSegments = MergeSegments(sampleSegments, CallerParameters.MinimumCallSize);
             var outputFolder = new FileLocation(outVcfFile).Directory;
-            foreach (var pedigreeMember in pedigreeMembers)
+            foreach (string sampleName in sampleNames)
             {
-                var outputVcfPath = SingleSampleCallset.GetSingleSamplePedigreeVcfOutput(outputFolder,
-                    pedigreeMember.Name);
-                CanvasSegmentWriter.WriteSegments(outputVcfPath.FullName, pedigreeMember.Segments,
-                    pedigreeMember.PedigreeMemberInfo.MeanCoverage, referenceFolder,
-                    pedigreeMember.Name, null, pedigreeMember.PedigreeMemberInfo.Ploidy, QualityFilterThreshold,
-                    isPedigreeInfoSupplied: false);
+                var sampleId = new SampleId(sampleName);
+                var coverageOutputPath = SingleSampleCallset.GetCoverageAndVariantFrequencyOutput(outputFolder, sampleName);
+                CanvasSegment.WriteCoveragePlotData(mergedSampleSegments[sampleId].AllSegments, pedigreeMembersInfo[sampleId].MeanCoverage,
+                    pedigreeMembersInfo[sampleId].Ploidy, coverageOutputPath.FullName, referenceFolder);
+                var outputVcfPath = SingleSampleCallset.GetSingleSamplePedigreeVcfOutput(outputFolder, sampleName);
+                CanvasSegmentWriter.WriteSegments(outputVcfPath.FullName, mergedSampleSegments[sampleId].AllSegments.ToList(),
+                    pedigreeMembersInfo[sampleId].MeanCoverage, referenceFolder, sampleName, null, pedigreeMembersInfo[sampleId].Ploidy, 
+                    QualityFilterThreshold, isPedigreeInfoSupplied: false);
             }
             return 0;
         }
 
 
-        private static void MergeSegments(LinkedList<PedigreeMember> pedigreeMembers, int minimumCallSize)
+        private static SampleList<Segments> MergeSegments( SampleList<Segments> segments, int minimumCallSize)
         {
-            foreach (var pedigreeMember in pedigreeMembers)
-            {
-                pedigreeMember.Segments = pedigreeMember.SegmentSets.SelectMany(x => x.GetSet(x.SelectedSet)).ToList();
-                pedigreeMember.Segments = pedigreeMember.Segments.OrderBy(c1 => c1.Chr).ThenBy(c2 => c2.Begin).ToList();
-            }
-
-            int nSegments = pedigreeMembers.First().Segments.Count;
+            int nSegments = segments.First().Value.AllSegments.Count;
             var copyNumbers = new List<List<int>>(nSegments);
             var qscores = new List<double>(nSegments);
             foreach (int segmentIndex in Enumerable.Range(0, nSegments))
             {
-                copyNumbers.Add(new List<int>());
-                qscores.Add(0);
-                foreach (var pedigreeMember in pedigreeMembers)
-                {
-                    copyNumbers[segmentIndex].Add(pedigreeMember.Segments[segmentIndex].CopyNumber);
-                    qscores[segmentIndex] += pedigreeMember.Segments[segmentIndex].QScore;
-                }
-                qscores[segmentIndex] /= pedigreeMembers.Count;
+                copyNumbers.Add(segments.Select(s => s.Value.AllSegments[segmentIndex].CopyNumber).ToList());
+                qscores.Add(segments.Select(s => s.Value.AllSegments[segmentIndex].QScore).Average());
             }
 
             if (copyNumbers == null && qscores != null || copyNumbers != null & qscores == null)
                 throw new ArgumentException("Both copyNumbers and qscores arguments must be specified.");
-            if (copyNumbers != null && copyNumbers.Count != pedigreeMembers.First().Segments.Count)
+            if (copyNumbers != null && copyNumbers.Count != nSegments)
                 throw new ArgumentException("Length of copyNumbers list should be equal to the number of segments.");
-            if (qscores != null && qscores.Count != pedigreeMembers.First().Segments.Count)
+            if (qscores != null && qscores.Count != nSegments)
                 throw new ArgumentException("Length of qscores list should be equal to the number of segments.");
 
-            foreach (var pedigreeMember in pedigreeMembers)
-                CanvasSegment.MergeSegments(ref pedigreeMember.Segments, minimumCallSize, 10000, copyNumbers, qscores);
+            var mergedSegments = new SampleList<Segments>();
+            foreach (var sampleSegments in segments)
+            {
+                var mergedAllSegments = CanvasSegment.MergeSegments(sampleSegments.Value.AllSegments.ToList(),
+                    minimumCallSize, 10000, copyNumbers, qscores);
+                mergedSegments.Add(sampleSegments.Key, Segments.CreateSegments(mergedAllSegments));
+            }
+            return mergedSegments;
         }
 
-        private PedigreeMember SetPedigreeMember(Segments segments, string variantFrequencyFile, string segmentFile, string ploidyBedPath,
-            SampleId sampleId, int defaultAlleleCountThreshold, int numberOfTrimmedBins, PedigreeMember.Kinship kinship, string commonCNVsbedPath)
+        private PedigreeMember GetPedigreeMember(Segments segments, string variantFrequencyFile, string segmentFile, SampleId sampleId, int defaultAlleleCountThreshold, PedigreeMember.Kinship kinship, string commonCNVsbedPath)
         {
-            var pedigreeMember = new PedigreeMember
-            {
-                Id = sampleId,
-                Kin = kinship
-            };
-            var allelesByChromosome = CanvasIO.ReadFrequenciesWrapper(_logger, new FileLocation(variantFrequencyFile), segments.IntervalsByChromosome);
-            segments.AddAlleles(allelesByChromosome);
-            pedigreeMember.SetPedigreeMemberInfo(segments, ploidyBedPath, numberOfTrimmedBins, allelesByChromosome, CallerParameters.MaximumCopyNumber);
+            var pedigreeMember = new PedigreeMember(sampleId, kinship);
 
             if (commonCNVsbedPath != null)
             {
@@ -355,56 +326,52 @@ namespace CanvasPedigreeCaller
             return commonRegions.Keys.Count(chromosome => chromsomes.Contains(chromosome));
         }
 
-        private void EstimateQScoresWithPedigreeInfo(List<PedigreeMember> parents, List<PedigreeMember> offsprings,
-            int segmentSetIndex,
-            int segmentIndex, SegmentsSet segmentsSet, CopyNumberDistribution copyNumberLikelihoods)
+        private void EstimateQScoresWithPedigreeInfo(SampleList<PedigreeMember> pedigreeMembers, SampleList<PedigreeMemberInfo> pedigreeMembersInfo, SampleList<CopyNumberModel> model,
+            int segmentSetIndex, List<SampleId> parents, List<SampleId> offsprings, int segmentIndex, SegmentsSet segmentsSet, CopyNumberDistribution copyNumberLikelihoods)
         {
-            var cnStates = GetCnStates(parents, offsprings, segmentSetIndex, segmentIndex, segmentsSet,
-                CallerParameters.MaximumCopyNumber);
-            var names = parents.Select(x => x.Name).Concat(offsprings.Select(x => x.Name)).ToList();
-            var probands = GetProbands(offsprings);
+            var cnStates = GetCnStates(pedigreeMembers, parents, offsprings, segmentSetIndex, segmentIndex, segmentsSet, CallerParameters.MaximumCopyNumber);
+            var names = parents.Union(offsprings).Select(x => ToString()).ToList();
+
             var singleSampleQualityScores = GetSingleSampleQualityScores(copyNumberLikelihoods, cnStates, names);
             var counter = 0;
-            foreach (var sample in parents.Concat(offsprings))
+            foreach (var sample in pedigreeMembers)
             {
-                sample.SegmentSets[segmentSetIndex].GetSet(segmentsSet)[segmentIndex].QScore =
+                sample.Value.SegmentSets[segmentSetIndex].GetSet(segmentsSet)[segmentIndex].QScore =
                     singleSampleQualityScores[counter];
-                if (sample.SegmentSets[segmentSetIndex].GetSet(segmentsSet)[segmentIndex].QScore <
+                if (sample.Value.SegmentSets[segmentSetIndex].GetSet(segmentsSet)[segmentIndex].QScore <
                     QualityFilterThreshold)
-                    sample.SegmentSets[segmentSetIndex].GetSet(segmentsSet)[segmentIndex].Filter =
+                    sample.Value.SegmentSets[segmentSetIndex].GetSet(segmentsSet)[segmentIndex].Filter =
                         $"q{QualityFilterThreshold}";
                 counter++;
             }
-            SetDenovoQualityScores(parents, segmentSetIndex, segmentIndex, segmentsSet, copyNumberLikelihoods,
-                names, probands, cnStates, singleSampleQualityScores);
+            SetDenovoQualityScores(pedigreeMembers, pedigreeMembersInfo, parents, offsprings, segmentSetIndex, segmentIndex,
+                segmentsSet, copyNumberLikelihoods, names, cnStates, singleSampleQualityScores);
         }
 
-        private void SetDenovoQualityScores(List<PedigreeMember> parents, int segmentSetIndex, int segmentIndex,
-            SegmentsSet segmentsSet,
-            CopyNumberDistribution copyNumberLikelihoods, List<string> names, List<PedigreeMember> probands,
-            List<int> cnStates, List<double> singleSampleQualityScores)
+        private void SetDenovoQualityScores(SampleList<PedigreeMember> samples, SampleList<PedigreeMemberInfo> samplesInfo, List<SampleId> parents, List<SampleId> offsprings, int segmentSetIndex, int segmentIndex,
+            SegmentsSet segmentsSet, CopyNumberDistribution copyNumberLikelihoods, List<string> names, List<int> cnStates, 
+            List<double> singleSampleQualityScores)
         {
-            int parent1Index = names.IndexOf(parents.First().Name);
-            int parent2Index = names.IndexOf(parents.Last().Name);
+            int parent1Index = names.IndexOf(parents.First().ToString());
+            int parent2Index = names.IndexOf(parents.Last().ToString());
 
-            foreach (var proband in probands)
+            foreach (var probandId in offsprings)
             {
-                int probandIndex = names.IndexOf(proband.Name);
-                var remainingProbandIndex = probands.Except(proband.ToEnumerable()).Select(x => names.IndexOf(x.Name));
-                if (cnStates[probandIndex] != proband.GetPloidy(segmentSetIndex, segmentIndex, segmentsSet) &&
+                int probandIndex = names.IndexOf(probandId.ToString());
+                var remainingProbandIndex = offsprings.Except(probandId.ToEnumerable()).Select(x => names.IndexOf(x.ToString())).ToList();
+                var probandSegment = samples[probandId].SegmentSets[segmentSetIndex].GetSet(segmentsSet)[segmentIndex];
+                var probandPloidy = samplesInfo[probandId].GetPloidy(probandSegment);
+                if (cnStates[probandIndex] != probandPloidy &&
                     // targeted proband is ALT
-                    (ParentsRefCheck(parents, segmentSetIndex, segmentIndex, segmentsSet, cnStates, parent1Index,
-                         parent2Index) ||
+                    (ParentsRefCheck(samples, samplesInfo, parents, segmentSetIndex, segmentIndex, segmentsSet, cnStates, parent1Index, parent2Index) ||
                      // either parent are REF or 
-                     IsNotCommonCnv(parents, proband, cnStates, parent1Index, parent2Index, probandIndex, segmentSetIndex,
-                         segmentIndex, segmentsSet)) &&
+                     IsNotCommonCnv(samples, samplesInfo, parents, cnStates, parent1Index, parent2Index, probandIndex, segmentSetIndex,
+                         segmentIndex, segmentsSet, probandPloidy)) &&
                     // or a common variant 
-                    remainingProbandIndex.All(
-                        index =>
-                            cnStates[index] ==
-                            probands[index].GetPloidy(segmentSetIndex, segmentIndex, segmentsSet) ||
-                            IsNotCommonCnv(parents, probands[index], cnStates, parent1Index,
-                                parent2Index, index, segmentSetIndex, segmentIndex, segmentsSet)) &&
+                    remainingProbandIndex.Zip(offsprings.Except(probandId.ToEnumerable())).All(index =>
+                            cnStates[index.Item1] == samplesInfo[index.Item2].GetPloidy(samples[index.Item2].SegmentSets[segmentSetIndex].GetSet(segmentsSet)[segmentIndex]) ||
+                            IsNotCommonCnv(samples, samplesInfo, parents, cnStates, parent1Index, parent2Index, probandIndex, segmentSetIndex,
+                            segmentIndex, segmentsSet, probandPloidy)) &&
                     // and other probands are REF or common variant 
                     singleSampleQualityScores[probandIndex] > QualityFilterThreshold &&
                     singleSampleQualityScores[parent1Index] > QualityFilterThreshold &&
@@ -416,45 +383,43 @@ namespace CanvasPedigreeCaller
                         remainingProbandIndex.ToList());
                     if (Double.IsInfinity(deNovoQualityScore) | deNovoQualityScore > CallerParameters.MaxQscore)
                         deNovoQualityScore = CallerParameters.MaxQscore;
-                    proband.SegmentSets[segmentSetIndex].GetSet(segmentsSet)[segmentIndex].DqScore =
+                    samples[probandId].SegmentSets[segmentSetIndex].GetSet(segmentsSet)[segmentIndex].DqScore =
                         deNovoQualityScore;
                 }
             }
         }
 
-        private static bool IsNotCommonCnv(List<PedigreeMember> parents, PedigreeMember proband, List<int> cnStates,
-            int parent1Index, int parent2Index,
-            int probandIndex, int segmentSetIndex, int segmentIndex, SegmentsSet segmentsSet)
+        private static bool IsNotCommonCnv(SampleList<PedigreeMember> samples, SampleList<PedigreeMemberInfo> samplesInfo, List<SampleId> parents, List<int> cnStates,
+            int parent1Index, int parent2Index, int probandIndex, int segmentSetIndex, int segmentIndex, SegmentsSet segmentsSet, int probandPloidy)
         {
             var parent1Genotypes = GenerateCnAlleles(cnStates[parent1Index]);
             var parent2Genotypes = GenerateCnAlleles(cnStates[parent2Index]);
             var probandGenotypes = GenerateCnAlleles(cnStates[probandIndex]);
-
+            var segment1 = samples[parents.First()].SegmentSets[segmentSetIndex].GetSet(segmentsSet)[segmentIndex];
+            var segment2 = samples[parents.Last()].SegmentSets[segmentSetIndex].GetSet(segmentsSet)[segmentIndex];
             bool isCommoCnv = (parent1Genotypes.Intersect(probandGenotypes).Any() &&
-                               parents.First().GetPloidy(segmentSetIndex, segmentIndex, segmentsSet) ==
-                               proband.GetPloidy(segmentSetIndex, segmentIndex, segmentsSet)) ||
+                               samplesInfo[parents.First()].GetPloidy(segment1) == probandPloidy) ||
                               (parent2Genotypes.Intersect(probandGenotypes).Any() &&
-                               parents.Last().GetPloidy(segmentSetIndex, segmentIndex, segmentsSet) ==
-                               proband.GetPloidy(segmentSetIndex, segmentIndex, segmentsSet));
+                               samplesInfo[parents.Last()].GetPloidy(segment2) == probandPloidy);
             return !isCommoCnv;
         }
 
-        private static bool ParentsRefCheck(List<PedigreeMember> parents, int segmentSetIndex, int segmentIndex,
-            SegmentsSet segmentsSet,
-            List<int> cnStates, int parent1Index, int parent2Index)
+        private static bool ParentsRefCheck(SampleList<PedigreeMember> samples, SampleList<PedigreeMemberInfo> samplesInfo, List<SampleId> parents, int segmentSetIndex, int segmentIndex,
+            SegmentsSet segmentsSet, List<int> cnStates, int parent1Index, int parent2Index)
         {
-            return cnStates[parent1Index] == parents.First().GetPloidy(segmentSetIndex, segmentIndex, segmentsSet) &&
-                   cnStates[parent2Index] == parents.Last().GetPloidy(segmentSetIndex, segmentIndex, segmentsSet);
+            var segment1 = samples[parents.First()].SegmentSets[segmentSetIndex].GetSet(segmentsSet)[segmentIndex];
+            var segment2 = samples[parents.Last()].SegmentSets[segmentSetIndex].GetSet(segmentsSet)[segmentIndex];
+            return cnStates[parent1Index] == samplesInfo[parents.First()].GetPloidy(segment1) &&
+                   cnStates[parent2Index] == samplesInfo[parents.Last()].GetPloidy(segment2);
         }
 
-        private void EstimateQScoresNoPedigreeInfo(LinkedList<PedigreeMember> samples, int setPosition,
-                int segmentPosition, SegmentsSet segmentsSet, double[][] copyNumberLikelihoods)
+        private void EstimateQScoresNoPedigreeInfo(SampleList<PedigreeMember> pedigreeMembers, int setPosition, int segmentPosition, SegmentsSet segmentsSet, double[][] copyNumberLikelihoods)
         {
             var cnStates =
-                samples.Select(
+                pedigreeMembers.SampleData.Select(
                     x => Math.Min(x.SegmentSets[setPosition].GetSet(segmentsSet)[segmentPosition].CopyNumber, CallerParameters.MaximumCopyNumber - 1)).ToList();
             int counter = 0;
-            foreach (PedigreeMember sample in samples)
+            foreach (PedigreeMember sample in pedigreeMembers.SampleData)
             {
                 double normalizationConstant = copyNumberLikelihoods[counter].Sum();
                 double qscore = -10.0 * Math.Log10((normalizationConstant - copyNumberLikelihoods[counter][cnStates[counter]]) / normalizationConstant);
@@ -468,20 +433,11 @@ namespace CanvasPedigreeCaller
         }
 
 
-        private static List<int> GetCnStates(IEnumerable<PedigreeMember> parents, IEnumerable<PedigreeMember> offsprings,
+        private static List<int> GetCnStates(SampleList<PedigreeMember> samples, List<SampleId> parents, List<SampleId> offsprings,
             int segmentSetIndex, int segmentIndex, SegmentsSet segmentsSet, int maximumCopyNumber)
         {
-            return
-                parents.Select(
-                        x =>
-                            Math.Min(
-                                x.SegmentSets[segmentSetIndex].GetSet(segmentsSet)[segmentIndex]
-                                    .CopyNumber, maximumCopyNumber - 1))
-                    .Concat(offsprings.Select(
-                        x =>
-                            Math.Min(
-                                x.SegmentSets[segmentSetIndex].GetSet(segmentsSet)[segmentIndex]
-                                    .CopyNumber, maximumCopyNumber - 1))).ToList();
+            return parents.Select(id => Math.Min(samples[id].SegmentSets[segmentSetIndex].GetSet(segmentsSet)[segmentIndex].CopyNumber, maximumCopyNumber - 1))
+                    .Concat(offsprings.Select(id => Math.Min(samples[id].SegmentSets[segmentSetIndex].GetSet(segmentsSet)[segmentIndex].CopyNumber, maximumCopyNumber - 1))).ToList();
         }
 
         private static List<PedigreeMember> GetChildren(IEnumerable<PedigreeMember> pedigreeMembers)
@@ -528,44 +484,46 @@ namespace CanvasPedigreeCaller
         /// <param name="setPosition"></param>
         /// <param name="copyNumbers"></param>
         /// <param name="genotypes"></param>
-        public void CallVariant(LinkedList<PedigreeMember> samples, int setPosition,
-            List<List<int>> copyNumbers, Dictionary<int, List<Genotype>> genotypes)
+        public void CallVariant(SampleList<PedigreeMember> pedigreeMembers, SampleList<PedigreeMemberInfo> pedigreeMembersInfo, SampleList<CopyNumberModel> model, 
+            int setPosition, List<List<int>> copyNumbers, Dictionary<int, List<Genotype>> genotypes)
         {
             SegmentsSet segmentsSet;
 
-            if (samples.First().SegmentSets[setPosition].SetA == null)
+            if (pedigreeMembers.SampleData.First().SegmentSets[setPosition].SetA == null)
                 segmentsSet = SegmentsSet.SetB;
-            else if (samples.First().SegmentSets[setPosition].SetB == null)
+            else if (pedigreeMembers.SampleData.First().SegmentSets[setPosition].SetB == null)
                 segmentsSet = SegmentsSet.SetA;
             else
-                segmentsSet = GetSegmentSetLikelihoodNoPedigreeInfo(samples, setPosition, copyNumbers, SegmentsSet.SetA) >
-                              GetSegmentSetLikelihoodNoPedigreeInfo(samples, setPosition, copyNumbers, SegmentsSet.SetB) ?
+                segmentsSet = GetSegmentSetLikelihoodNoPedigreeInfo(pedigreeMembers, pedigreeMembersInfo, model, setPosition, copyNumbers, SegmentsSet.SetA) >
+                              GetSegmentSetLikelihoodNoPedigreeInfo(pedigreeMembers, pedigreeMembersInfo, model, setPosition, copyNumbers, SegmentsSet.SetB) ?
                               SegmentsSet.SetA : SegmentsSet.SetB;
 
-            samples.ForEach(sample => sample.SegmentSets[setPosition].SelectedSet = segmentsSet);
+            pedigreeMembers.SampleData.ForEach(sample => sample.SegmentSets[setPosition].SelectedSet = segmentsSet);
 
             for (var segmentPosition = 0;
                 segmentPosition <
-                samples.First().SegmentSets[setPosition].GetSet(segmentsSet).Count;
+                pedigreeMembers.SampleData.First().SegmentSets[setPosition].GetSet(segmentsSet).Count;
                 segmentPosition++)
             {
-                var ll = AssignCopyNumberNoPedigreeInfo(samples, setPosition, segmentPosition, segmentsSet, copyNumbers);
-                EstimateQScoresNoPedigreeInfo(samples, setPosition, segmentPosition, segmentsSet, ll);
-                AssignMccNoPedigreeInfo(samples, setPosition, segmentPosition, segmentsSet, genotypes);
+                var ll = AssignCopyNumberNoPedigreeInfo(pedigreeMembers, pedigreeMembersInfo, model, setPosition, segmentPosition, segmentsSet, copyNumbers);
+                EstimateQScoresNoPedigreeInfo(pedigreeMembers, setPosition, segmentPosition, segmentsSet, ll);
+                AssignMccNoPedigreeInfo(pedigreeMembers, pedigreeMembersInfo, model, setPosition, segmentPosition, segmentsSet, genotypes);
             }
         }
 
-        private double GetSegmentSetLikelihoodNoPedigreeInfo(LinkedList<PedigreeMember> samples, int setPosition,
+        private double GetSegmentSetLikelihoodNoPedigreeInfo(SampleList<PedigreeMember> samples, SampleList<PedigreeMemberInfo> samplesInfo,
+            SampleList<CopyNumberModel> copyNumberModel, int setPosition,
             List<List<int>> copyNumberCombination, SegmentsSet segmentsSet)
         {
             double segmentSetLikelihood = 0;
+            int nSegments = samples.SampleData.First().SegmentSets[setPosition].GetSet(segmentsSet).Count;
             for (var segmentPosition = 0;
-                segmentPosition < samples.First().SegmentSets[setPosition].GetSet(segmentsSet).Count;
+                segmentPosition < nSegments;
                 segmentPosition++)
                 segmentSetLikelihood += Utilities.MaxValue(
-                    AssignCopyNumberNoPedigreeInfo(samples, setPosition, segmentPosition,
+                    AssignCopyNumberNoPedigreeInfo(samples, samplesInfo, copyNumberModel, setPosition, segmentPosition,
                         segmentsSet, copyNumberCombination));
-            segmentSetLikelihood /= samples.First().SegmentSets[setPosition].GetSet(segmentsSet).Count;
+            segmentSetLikelihood /= nSegments;
 
             return segmentSetLikelihood;
         }
@@ -580,50 +538,50 @@ namespace CanvasPedigreeCaller
         /// <param name="transitionMatrix"></param>
         /// <param name="offspringsGenotypes"></param>
         /// <param name="genotypes"></param>
-        public void CallVariantInPedigree(LinkedList<PedigreeMember> pedigreeMembers,
-                        List<PedigreeMember> parents, List<PedigreeMember> children, int setPosition, double[][] transitionMatrix, List<List<Genotype>> offspringsGenotypes,
+        public void CallVariantInPedigree(SampleList<PedigreeMember> pedigreeMembers, SampleList<PedigreeMemberInfo> pedigreeMembersInfo, SampleList<CopyNumberModel> model,
+                        List<SampleId> parents, List<SampleId> offsprings, int setPosition, double[][] transitionMatrix, List<List<Genotype>> offspringsGenotypes,
                         Dictionary<int, List<Genotype>> genotypes)
         {
             SegmentsSet segmentsSet;
 
-            if (parents.First().SegmentSets[setPosition].SetA == null)
+            if (pedigreeMembers[parents.First()].SegmentSets[setPosition].SetA == null)
                 segmentsSet = SegmentsSet.SetB;
-            else if (parents.First().SegmentSets[setPosition].SetB == null)
+            else if (pedigreeMembers[parents.First()].SegmentSets[setPosition].SetB == null)
                 segmentsSet = SegmentsSet.SetA;
             else
-                segmentsSet = GetSegmentSetLikelihood(parents, children, setPosition, transitionMatrix, offspringsGenotypes, SegmentsSet.SetA) >
-                              GetSegmentSetLikelihood(parents, children, setPosition, transitionMatrix, offspringsGenotypes, SegmentsSet.SetB) ?
+                segmentsSet = GetSegmentSetLikelihood(pedigreeMembers, pedigreeMembersInfo, model, parents,
+                                  offsprings, setPosition, SegmentsSet.SetA, transitionMatrix, offspringsGenotypes) >
+                              GetSegmentSetLikelihood(pedigreeMembers, pedigreeMembersInfo, model, parents,
+                                  offsprings, setPosition, SegmentsSet.SetB, transitionMatrix, offspringsGenotypes) ?
                               SegmentsSet.SetA : SegmentsSet.SetB;
 
-            parents.ForEach(sample => sample.SegmentSets[setPosition].SelectedSet = segmentsSet);
-            children.ForEach(sample => sample.SegmentSets[setPosition].SelectedSet = segmentsSet);
-
-            for (var segmentPosition = 0;
-                segmentPosition <
-                parents.First().SegmentSets[setPosition].GetSet(segmentsSet).Count;
-                segmentPosition++)
+            parents.ForEach(sampleId => pedigreeMembers[sampleId].SegmentSets[setPosition].SelectedSet = segmentsSet);
+            offsprings.ForEach(sampleId => pedigreeMembers[sampleId].SegmentSets[setPosition].SelectedSet = segmentsSet);
+            var nSegments = pedigreeMembers[parents.First()].SegmentSets[setPosition].GetSet(segmentsSet).Count;
+            for (var segmentPosition = 0; segmentPosition < nSegments; segmentPosition++)
             {
-                var ll = AssignCopyNumberWithPedigreeInfo(parents, children, setPosition, segmentPosition,
-                    segmentsSet, transitionMatrix, offspringsGenotypes);
-                EstimateQScoresWithPedigreeInfo(parents, children, setPosition, segmentPosition,
-                    segmentsSet, ll);
-                if (!UseMafInformation(pedigreeMembers, setPosition, segmentPosition,
-                    segmentsSet))
-                    AssignMccWithPedigreeInfo(parents, children, setPosition, segmentPosition, segmentsSet, genotypes);
+                var ll = AssignCopyNumberWithPedigreeInfo(pedigreeMembers, pedigreeMembersInfo, model, parents,
+                    offsprings, setPosition, segmentPosition, segmentsSet, transitionMatrix, offspringsGenotypes);
+
+                EstimateQScoresWithPedigreeInfo(pedigreeMembers, pedigreeMembersInfo, model, setPosition, parents,
+                    offsprings, segmentPosition, segmentsSet, ll);
+                if (!UseMafInformation(pedigreeMembers, setPosition, segmentPosition, segmentsSet))
+                    AssignMccWithPedigreeInfo(pedigreeMembers, pedigreeMembersInfo, model, parents,
+                        offsprings, setPosition, segmentPosition, segmentsSet, genotypes);
             }
         }
 
-        private double GetSegmentSetLikelihood(List<PedigreeMember> parents, List<PedigreeMember> children, int setPosition, double[][] transitionMatrix,
-            List<List<Genotype>> offspringsGenotypes, SegmentsSet segmentsSet)
+        private double GetSegmentSetLikelihood(SampleList<PedigreeMember> pedigreeMembers,
+            SampleList<PedigreeMemberInfo> pedigreeMembersInfo, SampleList<CopyNumberModel> model, List<SampleId> parents,
+            List<SampleId> offsprings, int setPosition, SegmentsSet segmentsSet, double[][] transitionMatrix,
+            List<List<Genotype>> offspringsGenotypes)
         {
             double segmentSetLikelihood = 0;
-            for (var segmentPosition = 0;
-                segmentPosition < parents.First().SegmentSets[setPosition].GetSet(segmentsSet).Count;
-                segmentPosition++)
-                segmentSetLikelihood +=
-                    AssignCopyNumberWithPedigreeInfo(parents, children, setPosition, segmentPosition,
-                        segmentsSet, transitionMatrix, offspringsGenotypes).MaximalLikelihood;
-            segmentSetLikelihood /= parents.First().SegmentSets[setPosition].GetSet(segmentsSet).Count;
+            var nSegments = pedigreeMembers[parents.First()].SegmentSets[setPosition].GetSet(segmentsSet).Count;
+            for (var segmentPosition = 0; segmentPosition < nSegments; segmentPosition++)
+                segmentSetLikelihood += AssignCopyNumberWithPedigreeInfo(pedigreeMembers, pedigreeMembersInfo, model, parents,
+                        offsprings, setPosition, segmentPosition, segmentsSet, transitionMatrix, offspringsGenotypes).MaximalLikelihood;
+            segmentSetLikelihood /= nSegments;
             return segmentSetLikelihood;
         }
 
@@ -631,34 +589,30 @@ namespace CanvasPedigreeCaller
         /// <summary>
         /// Calculates maximal likelihood for copy numbers. Updated CanvasSegment CopyNumber only. 
         /// </summary>
+        /// <param name="samples"></param>
+        /// <param name="samplesInfo"></param>
+        /// <param name="model"></param>
         /// <param name="parents"></param>
-        /// <param name="children"></param>
+        /// <param name="offsprings"></param>
+        /// <param name="setPosition"></param>
         /// <param name="segmentPosition"></param>
+        /// <param name="segmentsSet"></param>
         /// <param name="transitionMatrix"></param>
-        public CopyNumberDistribution AssignCopyNumberWithPedigreeInfo(List<PedigreeMember> parents,
-                List<PedigreeMember> children, int setPosition,
-                int segmentPosition, SegmentsSet segmentsSet, double[][] transitionMatrix,
+        /// <param name="offspringsGenotypes"></param>
+        public CopyNumberDistribution AssignCopyNumberWithPedigreeInfo(SampleList<PedigreeMember> samples,
+            SampleList<PedigreeMemberInfo> samplesInfo, SampleList<CopyNumberModel> model, List<SampleId> parents,
+            List<SampleId> offsprings, int setPosition, int segmentPosition, SegmentsSet segmentsSet, double[][] transitionMatrix,
                 List<List<Genotype>> offspringsGenotypes)
         {
             int nCopies = CallerParameters.MaximumCopyNumber;
-            var names = parents.Select(x => x.Name).Union(children.Select(x => x.Name)).ToList();
+            var names = offsprings.Union(parents).Select(x=>ToString()).ToList();
             var density = new CopyNumberDistribution(nCopies, names);
-            InitializeCn(setPosition, segmentPosition, segmentsSet, parents, children);
+            InitializeCn(setPosition, segmentPosition, segmentsSet, samples);
             density.MaximalLikelihood = 0;
-            var parent1Likelihood =
-                parents.First().PedigreeMemberInfo
-                    .CnModel.GetCnLikelihood(
-                        Math.Min(
-                            parents.First()
-                                .GetCoverage(setPosition, segmentPosition, segmentsSet,
-                                    CallerParameters.NumberOfTrimmedBins), parents.First().PedigreeMemberInfo.MeanCoverage * 3.0));
-            var parent2Likelihood =
-                parents.Last().PedigreeMemberInfo
-                    .CnModel.GetCnLikelihood(
-                        Math.Min(
-                            parents.Last()
-                                .GetCoverage(setPosition, segmentPosition, segmentsSet,
-                                    CallerParameters.NumberOfTrimmedBins), parents.Last().PedigreeMemberInfo.MeanCoverage * 3.0));
+            var coverages = parents.Select(id=>Math.Min(samples[id].GetCoverage(setPosition, segmentPosition, segmentsSet,CallerParameters.NumberOfTrimmedBins),
+                samplesInfo[id].MeanCoverage * 3.0)).ToList();
+            var parent1Likelihood = model[parents.First()].GetCnLikelihood(coverages.First());
+            var parent2Likelihood = model[parents.Last()].GetCnLikelihood(coverages.Last());
 
             if (parent1Likelihood.Count != parent2Likelihood.Count)
                 throw new ArgumentException("Both parents should have the same number of CN states");
@@ -670,25 +624,21 @@ namespace CanvasPedigreeCaller
                     foreach (var offspringGtStates in offspringsGenotypes)
                     {
                         double currentLikelihood = parent1Likelihood[cn1] * parent2Likelihood[cn2];
-                        int counter = 0;
-                        foreach (PedigreeMember child in children)
+                        for (var counter = 0; counter < offsprings.Count; counter++)
                         {
-                            var modelIndex =
-                                Math.Min(offspringGtStates[counter].CountsA + offspringGtStates[counter].CountsB,
+                            var child = offsprings[counter];
+                            int modelIndex = Math.Min(offspringGtStates[counter].CountsA + offspringGtStates[counter].CountsB,
                                     CallerParameters.MaximumCopyNumber - 1);
+                            double coverage = Math.Min(samples[child].GetCoverage(setPosition, segmentPosition,
+                                segmentsSet, CallerParameters.NumberOfTrimmedBins), samplesInfo[child].MeanCoverage * 3.0);
+
                             currentLikelihood *= transitionMatrix[cn1][offspringGtStates[counter].CountsA] *
                                                  transitionMatrix[cn2][offspringGtStates[counter].CountsB] *
-                                                 child.PedigreeMemberInfo.CnModel.GetCnLikelihood(child.GetCoverage(setPosition,
-                                                     segmentPosition, segmentsSet,
-                                                     CallerParameters.NumberOfTrimmedBins))[modelIndex];
-                            counter++;
-
+                                                 model[child].GetCnLikelihood(coverage)[modelIndex];
                         }
                         int[] copyNumberIndices = { cn1, cn2 };
-                        var index =
-                            copyNumberIndices.Concat(offspringGtStates.Select(x => x.CountsA + x.CountsB)).ToArray();
-                        density.SetJointProbability(
-                            Math.Max(currentLikelihood, density.GetJointProbability(index)), index);
+                        var index = copyNumberIndices.Concat(offspringGtStates.Select(x => x.CountsA + x.CountsB)).ToArray();
+                        density.SetJointProbability( Math.Max(currentLikelihood, density.GetJointProbability(index)), index);
 
                         currentLikelihood = Double.IsNaN(currentLikelihood) || Double.IsInfinity(currentLikelihood)
                             ? 0
@@ -697,14 +647,12 @@ namespace CanvasPedigreeCaller
                         if (currentLikelihood > density.MaximalLikelihood)
                         {
                             density.MaximalLikelihood = currentLikelihood;
-                            parents.First().SegmentSets[setPosition].GetSet(segmentsSet)[segmentPosition].CopyNumber = cn1;
-                            parents.Last().SegmentSets[setPosition].GetSet(segmentsSet)[segmentPosition].CopyNumber = cn2;
-                            counter = 0;
-                            foreach (PedigreeMember child in children)
+                            samples[parents.First()].SegmentSets[setPosition].GetSet(segmentsSet)[segmentPosition].CopyNumber = cn1;
+                            samples[parents.Last()].SegmentSets[setPosition].GetSet(segmentsSet)[segmentPosition].CopyNumber = cn2;
+                            for (int counter=0; counter < offsprings.Count; counter++)
                             {
-                                child.SegmentSets[setPosition].GetSet(segmentsSet)[segmentPosition].CopyNumber = offspringGtStates[counter].CountsA +
-                                                                             offspringGtStates[counter].CountsB;
-                                counter++;
+                                samples[offsprings[counter]].SegmentSets[setPosition].GetSet(segmentsSet)[segmentPosition].CopyNumber = 
+                                    offspringGtStates[counter].CountsA + offspringGtStates[counter].CountsB;
                             }
                         }
                     }
@@ -720,12 +668,13 @@ namespace CanvasPedigreeCaller
         /// <param name="children"></param>
         /// <param name="segmentPosition"></param>
         /// <param name="genotypes"></param>
-        public void AssignMccWithPedigreeInfo(List<PedigreeMember> parents, List<PedigreeMember> children,
-            int setPosition, int segmentPosition, SegmentsSet segmentsSet, Dictionary<int, List<Genotype>> genotypes)
+        public void AssignMccWithPedigreeInfo(SampleList<PedigreeMember> samples,
+            SampleList<PedigreeMemberInfo> samplesInfo, SampleList<CopyNumberModel> model, List<SampleId> parents,
+            List<SampleId> offsprings, int setPosition, int segmentPosition, SegmentsSet segmentsSet, Dictionary<int, List<Genotype>> genotypes)
         {
             double maximalLikelihood = Double.MinValue;
-            int parent1CopyNumber = parents.First().SegmentSets[setPosition].GetSet(segmentsSet)[segmentPosition].CopyNumber;
-            int parent2CopyNumber = parents.Last().SegmentSets[setPosition].GetSet(segmentsSet)[segmentPosition].CopyNumber;
+            int parent1CopyNumber = samples[parents.First()].SegmentSets[setPosition].GetSet(segmentsSet)[segmentPosition].CopyNumber;
+            int parent2CopyNumber = samples[parents.Last()].SegmentSets[setPosition].GetSet(segmentsSet)[segmentPosition].CopyNumber;
 
             foreach (var parent1GtStates in genotypes[parent1CopyNumber])
             {
@@ -733,19 +682,19 @@ namespace CanvasPedigreeCaller
                 {
                     var bestChildGtStates = new List<Genotype>();
                     double currentLikelihood = 1;
-                    foreach (PedigreeMember child in children)
+                    foreach (SampleId child in offsprings)
                     {
-                        int childCopyNumber = child.SegmentSets[setPosition].GetSet(segmentsSet)[segmentPosition].CopyNumber;
-                        bool isInheritedCnv = !child.SegmentSets[setPosition].GetSet(segmentsSet)[segmentPosition].DqScore.HasValue;
+                        int childCopyNumber = samples[child].SegmentSets[setPosition].GetSet(segmentsSet)[segmentPosition].CopyNumber;
+                        bool isInheritedCnv = !samples[child].SegmentSets[setPosition].GetSet(segmentsSet)[segmentPosition].DqScore.HasValue;
                         double bestLikelihood = Double.MinValue;
                         Genotype bestGtState = null;
-                        bestLikelihood = GetProbandLikelihood(setPosition, segmentPosition, segmentsSet, genotypes, childCopyNumber,
-                            parent1GtStates, parent2GtStates, isInheritedCnv, child, bestLikelihood, ref bestGtState);
+                        bestLikelihood = GetProbandLikelihood(model[child], setPosition, segmentPosition, segmentsSet, genotypes, childCopyNumber,
+                            parent1GtStates, parent2GtStates, isInheritedCnv, samples[child], bestLikelihood, ref bestGtState);
                         bestChildGtStates.Add(bestGtState);
                         currentLikelihood *= bestLikelihood;
                     }
-                    currentLikelihood *= GetCurrentGtLikelihood(parents.First(), setPosition, segmentPosition, segmentsSet, parent1GtStates) *
-                                         GetCurrentGtLikelihood(parents.Last(), setPosition, segmentPosition, segmentsSet, parent2GtStates);
+                    currentLikelihood *= GetCurrentGtLikelihood(model[parents.First()], samples[parents.First()], setPosition, segmentPosition, segmentsSet, parent1GtStates) *
+                                         GetCurrentGtLikelihood(model[parents.Last()], samples[parents.Last()], setPosition, segmentPosition, segmentsSet, parent2GtStates);
 
                     currentLikelihood = Double.IsNaN(currentLikelihood) || Double.IsInfinity(currentLikelihood)
                         ? 0
@@ -754,15 +703,15 @@ namespace CanvasPedigreeCaller
                     if (currentLikelihood > maximalLikelihood)
                     {
                         maximalLikelihood = currentLikelihood;
-                        AssignMCC(parents.First(), setPosition, segmentPosition, segmentsSet, genotypes, parent1GtStates, parent1CopyNumber);
-                        AssignMCC(parents.Last(), setPosition, segmentPosition, segmentsSet, genotypes, parent2GtStates, parent2CopyNumber);
+                        AssignMCC(samples[parents.First()], model[parents.First()], setPosition, segmentPosition, segmentsSet, genotypes, parent1GtStates, parent1CopyNumber);
+                        AssignMCC(samples[parents.Last()], model[parents.Last()], setPosition, segmentPosition, segmentsSet, genotypes, parent2GtStates, parent2CopyNumber);
                         var counter = 0;
-                        foreach (PedigreeMember child in children)
+                        foreach (SampleId child in offsprings)
                         {
                             if (bestChildGtStates[counter] == null) continue;
-                            int childCopyNumber = child.SegmentSets[setPosition].GetSet(segmentsSet)[segmentPosition].
+                            int childCopyNumber = samples[child].SegmentSets[setPosition].GetSet(segmentsSet)[segmentPosition].
                             CopyNumber;
-                            AssignMCC(child, setPosition, segmentPosition, segmentsSet, genotypes, bestChildGtStates[counter], childCopyNumber);
+                            AssignMCC(samples[child], model[child], setPosition, segmentPosition, segmentsSet, genotypes, bestChildGtStates[counter], childCopyNumber);
                             counter++;
                         }
                     }
@@ -770,7 +719,7 @@ namespace CanvasPedigreeCaller
             }
         }
 
-        private double GetProbandLikelihood(int setPosition, int segmentPosition, SegmentsSet segmentsSet, Dictionary<int, List<Genotype>> genotypes,
+        private double GetProbandLikelihood(CopyNumberModel copyNumberModel, int setPosition, int segmentPosition, SegmentsSet segmentsSet, Dictionary<int, List<Genotype>> genotypes,
             int childCopyNumber, Genotype parent1GtStates, Genotype parent2GtStates, bool isInheritedCnv, PedigreeMember child,
             double bestLikelihood, ref Genotype bestGtState)
         {
@@ -780,8 +729,7 @@ namespace CanvasPedigreeCaller
                 if (IsGtPedigreeConsistent(parent1GtStates, childGtState) &&
                     IsGtPedigreeConsistent(parent2GtStates, childGtState)
                     && isInheritedCnv)
-                    currentChildLikelihood = child.PedigreeMemberInfo.CnModel.GetCurrentGtLikelihood(child.PedigreeMemberInfo.MaxCoverage,
-                        child.GetAlleleCounts(setPosition, segmentPosition, segmentsSet), childGtState);
+                    currentChildLikelihood = copyNumberModel.GetCurrentGtLikelihood(child.GetAlleleCounts(setPosition, segmentPosition, segmentsSet), childGtState);
                 else
                     continue;
                 if (currentChildLikelihood > bestLikelihood)
@@ -793,7 +741,7 @@ namespace CanvasPedigreeCaller
             return bestLikelihood;
         }
 
-        private static void AssignMCC(PedigreeMember pedigreeMember, int setPosition, int segmentPosition, SegmentsSet segmentsSet,
+        private static void AssignMCC(PedigreeMember pedigreeMember, CopyNumberModel copyNumberModel, int setPosition, int segmentPosition, SegmentsSet segmentsSet,
             Dictionary<int, List<Genotype>> genotypes, Genotype gtStates, int copyNumber)
         {
             const int diploidCopyNumber = 2;
@@ -805,8 +753,7 @@ namespace CanvasPedigreeCaller
                     Math.Max(gtStates.CountsA, gtStates.CountsB);
                 int? selectedGtState = genotypes[copyNumber].IndexOf(gtStates);
                 pedigreeMember.SegmentSets[setPosition].GetSet(segmentsSet)[segmentPosition].MajorChromosomeCountScore =
-                    pedigreeMember.PedigreeMemberInfo.CnModel.GetGtLikelihoodScore(pedigreeMember.GetAlleleCounts(setPosition, segmentPosition, segmentsSet),
-                        genotypes[copyNumber], ref selectedGtState, pedigreeMember.PedigreeMemberInfo.MaxCoverage);
+                    copyNumberModel.GetGtLikelihoodScore(pedigreeMember.GetAlleleCounts(setPosition, segmentPosition, segmentsSet), genotypes[copyNumber], ref selectedGtState);
             }
             else
             {
@@ -817,12 +764,10 @@ namespace CanvasPedigreeCaller
             }
         }
 
-        private static double GetCurrentGtLikelihood(PedigreeMember pedigreeMember, int setPosition, int segmentPosition, SegmentsSet segmentsSet,
+        private static double GetCurrentGtLikelihood(CopyNumberModel copyNumberModel, PedigreeMember pedigreeMember, int setPosition, int segmentPosition, SegmentsSet segmentsSet,
             Genotype gtStates)
         {
-            double currentLikelihood = pedigreeMember.PedigreeMemberInfo.CnModel.GetCurrentGtLikelihood(pedigreeMember.PedigreeMemberInfo.MaxCoverage,
-                pedigreeMember.GetAlleleCounts(setPosition, segmentPosition, segmentsSet), gtStates);
-            return currentLikelihood;
+            return copyNumberModel.GetCurrentGtLikelihood(pedigreeMember.GetAlleleCounts(setPosition, segmentPosition, segmentsSet), gtStates);
         }
 
         public bool IsGtPedigreeConsistent(Genotype parentGtStates, Genotype childGtStates)
@@ -839,30 +784,31 @@ namespace CanvasPedigreeCaller
         /// <param name="samples"></param>
         /// <param name="segmentPosition"></param>
         /// <param name="copyNumberCombinations"></param>
-        public double[][] AssignCopyNumberNoPedigreeInfo(LinkedList<PedigreeMember> samples, int setPosition,
+        public double[][] AssignCopyNumberNoPedigreeInfo(SampleList<PedigreeMember> samples,
+            SampleList<PedigreeMemberInfo> samplesInfo, SampleList<CopyNumberModel> copyNumberModel, int setPosition,
             int segmentPosition, SegmentsSet segmentsSet, List<List<int>> copyNumberCombinations)
         {
             const int defaultCn = 2;
             const double maxCoverageMultiplier = 3.0;
 
             double maximalLikelihood = 0;
-            foreach (PedigreeMember sample in samples)
+            foreach (PedigreeMember sample in samples.SampleData)
                 sample.SegmentSets[setPosition].GetSet(segmentsSet)[segmentPosition].CopyNumber = defaultCn;
             int nCopies = CallerParameters.MaximumCopyNumber;
-            var names = samples.Select(x => x.Name).ToList();
+            var names = samples.SampleIds.Select(x=>ToString()).ToList();
             var totalLikelihoods = new List<double>();
             foreach (var copyNumberCombination in copyNumberCombinations)
             {
                 double totalLikelihood = 0;
-                foreach (PedigreeMember sample in samples)
+                foreach (var sampleId in samples.SampleIds)
                 {
                     maximalLikelihood = 0;
                     foreach (var copyNumber in copyNumberCombination)
                     {
                         var currentLikelihood =
-                            sample.PedigreeMemberInfo.CnModel.GetCnLikelihood(
-                                Math.Min(sample.GetCoverage(setPosition, segmentPosition, segmentsSet, CallerParameters.NumberOfTrimmedBins),
-                                    sample.PedigreeMemberInfo.MeanCoverage * maxCoverageMultiplier))[copyNumber];
+                            copyNumberModel[sampleId].GetCnLikelihood(
+                                Math.Min(samples[sampleId].GetCoverage(setPosition, segmentPosition, segmentsSet, CallerParameters.NumberOfTrimmedBins),
+                                    samplesInfo[sampleId].MeanCoverage * maxCoverageMultiplier))[copyNumber];
                         currentLikelihood = Double.IsNaN(currentLikelihood) || Double.IsInfinity(currentLikelihood)
                             ? 0
                             : currentLikelihood;
@@ -874,11 +820,11 @@ namespace CanvasPedigreeCaller
                 totalLikelihoods.Add(totalLikelihood);
             }
 
-            var density = new double[samples.Count][];
+            var density = new double[samples.Count()][];
             // no need to iterate over multiple genotypes for n (samples.Count) = 1
-            if (samples.Count == 1)
+            if (samples.Count() == 1)
             {
-                samples.First().SegmentSets[setPosition].GetSet(segmentsSet)[segmentPosition].CopyNumber =
+                samples.Single().Value.SegmentSets[setPosition].GetSet(segmentsSet)[segmentPosition].CopyNumber =
                     copyNumberCombinations[totalLikelihoods.IndexOf(totalLikelihoods.Max())].First();
                 density[0] = totalLikelihoods.ToArray();
                 return density;
@@ -886,7 +832,7 @@ namespace CanvasPedigreeCaller
 
             var bestcopyNumberCombination = copyNumberCombinations[totalLikelihoods.IndexOf(totalLikelihoods.Max())];
             int counter = 0;
-            foreach (PedigreeMember sample in samples)
+            foreach (var sampleId in samples.SampleIds)
             {
                 maximalLikelihood = 0;
                 density[counter] = new double[nCopies];
@@ -894,17 +840,17 @@ namespace CanvasPedigreeCaller
                 foreach (var copyNumber in bestcopyNumberCombination)
                 {
                     double currentLikelihood =
-                        sample.PedigreeMemberInfo.CnModel.GetCnLikelihood(
-                            Math.Min(sample.GetCoverage(setPosition, segmentPosition, segmentsSet, CallerParameters.NumberOfTrimmedBins),
-                                sample.PedigreeMemberInfo.MeanCoverage * maxCoverageMultiplier))[copyNumber];
+                        copyNumberModel[sampleId].GetCnLikelihood(
+                            Math.Min(samples[sampleId].GetCoverage(setPosition, segmentPosition, segmentsSet, CallerParameters.NumberOfTrimmedBins),
+                                samplesInfo[sampleId].MeanCoverage * maxCoverageMultiplier))[copyNumber];
                     currentLikelihood = Double.IsNaN(currentLikelihood) || Double.IsInfinity(currentLikelihood)
                         ? 0
                         : currentLikelihood;
                     if (currentLikelihood > maximalLikelihood)
                     {
                         maximalLikelihood = currentLikelihood;
-                        sample.SegmentSets[setPosition].GetSet(segmentsSet)[segmentPosition].CopyNumber = copyNumber;
-                        density[names.FindIndex(name => name == sample.Name)][copyNumber] = maximalLikelihood;
+                        samples[sampleId].SegmentSets[setPosition].GetSet(segmentsSet)[segmentPosition].CopyNumber = copyNumber;
+                        density[names.FindIndex(name => name == sampleId.ToString())][copyNumber] = maximalLikelihood;
                     }
                 }
             }
@@ -917,38 +863,35 @@ namespace CanvasPedigreeCaller
         /// <param name="samples"></param>
         /// <param name="segmentPosition"></param>
         /// <param name="genotypes"></param>       
-        public void AssignMccNoPedigreeInfo(LinkedList<PedigreeMember> samples, int setPosition,
-            int segmentPosition, SegmentsSet segmentsSet, Dictionary<int, List<Genotype>> genotypes)
+        public void AssignMccNoPedigreeInfo(SampleList<PedigreeMember> pedigreeMembers, SampleList<PedigreeMemberInfo> pedigreeMembersInfo, SampleList<CopyNumberModel> model, 
+            int setPosition, int segmentPosition, SegmentsSet segmentsSet, Dictionary<int, List<Genotype>> genotypes)
         {
-            foreach (PedigreeMember sample in samples)
+            foreach (var sampleId in pedigreeMembers.SampleIds)
             {
-                int copyNumber = sample.SegmentSets[setPosition].GetSet(segmentsSet)[segmentPosition].CopyNumber;
+                int copyNumber = pedigreeMembers[sampleId].SegmentSets[setPosition].GetSet(segmentsSet)[segmentPosition].CopyNumber;
                 if (copyNumber > 2)
                 {
-                    sample.SegmentSets[setPosition].GetSet(segmentsSet)[segmentPosition].MajorChromosomeCount = copyNumber == 2 ? 1 : copyNumber;
+                    pedigreeMembers[sampleId].SegmentSets[setPosition].GetSet(segmentsSet)[segmentPosition].MajorChromosomeCount = copyNumber == 2 ? 1 : copyNumber;
                     return;
                 }
                 var genotypeset = genotypes[copyNumber];
                 int? selectedGtState = null;
-                double gqscore = sample.PedigreeMemberInfo.CnModel.GetGtLikelihoodScore(sample.GetAlleleCounts(setPosition, segmentPosition, segmentsSet),
-                    genotypeset, ref selectedGtState, sample.PedigreeMemberInfo.MaxCoverage);
-                sample.SegmentSets[setPosition].GetSet(segmentsSet)[segmentPosition].MajorChromosomeCountScore = gqscore;
+                double gqscore = model[sampleId].GetGtLikelihoodScore(pedigreeMembers[sampleId].GetAlleleCounts(setPosition, segmentPosition, segmentsSet),
+                    genotypeset, ref selectedGtState);
+                pedigreeMembers[sampleId].SegmentSets[setPosition].GetSet(segmentsSet)[segmentPosition].MajorChromosomeCountScore = gqscore;
                 if (selectedGtState.HasValue)
-                    sample.SegmentSets[setPosition].GetSet(segmentsSet)[segmentPosition].MajorChromosomeCount =
+                    pedigreeMembers[sampleId].SegmentSets[setPosition].GetSet(segmentsSet)[segmentPosition].MajorChromosomeCount =
                         Math.Max(genotypeset[selectedGtState.Value].CountsA,
                             genotypeset[selectedGtState.Value].CountsB);
             }
         }
 
 
-
         private static void InitializeCn(int setPosition, int segmentPosition,
-            SegmentsSet segmentsSet, List<PedigreeMember> parents, List<PedigreeMember> children)
+            SegmentsSet segmentsSet, SampleList<PedigreeMember> samples)
         {
             const int defaultCn = 2;
-            parents.ForEach(sample => sample.SegmentSets[setPosition].GetSet(segmentsSet)[segmentPosition]
-                .CopyNumber = defaultCn);
-            children.ForEach(sample => sample.SegmentSets[setPosition].GetSet(segmentsSet)[segmentPosition]
+            samples.ForEach(sample => sample.Value.SegmentSets[setPosition].GetSet(segmentsSet)[segmentPosition]
                 .CopyNumber = defaultCn);
         }
 
@@ -1068,9 +1011,9 @@ namespace CanvasPedigreeCaller
         }
 
 
-        public static Dictionary<string, PedigreeMember.Kinship> ReadPedigreeFile(string pedigreeFile)
+        public static SampleList<PedigreeMember.Kinship> ReadPedigreeFile(string pedigreeFile)
         {
-            Dictionary<string, PedigreeMember.Kinship> kinships = new Dictionary<string, PedigreeMember.Kinship>();
+            var kinships = new SampleList<PedigreeMember.Kinship>();
             using (FileStream stream = new FileStream(pedigreeFile, FileMode.Open, FileAccess.Read))
             using (StreamReader reader = new StreamReader(stream))
             {
@@ -1082,9 +1025,9 @@ namespace CanvasPedigreeCaller
                     string paternallId = fields[3];
                     string proband = fields[5];
                     if (maternalId == "0" && paternallId == "0")
-                        kinships.Add(fields[1], PedigreeMember.Kinship.Parent);
+                        kinships.Add(new SampleId(fields[1]), PedigreeMember.Kinship.Parent);
                     else if (proband == "affected")
-                        kinships.Add(fields[1], PedigreeMember.Kinship.Proband);
+                        kinships.Add(new SampleId(fields[1]), PedigreeMember.Kinship.Proband);
                     else
                         Console.WriteLine($"Unused pedigree member: {row}");
                 }

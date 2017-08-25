@@ -22,6 +22,12 @@ namespace CanvasCommon
             _segments = segments;
             AllSegments = new ReadOnlyCollection<CanvasSegment>(allSegments);
         }
+
+        public static Segments CreateSegments(List<CanvasSegment> allSegments)
+        {
+            return new Segments(allSegments.GroupBy(x => x.Chr).ToOrderedDictionary(kvp=>kvp.Key,kvp=>kvp.ToList()), allSegments);
+        }
+
         public ICollection<string> GetChromosomes()
         {
             return _segments.Keys;
@@ -47,7 +53,6 @@ namespace CanvasCommon
             var rows = partitionedFileReader.ReadLines().Select(line => line.Split('\t'));
             var rowsByChr = rows.GroupByAdjacent(GetChromosome);
             var segments = rowsByChr.ToOrderedDictionary(kvp => kvp.Key, kvp => CreateSegments(kvp.Value));
-
             var allSegments = segments.SelectMany(kvp => kvp.Value).ToList();
             return new Segments(segments, allSegments);
         }
