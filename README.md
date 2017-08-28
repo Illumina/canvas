@@ -71,7 +71,7 @@ Options:
   -v, --version              print version and exit  
 
 #### Reference genome
-The required input files for Human reference genome builds GRCh37, hg19, and GRCh38 can be downloaded from https://illumina.box.com/CanvasPublic. When using a custom reference genome the equivalent files need to be created. Use the FlagUniqueKmers project to generate the annotated fasta file (kmer.fa) for a custom reference genome. 
+The required input files for Human reference genome builds GRCh37, hg19, and GRCh38 can be downloaded from S3 http://canvas-cnv-public.s3.amazonaws.com/. When using a custom reference genome the equivalent files need to be created. Use the FlagUniqueKmers project to generate the annotated fasta file (kmer.fa) for a custom reference genome. 
 
 ## Installation
 The easiest way to install Canvas is to use the latest pre-copiled binaries from [releases]:https://github.com/Illumina/canvas/releases (just download and uncopress). 
@@ -120,8 +120,8 @@ cd /tmp/BaseSpace
 ```
 4. This should show the following folders under canvas-spw/AppResults 
 ```
-- bams = simulated trio bams of 60x coverage aligned with iSAAC
-- canvasdata = hg19 genome reference files for running Canvas (can also be downloaded from https://illumina.box.com/CanvasPublic)
+- bams = simulated trio bams of 60x coverage aligned with Isaac
+- canvasdata = hg19 genome reference files for running Canvas (can also be downloaded from S3 http://canvas-cnv-public.s3.amazonaws.com/) 
 - snvvcf = SNV vcf files to accompany bams (joint germline CNV calls using Strelka2 https://github.com/Illumina/strelka)
 - simdata = bed files with simulated inherited and de novo variants
 ```
@@ -179,7 +179,7 @@ BaseSpace files are now available under your current directory. To run demo, tra
 “Projects/HiSeq 2500 RR:  NRC\ Exome\ (HCC1187 & HCC2218)/AppSessions/Isaac Enrichment 11|24|2015 9:23:23/AppResults.28295376.HCC1187BL/Files/Additional Files/NexteraRapidCapture_Exome_TargetedRegions_v1.2Used.txt” (targeted regions)
 ```
 #### Genome reference files  
-Download hg19 genome reference files from https://illumina.box.com/CanvasPublic into WORKDIR/testing/hg19/.
+Download hg19 genome reference files from S3 (http://canvas-cnv-public.s3.amazonaws.com/) into WORKDIR/testing/hg19/.
 
 #### Running demo
 With all files copied and installed, we are now ready to run Canvas. This demo will use Tumor-normal-enrichment workflow that runs on Nextera exome data.  Execute the command below. 
@@ -189,7 +189,7 @@ With all files copied and installed, we are now ready to run Canvas. This demo w
 CNV.vcf.gz files will be saved to HCC2218_v2 output directory. Depending on the number of available CPUs, the demo will take from few minutes to under an hour to complete.
 
 #### Inspecting results 
-Now we can test Canvas performance by using a set of previously curated HCC2218 copy number calls from whole-genome data (HCC2218Truth.vcf) and a set of repetitive or ambiguous regions (HCC2218.cnaqc.excluded_regions.bed), which are available in the TruthSets directory under https://illumina.box.com/CanvasPublic.  The evaluation is accomplished by using EvaluateCNV; the latest binary distribution for the tool can be found in [releases]:https://github.com/Illumina/canvas/releases.  
+Now we can test Canvas performance by using a set of previously curated HCC2218 copy number calls from whole-genome data (HCC2218Truth.vcf) and a set of repetitive or ambiguous regions (HCC2218.cnaqc.excluded_regions.bed), which are available in the TruthSets directory in S3 http://canvas-cnv-public.s3.amazonaws.com/.  The evaluation is accomplished by using EvaluateCNV; the latest binary distribution for the tool can be found in [releases]:https://github.com/Illumina/canvas/releases.  
 
 EvaluateCNV usage info:
 ```
