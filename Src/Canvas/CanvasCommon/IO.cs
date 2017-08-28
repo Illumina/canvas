@@ -151,7 +151,7 @@ namespace CanvasCommon
         }
 
         public static Dictionary<string, List<Balleles>> ReadFrequenciesWrapper(ILogger logger,
-            IFileLocation variantFrequencyFile, Dictionary<string, List<BedInterval>> intervalsByChromosome)
+            IFileLocation variantFrequencyFile, IReadOnlyDictionary<string, List<BedInterval>> intervalsByChromosome)
         {
             using (var reader = new GzipOrTextReader(variantFrequencyFile.FullName))
             {
@@ -161,7 +161,7 @@ namespace CanvasCommon
         }
 
         public static Dictionary<string, List<Balleles>> ReadFrequencies(GzipOrTextReader variantFrequencyFileReader,
-            Dictionary<string, List<BedInterval>> intervalByChromosome)
+            IReadOnlyDictionary<string, List<BedInterval>> intervalByChromosome)
         {
             const int minCounts = 10;
             var alleleCountsByChromosome = new Dictionary<string, List<Balleles>>();
