@@ -31,6 +31,7 @@
     <PackageReference Include="Isas.Manifests" Version="4.4.2.119" />
     <PackageReference Include="Isas.Ploidy" Version="3.0.0.73" />
     <PackageReference Include="Isas.SequencingFiles" Version="5.3.0.356" />
+    <PackageReference Include="protobuf-net" Version="2.3.2" />
   </ItemGroup>
 
 </Project>
