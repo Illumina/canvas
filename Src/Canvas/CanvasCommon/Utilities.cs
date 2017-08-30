@@ -944,7 +944,7 @@ namespace CanvasCommon
         /// that the minor allele frequency will be close to 0.5 but a little bit less (the lower the coverage, the further from 
         /// 0.5 it goes) for ordinary copy-number-2 regions.  
         /// </summary>
-        static public double EstimateDiploidMAF(int CopyNumber, float MeanCoverage)
+        static public double EstimateDiploidMAF(int CopyNumber, double MeanCoverage)
         {
             double expectedCoverageCN1 = MeanCoverage / 2.0f; // Rough guess: Our tumor genome has copy number 2.5
             double expectedCoverage = CopyNumber * expectedCoverageCN1;

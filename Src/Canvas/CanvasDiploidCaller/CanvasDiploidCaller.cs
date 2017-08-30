@@ -21,7 +21,7 @@ namespace CanvasDiploidCaller
         double DiploidCoverage = 0;
 
         // Parameters:
-        protected float MeanCoverage = 30;
+        protected double MeanCoverage = 30;
         public static double CoverageWeighting = 0.6;
         private double CoverageWeightingFactor; // Computed from CoverageWeighting
         public bool IsDbsnpVcf = false;
@@ -394,9 +394,9 @@ namespace CanvasDiploidCaller
             if (!string.IsNullOrEmpty(ploidyBedPath)) ploidy = PloidyInfo.LoadPloidyFromBedFile(ploidyBedPath);
 
             // load MAF
-            var allelesByChromosome = CanvasIO.ReadFrequenciesWrapper(_logger, new FileLocation(variantFrequencyFile), _segments.GetIntervalsByChromosome());
+            var allelesByChromosome = CanvasIO.ReadFrequenciesWrapper(_logger, new FileLocation(variantFrequencyFile), _segments.IntervalsByChromosome);
             _segments.AddAlleles(allelesByChromosome);
-            this.MeanCoverage = allelesByChromosome.SelectMany(x => x.Value).Select(y => y.MeanCoverage).Average();
+            this.MeanCoverage = allelesByChromosome.SelectMany(x => x.Value).SelectMany(y => y.TotalCoverage).Average();
             int medianVariantCoverage = AggregateVariantCoverage(ref this.Segments);
 
             // Create new models for different copy number states
@@ -457,14 +457,14 @@ namespace CanvasDiploidCaller
 
             // Merge neighboring segments that got the same copy number call.
             // merging segments requires quality scores so we do it after quality scores have been assigned
-            CanvasSegment.MergeSegments(ref this.Segments);
+            var mergedSegments = CanvasSegment.MergeSegments(Segments);
             // recalculating qscores after merging segments improves performance!
-            CanvasSegment.AssignQualityScores(this.Segments, CanvasSegment.QScoreMethod.LogisticGermline, germlineScoreParameters);
-            CanvasSegment.FilterSegments(QualityFilterThreshold, Segments);
+            CanvasSegment.AssignQualityScores(mergedSegments, CanvasSegment.QScoreMethod.LogisticGermline, germlineScoreParameters);
+            CanvasSegment.FilterSegments(QualityFilterThreshold, mergedSegments); 
 
             List<string> extraHeaders = new List<string>();
             string coverageOutputPath = SingleSampleCallset.GetCoverageAndVariantFrequencyOutputPath(outFile);
-            CanvasSegment.WriteCoveragePlotData(this.Segments, Model.DiploidCoverage, ploidy, coverageOutputPath, referenceFolder);
+            CanvasSegment.WriteCoveragePlotData(mergedSegments, Model.DiploidCoverage, ploidy, coverageOutputPath, referenceFolder);
 
             if (this.CNOracle != null)
             {
@@ -473,7 +473,7 @@ namespace CanvasDiploidCaller
 
             if (ploidy != null && !string.IsNullOrEmpty(ploidy.HeaderLine)) extraHeaders.Add(ploidy.HeaderLine);
 
-            CanvasSegmentWriter.WriteSegments(outFile, this.Segments, Model.DiploidCoverage, referenceFolder, sampleName,
+            CanvasSegmentWriter.WriteSegments(outFile, mergedSegments, Model.DiploidCoverage, referenceFolder, sampleName,
                 extraHeaders, ploidy, QualityFilterThreshold, isPedigreeInfoSupplied: false);
             return 0;
         }

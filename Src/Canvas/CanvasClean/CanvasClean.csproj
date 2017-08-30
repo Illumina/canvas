@@ -33,6 +33,7 @@
     <PackageReference Include="Isas.Framework" Version="7.5.2.530" />
     <PackageReference Include="Isas.Manifests" Version="4.4.2.119" />
     <PackageReference Include="Isas.SequencingFiles" Version="5.3.0.356" />
+    <PackageReference Include="protobuf-net" Version="2.3.2" />
   </ItemGroup>
 
 </Project>

@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using Illumina.Common;
 using Illumina.Common.FileSystem;
+using Isas.Framework.Logging;
 using Newtonsoft.Json;
 
 namespace CanvasPartition
@@ -45,9 +46,9 @@ namespace CanvasPartition
                 { "r|reference=", "folder that contains both genome.fa and GenomeSize.xml", v => referenceFolder = v},
                 { "s|split=", "CBS split method (None/Prune/SDUndo). Default: " + undoMethod, v => undoMethod = (SegmentSplitUndo)Enum.Parse(typeof(SegmentSplitUndo), v) },
                 { "b|bedfile=", "bed file to exclude (don't span these intervals)", v => filterBedFile = v },
-                { "c|commoncnvs=", "bed file with common CNVs (always include these intervals into segmentation results)", v => commonCNVsbedPath = v },             
+                { "c|commoncnvs=", "bed file with common CNVs (always include these intervals into segmentation results)", v => commonCNVsbedPath = v },
                 { "g|germline", "flag indicating that input file represents germline genome", v => isGermline = v != null },
-                { "f|coverageMetrics=", "text file with coverage metrics (optional)", v => coverageMetricsFile = v},                
+                { "f|coverageMetrics=", "text file with coverage metrics (optional)", v => coverageMetricsFile = v},
                 { "config=", "parameter configuration path (default {parameterconfigPath})", v => parameterconfigPath = v},
                 { "h|help", "show this message and exit", v => needHelp = v != null }
             };
@@ -98,20 +99,21 @@ namespace CanvasPartition
             var parameterconfigFile = new FileLocation(parameterconfigPath);
             var canvasPartitionParameters = Deserialize<CanvasPartitionParameters>(parameterconfigFile);
 
-            var segmentationInputs = vafFiles.Count > 0 && vafFiles.Count == cleanedFiles.Count ? 
-                cleanedFiles.Zip(vafFiles, (inFile, vafFile) => new SegmentationInput(inFile, vafFile, filterBedFile, 
-                canvasPartitionParameters.MaxInterBinDistInSegment, referenceFolder, coverageMetricsFile)).ToList():
-                cleanedFiles.Select(inFile => new SegmentationInput(inFile, null, filterBedFile, canvasPartitionParameters.MaxInterBinDistInSegment, 
-                referenceFolder, coverageMetricsFile)).ToList();   
+            ILogger logger = new Logger(Console.Out.ToEnumerable(), Console.Error.ToEnumerable());
+            var segmentationInputs = vafFiles.Count > 0 && vafFiles.Count == cleanedFiles.Count ?
+                cleanedFiles.Zip(vafFiles, (inFile, vafFile) => new SegmentationInput(inFile, vafFile, filterBedFile,
+                canvasPartitionParameters.MaxInterBinDistInSegment, referenceFolder, coverageMetricsFile, logger)).ToList() :
+                cleanedFiles.Select(inFile => new SegmentationInput(inFile, null, filterBedFile, canvasPartitionParameters.MaxInterBinDistInSegment,
+                referenceFolder, coverageMetricsFile, logger)).ToList();
             SegmentationInput.GenomeSegmentationResults segmentationResults;
             switch (partitionMethod)
             {
                 default:// use Wavelets if CBS is not selected       
                     Console.WriteLine("{0} Running Wavelet Partitioning", DateTime.Now);
-                    var waveletsRunner = new WaveletsRunner(new WaveletsRunner.WaveletsRunnerParams(isGermline, commonCNVsbedPath, madFactor: 
-                        canvasPartitionParameters.MadFactor, thresholdLowerMaf: canvasPartitionParameters.ThresholdLowerMaf, 
+                    var waveletsRunner = new WaveletsRunner(new WaveletsRunner.WaveletsRunnerParams(isGermline, commonCNVsbedPath, madFactor:
+                        canvasPartitionParameters.MadFactor, thresholdLowerMaf: canvasPartitionParameters.ThresholdLowerMaf,
                         evennessScoreThreshold: canvasPartitionParameters.EvennessScoreThreshold, verbose: 2));
-                    segmentationResults = new SegmentationInput.GenomeSegmentationResults(waveletsRunner.Run(segmentationInputs.Single(), 
+                    segmentationResults = new SegmentationInput.GenomeSegmentationResults(waveletsRunner.Run(segmentationInputs.Single(),
                         canvasPartitionParameters.EvennessScoreWindow));
                     segmentationInputs.Single().WriteCanvasPartitionResults(outPartitionedFiles.Single(), segmentationResults);
                     break;

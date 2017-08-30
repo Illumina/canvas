@@ -12,24 +12,6 @@ using Isas.SequencingFiles.Vcf;
 
 namespace CanvasCommon
 {
-    public class Genotype
-    {
-        public int CountsA { get; }
-        public int CountsB { get; }
-
-        public Genotype()
-        {
-            CountsA = 0;
-            CountsB = 0;
-        }
-
-        public Genotype(int countsA, int countsB)
-        {
-            CountsA = countsA;
-            CountsB = countsB;
-        }
-    }
-
     public class CanvasIO
     {
         public static void WriteToTextFile(string outfile, IEnumerable<SampleGenomicBin> bins)
@@ -169,7 +151,7 @@ namespace CanvasCommon
         }
 
         public static Dictionary<string, List<Balleles>> ReadFrequenciesWrapper(ILogger logger,
-            IFileLocation variantFrequencyFile, Dictionary<string, List<BedInterval>> intervalsByChromosome)
+            IFileLocation variantFrequencyFile, IReadOnlyDictionary<string, List<BedInterval>> intervalsByChromosome)
         {
             using (var reader = new GzipOrTextReader(variantFrequencyFile.FullName))
             {
@@ -179,7 +161,7 @@ namespace CanvasCommon
         }
 
         public static Dictionary<string, List<Balleles>> ReadFrequencies(GzipOrTextReader variantFrequencyFileReader,
-            Dictionary<string, List<BedInterval>> intervalByChromosome)
+            IReadOnlyDictionary<string, List<BedInterval>> intervalByChromosome)
         {
             const int minCounts = 10;
             var alleleCountsByChromosome = new Dictionary<string, List<Balleles>>();
@@ -202,11 +184,11 @@ namespace CanvasCommon
                 if (countRef + countAlt < minCounts) continue;
                 // as both lists are sorted linear search should achieve an average O(log(n)) complexity
                 int index = intervalByChromosome[chr].FindIndex(interval => interval.Start <= position && interval.End > position);
+                if (index == -1) continue;
                 alleleCountsByChromosome[chr][index].Add(new Ballele(position, countRef, countAlt));
             }
             return alleleCountsByChromosome;
         }
-
     }
 }
 
