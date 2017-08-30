@@ -229,15 +229,15 @@ namespace CanvasCommon
             }
         }
 
-        public static void WriteMultiSampleSegments(string outVcfPath, SampleList<Segments> segments, List<double> diploidCoverage,
+        public static void WriteMultiSampleSegments(string outVcfPath, SampleList<List<CanvasSegment>> segments, List<double> diploidCoverage,
         string wholeGenomeFastaDirectory, List<string> sampleNames, List<string> extraHeaders, List<PloidyInfo> ploidies, int qualityThreshold,
         bool isPedigreeInfoSupplied = true, int? denovoQualityThreshold = null)
         {
             using (BgzipOrStreamWriter writer = new BgzipOrStreamWriter(outVcfPath))
             {
-                var genome = WriteVcfHeader(segments.SampleData.First().AllSegments.ToList(), diploidCoverage.Average(), wholeGenomeFastaDirectory, sampleNames,
+                var genome = WriteVcfHeader(segments.SampleData.First(), diploidCoverage.Average(), wholeGenomeFastaDirectory, sampleNames,
                     extraHeaders, qualityThreshold, writer, denovoQualityThreshold);
-                WriteVariants(segments.SampleData.Select(x=>x.AllSegments.ToList()).ToList(), ploidies, genome, writer, isPedigreeInfoSupplied, denovoQualityThreshold);
+                WriteVariants(segments.SampleData.ToList(), ploidies, genome, writer, isPedigreeInfoSupplied, denovoQualityThreshold);
             }
         }
     }

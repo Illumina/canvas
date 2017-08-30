@@ -35,5 +35,9 @@ namespace CanvasPedigreeCaller
             return SegmentSets[setPosition].GetSet(segmentsSet)[segmentPosition].Balleles.GetAlleleCounts();
         }
 
+        public List<CanvasSegment> GetCanvasSegments()
+        {
+            return SegmentSets.SelectMany(set => set.GetSet(set.SelectedSet)).ToList();
+        }
     }
 }

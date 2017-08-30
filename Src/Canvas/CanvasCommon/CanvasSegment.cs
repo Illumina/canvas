@@ -147,7 +147,6 @@ namespace CanvasCommon
             SetA = setA;
             SetB = setB;
             SelectedSet = SegmentsSet.SetA;
-
         }
     }
 

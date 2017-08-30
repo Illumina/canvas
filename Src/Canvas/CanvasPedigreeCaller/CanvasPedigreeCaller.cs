@@ -107,27 +107,31 @@ namespace CanvasPedigreeCaller
                     Console.WriteLine($"{DateTime.Now} Finished SPW task for segment {interval.Start} - {interval.End}");
                 });
 
-                var mergedSampleSegments = MergeSegments(sampleSegments, CallerParameters.MinimumCallSize);
+                var variantCalledSegments = new SampleList<List<CanvasSegment>>();
+                foreach (var key in pedigreeMembers.SampleIds)
+                    variantCalledSegments.Add(key, pedigreeMembers[key].GetCanvasSegments());
+
+                var mergedVariantCalledSegments = MergeSegments(variantCalledSegments, CallerParameters.MinimumCallSize);
                 var outputFolder = new FileLocation(outVcfFile).Directory;
                 foreach (var sampleId in offspringsIds.Union(parentsIds))
                 {
                     var coverageOutputPath = SingleSampleCallset.GetCoverageAndVariantFrequencyOutput(outputFolder,
                         sampleId.ToString());
-                    CanvasSegment.WriteCoveragePlotData(mergedSampleSegments[sampleId].AllSegments, pedigreeMembersInfo[sampleId].MeanCoverage,
+                    CanvasSegment.WriteCoveragePlotData(mergedVariantCalledSegments[sampleId], pedigreeMembersInfo[sampleId].MeanCoverage,
                         pedigreeMembersInfo[sampleId].Ploidy, coverageOutputPath.FullName, referenceFolder);
                 }
 
                 var ploidies = offspringsIds.Union(parentsIds).Select(id => pedigreeMembersInfo[id].Ploidy).ToList();
                 var diploidCoverage = offspringsIds.Union(parentsIds).Select(id => pedigreeMembersInfo[id].MeanCoverage).ToList();
                 var names = offspringsIds.Union(parentsIds).Select(x=>ToString()).ToList();
-                CanvasSegmentWriter.WriteMultiSampleSegments(outVcfFile, mergedSampleSegments, diploidCoverage, referenceFolder, names, 
+                CanvasSegmentWriter.WriteMultiSampleSegments(outVcfFile, mergedVariantCalledSegments, diploidCoverage, referenceFolder, names, 
                     null, ploidies, QualityFilterThreshold, isPedigreeInfoSupplied: true, denovoQualityThreshold: DeNovoQualityFilterThreshold);
 
              outputFolder = new FileLocation(outVcfFile).Directory;
              foreach (var sampleId in offspringsIds.Union(parentsIds))
              {
                 var outputVcfPath = SingleSampleCallset.GetSingleSamplePedigreeVcfOutput(outputFolder, sampleId.ToString());
-                CanvasSegmentWriter.WriteSegments(outputVcfPath.FullName, mergedSampleSegments[sampleId].AllSegments.ToList(),
+                CanvasSegmentWriter.WriteSegments(outputVcfPath.FullName, mergedVariantCalledSegments[sampleId],
                     pedigreeMembersInfo[sampleId].MeanCoverage, referenceFolder, sampleId.ToString(), null,
                     pedigreeMembersInfo[sampleId].Ploidy, QualityFilterThreshold,
                     isPedigreeInfoSupplied: true, denovoQualityThreshold: DeNovoQualityFilterThreshold);
@@ -207,16 +211,21 @@ namespace CanvasPedigreeCaller
                     Console.WriteLine($"{DateTime.Now} Finished SPW task for segment {interval.Start} - {interval.End}");
                 });
 
-            var mergedSampleSegments = MergeSegments(sampleSegments, CallerParameters.MinimumCallSize);
+
+            var variantCalledSegments = new SampleList<List<CanvasSegment>>();
+            foreach (var key in pedigreeMembers.SampleIds)
+                variantCalledSegments.Add(key, pedigreeMembers[key].GetCanvasSegments());
+
+            var mergedVariantCalledSegments = MergeSegments(variantCalledSegments, CallerParameters.MinimumCallSize);
             var outputFolder = new FileLocation(outVcfFile).Directory;
             foreach (string sampleName in sampleNames)
             {
                 var sampleId = new SampleId(sampleName);
                 var coverageOutputPath = SingleSampleCallset.GetCoverageAndVariantFrequencyOutput(outputFolder, sampleName);
-                CanvasSegment.WriteCoveragePlotData(mergedSampleSegments[sampleId].AllSegments, pedigreeMembersInfo[sampleId].MeanCoverage,
+                CanvasSegment.WriteCoveragePlotData(mergedVariantCalledSegments[sampleId], pedigreeMembersInfo[sampleId].MeanCoverage,
                     pedigreeMembersInfo[sampleId].Ploidy, coverageOutputPath.FullName, referenceFolder);
                 var outputVcfPath = SingleSampleCallset.GetSingleSamplePedigreeVcfOutput(outputFolder, sampleName);
-                CanvasSegmentWriter.WriteSegments(outputVcfPath.FullName, mergedSampleSegments[sampleId].AllSegments.ToList(),
+                CanvasSegmentWriter.WriteSegments(outputVcfPath.FullName, mergedVariantCalledSegments[sampleId],
                     pedigreeMembersInfo[sampleId].MeanCoverage, referenceFolder, sampleName, null, pedigreeMembersInfo[sampleId].Ploidy, 
                     QualityFilterThreshold, isPedigreeInfoSupplied: false);
             }
@@ -224,15 +233,15 @@ namespace CanvasPedigreeCaller
         }
 
 
-        private static SampleList<Segments> MergeSegments( SampleList<Segments> segments, int minimumCallSize)
+        private static SampleList<List<CanvasSegment>> MergeSegments( SampleList<List<CanvasSegment>> segments, int minimumCallSize)
         {
-            int nSegments = segments.First().Value.AllSegments.Count;
+            int nSegments = segments.First().Value.Count;
             var copyNumbers = new List<List<int>>(nSegments);
             var qscores = new List<double>(nSegments);
             foreach (int segmentIndex in Enumerable.Range(0, nSegments))
             {
-                copyNumbers.Add(segments.Select(s => s.Value.AllSegments[segmentIndex].CopyNumber).ToList());
-                qscores.Add(segments.Select(s => s.Value.AllSegments[segmentIndex].QScore).Average());
+                copyNumbers.Add(segments.Select(s => s.Value[segmentIndex].CopyNumber).ToList());
+                qscores.Add(segments.Select(s => s.Value[segmentIndex].QScore).Average());
             }
 
             if (copyNumbers == null && qscores != null || copyNumbers != null & qscores == null)
@@ -242,12 +251,12 @@ namespace CanvasPedigreeCaller
             if (qscores != null && qscores.Count != nSegments)
                 throw new ArgumentException("Length of qscores list should be equal to the number of segments.");
 
-            var mergedSegments = new SampleList<Segments>();
+            var mergedSegments = new SampleList<List<CanvasSegment>>();
             foreach (var sampleSegments in segments)
             {
-                var mergedAllSegments = CanvasSegment.MergeSegments(sampleSegments.Value.AllSegments.ToList(),
+                var mergedAllSegments = CanvasSegment.MergeSegments(sampleSegments.Value.ToList(),
                     minimumCallSize, 10000, copyNumbers, qscores);
-                mergedSegments.Add(sampleSegments.Key, Segments.CreateSegments(mergedAllSegments));
+                mergedSegments.Add(sampleSegments.Key, mergedAllSegments);
             }
             return mergedSegments;
         }
