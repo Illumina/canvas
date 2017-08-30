@@ -336,29 +336,26 @@ namespace CanvasPedigreeCaller
         }
 
         private void EstimateQScoresWithPedigreeInfo(SampleList<PedigreeMember> pedigreeMembers, SampleList<PedigreeMemberInfo> pedigreeMembersInfo, SampleList<CopyNumberModel> model,
-            int segmentSetIndex, List<SampleId> parentIDs, List<SampleId> offspringIDs, int segmentIndex, SegmentsSet segmentsSet, CopyNumberDistribution copyNumberLikelihoods)
+            List<SampleId> parentIDs, List<SampleId> offspringIDs, CanvasSegmentIndex index, CopyNumberDistribution copyNumberLikelihoods)
         {
-            var cnStates = GetCnStates(pedigreeMembers, parentIDs, offspringIDs, segmentSetIndex, segmentIndex, segmentsSet, CallerParameters.MaximumCopyNumber);
+            var cnStates = GetCnStates(pedigreeMembers, parentIDs, offspringIDs, index, CallerParameters.MaximumCopyNumber);
             var names = parentIDs.Union(offspringIDs).Select(x => ToString()).ToList();
 
             var singleSampleQualityScores = GetSingleSampleQualityScores(copyNumberLikelihoods, cnStates, names);
             var counter = 0;
             foreach (var sample in pedigreeMembers)
             {
-                sample.Value.SegmentSets[segmentSetIndex].GetSet(segmentsSet)[segmentIndex].QScore =
-                    singleSampleQualityScores[counter];
-                if (sample.Value.SegmentSets[segmentSetIndex].GetSet(segmentsSet)[segmentIndex].QScore <
-                    QualityFilterThreshold)
-                    sample.Value.SegmentSets[segmentSetIndex].GetSet(segmentsSet)[segmentIndex].Filter =
-                        $"q{QualityFilterThreshold}";
+                sample.Value.GetCanvasSegment(index).QScore = singleSampleQualityScores[counter];
+                if (sample.Value.GetCanvasSegment(index).QScore < QualityFilterThreshold)
+                    sample.Value.GetCanvasSegment(index).Filter = $"q{QualityFilterThreshold}";
                 counter++;
             }
-            SetDenovoQualityScores(pedigreeMembers, pedigreeMembersInfo, parentIDs, offspringIDs, segmentSetIndex, segmentIndex,
-                segmentsSet, copyNumberLikelihoods, names, cnStates, singleSampleQualityScores);
+            SetDenovoQualityScores(pedigreeMembers, pedigreeMembersInfo, parentIDs, offspringIDs, index, 
+                copyNumberLikelihoods, names, cnStates, singleSampleQualityScores);
         }
 
-        private void SetDenovoQualityScores(SampleList<PedigreeMember> samples, SampleList<PedigreeMemberInfo> samplesInfo, List<SampleId> parentIDs, List<SampleId> offspringIDs, int segmentSetIndex, int segmentIndex,
-            SegmentsSet segmentsSet, CopyNumberDistribution copyNumberLikelihoods, List<string> names, List<int> cnStates, 
+        private void SetDenovoQualityScores(SampleList<PedigreeMember> samples, SampleList<PedigreeMemberInfo> samplesInfo, List<SampleId> parentIDs, List<SampleId> offspringIDs,
+            CanvasSegmentIndex index, CopyNumberDistribution copyNumberLikelihoods, List<string> names, List<int> cnStates, 
             List<double> singleSampleQualityScores)
         {
             int parent1Index = names.IndexOf(parentIDs.First().ToString());
@@ -368,19 +365,17 @@ namespace CanvasPedigreeCaller
             {
                 int probandIndex = names.IndexOf(probandId.ToString());
                 var remainingProbandIndex = offspringIDs.Except(probandId.ToEnumerable()).Select(x => names.IndexOf(x.ToString())).ToList();
-                var probandSegment = samples[probandId].SegmentSets[segmentSetIndex].GetSet(segmentsSet)[segmentIndex];
+                var probandSegment = samples[probandId].GetCanvasSegment(index);
                 var probandPloidy = samplesInfo[probandId].GetPloidy(probandSegment);
                 if (cnStates[probandIndex] != probandPloidy &&
                     // targeted proband is ALT
-                    (ParentsRefCheck(samples, samplesInfo, parentIDs, segmentSetIndex, segmentIndex, segmentsSet, cnStates, parent1Index, parent2Index) ||
+                    (ParentsRefCheck(samples, samplesInfo, parentIDs, index, cnStates, parent1Index, parent2Index) ||
                      // either parent are REF or 
-                     IsNotCommonCnv(samples, samplesInfo, parentIDs, cnStates, parent1Index, parent2Index, probandIndex, segmentSetIndex,
-                         segmentIndex, segmentsSet, probandPloidy)) &&
+                     IsNotCommonCnv(samples, samplesInfo, parentIDs, cnStates, parent1Index, parent2Index, probandIndex, index, probandPloidy)) &&
                     // or a common variant 
-                    remainingProbandIndex.Zip(offspringIDs.Except(probandId.ToEnumerable())).All(index =>
-                            cnStates[index.Item1] == samplesInfo[index.Item2].GetPloidy(samples[index.Item2].SegmentSets[segmentSetIndex].GetSet(segmentsSet)[segmentIndex]) ||
-                            IsNotCommonCnv(samples, samplesInfo, parentIDs, cnStates, parent1Index, parent2Index, probandIndex, segmentSetIndex,
-                            segmentIndex, segmentsSet, probandPloidy)) &&
+                    remainingProbandIndex.Zip(offspringIDs.Except(probandId.ToEnumerable())).All(i =>
+                            cnStates[i.Item1] == samplesInfo[i.Item2].GetPloidy(samples[i.Item2].GetCanvasSegment(index)) ||
+                            IsNotCommonCnv(samples, samplesInfo, parentIDs, cnStates, parent1Index, parent2Index, probandIndex, index, probandPloidy)) &&
                     // and other probands are REF or common variant 
                     singleSampleQualityScores[probandIndex] > QualityFilterThreshold &&
                     singleSampleQualityScores[parent1Index] > QualityFilterThreshold &&
@@ -392,20 +387,20 @@ namespace CanvasPedigreeCaller
                         remainingProbandIndex.ToList());
                     if (Double.IsInfinity(deNovoQualityScore) | deNovoQualityScore > CallerParameters.MaxQscore)
                         deNovoQualityScore = CallerParameters.MaxQscore;
-                    samples[probandId].SegmentSets[segmentSetIndex].GetSet(segmentsSet)[segmentIndex].DqScore =
+                    samples[probandId].GetCanvasSegment(index).DqScore =
                         deNovoQualityScore;
                 }
             }
         }
 
         private static bool IsNotCommonCnv(SampleList<PedigreeMember> samples, SampleList<PedigreeMemberInfo> samplesInfo, List<SampleId> parentIDs, List<int> cnStates,
-            int parent1Index, int parent2Index, int probandIndex, int segmentSetIndex, int segmentIndex, SegmentsSet segmentsSet, int probandPloidy)
+            int parent1Index, int parent2Index, int probandIndex, CanvasSegmentIndex index, int probandPloidy)
         {
             var parent1Genotypes = GenerateCnAlleles(cnStates[parent1Index]);
             var parent2Genotypes = GenerateCnAlleles(cnStates[parent2Index]);
             var probandGenotypes = GenerateCnAlleles(cnStates[probandIndex]);
-            var segment1 = samples[parentIDs.First()].SegmentSets[segmentSetIndex].GetSet(segmentsSet)[segmentIndex];
-            var segment2 = samples[parentIDs.Last()].SegmentSets[segmentSetIndex].GetSet(segmentsSet)[segmentIndex];
+            var segment1 = samples[parentIDs.First()].GetCanvasSegment(index);
+            var segment2 = samples[parentIDs.Last()].GetCanvasSegment(index);
             bool isCommoCnv = (parent1Genotypes.Intersect(probandGenotypes).Any() &&
                                samplesInfo[parentIDs.First()].GetPloidy(segment1) == probandPloidy) ||
                               (parent2Genotypes.Intersect(probandGenotypes).Any() &&
@@ -413,11 +408,11 @@ namespace CanvasPedigreeCaller
             return !isCommoCnv;
         }
 
-        private static bool ParentsRefCheck(SampleList<PedigreeMember> samples, SampleList<PedigreeMemberInfo> samplesInfo, List<SampleId> parentIDs, int segmentSetIndex, int segmentIndex,
-            SegmentsSet segmentsSet, List<int> cnStates, int parent1Index, int parent2Index)
+        private static bool ParentsRefCheck(SampleList<PedigreeMember> samples, SampleList<PedigreeMemberInfo> samplesInfo, List<SampleId> parentIDs, CanvasSegmentIndex index, 
+            List<int> cnStates, int parent1Index, int parent2Index)
         {
-            var segment1 = samples[parentIDs.First()].SegmentSets[segmentSetIndex].GetSet(segmentsSet)[segmentIndex];
-            var segment2 = samples[parentIDs.Last()].SegmentSets[segmentSetIndex].GetSet(segmentsSet)[segmentIndex];
+            var segment1 = samples[parentIDs.First()].GetCanvasSegment(index);
+            var segment2 = samples[parentIDs.Last()].GetCanvasSegment(index);
             return cnStates[parent1Index] == samplesInfo[parentIDs.First()].GetPloidy(segment1) &&
                    cnStates[parent2Index] == samplesInfo[parentIDs.Last()].GetPloidy(segment2);
         }
@@ -443,10 +438,10 @@ namespace CanvasPedigreeCaller
 
 
         private static List<int> GetCnStates(SampleList<PedigreeMember> samples, List<SampleId> parentIDs, List<SampleId> offspringIDs,
-            int segmentSetIndex, int segmentIndex, SegmentsSet segmentsSet, int maximumCopyNumber)
+            CanvasSegmentIndex index, int maximumCopyNumber)
         {
-            return parentIDs.Select(id => Math.Min(samples[id].SegmentSets[segmentSetIndex].GetSet(segmentsSet)[segmentIndex].CopyNumber, maximumCopyNumber - 1))
-                    .Concat(offspringIDs.Select(id => Math.Min(samples[id].SegmentSets[segmentSetIndex].GetSet(segmentsSet)[segmentIndex].CopyNumber, maximumCopyNumber - 1))).ToList();
+            return parentIDs.Select(id => Math.Min(samples[id].GetCanvasSegment(index).CopyNumber, maximumCopyNumber - 1))
+                    .Concat(offspringIDs.Select(id => Math.Min(samples[id].GetCanvasSegment(index).CopyNumber, maximumCopyNumber - 1))).ToList();
         }
 
         private static List<PedigreeMember> GetChildren(IEnumerable<PedigreeMember> pedigreeMembers)
@@ -575,8 +570,8 @@ namespace CanvasPedigreeCaller
                 var ll = AssignCopyNumberWithPedigreeInfo(pedigreeMembers, pedigreeMembersInfo, model, parentIDs,
                     offspringIDs, canvasSegmentIndex, transitionMatrix, offspringsGenotypes);
 
-                EstimateQScoresWithPedigreeInfo(pedigreeMembers, pedigreeMembersInfo, model, setPosition, parentIDs,
-                    offspringIDs, segmentPosition, segmentsSet, ll);
+                EstimateQScoresWithPedigreeInfo(pedigreeMembers, pedigreeMembersInfo, model, parentIDs,
+                    offspringIDs, canvasSegmentIndex, ll);
 
                 if (!UseMafInformation(pedigreeMembers, setPosition, segmentPosition, segmentsSet))
                     AssignMccWithPedigreeInfo(pedigreeMembers, pedigreeMembersInfo, model, parentIDs,
