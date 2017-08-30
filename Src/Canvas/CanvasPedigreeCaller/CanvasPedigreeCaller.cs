@@ -1069,42 +1069,6 @@ namespace CanvasPedigreeCaller
             return singleSampleQualityScores;
         }
 
-        public double GetDeNovoQualityScore(List<PedigreeMember> parents, CopyNumberDistribution density,
-            string sampleName, int sampleValue, double sampleProbability)
-        {
-            int nSamples = density.Count;
-            const int diploidState = 2;
-            var probandMarginalProbabilities = density.GetMarginalProbability(nSamples,
-                CallerParameters.MaximumCopyNumber, sampleName);
-            double normalization = probandMarginalProbabilities[sampleValue] +
-                                   probandMarginalProbabilities[diploidState];
-            double probandMarginalAlt = probandMarginalProbabilities[sampleValue] / normalization;
-            //density.SetConditionalProbability(density.Count, MaximumCopyNumber, sampleId, sampleValue, probandMarginalProbabilities[sampleValue]);
-
-            var parentNames = parents.Select(x => x.Name).ToList();
-            var firstParentMarginalProbabilities = density.GetMarginalProbability(nSamples,
-                CallerParameters.MaximumCopyNumber, parentNames.First());
-            var secondParentMarginalProbabilities = density.GetMarginalProbability(nSamples,
-                CallerParameters.MaximumCopyNumber, parentNames.Last());
-            normalization = firstParentMarginalProbabilities[sampleValue] +
-                            firstParentMarginalProbabilities[diploidState];
-            double firstParentMarginalAlt =
-                Math.Min(Math.Max(firstParentMarginalProbabilities[sampleValue] / normalization, 0.001), 0.999);
-            normalization = secondParentMarginalProbabilities[sampleValue] +
-                            secondParentMarginalProbabilities[diploidState];
-            double secondParentMarginalAlt =
-                Math.Min(Math.Max(secondParentMarginalProbabilities[sampleValue] / normalization, 0.001), 0.999);
-
-            normalization = (1 - firstParentMarginalAlt) * secondParentMarginalAlt +
-                            firstParentMarginalAlt * secondParentMarginalAlt +
-                            (1 - firstParentMarginalAlt) * (1 - firstParentMarginalAlt) +
-                            (1 - secondParentMarginalAlt) * firstParentMarginalAlt;
-            double diploidProbability = (1 - firstParentMarginalAlt) * (1 - secondParentMarginalAlt) / normalization;
-            double denovoProbability = diploidProbability * probandMarginalAlt;
-            double qscore = -10.0 * Math.Log10(1 - denovoProbability);
-            return qscore;
-        }
-
         public double GetConditionalDeNovoQualityScore(CopyNumberDistribution density, int probandIndex,
             int probandCopyNumber, string probandName, int parent1Index, int parent2Index,
             List<int> remainingProbandIndex)
