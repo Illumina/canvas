@@ -35,7 +35,7 @@ namespace CanvasTest
                 };
                 for (int varIndex = 0; varIndex < variantCount; varIndex++)
                 {
-                    segment.Balleles.BAlleles.Add(new Allele(0, RNG.Next(), 100, 50, 50));
+                    segment.Balleles.Add(new Ballele(0, RNG.Next(), 100, 50, 50));
                 }
                 segments.Add(segment);
             }

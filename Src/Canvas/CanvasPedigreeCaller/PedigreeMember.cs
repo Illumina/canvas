@@ -31,7 +31,7 @@ namespace CanvasPedigreeCaller
         {
             return SegmentSets[setPosition].GetSet(segmentsSet)[segmentPosition].MedianCount;
         }
-        public Tuple<int,int> GetMedianAlleleCounts(int segmentIndex)
+        public Tuple<int, int> GetMedianAlleleCounts(int segmentIndex)
         {
             int allele1 = Math.Min(Segments[segmentIndex].Balleles.MedianCounts.Item1, MaxCoverage - 1);
             int allele2 = Math.Min(Segments[segmentIndex].Balleles.MedianCounts.Item2, MaxCoverage - 1);
@@ -39,10 +39,8 @@ namespace CanvasPedigreeCaller
         }
         public List<Tuple<int, int>> GetAlleleCounts(int setPosition, int segmentPosition, SegmentsSet segmentsSet)
         {
-            return SegmentSets[setPosition].GetSet(segmentsSet)[segmentPosition].Balleles.BAlleles.Select(x=> 
-            new Tuple<int, int>(x.Counts.AlleleACounts, x.Counts.AlleleBCounts)).ToList();
+            return SegmentSets[setPosition].GetSet(segmentsSet)[segmentPosition].Balleles.GetAlleleCounts();
         }
-
         public int GetPloidy(int haplotypeIndex, int segmentIndex, SegmentsSet segmentsSet)
         {
             return Ploidy?.GetReferenceCopyNumber(SegmentSets[haplotypeIndex].GetSet(segmentsSet)[segmentIndex]) ?? 2;

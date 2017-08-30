@@ -5,6 +5,7 @@ using System.Linq;
 using Illumina.Common;
 using Illumina.Common.FileSystem;
 using Isas.Framework.Logging;
+using Isas.SequencingFiles;
 using Isas.SequencingFiles.Vcf;
 
 
@@ -21,7 +22,10 @@ namespace CanvasCommon
             _segments = segments;
             AllSegments = new ReadOnlyCollection<CanvasSegment>(allSegments);
         }
-
+        public ICollection<string> GetChromosomes()
+        {
+            return _segments.Keys;
+        }
         public IReadOnlyList<CanvasSegment> GetSegmentsForChromosome(string chromosome)
         {
             return _segments[chromosome];
@@ -131,6 +135,32 @@ namespace CanvasCommon
         private static string GetSegmentId(string[] row)
         {
             return row[4];
+        }
+
+        public void AddAlleles(Dictionary<string, List<Balleles>> allelesByChromosome)
+        {
+            foreach (string chr in GetChromosomes())
+            {
+                var counter = 0;
+                foreach (var segment in GetSegmentsForChromosome(chr))
+                {
+                    segment.Balleles.Add(allelesByChromosome[chr][counter]);
+                    counter++;
+                }
+            }
+        }
+        public Dictionary<string, List<BedInterval>> GetIntervalsByChromosome()
+        {
+            var intervalsByChromosome = new Dictionary<string, List<BedInterval>>();
+            foreach (string chr in GetChromosomes())
+            {
+                intervalsByChromosome[chr] = new List<BedInterval>();
+                foreach (var canvasSegment in GetSegmentsForChromosome(chr))
+                {
+                    intervalsByChromosome[chr].Add(new BedInterval(canvasSegment.Begin, canvasSegment.End));
+                }
+            }
+            return intervalsByChromosome;
         }
     }
 }

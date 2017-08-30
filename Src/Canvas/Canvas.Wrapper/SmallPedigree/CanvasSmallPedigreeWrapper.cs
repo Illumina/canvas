@@ -106,8 +106,8 @@ namespace Canvas.Wrapper.SmallPedigree
 
             var singleSampleJob = new UnitOfWork()
             {
-                ExecutablePath = CrossPlatform.IsThisLinux() ? _runtimeExecutable.FullName : _canvasExe.FullName,
-                CommandLine = CrossPlatform.IsThisLinux() ? _canvasExe + " " + commandLine : commandLine.ToString(),
+                ExecutablePath = _runtimeExecutable.FullName,
+                CommandLine = _canvasExe + " " + commandLine,
                 LoggingStub = "Canvas_" + pedigreeId,
             };
             _workManager.DoWorkSingleThread(singleSampleJob);
