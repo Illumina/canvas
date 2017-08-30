@@ -514,11 +514,11 @@ namespace CanvasPedigreeCaller
                 pedigreeMembers.SampleData.First().SegmentSets[setPosition].GetSet(segmentsSet).Count;
                 segmentPosition++)
             {
-                var index = new CanvasSegmentIndex(setPosition, segmentsSet, segmentPosition);
+                var canvasSegmentIndex = new CanvasSegmentIndex(setPosition, segmentsSet, segmentPosition);
 
-                var ll = AssignCopyNumberNoPedigreeInfo(pedigreeMembers, pedigreeMembersInfo, model, index, copyNumbers);
-                EstimateQScoresNoPedigreeInfo(pedigreeMembers, index, ll);
-                AssignMccNoPedigreeInfo(pedigreeMembers, pedigreeMembersInfo, model, index, genotypes);
+                var ll = AssignCopyNumberNoPedigreeInfo(pedigreeMembers, pedigreeMembersInfo, model, canvasSegmentIndex, copyNumbers);
+                EstimateQScoresNoPedigreeInfo(pedigreeMembers, canvasSegmentIndex, ll);
+                AssignMccNoPedigreeInfo(pedigreeMembers, pedigreeMembersInfo, model, canvasSegmentIndex, genotypes);
             }
         }
 
@@ -529,9 +529,9 @@ namespace CanvasPedigreeCaller
             double segmentSetLikelihood = 0;
             int nSegments = samples.SampleData.First().SegmentSets[setPosition].GetSet(segmentsSet).Count;
             for (var segmentPosition = 0; segmentPosition < nSegments; segmentPosition++) { 
-                var index = new CanvasSegmentIndex(setPosition, segmentsSet, segmentPosition);
+                var canvasSegmentIndex = new CanvasSegmentIndex(setPosition, segmentsSet, segmentPosition);
                 segmentSetLikelihood += Utilities.MaxValue(
-                    AssignCopyNumberNoPedigreeInfo(samples, samplesInfo, copyNumberModel, index, copyNumberCombination));
+                    AssignCopyNumberNoPedigreeInfo(samples, samplesInfo, copyNumberModel, canvasSegmentIndex, copyNumberCombination));
             }
             segmentSetLikelihood /= nSegments;
 
@@ -570,17 +570,17 @@ namespace CanvasPedigreeCaller
             var nSegments = pedigreeMembers[parentIDs.First()].SegmentSets[setPosition].GetSet(segmentsSet).Count;
             for (var segmentPosition = 0; segmentPosition < nSegments; segmentPosition++)
             {
-                var index = new CanvasSegmentIndex(setPosition, segmentsSet, segmentPosition);
+                var canvasSegmentIndex = new CanvasSegmentIndex(setPosition, segmentsSet, segmentPosition);
 
                 var ll = AssignCopyNumberWithPedigreeInfo(pedigreeMembers, pedigreeMembersInfo, model, parentIDs,
-                    offspringIDs, index, transitionMatrix, offspringsGenotypes);
+                    offspringIDs, canvasSegmentIndex, transitionMatrix, offspringsGenotypes);
 
                 EstimateQScoresWithPedigreeInfo(pedigreeMembers, pedigreeMembersInfo, model, setPosition, parentIDs,
                     offspringIDs, segmentPosition, segmentsSet, ll);
 
                 if (!UseMafInformation(pedigreeMembers, setPosition, segmentPosition, segmentsSet))
                     AssignMccWithPedigreeInfo(pedigreeMembers, pedigreeMembersInfo, model, parentIDs,
-                        offspringIDs, index, genotypes);
+                        offspringIDs, canvasSegmentIndex, genotypes);
             }
         }
 
@@ -774,8 +774,7 @@ namespace CanvasPedigreeCaller
             else
             {
                 pedigreeMember.GetCanvasSegment(index).MajorChromosomeCount = copyNumber == diploidCopyNumber
-                    ? haploidCopyNumber
-                    : copyNumber;
+                    ? haploidCopyNumber                     : copyNumber;
                 pedigreeMember.GetCanvasSegment(index).MajorChromosomeCountScore = null;
             }
         }
