@@ -541,55 +541,55 @@ namespace CanvasPedigreeCaller
         /// Identify variant with the highest likelihood at a given setPosition and assign relevant scores
         /// </summary>
         /// <param name="pedigreeMembers"></param>
-        /// <param name="parents"></param>
+        /// <param name="parentIDs"></param>
         /// <param name="children"></param>
         /// <param name="setPosition"></param>
         /// <param name="transitionMatrix"></param>
         /// <param name="offspringsGenotypes"></param>
         /// <param name="genotypes"></param>
         public void CallVariantInPedigree(SampleList<PedigreeMember> pedigreeMembers, SampleList<PedigreeMemberInfo> pedigreeMembersInfo, SampleList<CopyNumberModel> model,
-                        List<SampleId> parents, List<SampleId> offsprings, int setPosition, double[][] transitionMatrix, List<List<Genotype>> offspringsGenotypes,
+                        List<SampleId> parentIDs, List<SampleId> offspringIDs, int setPosition, double[][] transitionMatrix, List<List<Genotype>> offspringsGenotypes,
                         Dictionary<int, List<Genotype>> genotypes)
         {
             SegmentsSet segmentsSet;
 
-            if (pedigreeMembers[parents.First()].SegmentSets[setPosition].SetA == null)
+            if (pedigreeMembers[parentIDs.First()].SegmentSets[setPosition].SetA == null)
                 segmentsSet = SegmentsSet.SetB;
-            else if (pedigreeMembers[parents.First()].SegmentSets[setPosition].SetB == null)
+            else if (pedigreeMembers[parentIDs.First()].SegmentSets[setPosition].SetB == null)
                 segmentsSet = SegmentsSet.SetA;
             else
-                segmentsSet = GetSegmentSetLikelihood(pedigreeMembers, pedigreeMembersInfo, model, parents,
-                                  offsprings, setPosition, SegmentsSet.SetA, transitionMatrix, offspringsGenotypes) >
-                              GetSegmentSetLikelihood(pedigreeMembers, pedigreeMembersInfo, model, parents,
-                                  offsprings, setPosition, SegmentsSet.SetB, transitionMatrix, offspringsGenotypes) ?
+                segmentsSet = GetSegmentSetLikelihood(pedigreeMembers, pedigreeMembersInfo, model, parentIDs,
+                                  offspringIDs, setPosition, SegmentsSet.SetA, transitionMatrix, offspringsGenotypes) >
+                              GetSegmentSetLikelihood(pedigreeMembers, pedigreeMembersInfo, model, parentIDs,
+                                  offspringIDs, setPosition, SegmentsSet.SetB, transitionMatrix, offspringsGenotypes) ?
                               SegmentsSet.SetA : SegmentsSet.SetB;
 
-            parents.ForEach(sampleId => pedigreeMembers[sampleId].SegmentSets[setPosition].SelectedSet = segmentsSet);
-            offsprings.ForEach(sampleId => pedigreeMembers[sampleId].SegmentSets[setPosition].SelectedSet = segmentsSet);
-            var nSegments = pedigreeMembers[parents.First()].SegmentSets[setPosition].GetSet(segmentsSet).Count;
+            parentIDs.ForEach(sampleId => pedigreeMembers[sampleId].SegmentSets[setPosition].SelectedSet = segmentsSet);
+            offspringIDs.ForEach(sampleId => pedigreeMembers[sampleId].SegmentSets[setPosition].SelectedSet = segmentsSet);
+            var nSegments = pedigreeMembers[parentIDs.First()].SegmentSets[setPosition].GetSet(segmentsSet).Count;
             for (var segmentPosition = 0; segmentPosition < nSegments; segmentPosition++)
             {
-                var ll = AssignCopyNumberWithPedigreeInfo(pedigreeMembers, pedigreeMembersInfo, model, parents,
-                    offsprings, setPosition, segmentPosition, segmentsSet, transitionMatrix, offspringsGenotypes);
+                var ll = AssignCopyNumberWithPedigreeInfo(pedigreeMembers, pedigreeMembersInfo, model, parentIDs,
+                    offspringIDs, setPosition, segmentPosition, segmentsSet, transitionMatrix, offspringsGenotypes);
 
-                EstimateQScoresWithPedigreeInfo(pedigreeMembers, pedigreeMembersInfo, model, setPosition, parents,
-                    offsprings, segmentPosition, segmentsSet, ll);
+                EstimateQScoresWithPedigreeInfo(pedigreeMembers, pedigreeMembersInfo, model, setPosition, parentIDs,
+                    offspringIDs, segmentPosition, segmentsSet, ll);
                 if (!UseMafInformation(pedigreeMembers, setPosition, segmentPosition, segmentsSet))
-                    AssignMccWithPedigreeInfo(pedigreeMembers, pedigreeMembersInfo, model, parents,
-                        offsprings, setPosition, segmentPosition, segmentsSet, genotypes);
+                    AssignMccWithPedigreeInfo(pedigreeMembers, pedigreeMembersInfo, model, parentIDs,
+                        offspringIDs, setPosition, segmentPosition, segmentsSet, genotypes);
             }
         }
 
         private double GetSegmentSetLikelihood(SampleList<PedigreeMember> pedigreeMembers,
-            SampleList<PedigreeMemberInfo> pedigreeMembersInfo, SampleList<CopyNumberModel> model, List<SampleId> parents,
-            List<SampleId> offsprings, int setPosition, SegmentsSet segmentsSet, double[][] transitionMatrix,
+            SampleList<PedigreeMemberInfo> pedigreeMembersInfo, SampleList<CopyNumberModel> model, List<SampleId> parentIDs,
+            List<SampleId> offspringIDs, int setPosition, SegmentsSet segmentsSet, double[][] transitionMatrix,
             List<List<Genotype>> offspringsGenotypes)
         {
             double segmentSetLikelihood = 0;
-            var nSegments = pedigreeMembers[parents.First()].SegmentSets[setPosition].GetSet(segmentsSet).Count;
+            var nSegments = pedigreeMembers[parentIDs.First()].SegmentSets[setPosition].GetSet(segmentsSet).Count;
             for (var segmentPosition = 0; segmentPosition < nSegments; segmentPosition++)
-                segmentSetLikelihood += AssignCopyNumberWithPedigreeInfo(pedigreeMembers, pedigreeMembersInfo, model, parents,
-                        offsprings, setPosition, segmentPosition, segmentsSet, transitionMatrix, offspringsGenotypes).MaximalLikelihood;
+                segmentSetLikelihood += AssignCopyNumberWithPedigreeInfo(pedigreeMembers, pedigreeMembersInfo, model, parentIDs,
+                        offspringIDs, setPosition, segmentPosition, segmentsSet, transitionMatrix, offspringsGenotypes).MaximalLikelihood;
             segmentSetLikelihood /= nSegments;
             return segmentSetLikelihood;
         }
@@ -601,30 +601,30 @@ namespace CanvasPedigreeCaller
         /// <param name="samples"></param>
         /// <param name="samplesInfo"></param>
         /// <param name="model"></param>
-        /// <param name="parents"></param>
-        /// <param name="offsprings"></param>
+        /// <param name="parentIDs"></param>
+        /// <param name="offspringIDs"></param>
         /// <param name="setPosition"></param>
         /// <param name="segmentPosition"></param>
         /// <param name="segmentsSet"></param>
         /// <param name="transitionMatrix"></param>
         /// <param name="offspringsGenotypes"></param>
         public CopyNumberDistribution AssignCopyNumberWithPedigreeInfo(SampleList<PedigreeMember> samples,
-            SampleList<PedigreeMemberInfo> samplesInfo, SampleList<CopyNumberModel> model, List<SampleId> parents,
-            List<SampleId> offsprings, int setPosition, int segmentPosition, SegmentsSet segmentsSet, double[][] transitionMatrix,
+            SampleList<PedigreeMemberInfo> samplesInfo, SampleList<CopyNumberModel> model, List<SampleId> parentIDs,
+            List<SampleId> offspringIDs, int setPosition, int segmentPosition, SegmentsSet segmentsSet, double[][] transitionMatrix,
                 List<List<Genotype>> offspringsGenotypes)
         {
             int nCopies = CallerParameters.MaximumCopyNumber;
-            var names = offsprings.Union(parents).Select(x=>ToString()).ToList();
+            var names = offspringIDs.Union(parentIDs).Select(x=>ToString()).ToList();
             var density = new CopyNumberDistribution(nCopies, names);
             InitializeCn(setPosition, segmentPosition, segmentsSet, samples);
             density.MaximalLikelihood = 0;
-            var coverages = parents.Select(id=>Math.Min(samples[id].GetCoverage(setPosition, segmentPosition, segmentsSet,CallerParameters.NumberOfTrimmedBins),
+            var coverages = parentIDs.Select(id=>Math.Min(samples[id].GetCoverage(setPosition, segmentPosition, segmentsSet,CallerParameters.NumberOfTrimmedBins),
                 samplesInfo[id].MeanCoverage * 3.0)).ToList();
-            var parent1Likelihood = model[parents.First()].GetCnLikelihood(coverages.First());
-            var parent2Likelihood = model[parents.Last()].GetCnLikelihood(coverages.Last());
+            var parent1Likelihood = model[parentIDs.First()].GetCnLikelihood(coverages.First());
+            var parent2Likelihood = model[parentIDs.Last()].GetCnLikelihood(coverages.Last());
 
             if (parent1Likelihood.Count != parent2Likelihood.Count)
-                throw new ArgumentException("Both parents should have the same number of CN states");
+                throw new ArgumentException("Both parentIDs should have the same number of CN states");
 
             for (int cn1 = 0; cn1 < nCopies; cn1++)
             {
@@ -633,9 +633,9 @@ namespace CanvasPedigreeCaller
                     foreach (var offspringGtStates in offspringsGenotypes)
                     {
                         double currentLikelihood = parent1Likelihood[cn1] * parent2Likelihood[cn2];
-                        for (var counter = 0; counter < offsprings.Count; counter++)
+                        for (var counter = 0; counter < offspringIDs.Count; counter++)
                         {
-                            var child = offsprings[counter];
+                            var child = offspringIDs[counter];
                             int modelIndex = Math.Min(offspringGtStates[counter].CountsA + offspringGtStates[counter].CountsB,
                                     CallerParameters.MaximumCopyNumber - 1);
                             double coverage = Math.Min(samples[child].GetCoverage(setPosition, segmentPosition,
@@ -656,11 +656,11 @@ namespace CanvasPedigreeCaller
                         if (currentLikelihood > density.MaximalLikelihood)
                         {
                             density.MaximalLikelihood = currentLikelihood;
-                            samples[parents.First()].SegmentSets[setPosition].GetSet(segmentsSet)[segmentPosition].CopyNumber = cn1;
-                            samples[parents.Last()].SegmentSets[setPosition].GetSet(segmentsSet)[segmentPosition].CopyNumber = cn2;
-                            for (int counter=0; counter < offsprings.Count; counter++)
+                            samples[parentIDs.First()].SegmentSets[setPosition].GetSet(segmentsSet)[segmentPosition].CopyNumber = cn1;
+                            samples[parentIDs.Last()].SegmentSets[setPosition].GetSet(segmentsSet)[segmentPosition].CopyNumber = cn2;
+                            for (int counter=0; counter < offspringIDs.Count; counter++)
                             {
-                                samples[offsprings[counter]].SegmentSets[setPosition].GetSet(segmentsSet)[segmentPosition].CopyNumber = 
+                                samples[offspringIDs[counter]].SegmentSets[setPosition].GetSet(segmentsSet)[segmentPosition].CopyNumber = 
                                     offspringGtStates[counter].CountsA + offspringGtStates[counter].CountsB;
                             }
                         }
@@ -673,17 +673,17 @@ namespace CanvasPedigreeCaller
         /// <summary>
         /// Calculates maximal likelihood for genotypes given a copy number call. Updated MajorChromosomeCount.
         /// </summary>
-        /// <param name="parents"></param>
+        /// <param name="parentIDs"></param>
         /// <param name="children"></param>
         /// <param name="segmentPosition"></param>
         /// <param name="genotypes"></param>
         public void AssignMccWithPedigreeInfo(SampleList<PedigreeMember> samples,
-            SampleList<PedigreeMemberInfo> samplesInfo, SampleList<CopyNumberModel> model, List<SampleId> parents,
-            List<SampleId> offsprings, int setPosition, int segmentPosition, SegmentsSet segmentsSet, Dictionary<int, List<Genotype>> genotypes)
+            SampleList<PedigreeMemberInfo> samplesInfo, SampleList<CopyNumberModel> model, List<SampleId> parentIDs,
+            List<SampleId> offspringIDs, int setPosition, int segmentPosition, SegmentsSet segmentsSet, Dictionary<int, List<Genotype>> genotypes)
         {
             double maximalLikelihood = Double.MinValue;
-            int parent1CopyNumber = samples[parents.First()].SegmentSets[setPosition].GetSet(segmentsSet)[segmentPosition].CopyNumber;
-            int parent2CopyNumber = samples[parents.Last()].SegmentSets[setPosition].GetSet(segmentsSet)[segmentPosition].CopyNumber;
+            int parent1CopyNumber = samples[parentIDs.First()].SegmentSets[setPosition].GetSet(segmentsSet)[segmentPosition].CopyNumber;
+            int parent2CopyNumber = samples[parentIDs.Last()].SegmentSets[setPosition].GetSet(segmentsSet)[segmentPosition].CopyNumber;
 
             foreach (var parent1GtStates in genotypes[parent1CopyNumber])
             {
@@ -691,7 +691,7 @@ namespace CanvasPedigreeCaller
                 {
                     var bestChildGtStates = new List<Genotype>();
                     double currentLikelihood = 1;
-                    foreach (SampleId child in offsprings)
+                    foreach (SampleId child in offspringIDs)
                     {
                         int childCopyNumber = samples[child].SegmentSets[setPosition].GetSet(segmentsSet)[segmentPosition].CopyNumber;
                         bool isInheritedCnv = !samples[child].SegmentSets[setPosition].GetSet(segmentsSet)[segmentPosition].DqScore.HasValue;
@@ -702,8 +702,8 @@ namespace CanvasPedigreeCaller
                         bestChildGtStates.Add(bestGtState);
                         currentLikelihood *= bestLikelihood;
                     }
-                    currentLikelihood *= GetCurrentGtLikelihood(model[parents.First()], samples[parents.First()], setPosition, segmentPosition, segmentsSet, parent1GtStates) *
-                                         GetCurrentGtLikelihood(model[parents.Last()], samples[parents.Last()], setPosition, segmentPosition, segmentsSet, parent2GtStates);
+                    currentLikelihood *= GetCurrentGtLikelihood(model[parentIDs.First()], samples[parentIDs.First()], setPosition, segmentPosition, segmentsSet, parent1GtStates) *
+                                         GetCurrentGtLikelihood(model[parentIDs.Last()], samples[parentIDs.Last()], setPosition, segmentPosition, segmentsSet, parent2GtStates);
 
                     currentLikelihood = Double.IsNaN(currentLikelihood) || Double.IsInfinity(currentLikelihood)
                         ? 0
@@ -712,10 +712,10 @@ namespace CanvasPedigreeCaller
                     if (currentLikelihood > maximalLikelihood)
                     {
                         maximalLikelihood = currentLikelihood;
-                        AssignMCC(samples[parents.First()], model[parents.First()], setPosition, segmentPosition, segmentsSet, genotypes, parent1GtStates, parent1CopyNumber);
-                        AssignMCC(samples[parents.Last()], model[parents.Last()], setPosition, segmentPosition, segmentsSet, genotypes, parent2GtStates, parent2CopyNumber);
+                        AssignMCC(samples[parentIDs.First()], model[parentIDs.First()], setPosition, segmentPosition, segmentsSet, genotypes, parent1GtStates, parent1CopyNumber);
+                        AssignMCC(samples[parentIDs.Last()], model[parentIDs.Last()], setPosition, segmentPosition, segmentsSet, genotypes, parent2GtStates, parent2CopyNumber);
                         var counter = 0;
-                        foreach (SampleId child in offsprings)
+                        foreach (SampleId child in offspringIDs)
                         {
                             if (bestChildGtStates[counter] == null) continue;
                             int childCopyNumber = samples[child].SegmentSets[setPosition].GetSet(segmentsSet)[segmentPosition].
