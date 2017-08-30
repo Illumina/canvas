@@ -323,7 +323,8 @@ namespace CanvasPedigreeCaller
                         $"chromosomes in {segmentFile}");
 
                 var segmentIntervalsByChromosome = new ConcurrentDictionary<string, List<BedInterval>>();
-                Parallel.ForEach(commonRegions.Keys, chr => segmentIntervalsByChromosome[chr] =
+                var chromosomes = commonRegions.Keys.Where(chromosome => coverage.StartByChr.ContainsKey(chromosome));
+                Parallel.ForEach(chromosomes, chr => segmentIntervalsByChromosome[chr] =
                 CanvasSegment.RemapCommonRegions(commonRegions[chr], coverage.StartByChr[chr], coverage.EndByChr[chr]));
                 var allelesByChromosomeCommonSegs = CanvasIO.ReadFrequenciesWrapper(_logger, new FileLocation(variantFrequencyFile), segmentIntervalsByChromosome);
                 var segmentsSetByChromosome = new ConcurrentDictionary<string, List<CanvasSegmentsSet>>();
