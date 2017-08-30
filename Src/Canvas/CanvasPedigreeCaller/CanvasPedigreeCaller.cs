@@ -444,21 +444,6 @@ namespace CanvasPedigreeCaller
                     .Concat(offspringIDs.Select(id => Math.Min(samples[id].GetCanvasSegment(index).CopyNumber, maximumCopyNumber - 1))).ToList();
         }
 
-        private static List<PedigreeMember> GetChildren(IEnumerable<PedigreeMember> pedigreeMembers)
-        {
-            return pedigreeMembers.Select(x => x).Where(x => x.Kin != PedigreeMember.Kinship.Parent).ToList();
-        }
-
-        private static List<PedigreeMember> GetParents(IEnumerable<PedigreeMember> pedigreeMembers)
-        {
-            return pedigreeMembers.Select(x => x).Where(x => x.Kin == PedigreeMember.Kinship.Parent).ToList();
-        }
-
-        private static List<PedigreeMember> GetProbands(IEnumerable<PedigreeMember> pedigreeMembers)
-        {
-            return pedigreeMembers.Select(x => x).Where(x => x.Kin == PedigreeMember.Kinship.Proband).ToList();
-        }
-
         public static int AggregateVariantCoverage(ref List<CanvasSegment> segments)
         {
             var variantCoverage = segments.SelectMany(segment => segment.Balleles.TotalCoverage).ToList();
