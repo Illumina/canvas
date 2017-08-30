@@ -25,19 +25,23 @@ namespace CanvasPedigreeCaller
         public Kinship Kin { get; }
 
 
-        public double GetCoverage(int setPosition, int segmentPosition, SegmentsSet segmentsSet, int numberOfTrimmedBins)
+        public double GetCoverage(CanvasSegmentIndex segmentIndex, int numberOfTrimmedBins)
         {
-            return SegmentSets[setPosition].GetSet(segmentsSet)[segmentPosition].MedianCount;
+            return GetCanvasSegment(segmentIndex).MedianCount;
         }
 
-        public List<Tuple<int, int>> GetAlleleCounts(int setPosition, int segmentPosition, SegmentsSet segmentsSet)
+        public List<Tuple<int, int>> GetAlleleCounts(CanvasSegmentIndex segmentIndex)
         {
-            return SegmentSets[setPosition].GetSet(segmentsSet)[segmentPosition].Balleles.GetAlleleCounts();
+            return GetCanvasSegment(segmentIndex).Balleles.GetAlleleCounts();
         }
 
         public List<CanvasSegment> GetCanvasSegments()
         {
             return SegmentSets.SelectMany(set => set.GetSet(set.SelectedSet)).ToList();
+        }
+        public CanvasSegment GetCanvasSegment(CanvasSegmentIndex segmentIndex)
+        {
+            return SegmentSets[segmentIndex.SetPosition].GetSet(segmentIndex.Set)[segmentIndex.SegmentPosition];
         }
     }
 }
