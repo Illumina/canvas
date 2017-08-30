@@ -69,7 +69,7 @@ namespace CanvasSomaticCaller
                 {"s|somaticvcf=", "somatic vcf file - optionally used for purity estimation", v => somaticVCFPath = v},
                 {"b|bedfile=", "bed file containing regions to exclude from calling", v => bedPath = v},
                 {
-                    "p|ploidyVcfFile=", "bed file specifying reference ploidy (e.g. for sex chromosomes) (optional)",
+                    "p|ploidyVcfFile=", "vcf file specifying reference ploidy (e.g. for sex chromosomes) (optional)",
                     v => ploidyVcfPath = v
                 },
                 {

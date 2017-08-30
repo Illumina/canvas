@@ -63,7 +63,16 @@ namespace Canvas.Wrapper
 
             commandLine.Append($" --somatic-vcf \"{input.SomaticVcf.VcfFile}\"");
 
-            AddPloidyVcf(commandLine, SingleSampleCommonOptionsParser.PloidyVcfOptionName, input, sampleId, sampleSandbox);
+            if (input.SexPloidy == null)
+            {
+                _logger.Warn("Sex chromosome ploidy not available. No ploidy will be provided to Canvas.");
+            }
+            else
+            {
+
+                _canvasPloidyVcfCreator.AddPloidyVcfOption(commandLine, SingleSampleCommonOptionsParser.PloidyVcfOptionName, input.GenomeMetadata, input.SexPloidy, sampleId, sampleSandbox);
+            }
+
 
             commandLine.Append(_singleSampleInputCommandLineBuilder.GetCustomParameters());
             commandLine = _singleSampleInputCommandLineBuilder.MergeCustomCanvasParameters(commandLine);
@@ -75,17 +84,6 @@ namespace Canvas.Wrapper
             };
             _workManager.DoWorkSingleThread(singleSampleJob);
             return GetCanvasOutput(sampleId, sampleSandbox);
-        }
-
-        private void AddPloidyVcf(StringBuilder commandLine, string optionName, CanvasTumorNormalWgsInput input, string sampleId, IDirectoryLocation sampleSandbox)
-        {
-            if (input.SexPloidy == null)
-            {
-                _logger.Warn("Sex chromosome ploidy not available. No ploidy will be provided to Canvas.");
-                return;
-            }
-            var ploidyVcf = _canvasPloidyVcfCreator.CreatePloidyVcf(sampleId, input.SexPloidy, input.GenomeMetadata, sampleSandbox);
-            commandLine.Append($" --{optionName} \"{ploidyVcf.VcfFile}\"");
         }
 
         private CanvasOutput GetCanvasOutput(string sampleId, IDirectoryLocation sampleSandbox)

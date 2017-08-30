@@ -70,7 +70,7 @@ namespace CanvasCommon
                 int overlapBases = overlapEnd - overlapStart;
                 if (overlapBases < 0) continue;
                 baseCounts[2] -= overlapBases;
-                baseCounts[interval.Ploidy] += overlapBases; // ASSUMPTION: Bed file ploidy shouldn't be >4 (i.e. we wouldn't handle an XXXXXY genome):
+                baseCounts[interval.Ploidy] += overlapBases; // ASSUMPTION: Vcf file ploidy shouldn't be >4 (i.e. we wouldn't handle an XXXXXY genome):
             }
             int bestCount = 0;
             int referenceCN = 2;
@@ -85,8 +85,24 @@ namespace CanvasCommon
             return referenceCN;
         }
 
-        // Use the first sample column if no sampleId provided
-        public static PloidyInfo LoadPloidyFromVcfFile(string vcfPath, int sampleIndex = 0) 
+        // Only one sample column allowed, if no sampleId provided, 
+        public static PloidyInfo LoadPloidyFromVcfFileNoSampleId(string vcfPath)
+        {
+            // check how many sample columns in the VCF file
+            using (VcfReader reader = new VcfReader(vcfPath))
+            {
+                var sampleCount = reader.Samples.Count;
+                if (sampleCount == 0) 
+                    throw new ArgumentException(
+                        $"File '{vcfPath}' does not contain any genotype column");
+                else if (sampleCount > 1)
+                    throw new ArgumentException(
+                        $"File '{vcfPath}' cannot have more than one genotype columns when no sample ID provided'");
+            }
+            return LoadPloidyFromVcfFile(vcfPath, 0);
+        }
+
+        private static PloidyInfo LoadPloidyFromVcfFile(string vcfPath, int sampleIndex) 
         {
             PloidyInfo ploidy = new PloidyInfo();
 

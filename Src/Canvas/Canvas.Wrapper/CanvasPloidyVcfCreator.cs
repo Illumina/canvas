@@ -6,12 +6,13 @@ using System.Collections.Generic;
 using Isas.Ploidy;
 using System;
 using System.Linq;
+using System.Text;
 
 namespace Canvas.Wrapper
 {
     public class CanvasPloidyVcfCreator
     {
-        public const string PloidyVcfName = "ploidy.vcf.gz";
+        private const string PloidyVcfName = "ploidy.vcf.gz";
         public CanvasPloidyVcfCreator(PloidyCorrector ploidyFixer)
         {
             _ploidyFixer = ploidyFixer;
@@ -48,6 +49,18 @@ namespace Canvas.Wrapper
             var ploidyX = karyotypeLower.Count(letter => letter == 'x');
             var ploidyY = karyotypeLower.Count(letter => letter == 'y');
             return new SexPloidyInfo(ploidyX, ploidyY);
+        }
+
+        public void AddPloidyVcfOption(StringBuilder commandLine, string ploidyOptionName, GenomeMetadata genomeMetadata, string SexChromosomeKaryotype, string sampleId, IDirectoryLocation sampleSandbox)
+        {
+            var ploidyVcf = CreatePloidyVcfFromSexChromosomeKaryotype(sampleId, SexChromosomeKaryotype, genomeMetadata, sampleSandbox);
+            commandLine.Append($" --{ploidyOptionName} \"{ploidyVcf.VcfFile}\"");
+        }
+
+        public void AddPloidyVcfOption(StringBuilder commandLine, string ploidyOptionName, GenomeMetadata genomeMetadata, SexPloidyInfo sexPloidyInfo, string sampleId, IDirectoryLocation sampleSandbox)
+        {
+            var ploidyVcf = CreatePloidyVcf(sampleId, sexPloidyInfo, genomeMetadata, sampleSandbox);
+            commandLine.Append($" --{ploidyOptionName} \"{ploidyVcf.VcfFile}\"");
         }
     }
 }

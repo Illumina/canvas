@@ -391,7 +391,7 @@ namespace CanvasDiploidCaller
                 return 0;
             }
             PloidyInfo ploidy = null;
-            if (!string.IsNullOrEmpty(ploidyVcfPath)) ploidy = PloidyInfo.LoadPloidyFromVcfFile(ploidyVcfPath);
+            if (!string.IsNullOrEmpty(ploidyVcfPath)) ploidy = PloidyInfo.LoadPloidyFromVcfFileNoSampleId(ploidyVcfPath);
 
             // load MAF
             this.MeanCoverage = CanvasIO.LoadFrequenciesBySegment(variantFrequencyFile, this.Segments, referenceFolder);

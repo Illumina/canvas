@@ -455,15 +455,12 @@ namespace EvaluateCNV
         private static PloidyInfo LoadPloidy(IFileLocation ploidyFile, IFileLocation cnvCalls)
         {
             if (ploidyFile == null) return new PloidyInfo();
-            if (ploidyFile.FullName.EndsWith(".vcf") || ploidyFile.FullName.EndsWith(".vcf.gz"))
-            {
-                var sampleId = GetSampleIdFromVcfHeader(cnvCalls);
-                return PloidyInfo.LoadPloidyFromVcfFile(ploidyFile.FullName, sampleId);
-            }
-            else
+            if (!ploidyFile.FullName.EndsWith(".vcf") && !ploidyFile.FullName.EndsWith(".vcf.gz"))
             {
                 throw new NotSupportedException("Ploidy information must be provided in VCF format.");
             }
+            var sampleId = GetSampleIdFromVcfHeader(cnvCalls);
+            return PloidyInfo.LoadPloidyFromVcfFile(ploidyFile.FullName, sampleId);
         }
 
         private static string GetSampleIdFromVcfHeader(IFileLocation cnvCallsPath)

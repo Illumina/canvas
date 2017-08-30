@@ -69,13 +69,13 @@ namespace CanvasSomaticCaller
         #endregion
 
         /// <summary>
-        /// Load the expected ploidy for sex chromosomes from a .bed file.  This lets us know that, for instance, copy number 2
+        /// Load the expected ploidy for sex chromosomes from a .vcf file.  This lets us know that, for instance, copy number 2
         /// on chrX is a GAIN (not REF) call for a male (XY) sample.
         /// </summary>
         public void LoadReferencePloidy(string filePath) // Single sample, the first sample column would be used.
         {
             Console.WriteLine(">>>LoadReferencePloidy({0})", filePath);
-            ReferencePloidy = PloidyInfo.LoadPloidyFromVcfFile(filePath);
+            ReferencePloidy = PloidyInfo.LoadPloidyFromVcfFileNoSampleId(filePath);
         }
 
         /// <summary>

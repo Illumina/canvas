@@ -36,7 +36,7 @@ namespace CanvasNormalize
         {
             PloidyInfo referencePloidy = null;
             if (referencePloidyVcfFile != null && referencePloidyVcfFile.Exists)
-                referencePloidy = PloidyInfo.LoadPloidyFromVcfFile(referencePloidyVcfFile.FullName);
+                referencePloidy = PloidyInfo.LoadPloidyFromVcfFileNoSampleId(referencePloidyVcfFile.FullName);
 
             CanvasIO.WriteToTextFile(outputPath.FullName, RatiosToCounts(ratios, referencePloidy));
         }

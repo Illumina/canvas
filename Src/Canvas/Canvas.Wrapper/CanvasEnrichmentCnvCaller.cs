@@ -105,12 +105,12 @@ namespace Canvas.Wrapper
                 }
             }
 
-            AddPloidyVcf(commandLine, SomaticEnrichmentOptionsParser.ControlPloidyVcfOptionName, input, controlSexChromosomeKaryotype, sampleId, sampleSandbox, true);
+            AddControlPloidyVcf(commandLine, input, controlSexChromosomeKaryotype, sampleId, sampleSandbox);
 
             commandLine.Append($" --{SingleSampleCommonOptionsParser.PopulationBAlleleVcfOptionName} \"{dbSnpVcf}\"");
             commandLine.Append($" --manifest \"{manifest}\"");
 
-            AddPloidyVcf(commandLine, SingleSampleCommonOptionsParser.PloidyVcfOptionName, input, sexChromosomeKaryotype, sampleId, sampleSandbox, false);
+            AddSamplePloidyVcf(commandLine, input, sexChromosomeKaryotype, sampleId, sampleSandbox);
 
             if (input.PredefinedBinsFile != null)
             {
@@ -129,25 +129,26 @@ namespace Canvas.Wrapper
             return GetCanvasOutput(sampleId, sampleSandbox);
         }
 
-        private void AddPloidyVcf(StringBuilder commandLine, string optionName, CanvasEnrichmentInput input, string SexChromosomeKaryotype, string sampleId, IDirectoryLocation sampleSandbox, bool isControl)
+        private void AddControlPloidyVcf(StringBuilder commandLine, CanvasEnrichmentInput input, string SexChromosomeKaryotype, string sampleId, IDirectoryLocation sampleSandbox)
         {
             if (SexChromosomeKaryotype == null)
             {
-                if (isControl)
-                {
-                    _logger.Warn("Sex chromosome ploidy not available for control sample. No ploidy will be provided to Canvas.");
-                }
-                else
-                {
-                    _logger.Warn("Sex chromosome ploidy not available. No ploidy will be provided to Canvas.");
-                }
+                _logger.Warn("Sex chromosome ploidy not available for control sample. No ploidy will be provided to Canvas.");
                 return;
             }
-            var workingSandbox = isControl ? sampleSandbox.CreateSubdirectory("control") : sampleSandbox;
-            var ploidyVcf = _canvasPloidyVcfCreator.CreatePloidyVcfFromSexChromosomeKaryotype(sampleId, SexChromosomeKaryotype, input.GenomeMetadata, workingSandbox);
-            commandLine.Append($" --{optionName} \"{ploidyVcf.VcfFile}\"");
+
+            _canvasPloidyVcfCreator.AddPloidyVcfOption(commandLine, SomaticEnrichmentOptionsParser.ControlPloidyVcfOptionName, input.GenomeMetadata, SexChromosomeKaryotype, sampleId, sampleSandbox.CreateSubdirectory("control"));
         }
 
+        private void AddSamplePloidyVcf(StringBuilder commandLine, CanvasEnrichmentInput input, string SexChromosomeKaryotype, string sampleId, IDirectoryLocation sampleSandbox)
+        {
+            if (SexChromosomeKaryotype == null)
+            {
+                _logger.Warn("Sex chromosome ploidy not available. No ploidy will be provided to Canvas.");
+                return;
+            }
+            _canvasPloidyVcfCreator.AddPloidyVcfOption(commandLine, SingleSampleCommonOptionsParser.PloidyVcfOptionName, input.GenomeMetadata, SexChromosomeKaryotype, sampleId, sampleSandbox);
+        }
 
         private CanvasEnrichmentOutput GetCanvasOutput(string sampleId, IDirectoryLocation sampleSandbox)
         {
