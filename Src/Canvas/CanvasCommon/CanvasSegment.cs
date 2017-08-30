@@ -25,7 +25,7 @@ namespace CanvasCommon
 
         public double GetMaxFrequency()
         {
-            return Math.Max(CountsA, CountsB) / (double) GetTotalCoverage(CountsA, CountsB);
+            return Math.Max(CountsA, CountsB) / (double)GetTotalCoverage(CountsA, CountsB);
         }
 
         private static int GetTotalCoverage(int alleleACounts, int alleleBCounts)

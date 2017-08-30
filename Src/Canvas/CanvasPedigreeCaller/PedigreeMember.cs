@@ -19,7 +19,7 @@ namespace CanvasPedigreeCaller
         {
             Other, Parent, Proband
         }
-        public List<CanvasSegmentsSet> SegmentSets = new List<CanvasSegmentsSet>(); 
+        public List<CanvasSegmentsSet> SegmentSets = new List<CanvasSegmentsSet>();
         public SampleId Id { get; }
         public string Name => Id.ToString();
         public Kinship Kin { get; }
