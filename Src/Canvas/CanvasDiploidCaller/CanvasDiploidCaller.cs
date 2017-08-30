@@ -21,7 +21,7 @@ namespace CanvasDiploidCaller
         double DiploidCoverage = 0;
 
         // Parameters:
-        protected float MeanCoverage = 30;
+        protected double MeanCoverage = 30;
         public static double CoverageWeighting = 0.6;
         private double CoverageWeightingFactor; // Computed from CoverageWeighting
         public bool IsDbsnpVcf = false;
@@ -396,7 +396,7 @@ namespace CanvasDiploidCaller
             // load MAF
             var allelesByChromosome = CanvasIO.ReadFrequenciesWrapper(_logger, new FileLocation(variantFrequencyFile), _segments.IntervalsByChromosome);
             _segments.AddAlleles(allelesByChromosome);
-            this.MeanCoverage = allelesByChromosome.SelectMany(x => x.Value).Select(y => y.MeanCoverage).Average();
+            this.MeanCoverage = allelesByChromosome.SelectMany(x => x.Value).SelectMany(y => y.TotalCoverage).Average();
             int medianVariantCoverage = AggregateVariantCoverage(ref this.Segments);
 
             // Create new models for different copy number states

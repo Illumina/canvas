@@ -12,24 +12,6 @@ using Isas.SequencingFiles.Vcf;
 
 namespace CanvasCommon
 {
-    public class Genotype
-    {
-        public int CountsA { get; }
-        public int CountsB { get; }
-
-        public Genotype()
-        {
-            CountsA = 0;
-            CountsB = 0;
-        }
-
-        public Genotype(int countsA, int countsB)
-        {
-            CountsA = countsA;
-            CountsB = countsB;
-        }
-    }
-
     public class CanvasIO
     {
         public static void WriteToTextFile(string outfile, IEnumerable<SampleGenomicBin> bins)
@@ -202,11 +184,11 @@ namespace CanvasCommon
                 if (countRef + countAlt < minCounts) continue;
                 // as both lists are sorted linear search should achieve an average O(log(n)) complexity
                 int index = intervalByChromosome[chr].FindIndex(interval => interval.Start <= position && interval.End > position);
+                if (index == -1) continue;
                 alleleCountsByChromosome[chr][index].Add(new Ballele(position, countRef, countAlt));
             }
             return alleleCountsByChromosome;
         }
-
     }
 }
 

@@ -46,7 +46,7 @@ namespace CanvasSomaticCaller
         // Parameters:
         public float? userPloidy;
         public float? userPurity;
-        protected float MeanCoverage = 30;
+        protected double MeanCoverage = 30;
         private double CoverageWeightingFactor; // Computed from CoverageWeighting
         public bool IsEnrichment;
         public bool IsDbsnpVcf;
@@ -386,7 +386,7 @@ namespace CanvasSomaticCaller
 
             var allelesByChromosome = CanvasIO.ReadFrequenciesWrapper(_logger, new FileLocation(variantFrequencyFile), SegmentsByChromosome.IntervalsByChromosome);
             SegmentsByChromosome.AddAlleles(allelesByChromosome);
-            this.MeanCoverage = allelesByChromosome.SelectMany(x => x.Value).Select(y => y.MeanCoverage).Average();
+            this.MeanCoverage = allelesByChromosome.SelectMany(x => x.Value).SelectMany(y => y.TotalCoverage).Average();
 
             if (this.IsDbsnpVcf)
             {

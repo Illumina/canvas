@@ -69,8 +69,8 @@ namespace Canvas.Wrapper
             commandLine = _singleSampleInputCommandLineBuilder.MergeCustomCanvasParameters(commandLine);
             UnitOfWork singleSampleJob = new UnitOfWork()
             {
-                ExecutablePath = CrossPlatform.IsThisLinux() ? _runtimeExecutable.FullName : _canvasExe.FullName,
-                CommandLine = CrossPlatform.IsThisLinux() ? _canvasExe + " " + commandLine : commandLine.ToString(),
+                ExecutablePath = _runtimeExecutable.FullName,
+                CommandLine = _canvasExe + " " + commandLine,
                 LoggingStub = "Canvas_" + sampleId,
             };
             _workManager.DoWorkSingleThread(singleSampleJob);
