@@ -8,14 +8,14 @@ namespace CanvasCommon.CommandLineParsing.CoreOptionTypes
     {
         IOptionCollection GetOptions();
         IParsingResult Parse(SuccessfulResultCollection parseInput);
-        void ShowHelp(TextWriter writer);
+        void ShowHelp(LoggerExtensions.WriteLine writer);
     }
 
     public abstract class Option<TParseOutput> : IOption
     {
         public abstract OptionCollection<TParseOutput> GetOptions();
         public abstract IParsingResult<TParseOutput> Parse(SuccessfulResultCollection parseInput);
-        public void ShowHelp(TextWriter writer)
+        public void ShowHelp(LoggerExtensions.WriteLine writer)
         {
             OptionExtensions.ShowHelp(this, writer);
         }
@@ -46,7 +46,7 @@ namespace CanvasCommon.CommandLineParsing.CoreOptionTypes
             return result.Get(option);
         }
 
-        public static void ShowHelp<T>(this Option<T> option, TextWriter writer)
+        public static void ShowHelp<T>(this Option<T> option, LoggerExtensions.WriteLine writer)
         {
             OptionCollection<T> options = new OptionCollection<T>();
             options.Add(option);

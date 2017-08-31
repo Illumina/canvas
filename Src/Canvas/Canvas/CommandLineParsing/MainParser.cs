@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using CanvasCommon.CommandLineParsing;
 using CanvasCommon.CommandLineParsing.CoreOptionTypes;
 using CanvasCommon.CommandLineParsing.OptionProcessing;
 using Illumina.Common;
@@ -39,27 +40,26 @@ namespace Canvas.CommandLineParsing
             return result.Get(CommonOptionsParser);
         }
 
-        public IParsingResult<IModeLauncher> Parse(FrameworkServices frameworkServices, string[] args, TextWriter standardWriter, TextWriter errorWriter)
+        private IParsingResult<IModeLauncher> Parse(FrameworkServices frameworkServices, string[] args, TextWriter standardWriter, TextWriter errorWriter)
         {
             var mode = _modeParsers[args[0]];
             return mode.Parse(this, frameworkServices, args, standardWriter, errorWriter);
         }
 
-        public int Parse(string[] args, TextWriter standardWriter, TextWriter errorWriter)
+        private int Parse(string[] args, LoggerExtensions.WriteLine standardWriter, LoggerExtensions.WriteLine errorWriter)
         {
-            var mode = _modeParsers[args[0]];
-            var options = mode.GetModeOptions();
-            options.Add(BaseOptionsParser);
-            options.Add(CommonOptionsParser);
-            var result = options.Parse(args.Skip(1));
-            var baseOptions = result.Get(BaseOptionsParser);
-            if (!result.RemainingArgs.Any() && baseOptions.Success && HandleBaseOptions(baseOptions.Result, standardWriter, mode))
+            var mode = GetMode(args);
+            if (AnyBaseOptions(args, out BaseOptions baseOptions))
+            {
+                HandleBaseOptions(baseOptions, standardWriter, mode);
                 return 0;
+            }
 
+            var result = GetParseResults(args);
             if (!result.Validate(out IParsingResult<IModeLauncher> failedResult))
             {
-                errorWriter.WriteLine(failedResult.ErrorMessage);
-                errorWriter.WriteLine();
+                errorWriter(failedResult.ErrorMessage);
+                errorWriter(" ");
                 ShowHelp(errorWriter, mode);
                 return -1;
             }
@@ -67,80 +67,110 @@ namespace Canvas.CommandLineParsing
             throw new IlluminaException("This method should only be called when we fail to parse common options");
         }
 
-        public int HandleMissingMode(IEnumerable<string> args, TextWriter standardWriter, TextWriter errorWriter)
+        private int HandleMissingMode(IEnumerable<string> args, TextWriter standardWriter, TextWriter errorWriter)
         {
-            string error = "Error: no mode specified";
             var baseOptionsResult = BaseOptionsParser.Parse(args);
+            if (baseOptionsResult.Success && AnyBaseOptions(baseOptionsResult.Result))
+            {
+                HandleBaseOptions(baseOptionsResult.Result, standardWriter.WriteLine);
+                return 0;
+            }
+
             if (baseOptionsResult.Success)
             {
-                if (HandleBaseOptions(baseOptionsResult.Result, standardWriter))
-                    return 0;
+                errorWriter.WriteLine("Error: no mode specified");
             }
             else
             {
-                error = baseOptionsResult.ErrorMessage;
+                errorWriter.WriteLine(baseOptionsResult.ErrorMessage);
             }
-            errorWriter.WriteLine(error);
             errorWriter.WriteLine();
-            ShowHelp(errorWriter);
+            ShowHelp(errorWriter.WriteLine);
             return -1;
         }
 
-        public bool HandleBaseOptions(BaseOptions baseOptions, TextWriter writer, IModeParser specifiedMode = null)
-        {
-            if (baseOptions.ShowHelp)
-            {
-                ShowHelp(writer, specifiedMode);
-                return true;
-            }
+        private IModeParser GetMode(string[] args) => _modeParsers[args[0]];
 
-            if (baseOptions.ShowVersion)
+        private bool AnyBaseOptions(string[] args, out BaseOptions baseOptionsResult)
+        {
+            baseOptionsResult = null;
+            var result = GetParseResults(args);
+            var baseOptions = result.Get(BaseOptionsParser);
+            if (!result.RemainingArgs.Any() && baseOptions.Success && AnyBaseOptions(baseOptions.Result))
             {
-                ShowVersion(writer);
+                baseOptionsResult = baseOptions.Result;
                 return true;
             }
             return false;
         }
 
-        public void ShowHelp(TextWriter writer, IModeParser specifiedMode = null)
+        public ResultCollection<IModeLauncher> GetParseResults(string[] args)
         {
-            writer.WriteLine($"Canvas {GetVersion()} {GetCopyright()}");
-            writer.WriteLine();
-            string modeName = specifiedMode?.Name ?? "[MODE]";
-            if (specifiedMode != null)
+            var mode = GetMode(args);
+            var options = mode.GetModeOptions();
+            options.Add(BaseOptionsParser);
+            options.Add(CommonOptionsParser);
+            var result = options.Parse(args.Skip(1));
+            return result;
+        }
+
+        private static bool AnyBaseOptions(BaseOptions baseOptions)
+        {
+            return baseOptions.ShowHelp || baseOptions.ShowVersion;
+        }
+
+        private void HandleBaseOptions(BaseOptions baseOptions, LoggerExtensions.WriteLine writer, IModeParser specifiedMode = null)
+        {
+            if (baseOptions.ShowHelp)
             {
-                writer.WriteLine($"{specifiedMode.Name} - {specifiedMode.Description}");
-                writer.WriteLine();
+                ShowHelp(writer, specifiedMode);
             }
-            writer.WriteLine($"Usage: Canvas.exe {modeName} [OPTIONS]+");
-            writer.WriteLine();
-            if (specifiedMode == null)
+
+            if (baseOptions.ShowVersion)
             {
-                writer.WriteLine("Available modes:");
-                foreach (var mode in _modeParsers.Values)
-                {
-                    writer.WriteLine($"\t{mode.Name} - {mode.Description}");
-                }
-                writer.WriteLine();
-                writer.WriteLine("Options:");
-                BaseOptionsParser.ShowHelp(writer);
-            }
-            else
-            {
-                writer.WriteLine("Mode-specific options:");
-                specifiedMode.ShowHelp(writer);
-                writer.WriteLine();
-                writer.WriteLine("Common options:");
-                CommonOptionsParser.ShowHelp(writer);
-                writer.WriteLine();
-                writer.WriteLine("Other options:");
-                BaseOptionsParser.ShowHelp(writer);
+                ShowVersion(writer);
             }
         }
 
-        private void ShowVersion(TextWriter standardWriter)
+        public void ShowHelp(LoggerExtensions.WriteLine writeLine, IModeParser specifiedMode = null)
         {
-            standardWriter.WriteLine(GetVersion());
+            writeLine($"Canvas {GetVersion()} {GetCopyright()}");
+            writeLine(" ");
+            string modeName = specifiedMode?.Name ?? "[MODE]";
+            if (specifiedMode != null)
+            {
+                writeLine($"{specifiedMode.Name} - {specifiedMode.Description}");
+                writeLine(" ");
+            }
+            writeLine($"Usage: Canvas.exe {modeName} [OPTIONS]+");
+            writeLine(" ");
+            if (specifiedMode == null)
+            {
+                writeLine("Available modes:");
+                foreach (var mode in _modeParsers.Values)
+                {
+                    writeLine($"\t{mode.Name} - {mode.Description}");
+                }
+                writeLine(" ");
+                writeLine("Options:");
+                BaseOptionsParser.ShowHelp(writeLine);
+            }
+            else
+            {
+                writeLine("Mode-specific options:");
+                specifiedMode.ShowHelp(writeLine);
+                writeLine(" ");
+                writeLine("Common options:");
+                CommonOptionsParser.ShowHelp(writeLine);
+                writeLine(" ");
+                writeLine("Other options:");
+                BaseOptionsParser.ShowHelp(writeLine);
+            }
+        }
+
+        private void ShowVersion(LoggerExtensions.WriteLine standardWriter)
+        {
+            standardWriter(GetVersion());
         }
 
         public string GetVersion()
@@ -163,9 +193,15 @@ namespace Canvas.CommandLineParsing
             var commonOptionsResult = ParseCommonOptions(args);
             if (!commonOptionsResult.Success)
             {
-                return Parse(args, standardOutput, standardError);
+                return Parse(args, standardOutput.WriteLine, standardError.WriteLine);
             }
             var commonOptions = commonOptionsResult.Result;
+
+            if (AnyBaseOptions(args, out BaseOptions baseOptions))
+            {
+                HandleBaseOptions(baseOptions, standardOutput.WriteLine, GetMode(args));
+                return 0;
+            }
             IDirectoryLocation outFolder = commonOptions.OutputDirectory;
             var log = outFolder.GetFileLocation("CanvasLog.txt");
             var error = outFolder.GetFileLocation("CanvasError.txt");

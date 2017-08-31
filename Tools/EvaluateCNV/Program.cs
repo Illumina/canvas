@@ -44,7 +44,7 @@ namespace EvaluateCNV
             Console.WriteLine("Usage info:");
             Console.WriteLine("EvaluateCNV $TruthSetPath $CNV.vcf $ExcludedRegionsBed $OutputDir [OPTIONS]+[$RegionOfInterestBed]");
             Console.WriteLine("Options:");
-            optionsParser.ShowHelp(Console.Out);
+            optionsParser.ShowHelp(Console.Out.WriteLine);
         }
     }
 
