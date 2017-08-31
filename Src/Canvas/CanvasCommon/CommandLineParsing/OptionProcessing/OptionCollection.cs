@@ -1,10 +1,10 @@
-using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using CanvasCommon.CommandLineParsing.CoreOptionTypes;
 using Illumina.Common;
+using static CanvasCommon.CommandLineParsing.CoreOptionTypes.OptionExtensions;
 
 namespace CanvasCommon.CommandLineParsing.OptionProcessing
 {
@@ -164,7 +164,7 @@ namespace CanvasCommon.CommandLineParsing.OptionProcessing
             return leafs;
         }
 
-        public void ShowHelp(LoggerExtensions.WriteLine writeLine)
+        public void ShowHelp(WriteLine writeLine)
         {
             var stringWriter = new StringWriter();
             GetOptionSet().WriteOptionDescriptions(stringWriter);

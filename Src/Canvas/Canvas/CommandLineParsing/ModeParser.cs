@@ -1,9 +1,8 @@
 using System.IO;
-using System.Linq;
 using CanvasCommon.CommandLineParsing.OptionProcessing;
 using Isas.Framework.FrameworkFactory;
 using Isas.Framework.Logging;
-using LoggerExtensions = CanvasCommon.CommandLineParsing.LoggerExtensions;
+using static CanvasCommon.CommandLineParsing.CoreOptionTypes.OptionExtensions;
 
 namespace Canvas.CommandLineParsing
 {
@@ -14,7 +13,7 @@ namespace Canvas.CommandLineParsing
         IParsingResult<IModeLauncher> Parse(MainParser main, FrameworkServices frameworkServices, string[] args, TextWriter standardWriter,
             TextWriter errorWriter);
         OptionCollection<IModeLauncher> GetModeOptions();
-        void ShowHelp(LoggerExtensions.WriteLine writer);
+        void ShowHelp(WriteLine writer);
     }
 
     public abstract class ModeParser<T> : IModeParser
@@ -50,14 +49,14 @@ namespace Canvas.CommandLineParsing
             return ParsingResult<IModeLauncher>.SuccessfulResult(new ModeLauncher(frameworkServices, runner, args, main.GetVersion(), Name));
         }
 
-        private void ShowError(MainParser main, LoggerExtensions.WriteLine errorWriter, string errorMessage)
+        private void ShowError(MainParser main, WriteLine errorWriter, string errorMessage)
         {
             errorWriter(errorMessage);
             errorWriter(" ");
             main.ShowHelp(errorWriter, this);
         }
 
-        public void ShowHelp(LoggerExtensions.WriteLine writer)
+        public void ShowHelp(WriteLine writer)
         {
             GetModeOptions().ShowHelp(writer);
         }

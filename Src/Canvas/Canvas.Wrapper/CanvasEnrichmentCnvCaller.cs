@@ -1,8 +1,6 @@
 ﻿using System.Collections.Generic;
-using System.Linq;
 using System.Text;
 using Canvas.CommandLineParsing;
-using Illumina.Common;
 using Illumina.Common.FileSystem;
 using Illumina.SecondaryAnalysis.VariantCalling;
 using Isas.Framework.DataTypes;

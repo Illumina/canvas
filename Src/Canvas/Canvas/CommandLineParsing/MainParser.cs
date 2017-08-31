@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using CanvasCommon.CommandLineParsing;
 using CanvasCommon.CommandLineParsing.CoreOptionTypes;
 using CanvasCommon.CommandLineParsing.OptionProcessing;
 using Illumina.Common;
@@ -10,6 +9,7 @@ using Illumina.Common.FileSystem;
 using Isas.Framework.FrameworkFactory;
 using Isas.Framework.Settings;
 using Isas.Framework.WorkManagement;
+using static CanvasCommon.CommandLineParsing.CoreOptionTypes.OptionExtensions;
 
 namespace Canvas.CommandLineParsing
 {
@@ -46,7 +46,7 @@ namespace Canvas.CommandLineParsing
             return mode.Parse(this, frameworkServices, args, standardWriter, errorWriter);
         }
 
-        private int Parse(string[] args, LoggerExtensions.WriteLine standardWriter, LoggerExtensions.WriteLine errorWriter)
+        private int Parse(string[] args, WriteLine standardWriter, WriteLine errorWriter)
         {
             var mode = GetMode(args);
             if (AnyBaseOptions(args, out BaseOptions baseOptions))
@@ -119,7 +119,7 @@ namespace Canvas.CommandLineParsing
             return baseOptions.ShowHelp || baseOptions.ShowVersion;
         }
 
-        private void HandleBaseOptions(BaseOptions baseOptions, LoggerExtensions.WriteLine writer, IModeParser specifiedMode = null)
+        private void HandleBaseOptions(BaseOptions baseOptions, WriteLine writer, IModeParser specifiedMode = null)
         {
             if (baseOptions.ShowHelp)
             {
@@ -132,7 +132,7 @@ namespace Canvas.CommandLineParsing
             }
         }
 
-        public void ShowHelp(LoggerExtensions.WriteLine writeLine, IModeParser specifiedMode = null)
+        public void ShowHelp(WriteLine writeLine, IModeParser specifiedMode = null)
         {
             writeLine($"Canvas {GetVersion()} {GetCopyright()}");
             writeLine(" ");
@@ -168,7 +168,7 @@ namespace Canvas.CommandLineParsing
             }
         }
 
-        private void ShowVersion(LoggerExtensions.WriteLine standardWriter)
+        private void ShowVersion(WriteLine standardWriter)
         {
             standardWriter(GetVersion());
         }
