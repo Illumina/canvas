@@ -357,7 +357,7 @@ namespace EvaluateCNV
                     purity = Convert.ToDouble(purityLine.Split("=")[1]);
                 string ploidyLine = reader.HeaderLines.Find(stringToCheck => stringToCheck.Contains("OverallPloidy"));
                 if (ploidyLine != null)
-                    ploidy = Convert.ToDouble(purityLine.Split("=")[1]);
+                    ploidy = Convert.ToDouble(ploidyLine.txt.Split("=")[1]);
             }
             return new VcfHeaderInfo(ploidy, purity);
         }
