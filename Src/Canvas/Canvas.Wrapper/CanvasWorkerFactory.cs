@@ -58,7 +58,7 @@ namespace Canvas.Wrapper
                 annotationProvider,
                 GetCanvasSingleSampleInputCommandLineBuilderWithSomaticQualityThreshold(annotationProvider),
                 new CanvasEnrichmentInputCreator<CanvasEnrichmentInput>(),
-                GetCanvasPloidyBedCreator());
+                GetCanvasPloidyVcfCreator());
             return GetCanvasWorker(canvasCnvCaller, CanvasEnrichmentOutput.GetFromStub);
         }
 
@@ -77,7 +77,7 @@ namespace Canvas.Wrapper
                 runtimeExecutable,
                 annotationProvider,
                 GetCanvasSingleSampleInputCommandLineBuilderWithSomaticQualityThreshold(annotationProvider),
-                GetCanvasPloidyBedCreator());
+                GetCanvasPloidyVcfCreator());
             return GetCanvasWorker(canvasCnvCaller, CanvasOutput.GetFromStub);
         }
 
@@ -93,13 +93,13 @@ namespace Canvas.Wrapper
                 annotationProvider,
                 GetCanvasSingleSampleInputCommandLineBuilderWithSomaticQualityThreshold(annotationProvider),
                 new CanvasEnrichmentInputCreator<CanvasTumorNormalEnrichmentInput>(),
-                GetCanvasPloidyBedCreator());
+                GetCanvasPloidyVcfCreator());
             return GetCanvasWorker(canvasCnvCaller, CanvasOutput.GetFromStub);
         }
 
-        private CanvasPloidyBedCreator GetCanvasPloidyBedCreator()
+        private CanvasPloidyVcfCreator GetCanvasPloidyVcfCreator()
         {
-            return new CanvasPloidyBedCreator(_logger, _workManager, GetPloidyCorrector());
+            return new CanvasPloidyVcfCreator(GetPloidyCorrector());
         }
 
         internal PloidyCorrector GetPloidyCorrector()

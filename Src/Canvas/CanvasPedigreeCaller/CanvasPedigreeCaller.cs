@@ -282,7 +282,7 @@ namespace CanvasPedigreeCaller
                 CanvasSegment.MergeSegments(ref pedigreeMember.Segments, minimumCallSize, 10000, copyNumbers, qscores);
         }
 
-        private PedigreeMember SetPedigreeMember(string variantFrequencyFile, string segmentFile, string ploidyBedPath,
+        private PedigreeMember SetPedigreeMember(string variantFrequencyFile, string segmentFile, string ploidyVcfPath,
             string sampleName, int defaultAlleleCountThreshold, string referenceFolder, int numberOfTrimmedBins, PedigreeMember.Kinship kinship, string commonCNVsbedPath)
         {
             var segments = Segments.ReadSegments(_logger, new FileLocation(segmentFile));
@@ -308,8 +308,8 @@ namespace CanvasPedigreeCaller
                             .ToArray()), 2);
             pedigreeMember.MeanCoverage = pedigreeMember.Segments.Any() ? pedigreeMember.Segments.Select(x => x.TruncatedMedianCount(numberOfTrimmedBins)).Average() : 0;
             pedigreeMember.MaxCoverage = pedigreeMember.Segments.Any() ? (int)(pedigreeMember.Segments.Select(x => x.TruncatedMedianCount(numberOfTrimmedBins)).Max() + 10) : 0;
-            if (!ploidyBedPath.IsNullOrEmpty() && File.Exists(ploidyBedPath))
-                pedigreeMember.Ploidy = PloidyInfo.LoadPloidyFromVcfFile(ploidyBedPath, pedigreeMember.Name);
+            if (!ploidyVcfPath.IsNullOrEmpty() && File.Exists(ploidyVcfPath))
+                pedigreeMember.Ploidy = PloidyInfo.LoadPloidyFromVcfFile(ploidyVcfPath, pedigreeMember.Name);
 
             if (commonCNVsbedPath != null)
             {

@@ -8,7 +8,7 @@ namespace Canvas.CommandLineParsing
     {
         public IFileLocation BAlleleSites { get; set; }
         public string SampleName { get; set; }
-        public IFileLocation PloidyBed { get; }
+        public IFileLocation PloidyVcf { get; }
         public bool IsDbSnpVcf { get; }
 
         /// <summary>
@@ -18,11 +18,11 @@ namespace Canvas.CommandLineParsing
         /// <param name="isDbSnpVcf"></param>
         /// <param name="ploidyBed"></param>
         /// <param name="sampleName"></param>
-        public SingleSampleCommonOptions(IFileLocation bAlleleSites, bool isDbSnpVcf, IFileLocation ploidyBed, string sampleName)
+        public SingleSampleCommonOptions(IFileLocation bAlleleSites, bool isDbSnpVcf, IFileLocation ploidyVcf, string sampleName)
         {
             BAlleleSites = bAlleleSites;
             IsDbSnpVcf = isDbSnpVcf;
-            PloidyBed = ploidyBed;
+            PloidyVcf = ploidyVcf;
             SampleName = sampleName;
         }
     }

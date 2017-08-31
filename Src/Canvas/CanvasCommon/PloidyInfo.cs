@@ -70,7 +70,7 @@ namespace CanvasCommon
                 int overlapBases = overlapEnd - overlapStart;
                 if (overlapBases < 0) continue;
                 baseCounts[2] -= overlapBases;
-                baseCounts[interval.Ploidy] += overlapBases; // ASSUMPTION: Bed file ploidy shouldn't be >4 (i.e. we wouldn't handle an XXXXXY genome):
+                baseCounts[interval.Ploidy] += overlapBases; // ASSUMPTION: Vcf file ploidy shouldn't be >4 (i.e. we wouldn't handle an XXXXXY genome):
             }
             int bestCount = 0;
             int referenceCN = 2;
@@ -85,18 +85,31 @@ namespace CanvasCommon
             return referenceCN;
         }
 
-        public static PloidyInfo LoadPloidyFromVcfFile(string vcfPath, string sampleName)
+        // Only one sample column allowed, if no sampleId provided, 
+        public static PloidyInfo LoadPloidyFromVcfFileNoSampleId(string vcfPath)
+        {
+            // check how many sample columns in the VCF file
+            using (VcfReader reader = new VcfReader(vcfPath))
+            {
+                var sampleCount = reader.Samples.Count;
+                if (sampleCount == 0) 
+                    throw new ArgumentException(
+                        $"File '{vcfPath}' does not contain any genotype column");
+                else if (sampleCount > 1)
+                    throw new ArgumentException(
+                        $"File '{vcfPath}' cannot have more than one genotype columns when no sample ID provided'");
+            }
+            return LoadPloidyFromVcfFile(vcfPath, 0);
+        }
+
+        private static PloidyInfo LoadPloidyFromVcfFile(string vcfPath, int sampleIndex) 
         {
             PloidyInfo ploidy = new PloidyInfo();
 
             using (VcfReader reader = new VcfReader(vcfPath))
             {
-                int sampleIndex = reader.Samples.IndexOf(sampleName);
-                    if (sampleIndex == -1)
-                        throw new ArgumentException(
-                            $"File '{vcfPath}' does not contain a genotype column for sample '{sampleName}'");
-
-                ploidy.HeaderLine = string.Join(" ", reader.HeaderLines);
+                //the ploidy.vcf header lines need to be updated to include reference sex chromosome info for one or multiple samples
+                //ploidy.HeaderLine = string.Join(" ", reader.HeaderLines);
 
                 while (true)
                 {
@@ -125,41 +138,18 @@ namespace CanvasCommon
             return ploidy;
         }
 
-        public static PloidyInfo LoadPloidyFromBedFile(string filePath)
+
+        public static PloidyInfo LoadPloidyFromVcfFile(string vcfPath, string sampleId)
         {
-            PloidyInfo ploidy = new PloidyInfo();
-            if (string.IsNullOrEmpty(filePath)) return ploidy;
-            int count = 0;
-            using (GzipReader reader = new GzipReader(filePath))
+            int sampleIndex;
+            using (VcfReader reader = new VcfReader(vcfPath))
             {
-                while (true)
-                {
-                    string fileLine = reader.ReadLine();
-                    if (fileLine == null) break;
-                    // save anything that looks like a vcf header line (we will add it to the output vcf)
-                    // TODO: support adding multiple header lines to the output vcf
-                    if (fileLine.StartsWith("##"))
-                    {
-                        ploidy.HeaderLine = fileLine.Trim();
-                        continue;
-                    }
-                    if (fileLine.Length == 0 || fileLine[0] == '#') continue;
-                    string[] bits = fileLine.Split('\t');
-                    string chromosome = bits[0];
-                    if (!ploidy.PloidyByChromosome.ContainsKey(chromosome))
-                    {
-                        ploidy.PloidyByChromosome[chromosome] = new List<PloidyInterval>();
-                    }
-                    PloidyInterval interval = new PloidyInterval(chromosome);
-                    interval.Start = int.Parse(bits[1]);
-                    interval.End = int.Parse(bits[2]);
-                    interval.Ploidy = int.Parse(bits[4]);
-                    ploidy.PloidyByChromosome[chromosome].Add(interval);
-                    count++;
-                }
+                sampleIndex = reader.Samples.IndexOf(sampleId);
+                if (sampleIndex == -1)
+                    throw new ArgumentException(
+                        $"File '{vcfPath}' does not contain a genotype column for sample '{sampleId}'");
             }
-            Console.WriteLine("Reference ploidy: Loaded {0} intervals across {1} chromosomes", count, ploidy.PloidyByChromosome.Keys.Count);
-            return ploidy;
+            return LoadPloidyFromVcfFile(vcfPath, sampleIndex);
         }
     }
 
