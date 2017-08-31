@@ -42,9 +42,7 @@ namespace Canvas.CommandLineParsing
             {
                 if (!results.Validate(out IParsingResult<IModeLauncher> failedResult))
                 {
-                    errorWriter.WriteLine(failedResult.ErrorMessage);
-                    errorWriter.WriteLine();
-                    main.ShowHelp(errorWriter, this);
+                    ShowError(main, errorWriter, failedResult.ErrorMessage);
                     return ParsingResult<T>.FailedResult(failedResult.ErrorMessage);
                 }
                 var successfulResults = new SuccessfulResultCollection(results);
@@ -52,9 +50,20 @@ namespace Canvas.CommandLineParsing
                 return GetSerializedResult(successfulResults, commonOptions);
             });
 
-            if (!parsingResult.Success) return ParsingResult<IModeLauncher>.FailedResult(parsingResult);
+            if (!parsingResult.Success)
+            {
+                ShowError(main, errorWriter, parsingResult.ErrorMessage);
+                return ParsingResult<IModeLauncher>.FailedResult(parsingResult);
+            }
             var runner = GetRunner(parsingResult.Result);
             return ParsingResult<IModeLauncher>.SuccessfulResult(new ModeLauncher(frameworkServices, runner, args, main.GetVersion(), Name));
+        }
+
+        private void ShowError(MainParser main, TextWriter errorWriter, string errorMessage)
+        {
+            errorWriter.WriteLine(errorMessage);
+            errorWriter.WriteLine();
+            main.ShowHelp(errorWriter, this);
         }
 
         public void ShowHelp(TextWriter writer)

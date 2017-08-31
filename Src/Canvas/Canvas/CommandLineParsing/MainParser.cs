@@ -60,7 +60,7 @@ namespace Canvas.CommandLineParsing
             {
                 errorWriter.WriteLine(failedResult.ErrorMessage);
                 errorWriter.WriteLine();
-                ShowHelp(errorWriter);
+                ShowHelp(errorWriter, mode);
                 return -1;
             }
 
@@ -122,13 +122,20 @@ namespace Canvas.CommandLineParsing
                     writer.WriteLine($"\t{mode.Name} - {mode.Description}");
                 }
                 writer.WriteLine();
+                writer.WriteLine("Options:");
+                BaseOptionsParser.ShowHelp(writer);
             }
-            writer.WriteLine("Options:");
-            if (specifiedMode != null)
+            else
             {
+                writer.WriteLine("Mode-specific options:");
                 specifiedMode.ShowHelp(writer);
+                writer.WriteLine();
+                writer.WriteLine("Common options:");
+                CommonOptionsParser.ShowHelp(writer);
+                writer.WriteLine();
+                writer.WriteLine("Other options:");
+                BaseOptionsParser.ShowHelp(writer);
             }
-            BaseOptionsParser.ShowHelp(writer);
         }
 
         private void ShowVersion(TextWriter standardWriter)
@@ -173,9 +180,7 @@ namespace Canvas.CommandLineParsing
                 frameworkServices =>
                 {
                     var result = Parse(frameworkServices, args, standardOutput, standardError);
-                    if (!result.Success)
-                        returnValue = -1;
-                    returnValue = result.Result.Launch();
+                    returnValue = result.Success ? result.Result.Launch() : -1;
                 });
             return returnValue;
         }
