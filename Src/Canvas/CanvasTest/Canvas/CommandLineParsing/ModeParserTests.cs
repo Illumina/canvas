@@ -148,9 +148,8 @@ namespace CanvasTest.Canvas.CommandLineParsing
             Assert.Empty(standardWriter.ToString());
         }
 
-        [Theory]
-        [InlineData("required")]
-        public void Parse_ModeWithVersion_ReturnsSuccecssAndDisplaysVersion(string messageToDisplay)
+        [Fact]
+        public void Parse_ModeWithVersion_ReturnsSuccessAndDisplaysVersion()
         {
             StringWriter standardWriter = new StringWriter();
             StringWriter errorWriter = new StringWriter();
@@ -170,6 +169,31 @@ namespace CanvasTest.Canvas.CommandLineParsing
             // assert
             Assert.Equal(0, result);
             Assert.Equal(Version, output);
+            Assert.Empty(errorWriter.ToString());
+        }
+
+        [Theory]
+        [InlineData("Mode-specific options:")]
+        public void Parse_ModeWithHelp_ReturnsSuccessAndDisplaysHelp(string messageToDisplay)
+        {
+            StringWriter standardWriter = new StringWriter();
+            StringWriter errorWriter = new StringWriter();
+
+            // arrange
+            GermlineWgsModeParser germlineWgsModeParser = new GermlineWgsModeParser("WGS", "Run Canvas from WGS data");
+            MainParser parser = GetMainParser(germlineWgsModeParser);
+            string[] modeArgs =
+            {
+                "WGS", "-h"
+            };
+
+            // act
+            var result = parser.Run(modeArgs, standardWriter, errorWriter);
+            string output = standardWriter.ToString().Trim();
+
+            // assert
+            Assert.Equal(0, result);
+            Assert.Contains(messageToDisplay, output);
             Assert.Empty(errorWriter.ToString());
         }
 

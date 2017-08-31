@@ -53,7 +53,7 @@ namespace Canvas.CommandLineParsing
             options.Add(CommonOptionsParser);
             var result = options.Parse(args.Skip(1));
             var baseOptions = result.Get(BaseOptionsParser);
-            if (!result.RemainingArgs.Any() && baseOptions.Success && HandleBaseOptions(baseOptions.Result, standardWriter))
+            if (!result.RemainingArgs.Any() && baseOptions.Success && HandleBaseOptions(baseOptions.Result, standardWriter, mode))
                 return 0;
 
             if (!result.Validate(out IParsingResult<IModeLauncher> failedResult))
