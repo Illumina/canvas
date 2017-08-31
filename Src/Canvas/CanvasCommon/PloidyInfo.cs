@@ -108,7 +108,8 @@ namespace CanvasCommon
 
             using (VcfReader reader = new VcfReader(vcfPath))
             {
-                ploidy.HeaderLine = string.Join(" ", reader.HeaderLines);
+                //the ploidy.vcf header lines need to be updated to include reference sex chromosome info for one or multiple samples
+                //ploidy.HeaderLine = string.Join(" ", reader.HeaderLines);
 
                 while (true)
                 {
