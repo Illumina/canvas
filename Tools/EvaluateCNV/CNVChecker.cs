@@ -346,6 +346,22 @@ namespace EvaluateCNV
             }
         }
 
+        public VcfHeaderInfo GetVCFHeaderInfo(string vcfPath)
+        {
+            double? purity = null;
+            double? ploidy = null;
+            using (var reader = new VcfReader(vcfPath, false))
+            {
+                string purityLine = reader.HeaderLines.Find(stringToCheck => stringToCheck.Contains("EstimatedTumorPurity"));
+                if (purityLine != null)
+                    purity = Convert.ToDouble(purityLine.Split("=")[1]);
+                string ploidyLine = reader.HeaderLines.Find(stringToCheck => stringToCheck.Contains("OverallPloidy"));
+                if (ploidyLine != null)
+                    ploidy = Convert.ToDouble(purityLine.Split("=")[1]);
+            }
+            return new VcfHeaderInfo(ploidy, purity);
+        }
+
         public IEnumerable<CNVCall> GetCnvCallsFromVcf(string vcfPath, bool includePassingOnly)
         {
             using (VcfReader reader = new VcfReader(vcfPath, false))

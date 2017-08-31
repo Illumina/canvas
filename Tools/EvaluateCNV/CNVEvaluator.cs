@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using CanvasCommon;
@@ -26,6 +27,18 @@ namespace EvaluateCNV
             BaseCount = new long[maxCN + 1, maxCN + 1];
             if (hasRoi)
                 RoiBaseCount = new long[maxCN + 1, maxCN + 1];
+        }
+    }
+
+    internal class VcfHeaderInfo
+    {
+        public double? Ploidy { get; }
+        public double? Purity { get; }
+
+        public VcfHeaderInfo(double? ploidy, double? purity)
+        {
+            Ploidy = ploidy;
+            Purity = purity;
         }
     }
 
@@ -62,6 +75,7 @@ namespace EvaluateCNV
             if (_cnvChecker.DQscoreThreshold.HasValue && !Path.GetFileName(cnvCallsPath).ToLower().Contains("vcf"))
                 throw new ArgumentException("CNV.vcf must be in a vcf format when --dqscore option is used");
             var calls = _cnvChecker.GetCnvCallsFromVcf(cnvCallsPath, includePassingOnly);
+            var headerInfo = _cnvChecker.GetVCFHeaderInfo(cnvCallsPath);
 
             foreach (var baseCounter in baseCounters)
             {
@@ -81,7 +95,7 @@ namespace EvaluateCNV
                 FileMode.Create : FileMode.Append, FileAccess.Write))
                 using (StreamWriter outputWriter = new StreamWriter(stream))
                 {
-                    WriteResults(truthSetPath, cnvCallsPath, outputWriter, baseCounter, includePassingOnly);
+                    WriteResults(headerInfo, truthSetPath, cnvCallsPath, outputWriter, baseCounter, includePassingOnly);
                 }
             }
         }
@@ -217,7 +231,7 @@ namespace EvaluateCNV
                               $" for variants sizes {baseCounter.MinSize} to {baseCounter.MaxSize}");
         }
 
-        static void WriteResults(string truthSetPath, string cnvCallsPath, StreamWriter outputWriter, BaseCounter baseCounter, bool includePassingOnly)
+        static void WriteResults(VcfHeaderInfo headerInfo, string truthSetPath, string cnvCallsPath, StreamWriter outputWriter, BaseCounter baseCounter, bool includePassingOnly)
         {
             // Compute overall stats:
             long totalBases = 0;
@@ -273,8 +287,11 @@ namespace EvaluateCNV
             }
 
             // Report stats:
+            string purity = headerInfo.Purity.HasValue ? headerInfo.Purity.Value.ToString(CultureInfo.InvariantCulture) : "NA";
+            outputWriter.WriteLine($"Purity\t{purity}");
+            string ploidy = headerInfo.Ploidy.HasValue ? headerInfo.Ploidy.Value.ToString(CultureInfo.InvariantCulture) : "NA";
+            outputWriter.WriteLine($"Ploidy\t{ploidy}");
             outputWriter.WriteLine(includePassingOnly ? "Results for PASSing variants" : "Results for all variants");
-
             outputWriter.WriteLine("TruthSet\t{0}", truthSetPath);
             outputWriter.WriteLine("CNVCalls\t{0}", cnvCallsPath);
             outputWriter.WriteLine("Accuracy\t{0:F4}", 100 * totalBasesRight / (double)totalBases);
