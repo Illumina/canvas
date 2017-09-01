@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using CanvasCommon;
 using Illumina.Common;
+using Illumina.Common.FileSystem;
 
 namespace EvaluateCNV
 {
@@ -285,14 +286,11 @@ namespace EvaluateCNV
                 }
             }
 
-            // load VCF header information 
-            var headerInfo = _cnvChecker.GetVCFHeaderInfo(cnvCallsPath);
-            
+            // load and append VCF header information 
+            _cnvChecker.HandlePurity(outputWriter, new FileLocation(cnvCallsPath));
+            _cnvChecker.HandlePloidy(outputWriter, new FileLocation(cnvCallsPath));
+
             // Report stats:
-            string purity = headerInfo.Purity.HasValue ? headerInfo.Purity.Value.ToString(CultureInfo.InvariantCulture) : "NA";
-            outputWriter.WriteLine($"Purity\t{purity}");
-            string ploidy = headerInfo.Ploidy.HasValue ? headerInfo.Ploidy.Value.ToString(CultureInfo.InvariantCulture) : "NA";
-            outputWriter.WriteLine($"Ploidy\t{ploidy}");
             outputWriter.WriteLine(includePassingOnly ? "Results for PASSing variants" : "Results for all variants");
             outputWriter.WriteLine("TruthSet\t{0}", truthSetPath);
             outputWriter.WriteLine("CNVCalls\t{0}", cnvCallsPath);

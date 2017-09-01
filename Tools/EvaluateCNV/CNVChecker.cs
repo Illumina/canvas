@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.IO;
 using CanvasCommon;
@@ -346,23 +347,33 @@ namespace EvaluateCNV
             }
         }
 
-        public VcfHeaderInfo GetVCFHeaderInfo(string vcfPath)
+        public void HandlePurity(TextWriter outputWriter, IFileLocation vcfPath)
         {
-            double? purity = null;
-            double? ploidy = null;
-            using (var reader = new VcfReader(vcfPath, false))
+            using (var reader = new VcfReader(vcfPath.FullName, false))
             {
                 string purityLine = reader.HeaderLines.Find(stringToCheck => stringToCheck.Contains("EstimatedTumorPurity"));
                 if (purityLine != null)
-                    purity = double.Parse(purityLine.Split("=")[1]);
-                string ploidyLine = reader.HeaderLines.Find(stringToCheck => stringToCheck.Contains("OverallPloidy"));
-                if (ploidyLine != null)
-                    ploidy = double.Parse(ploidyLine.Split("=")[1]);
+                {
+                    double purity = double.Parse(purityLine.Split("=")[1]);
+                    outputWriter.WriteLine($"Purity\t{purity}");
+                }
             }
-            return new VcfHeaderInfo(ploidy, purity);
         }
+        
+        public void HandlePloidy(TextWriter outputWriter, IFileLocation vcfPath)
+            {
+                using (var reader = new VcfReader(vcfPath.FullName, false))
+                {
+                    string ploidyLine = reader.HeaderLines.Find(stringToCheck => stringToCheck.Contains("OverallPloidy"));
+                    if (ploidyLine != null)
+                    {
+                        double ploidy = double.Parse(ploidyLine.Split("=")[1]);
+                        outputWriter.WriteLine($"Ploidy\t{ploidy}");
+                    }
+                }
+            }
 
-        public IEnumerable<CNVCall> GetCnvCallsFromVcf(string vcfPath, bool includePassingOnly)
+            public IEnumerable<CNVCall> GetCnvCallsFromVcf(string vcfPath, bool includePassingOnly)
         {
             using (VcfReader reader = new VcfReader(vcfPath, false))
             {
