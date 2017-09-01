@@ -92,14 +92,14 @@ namespace CanvasCommon
             return GetSingleSamplePedigreeVcfOutput(GetSampleOutputFolder(analysisOutputFolder, sampleName).GetFileLocation("CNV"));
         }
 
-        public static string GetCoverageAndVariantFrequencyOutputPath(string outputVcfPath)
+        public static IFileLocation GetCoverageAndVariantFrequencyOutputPath(string outputVcfPath)
         {
             string coveragePath = outputVcfPath;
             if (outputVcfPath.EndsWith(".vcf.gz"))
                 coveragePath = coveragePath.ReplaceFileNameExtension(".vcf.gz", "");
             else
                 coveragePath.ReplaceFileNameExtension(".vcf", "");
-            return GetCoverageAndVariantFrequencyOutput(new FileLocation(coveragePath)).FullName;
+            return GetCoverageAndVariantFrequencyOutput(new FileLocation(coveragePath));
         }
     }
 }

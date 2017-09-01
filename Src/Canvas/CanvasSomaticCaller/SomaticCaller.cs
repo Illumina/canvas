@@ -435,7 +435,7 @@ namespace CanvasSomaticCaller
                 }
             }
 
-            string coverageOutputPath = SingleSampleCallset.GetCoverageAndVariantFrequencyOutputPath(outputVCFPath);
+            var coverageOutputPath = SingleSampleCallset.GetCoverageAndVariantFrequencyOutputPath(outputVCFPath);
             CanvasSegment.WriteCoveragePlotData(this.Segments, this.Model?.DiploidCoverage, this.ReferencePloidy, coverageOutputPath, referenceFolder);
 
             if (this.ReferencePloidy != null && !string.IsNullOrEmpty(this.ReferencePloidy.HeaderLine))

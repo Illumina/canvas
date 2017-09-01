@@ -463,7 +463,7 @@ namespace CanvasDiploidCaller
             CanvasSegment.FilterSegments(QualityFilterThreshold, Segments);
 
             List<string> extraHeaders = new List<string>();
-            string coverageOutputPath = SingleSampleCallset.GetCoverageAndVariantFrequencyOutputPath(outFile);
+            var coverageOutputPath = SingleSampleCallset.GetCoverageAndVariantFrequencyOutputPath(outFile);
             CanvasSegment.WriteCoveragePlotData(this.Segments, Model.DiploidCoverage, ploidy, coverageOutputPath, referenceFolder);
 
             if (this.CNOracle != null)
