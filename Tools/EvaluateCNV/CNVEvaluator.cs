@@ -31,18 +31,6 @@ namespace EvaluateCNV
         }
     }
 
-    internal class VcfHeaderInfo
-    {
-        public double? Ploidy { get; }
-        public double? Purity { get; }
-
-        public VcfHeaderInfo(double? ploidy, double? purity)
-        {
-            Ploidy = ploidy;
-            Purity = purity;
-        }
-    }
-
     class CNVEvaluator
     {
         private CNVChecker _cnvChecker;
