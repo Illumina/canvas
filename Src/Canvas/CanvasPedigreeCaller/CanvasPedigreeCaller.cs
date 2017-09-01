@@ -180,7 +180,7 @@ namespace CanvasPedigreeCaller
             {
                 var coverageOutputPath = SingleSampleCallset.GetCoverageAndVariantFrequencyOutput(outputFolder,
                     member.Name);
-                CanvasSegment.WriteCoveragePlotData(member.Segments, member.MeanCoverage, member.Ploidy, coverageOutputPath.FullName, referenceFolder);
+                CanvasSegment.WriteCoveragePlotData(member.Segments, member.MeanCoverage, member.Ploidy, coverageOutputPath, referenceFolder);
             }
             return names;
         }
