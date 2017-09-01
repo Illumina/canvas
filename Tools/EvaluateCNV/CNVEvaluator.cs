@@ -75,7 +75,6 @@ namespace EvaluateCNV
             if (_cnvChecker.DQscoreThreshold.HasValue && !Path.GetFileName(cnvCallsPath).ToLower().Contains("vcf"))
                 throw new ArgumentException("CNV.vcf must be in a vcf format when --dqscore option is used");
             var calls = _cnvChecker.GetCnvCallsFromVcf(cnvCallsPath, includePassingOnly);
-            var headerInfo = _cnvChecker.GetVCFHeaderInfo(cnvCallsPath);
 
             foreach (var baseCounter in baseCounters)
             {
@@ -95,7 +94,7 @@ namespace EvaluateCNV
                 FileMode.Create : FileMode.Append, FileAccess.Write))
                 using (StreamWriter outputWriter = new StreamWriter(stream))
                 {
-                    WriteResults(headerInfo, truthSetPath, cnvCallsPath, outputWriter, baseCounter, includePassingOnly);
+                    WriteResults(truthSetPath, cnvCallsPath, outputWriter, baseCounter, includePassingOnly);
                 }
             }
         }
@@ -231,7 +230,7 @@ namespace EvaluateCNV
                               $" for variants sizes {baseCounter.MinSize} to {baseCounter.MaxSize}");
         }
 
-        static void WriteResults(VcfHeaderInfo headerInfo, string truthSetPath, string cnvCallsPath, StreamWriter outputWriter, BaseCounter baseCounter, bool includePassingOnly)
+        private void WriteResults(string truthSetPath, string cnvCallsPath, StreamWriter outputWriter, BaseCounter baseCounter, bool includePassingOnly)
         {
             // Compute overall stats:
             long totalBases = 0;
@@ -286,6 +285,9 @@ namespace EvaluateCNV
                 }
             }
 
+            // load VCF header information 
+            var headerInfo = _cnvChecker.GetVCFHeaderInfo(cnvCallsPath);
+            
             // Report stats:
             string purity = headerInfo.Purity.HasValue ? headerInfo.Purity.Value.ToString(CultureInfo.InvariantCulture) : "NA";
             outputWriter.WriteLine($"Purity\t{purity}");

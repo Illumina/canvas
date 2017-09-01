@@ -354,10 +354,10 @@ namespace EvaluateCNV
             {
                 string purityLine = reader.HeaderLines.Find(stringToCheck => stringToCheck.Contains("EstimatedTumorPurity"));
                 if (purityLine != null)
-                    purity = Convert.ToDouble(purityLine.Split("=")[1]);
+                    purity = double.Parse(purityLine.Split("=")[1]);
                 string ploidyLine = reader.HeaderLines.Find(stringToCheck => stringToCheck.Contains("OverallPloidy"));
                 if (ploidyLine != null)
-                    ploidy = Convert.ToDouble(ploidyLine.Split("=")[1]);
+                    ploidy = double.Parse(ploidyLine.Split("=")[1]);
             }
             return new VcfHeaderInfo(ploidy, purity);
         }
