@@ -85,6 +85,7 @@ namespace EvaluateCNV
                 FileMode.Create : FileMode.Append, FileAccess.Write))
                 using (StreamWriter outputWriter = new StreamWriter(stream))
                 {
+                    outputWriter.NewLine = "\n";
                     WriteResults(truthSetPath, cnvCallsPath, outputWriter, baseCounter, includePassingOnly);
                 }
             }
