@@ -275,8 +275,7 @@ namespace EvaluateCNV
             }
 
             // load and append VCF header information 
-            _cnvChecker.HandlePurity(outputWriter, new FileLocation(cnvCallsPath));
-            _cnvChecker.HandlePloidy(outputWriter, new FileLocation(cnvCallsPath));
+            _cnvChecker.HandleVcfHeaderInfo(outputWriter, new FileLocation(cnvCallsPath));
 
             // Report stats:
             outputWriter.WriteLine(includePassingOnly ? "Results for PASSing variants" : "Results for all variants");

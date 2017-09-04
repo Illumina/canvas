@@ -347,33 +347,41 @@ namespace EvaluateCNV
             }
         }
 
-        public void HandlePurity(TextWriter outputWriter, IFileLocation vcfPath)
+        private static List<string> GetVcfHeaderLines(IFileLocation vcfPath)
         {
             using (var reader = new VcfReader(vcfPath.FullName, false))
             {
-                string purityLine = reader.HeaderLines.Find(stringToCheck => stringToCheck.Contains("EstimatedTumorPurity"));
-                if (purityLine != null)
-                {
-                    double purity = double.Parse(purityLine.Split("=")[1]);
-                    outputWriter.WriteLine($"Purity\t{purity}");
-                }
+                return reader.HeaderLines;
             }
         }
-        
-        public void HandlePloidy(TextWriter outputWriter, IFileLocation vcfPath)
-            {
-                using (var reader = new VcfReader(vcfPath.FullName, false))
-                {
-                    string ploidyLine = reader.HeaderLines.Find(stringToCheck => stringToCheck.Contains("OverallPloidy"));
-                    if (ploidyLine != null)
-                    {
-                        double ploidy = double.Parse(ploidyLine.Split("=")[1]);
-                        outputWriter.WriteLine($"Ploidy\t{ploidy}");
-                    }
-                }
-            }
 
-            public IEnumerable<CNVCall> GetCnvCallsFromVcf(string vcfPath, bool includePassingOnly)
+        private static void HandleHeaderLine(TextWriter writer, List<string> headerLines, string headerKey,
+            Action<TextWriter, string> processValue)
+        {
+            if (headerLines.Any(stringToCheck => stringToCheck.Contains(headerKey)))
+                processValue(writer, headerLines.Find(stringToCheck => stringToCheck.Contains(headerKey)));
+        }
+
+        private static void LogPurity(TextWriter writer, string value)
+        {
+            double purity = double.Parse(value.Split("=")[1]);
+            writer.WriteLine($"Purity\t{purity}");
+        }
+
+        private static void LogPloidy(TextWriter writer, string value)
+        {
+            double ploidy = double.Parse(value.Split("=")[1]);
+            writer.WriteLine($"Ploidy\t{ploidy}");
+        }
+
+        public void HandleVcfHeaderInfo(TextWriter outputWriter, IFileLocation vcfPath)
+        {
+            var headerLines = GetVcfHeaderLines(vcfPath);
+            HandleHeaderLine(outputWriter, headerLines, "EstimatedTumorPurity", LogPurity);
+            HandleHeaderLine(outputWriter, headerLines, "OverallPloidy", LogPloidy);
+        }
+
+        public IEnumerable<CNVCall> GetCnvCallsFromVcf(string vcfPath, bool includePassingOnly)
         {
             using (VcfReader reader = new VcfReader(vcfPath, false))
             {
