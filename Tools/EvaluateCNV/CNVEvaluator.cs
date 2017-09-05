@@ -79,10 +79,14 @@ namespace EvaluateCNV
                     fileName += baseCounter.MaxSize == int.MaxValue ? "+" : $"_{ Math.Round(baseCounter.MaxSize / 1000.0)}kb";
                 }
                 fileName += ".txt";
-                using (FileStream stream = new FileStream(Path.Combine(outputPath, fileName), includePassingOnly ?
+                var outputDir = new DirectoryLocation(outputPath);
+                outputDir.Create();
+                var outputFile = outputDir.GetFileLocation(fileName);
+                using (FileStream stream = new FileStream(outputFile.FullName, includePassingOnly ?
                 FileMode.Create : FileMode.Append, FileAccess.Write))
                 using (StreamWriter outputWriter = new StreamWriter(stream))
                 {
+                    outputWriter.NewLine = "\n";
                     WriteResults(truthSetPath, cnvCallsPath, outputWriter, baseCounter, includePassingOnly);
                 }
             }
