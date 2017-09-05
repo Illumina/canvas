@@ -125,7 +125,6 @@ namespace CanvasTest.Canvas.CommandLineParsing
         [Fact]
         public void Parse_ModeWithMissingRequiredArgument_DisplaysError()
         {
-            _checkpointer.RunCheckpoint("name", () => (IParsingResult<GermlineWgsInput>)null).ReturnsForAnyArgs(info => info.ArgAt<Func<IParsingResult<GermlineWgsInput>>>(1)());
             string messageToDisplay = "required";
             StringWriter standardWriter = new StringWriter();
             StringWriter errorWriter = new StringWriter();
@@ -139,18 +138,17 @@ namespace CanvasTest.Canvas.CommandLineParsing
             };
 
             // act
-            var result = parser.Parse(_services, modeArgs, standardWriter, errorWriter);
+            var result = parser.Run(modeArgs, standardWriter, errorWriter);
             string errorOutput = errorWriter.ToString();
 
             // assert
-            Assert.False(result.Success);
+            Assert.NotEqual(0, result);
             Assert.Contains(messageToDisplay, errorOutput);
             Assert.Empty(standardWriter.ToString());
         }
 
-        [Theory]
-        [InlineData("required")]
-        public void Parse_ModeWithVersion_ReturnsSuccecssAndDisplaysVersion(string messageToDisplay)
+        [Fact]
+        public void Parse_ModeWithVersion_ReturnsSuccessAndDisplaysVersion()
         {
             StringWriter standardWriter = new StringWriter();
             StringWriter errorWriter = new StringWriter();
@@ -170,6 +168,31 @@ namespace CanvasTest.Canvas.CommandLineParsing
             // assert
             Assert.Equal(0, result);
             Assert.Equal(Version, output);
+            Assert.Empty(errorWriter.ToString());
+        }
+
+        [Theory]
+        [InlineData("Mode-specific options:")]
+        public void Parse_ModeWithHelp_ReturnsSuccessAndDisplaysHelp(string messageToDisplay)
+        {
+            StringWriter standardWriter = new StringWriter();
+            StringWriter errorWriter = new StringWriter();
+
+            // arrange
+            GermlineWgsModeParser germlineWgsModeParser = new GermlineWgsModeParser("WGS", "Run Canvas from WGS data");
+            MainParser parser = GetMainParser(germlineWgsModeParser);
+            string[] modeArgs =
+            {
+                "WGS", "-h"
+            };
+
+            // act
+            var result = parser.Run(modeArgs, standardWriter, errorWriter);
+            string output = standardWriter.ToString().Trim();
+
+            // assert
+            Assert.Equal(0, result);
+            Assert.Contains(messageToDisplay, output);
             Assert.Empty(errorWriter.ToString());
         }
 
@@ -665,38 +688,5 @@ namespace CanvasTest.Canvas.CommandLineParsing
             var result = new SmallPedigreeOptionsParser().Parse(stringInputArgument);
             Assert.True(result.Success);
         }
-
-        [Fact]
-        public void Parse_SpwWgsMode_ReturnsSuccess()
-        {
-            // arrange
-            var germlineWgsModeParser = new SmallPedigreeModeParser("SmallPedigree-WGS", "run spw");
-            MainParser parser = GetMainParser(germlineWgsModeParser);
-            string[] args =
-            {
-                "SmallPedigree-WGS",
-                "--bam", "/illumina/scratch/STE_DataAnalysis/repo/SmallPedigreeWorkflow/Chr15Bam/NA12877-PcrFree_S1.REF_chr15.bam", "father", "NA12877-PcrFree",
-                "--bam", "/illumina/scratch/STE_DataAnalysis/repo/SmallPedigreeWorkflow/Chr15Bam/NA12878-PcrFree_S2.REF_chr15.bam", "mother", "NA12878-PcrFree",
-                "--bam", "/illumina/scratch/STE_DataAnalysis/repo/SmallPedigreeWorkflow/Chr15Bam/NA12882-PcrFree_S3.REF_chr15.bam", "proband", "NA12882-PcrFree",
-                "--reference", "/illumina/development/Isas/Genomes/Homo_sapiens/NCBI/GRCh38Decoy/Annotation/Canvas/kmerv2.fa",
-                "--genome-folder", "/illumina/development/Isas/Genomes/Homo_sapiens/NCBI/GRCh38Decoy/Sequence/WholeGenomeFasta",
-                "--filter-bed", "/illumina/development/Isas/Genomes/Homo_sapiens/NCBI/GRCh38Decoy/Annotation/Canvas/filter13.bed",
-                "--output", "/illumina/scratch/bioinfoSD/eroller/SPW_NewCanvas/Temp_06-DetectCNV",
-                "--sample-b-allele-vcf", "/illumina/scratch/bioinfoSD/eroller/SPW_NewCanvas/Pedigree.vcf.gz",
-                "--ploidy-vcf", "/illumina/scratch/bioinfoSD/eroller/SPW_NewCanvas/Temp_06-DetectCNV/ploidy.vcf.gz",
-                "--custom-parameters", "CanvasPartition,--commoncnvs /illumina/development/Isas/Genomes/Homo_sapiens/NCBI/GRCh38Decoy/Annotation/Canvas/commoncnvs.bed"
-            };
-
-            // act
-            using (var standardWriter = new StringWriter())
-            using (var errorWriter = new StringWriter())
-            {
-                var result = parser.Parse(args, standardWriter, errorWriter);
-                // assert
-                Assert.Equal(-1, result);
-                Assert.Contains("does not exist", errorWriter.GetStringBuilder().ToString());
-            }
-        }
-
     }
 }

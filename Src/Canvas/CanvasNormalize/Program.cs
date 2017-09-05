@@ -41,7 +41,7 @@ namespace CanvasNormalize
         public IFileLocation manifestFile = null;
 
         // Bed file containing the reference ploidy
-        public IFileLocation ploidyBedFile = null;
+        public IFileLocation ploidyVcfFile = null;
 
         public CanvasCommon.CanvasNormalizeMode normalizationMode = CanvasCommon.CanvasNormalizeMode.WeightedAverage;
 
@@ -63,7 +63,7 @@ namespace CanvasNormalize
                     { "o|out=",           "bed file to output containing normalized bin counts",     v => parameters.outBedFile = new FileLocation(v) },
                     { "w|weightedAverageNormal=",           "bed file to output containing reference bin counts",     v => parameters.weightedAverageNormalBedFile = new FileLocation(v) },
                     { "f|manifest=",      "Nextera manifest file",                       v => parameters.manifestFile = new FileLocation(v) },
-                    { "p|ploidyBedFile=", "bed file specifying reference ploidy (e.g. for sex chromosomes) (optional)", v => parameters.ploidyBedFile = new FileLocation(v)},
+                    { "p|ploidyVcfFile=", "vcf file specifying reference ploidy (e.g. for sex chromosomes) (optional)", v => parameters.ploidyVcfFile = new FileLocation(v)},
                     { "r|referenceBinCountRange=", "reference bin count range for the PCA mode. Default: (1, infinity). Pass this option twice to specify the min and the max (optional)", v => parameters.referenceBinCountRange.Add(double.Parse(v))},
                     { "h|help",           "show this message and exit",                       v => needHelp = v != null },
                     { "m|mode=",          "normalization mode (WeightedAverage/BestLR2/PCA). Default: " + parameters.normalizationMode, v => parameters.normalizationMode = CanvasCommon.Utilities.ParseCanvasNormalizeMode(v) },
@@ -143,9 +143,9 @@ namespace CanvasNormalize
             }
             
             // Does the ploidy bed file exist?
-            if (parameters.ploidyBedFile != null && !parameters.ploidyBedFile.Exists) 
+            if (parameters.ploidyVcfFile != null && !parameters.ploidyVcfFile.Exists) 
             {
-                Console.WriteLine("CanvasNormalize.exe: File {0} does not exist! Exiting.", parameters.ploidyBedFile.FullName);
+                Console.WriteLine("CanvasNormalize.exe: File {0} does not exist! Exiting.", parameters.ploidyVcfFile.FullName);
                 return null;
             }
 

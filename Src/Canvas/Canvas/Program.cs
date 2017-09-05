@@ -1,9 +1,6 @@
 ﻿using System;
 using Canvas.CommandLineParsing;
 using CanvasCommon;
-using Illumina.Common.FileSystem;
-using Isas.Framework.FrameworkFactory;
-using Isas.Framework.Settings;
 
 namespace Canvas
 {

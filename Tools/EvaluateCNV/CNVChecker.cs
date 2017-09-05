@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.IO;
 using CanvasCommon;
@@ -346,6 +347,40 @@ namespace EvaluateCNV
             }
         }
 
+        private static List<string> GetVcfHeaderLines(IFileLocation vcfPath)
+        {
+            using (var reader = new VcfReader(vcfPath.FullName, false))
+            {
+                return reader.HeaderLines;
+            }
+        }
+
+        private static void HandleHeaderLine(TextWriter writer, List<string> headerLines, string headerKey,
+            Action<TextWriter, string> processValue)
+        {
+            if (headerLines.Any(stringToCheck => stringToCheck.Contains(headerKey)))
+                processValue(writer, headerLines.Find(stringToCheck => stringToCheck.Contains(headerKey)));
+        }
+
+        private static void LogPurity(TextWriter writer, string value)
+        {
+            double purity = double.Parse(value.Split("=")[1]);
+            writer.WriteLine($"Purity\t{purity}");
+        }
+
+        private static void LogPloidy(TextWriter writer, string value)
+        {
+            double ploidy = double.Parse(value.Split("=")[1]);
+            writer.WriteLine($"Ploidy\t{ploidy}");
+        }
+
+        public void HandleVcfHeaderInfo(TextWriter outputWriter, IFileLocation vcfPath)
+        {
+            var headerLines = GetVcfHeaderLines(vcfPath);
+            HandleHeaderLine(outputWriter, headerLines, "EstimatedTumorPurity", LogPurity);
+            HandleHeaderLine(outputWriter, headerLines, "OverallPloidy", LogPloidy);
+        }
+
         public IEnumerable<CNVCall> GetCnvCallsFromVcf(string vcfPath, bool includePassingOnly)
         {
             using (VcfReader reader = new VcfReader(vcfPath, false))
@@ -455,13 +490,12 @@ namespace EvaluateCNV
         private static PloidyInfo LoadPloidy(IFileLocation ploidyFile, IFileLocation cnvCalls)
         {
             if (ploidyFile == null) return new PloidyInfo();
-            if (ploidyFile.FullName.EndsWith(".vcf") || ploidyFile.FullName.EndsWith(".vcf.gz"))
+            if (!ploidyFile.FullName.EndsWith(".vcf") && !ploidyFile.FullName.EndsWith(".vcf.gz"))
             {
-                var sampleId = GetSampleIdFromVcfHeader(cnvCalls);
-                return PloidyInfo.LoadPloidyFromVcfFile(ploidyFile.FullName, sampleId);
+                throw new NotSupportedException("Ploidy information must be provided in VCF format.");
             }
-
-            return PloidyInfo.LoadPloidyFromBedFile(ploidyFile.FullName);
+            var sampleId = GetSampleIdFromVcfHeader(cnvCalls);
+            return PloidyInfo.LoadPloidyFromVcfFile(ploidyFile.FullName, sampleId);
         }
 
         private static string GetSampleIdFromVcfHeader(IFileLocation cnvCallsPath)

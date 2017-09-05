@@ -1035,7 +1035,7 @@ namespace CanvasBin
         }
 
         [ProtoContract]
-        private class IntermediateData
+        internal class IntermediateData
         {
             #region Members
             [ProtoMember(1)]

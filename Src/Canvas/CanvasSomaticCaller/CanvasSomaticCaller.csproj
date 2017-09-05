@@ -6,8 +6,6 @@
     <AssemblyName>CanvasSomaticCaller</AssemblyName>
     <OutputType>Exe</OutputType>
     <PackageId>CanvasSomaticCaller</PackageId>
-    <RuntimeFrameworkVersion>1.1.0</RuntimeFrameworkVersion>
-    <PackageTargetFallback>$(PackageTargetFallback);dnxcore50</PackageTargetFallback>
     <GenerateAssemblyTitleAttribute>false</GenerateAssemblyTitleAttribute>
     <GenerateAssemblyDescriptionAttribute>false</GenerateAssemblyDescriptionAttribute>
     <GenerateAssemblyConfigurationAttribute>false</GenerateAssemblyConfigurationAttribute>
@@ -17,9 +15,14 @@
     <GenerateAssemblyInformationalVersionAttribute>false</GenerateAssemblyInformationalVersionAttribute>
     <GenerateAssemblyCompanyAttribute>false</GenerateAssemblyCompanyAttribute>
     <GenerateAssemblyCopyrightAttribute>false</GenerateAssemblyCopyrightAttribute>
+    <Platforms>AnyCPU;x64</Platforms>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+    <OutputPath>..\x64\CanvasCore\</OutputPath>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <OutputPath>..\x64\CanvasCore\</OutputPath>
   </PropertyGroup>
 
@@ -37,9 +40,10 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Illumina.Common" Version="4.0.0.267" />
-    <PackageReference Include="Isas.Framework" Version="7.4.1.500" />
-    <PackageReference Include="Isas.SequencingFiles" Version="5.0.2.334" />
+    <PackageReference Include="Illumina.Common" Version="4.5.0.298" />
+    <PackageReference Include="Isas.Framework" Version="7.8.4.572" />
+    <PackageReference Include="Isas.SequencingFiles" Version="5.3.2.365" />
+    <PackageReference Include="protobuf-net" Version="2.3.2" />
   </ItemGroup>
 
 </Project>

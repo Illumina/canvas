@@ -7,6 +7,7 @@ using Isas.SequencingFiles;
 using Isas.SequencingFiles.Vcf;
 using CanvasCommon;
 using Illumina.Common.FileSystem;
+using Isas.Framework.Logging;
 
 namespace CanvasSomaticCaller
 {
@@ -17,6 +18,7 @@ namespace CanvasSomaticCaller
         // Static:
 
         // Data:
+        private Segments SegmentsByChromosome;
         List<CanvasSegment> Segments;
         List<SegmentPloidy> AllPloidies;
         CopyNumberOracle CNOracle = null;
@@ -44,7 +46,7 @@ namespace CanvasSomaticCaller
         // Parameters:
         public float? userPloidy;
         public float? userPurity;
-        protected float MeanCoverage = 30;
+        protected double MeanCoverage = 30;
         private double CoverageWeightingFactor; // Computed from CoverageWeighting
         public bool IsEnrichment;
         public bool IsDbsnpVcf;
@@ -55,18 +57,25 @@ namespace CanvasSomaticCaller
 
 
         public bool FFPEMode; // Assume MAF and Coverage are independent/uncorrelated in FFPEMode (always false for now)
+        private readonly ILogger _logger;
+
+        public SomaticCaller(ILogger logger)
+        {
+            _logger = logger;
+        }
+
         public int QualityFilterThreshold { get; set; } = 10;
 
         #endregion
 
         /// <summary>
-        /// Load the expected ploidy for sex chromosomes from a .bed file.  This lets us know that, for instance, copy number 2
+        /// Load the expected ploidy for sex chromosomes from a .vcf file.  This lets us know that, for instance, copy number 2
         /// on chrX is a GAIN (not REF) call for a male (XY) sample.
         /// </summary>
-        public void LoadReferencePloidy(string filePath)
+        public void LoadReferencePloidy(string filePath) // Single sample, the first sample column would be used.
         {
             Console.WriteLine(">>>LoadReferencePloidy({0})", filePath);
-            ReferencePloidy = PloidyInfo.LoadPloidyFromBedFile(filePath);
+            ReferencePloidy = PloidyInfo.LoadPloidyFromVcfFileNoSampleId(filePath);
         }
 
         /// <summary>
@@ -122,7 +131,7 @@ namespace CanvasSomaticCaller
                     int CN = this.GetKnownCNForSegment(segment);
                     if (CN < 0) continue;
                     List<float> MAF = new List<float>();
-                    foreach (float VF in segment.Alleles.Frequencies)
+                    foreach (float VF in segment.Balleles.Frequencies)
                     {
                         MAF.Add(VF > 0.5 ? 1 - VF : VF);
                     }
@@ -287,7 +296,7 @@ namespace CanvasSomaticCaller
                     int count = (int)Math.Round(tempCount);
                     if (count >= histogramBinCount || count < 0)
                         continue;
-                    
+
                     CNHistogram[CN][count]++;
                 }
             }
@@ -356,7 +365,8 @@ namespace CanvasSomaticCaller
             this.OutputFolder = Path.GetDirectoryName(outputVCFPath);
             this.TempFolder = Path.GetDirectoryName(inFile);
             Console.WriteLine("{0} CallVariants start:", DateTime.Now);
-            this.Segments = CanvasSegment.ReadSegments(inFile);
+            SegmentsByChromosome = CanvasCommon.Segments.ReadSegments(_logger, new FileLocation(inFile));
+            Segments = SegmentsByChromosome.AllSegments.ToList();
 
             // Special logic: Increase the allowed model deviation for targeted data.
             if (this.Segments.Count < 500)
@@ -374,7 +384,10 @@ namespace CanvasSomaticCaller
                 this.DebugModelSegmentCoverageByCN();
             }
 
-            this.MeanCoverage = CanvasIO.LoadFrequenciesBySegment(variantFrequencyFile, this.Segments, referenceFolder);
+            var allelesByChromosome = CanvasIO.ReadFrequenciesWrapper(_logger, new FileLocation(variantFrequencyFile), SegmentsByChromosome.GetIntervalsByChromosome());
+            SegmentsByChromosome.AddAlleles(allelesByChromosome);
+            this.MeanCoverage = allelesByChromosome.SelectMany(x => x.Value).SelectMany(y => y.TotalCoverage).Average();
+
             if (this.IsDbsnpVcf)
             {
                 int tmpMinimumVariantFreq = somaticCallerParameters.MinimumVariantFrequenciesForInformativeSegment;
@@ -422,7 +435,7 @@ namespace CanvasSomaticCaller
                 }
             }
 
-            string coverageOutputPath = SingleSampleCallset.GetCoverageAndVariantFrequencyOutputPath(outputVCFPath);
+            var coverageOutputPath = SingleSampleCallset.GetCoverageAndVariantFrequencyOutputPath(outputVCFPath);
             CanvasSegment.WriteCoveragePlotData(this.Segments, this.Model?.DiploidCoverage, this.ReferencePloidy, coverageOutputPath, referenceFolder);
 
             if (this.ReferencePloidy != null && !string.IsNullOrEmpty(this.ReferencePloidy.HeaderLine))
@@ -438,14 +451,14 @@ namespace CanvasSomaticCaller
             // jump across non-manifest intervals.
             if (this.IsEnrichment)
             {
-                CanvasSegment.MergeSegments(ref this.Segments, somaticCallerParameters.MinimumCallSize, 1);
+                CanvasSegment.MergeSegments(ref Segments, somaticCallerParameters.MinimumCallSize, 1);
             }
             else
             {
-                CanvasSegment.MergeSegmentsUsingExcludedIntervals(ref this.Segments, somaticCallerParameters.MinimumCallSize, ExcludedIntervals);
+                CanvasSegment.MergeSegmentsUsingExcludedIntervals(ref Segments, somaticCallerParameters.MinimumCallSize, ExcludedIntervals);
             }
             // recalculating quality scores doesn't seem to have any effect, but we do it for consistency with the diploid caller where it seems to matter
-            CanvasSegment.AssignQualityScores(this.Segments, CanvasSegment.QScoreMethod.Logistic, this.somaticCallerQscoreParameters);
+            CanvasSegment.AssignQualityScores(Segments, CanvasSegment.QScoreMethod.Logistic, this.somaticCallerQscoreParameters);
             CanvasSegment.FilterSegments(QualityFilterThreshold, Segments);
 
             if (this.CNOracle != null)
@@ -483,10 +496,10 @@ namespace CanvasSomaticCaller
                 int CN = this.GetKnownCNForSegment(segment);
                 // Require the segment have a known CN and reasonably large number of variants:
                 if (CN < 0) continue;
-                if (segment.Alleles.Frequencies.Count < somaticCallerParameters.MinimumVariantFrequenciesForInformativeSegment) continue;
+                if (segment.Balleles.Frequencies.Count < somaticCallerParameters.MinimumVariantFrequenciesForInformativeSegment) continue;
 
                 List<float> MAF = new List<float>();
-                foreach (float VF in segment.Alleles.Frequencies)
+                foreach (float VF in segment.Balleles.Frequencies)
                 {
                     MAF.Add(VF > 0.5 ? 1 - VF : VF);
                 }
@@ -1409,14 +1422,14 @@ namespace CanvasSomaticCaller
                 // If the segment has few or no variants, then don't use the MAF for this segment - set to -1 (no frequency)
                 // Typically a segment will have no variants if it's on chrX or chrY and starling knows not to call a
                 // heterozygous variant there (other than in the PAR regions).
-                if (segment.Alleles.Frequencies.Count < MinimumVariantFrequenciesForInformativeSegment)
+                if (segment.Balleles.Frequencies.Count < MinimumVariantFrequenciesForInformativeSegment)
                 {
                     info.MAF = -1;
                 }
                 else
                 {
                     List<double> MAF = new List<double>();
-                    foreach (float value in segment.Alleles.Frequencies) MAF.Add(value > 0.5 ? 1 - value : value);
+                    foreach (float value in segment.Balleles.Frequencies) MAF.Add(value > 0.5 ? 1 - value : value);
                     MAF.Sort();
                     info.MAF = MAF[MAF.Count / 2];
                 }
@@ -1430,9 +1443,9 @@ namespace CanvasSomaticCaller
                 {
                     info.Weight = segment.BinCount;
                 }
-                if (segment.Alleles.Frequencies.Count < 10)
+                if (segment.Balleles.Frequencies.Count < 10)
                 {
-                    info.Weight *= (double)segment.Alleles.Frequencies.Count / 10;
+                    info.Weight *= (double)segment.Balleles.Frequencies.Count / 10;
                 }
                 usableSegments.Add(info);
             }
@@ -1998,7 +2011,7 @@ namespace CanvasSomaticCaller
             {
                 // Compute (MAF, Coverage) for this segment:
                 List<double> MAF = new List<double>();
-                foreach (float VF in segment.Alleles.Frequencies) MAF.Add(VF > 0.5 ? 1 - VF : VF);
+                foreach (float VF in segment.Balleles.Frequencies) MAF.Add(VF > 0.5 ? 1 - VF : VF);
                 double medianCoverage = CanvasCommon.Utilities.Median(segment.Counts);
                 MAF.Sort();
 
@@ -2114,7 +2127,7 @@ namespace CanvasSomaticCaller
             {
                 // Compute (MAF, Coverage) for this segment:
                 List<double> MAF = new List<double>();
-                foreach (float VF in segment.Alleles.Frequencies) MAF.Add(VF > 0.5 ? 1 - VF : VF);
+                foreach (float VF in segment.Balleles.Frequencies) MAF.Add(VF > 0.5 ? 1 - VF : VF);
                 double medianCoverage = CanvasCommon.Utilities.Median(segment.Counts);
                 MAF.Sort();
                 double medianMAF = dummyMAF;
@@ -2471,6 +2484,7 @@ namespace CanvasSomaticCaller
                     double Heterogeneity = this.GetKnownClonalityForSegment(segment);
                     if (CN < 0) continue;
                     if (segment.End - segment.Begin < 5000) continue;
+                    double medianCoverage = CanvasCommon.Utilities.Median(segment.Counts);
                     string accurateFlag = "N";
                     if (CN == segment.CopyNumber) accurateFlag = "Y";
                     string directionAccurateFlag = "N";

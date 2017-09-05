@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using CanvasCommon;
 
 namespace CanvasPedigreeCaller
@@ -8,9 +9,12 @@ namespace CanvasPedigreeCaller
     {
         public enum Kinship
         {
-            Parent, Offspring, Proband
+            Other, Parent, Proband
         }
+
+        public Segments SegmentsByChromosome;
         public List<CanvasSegment> Segments = new List<CanvasSegment>();
+        public List<CanvasSegmentsSet> SegmentSets = new List<CanvasSegmentsSet>();
         public double MeanCoverage { get; set; }
         public int MaxCoverage { get; set; }
         public double MeanMafCoverage { get; set; }
@@ -23,25 +27,23 @@ namespace CanvasPedigreeCaller
         public CopyNumberModel CnModel { get; set; }
         public Kinship Kin { get; set; }
 
-        public double GetCoverage(int segmentIndex, int numberOfTrimmedBins)
+        public double GetCoverage(int setPosition, int segmentPosition, SegmentsSet segmentsSet, int numberOfTrimmedBins)
         {
-            return Segments[segmentIndex].TruncatedMedianCount(numberOfTrimmedBins);
+            return SegmentSets[setPosition].GetSet(segmentsSet)[segmentPosition].MedianCount;
         }
-        public Tuple<int,int> GetMedianAlleleCounts(int segmentIndex)
+        public Tuple<int, int> GetMedianAlleleCounts(int segmentIndex)
         {
-            int allele1 = Math.Min(Segments[segmentIndex].Alleles.MedianCounts.Item1, MaxCoverage - 1);
-            int allele2 = Math.Min(Segments[segmentIndex].Alleles.MedianCounts.Item2, MaxCoverage - 1);
+            int allele1 = Math.Min(Segments[segmentIndex].Balleles.MedianCounts.Item1, MaxCoverage - 1);
+            int allele2 = Math.Min(Segments[segmentIndex].Balleles.MedianCounts.Item2, MaxCoverage - 1);
             return new Tuple<int, int>(allele1, allele2);
         }
-        public List<Tuple<int, int>> GetAlleleCounts(int segmentIndex)
+        public List<Tuple<int, int>> GetAlleleCounts(int setPosition, int segmentPosition, SegmentsSet segmentsSet)
         {
-            return Segments[segmentIndex].Alleles.Counts;
+            return SegmentSets[setPosition].GetSet(segmentsSet)[segmentPosition].Balleles.GetAlleleCounts();
         }
-
-        public int GetPloidy(int segmentIndex)
+        public int GetPloidy(int haplotypeIndex, int segmentIndex, SegmentsSet segmentsSet)
         {
-            return Ploidy?.GetReferenceCopyNumber(Segments[segmentIndex]) ?? 2;
+            return Ploidy?.GetReferenceCopyNumber(SegmentSets[haplotypeIndex].GetSet(segmentsSet)[segmentIndex]) ?? 2;
         }
-
     }
 }
