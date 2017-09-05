@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.IO;
 using CanvasCommon;
@@ -344,6 +345,40 @@ namespace EvaluateCNV
                     }
                 }
             }
+        }
+
+        private static List<string> GetVcfHeaderLines(IFileLocation vcfPath)
+        {
+            using (var reader = new VcfReader(vcfPath.FullName, false))
+            {
+                return reader.HeaderLines;
+            }
+        }
+
+        private static void HandleHeaderLine(TextWriter writer, List<string> headerLines, string headerKey,
+            Action<TextWriter, string> processValue)
+        {
+            if (headerLines.Any(stringToCheck => stringToCheck.Contains(headerKey)))
+                processValue(writer, headerLines.Find(stringToCheck => stringToCheck.Contains(headerKey)));
+        }
+
+        private static void LogPurity(TextWriter writer, string value)
+        {
+            double purity = double.Parse(value.Split("=")[1]);
+            writer.WriteLine($"Purity\t{purity}");
+        }
+
+        private static void LogPloidy(TextWriter writer, string value)
+        {
+            double ploidy = double.Parse(value.Split("=")[1]);
+            writer.WriteLine($"Ploidy\t{ploidy}");
+        }
+
+        public void HandleVcfHeaderInfo(TextWriter outputWriter, IFileLocation vcfPath)
+        {
+            var headerLines = GetVcfHeaderLines(vcfPath);
+            HandleHeaderLine(outputWriter, headerLines, "EstimatedTumorPurity", LogPurity);
+            HandleHeaderLine(outputWriter, headerLines, "OverallPloidy", LogPloidy);
         }
 
         public IEnumerable<CNVCall> GetCnvCallsFromVcf(string vcfPath, bool includePassingOnly)

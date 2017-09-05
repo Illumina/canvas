@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using CanvasCommon;
@@ -222,7 +223,7 @@ namespace EvaluateCNV
                               $" for variants sizes {baseCounter.MinSize} to {baseCounter.MaxSize}");
         }
 
-        static void WriteResults(string truthSetPath, string cnvCallsPath, StreamWriter outputWriter, BaseCounter baseCounter, bool includePassingOnly)
+        private void WriteResults(string truthSetPath, string cnvCallsPath, StreamWriter outputWriter, BaseCounter baseCounter, bool includePassingOnly)
         {
             // Compute overall stats:
             long totalBases = 0;
@@ -277,9 +278,11 @@ namespace EvaluateCNV
                 }
             }
 
+            // load and append VCF header information 
+            _cnvChecker.HandleVcfHeaderInfo(outputWriter, new FileLocation(cnvCallsPath));
+
             // Report stats:
             outputWriter.WriteLine(includePassingOnly ? "Results for PASSing variants" : "Results for all variants");
-
             outputWriter.WriteLine("TruthSet\t{0}", truthSetPath);
             outputWriter.WriteLine("CNVCalls\t{0}", cnvCallsPath);
             outputWriter.WriteLine("Accuracy\t{0:F4}", 100 * totalBasesRight / (double)totalBases);
