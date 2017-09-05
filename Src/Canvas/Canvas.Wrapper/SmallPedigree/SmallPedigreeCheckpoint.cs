@@ -28,9 +28,7 @@ namespace Canvas.Wrapper.SmallPedigree
 
         public CanvasSmallPedigreeOutput Run(CanvasSmallPedigreeInput input, IDirectoryLocation sandbox, IFileMover fileMover)
         {
-            System.Console.WriteLine($"%%% CanvasSmallPedigreeOutput::Run");
             CanvasSmallPedigreeOutput output = _wrapper.Run(input, sandbox);
-            System.Console.WriteLine($"%%% CanvasSmallPedigreeOutput::Run - output is '{output}'");
             if (output == null) return null;
             _move(output, fileMover);
             return _load(input);
@@ -48,7 +46,6 @@ namespace Canvas.Wrapper.SmallPedigree
 
         public CanvasSmallPedigreeOutput Run(CanvasSmallPedigreeInput input, IDirectoryLocation sandbox, IFileMover fileMover)
         {
-            System.Console.WriteLine($"%%% NullSmallPedigreeCheckpoint::Run");
             _logger.Info("Canvas is disabled.");
             return null;
         }
