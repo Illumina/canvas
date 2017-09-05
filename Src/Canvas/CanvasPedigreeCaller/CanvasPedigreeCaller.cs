@@ -115,8 +115,7 @@ namespace CanvasPedigreeCaller
                 out List<List<CanvasSegment>> segments);
             var ploidies = pedigreeMembers.Select(x => x.Ploidy).ToList();
             CanvasSegmentWriter.WriteMultiSampleSegments(outVcfFile, segments, diploidCoverage, referenceFolder, names,
-                null, ploidies,
-                QualityFilterThreshold, isPedigreeInfoSupplied: true,
+                null, ploidies, QualityFilterThreshold, isPedigreeInfoSupplied: true, 
                 denovoQualityThreshold: DeNovoQualityFilterThreshold);
 
             var outputFolder = new FileLocation(outVcfFile).Directory;
