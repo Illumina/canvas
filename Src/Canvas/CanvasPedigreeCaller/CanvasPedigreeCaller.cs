@@ -339,7 +339,7 @@ namespace CanvasPedigreeCaller
             List<SampleId> parentIDs, List<SampleId> offspringIDs, CanvasSegmentIndex index, CopyNumberDistribution copyNumberLikelihoods)
         {
             var cnStates = GetCnStates(pedigreeMembers, parentIDs, offspringIDs, index, CallerParameters.MaximumCopyNumber);
-            var names = parentIDs.Union(offspringIDs).Select(x => x.ToString()).ToList();
+            var names = offspringIDs.Union(parentIDs).Select(x => x.ToString()).ToList();
 
             var singleSampleQualityScores = GetSingleSampleQualityScores(copyNumberLikelihoods, cnStates, names);
             var counter = 0;
