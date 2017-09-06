@@ -336,7 +336,7 @@ namespace CanvasPedigreeCaller
         }
 
         private void EstimateQScoresWithPedigreeInfo(SampleList<PedigreeMember> pedigreeMembers, SampleList<PedigreeMemberInfo> pedigreeMembersInfo, SampleList<CopyNumberModel> model,
-            List<SampleId> parentIDs, List<SampleId> offspringIDs, CanvasSegmentIndex index, CopyNumberDistribution copyNumberLikelihoods)
+            List<SampleId> parentIDs, List<SampleId> offspringIDs, CanvasSegmentIndex index, CopyNumbersLikelihood copyNumberLikelihoods)
         {
             var cnStates = GetCnStates(pedigreeMembers, parentIDs, offspringIDs, index, CallerParameters.MaximumCopyNumber);
             var names = offspringIDs.Union(parentIDs).Select(x => x.ToString()).ToList();
@@ -355,7 +355,7 @@ namespace CanvasPedigreeCaller
         }
 
         private void SetDenovoQualityScores(SampleList<PedigreeMember> samples, SampleList<PedigreeMemberInfo> samplesInfo, List<SampleId> parentIDs, List<SampleId> offspringIDs,
-            CanvasSegmentIndex index, CopyNumberDistribution copyNumberLikelihoods, List<string> names, List<int> cnStates,
+            CanvasSegmentIndex index, CopyNumbersLikelihood copyNumberLikelihoods, List<string> names, List<int> cnStates,
             List<double> singleSampleQualityScores)
         {
             int parent1Index = names.IndexOf(parentIDs.First().ToString());
@@ -553,11 +553,11 @@ namespace CanvasPedigreeCaller
             {
                 var canvasSegmentIndex = new CanvasSegmentIndex(setPosition, segmentsSet, segmentPosition);
 
-                var ll = AssignCopyNumberWithPedigreeInfo(pedigreeMembers, pedigreeMembersInfo, model, parentIDs,
+                var copyNumbersLikelihood = AssignCopyNumberWithPedigreeInfo(pedigreeMembers, pedigreeMembersInfo, model, parentIDs,
                     offspringIDs, canvasSegmentIndex, transitionMatrix, offspringsGenotypes);
 
                 EstimateQScoresWithPedigreeInfo(pedigreeMembers, pedigreeMembersInfo, model, parentIDs,
-                    offspringIDs, canvasSegmentIndex, ll);
+                    offspringIDs, canvasSegmentIndex, copyNumbersLikelihood);
 
                 if (!UseMafInformation(pedigreeMembers, setPosition, segmentPosition, segmentsSet))
                     AssignMccWithPedigreeInfo(pedigreeMembers, pedigreeMembersInfo, model, parentIDs,
@@ -597,14 +597,14 @@ namespace CanvasPedigreeCaller
         /// <param name="segmentsSet"></param>
         /// <param name="transitionMatrix"></param>
         /// <param name="offspringsGenotypes"></param>
-        public CopyNumberDistribution AssignCopyNumberWithPedigreeInfo(SampleList<PedigreeMember> samples,
+        public CopyNumbersLikelihood AssignCopyNumberWithPedigreeInfo(SampleList<PedigreeMember> samples,
             SampleList<PedigreeMemberInfo> samplesInfo, SampleList<CopyNumberModel> model, List<SampleId> parentIDs,
             List<SampleId> offspringIDs, CanvasSegmentIndex index, double[][] transitionMatrix,
                 List<List<Genotype>> offspringsGenotypes)
         {
             int nCopies = CallerParameters.MaximumCopyNumber;
             var names = offspringIDs.Union(parentIDs).Select(x => x.ToString()).ToList();
-            var density = new CopyNumberDistribution(nCopies, names);
+            var density = new CopyNumbersLikelihood(nCopies, names);
             InitializeCn(index, samples);
             density.MaximalLikelihood = 0;
             var coverages = parentIDs.Select(id => Math.Min(samples[id].GetCoverage(index, CallerParameters.NumberOfTrimmedBins),
@@ -1028,12 +1028,12 @@ namespace CanvasPedigreeCaller
             return kinships;
         }
 
-        public List<double> GetSingleSampleQualityScores(CopyNumberDistribution density, List<int> cnStates,
+        public List<double> GetSingleSampleQualityScores(CopyNumbersLikelihood density, List<int> cnStates,
             List<string> sampleNames)
         {
             var singleSampleQualityScores = new List<double>();
             if (density.Count != cnStates.Count)
-                throw new ArgumentException("Size of CopyNumberDistribution should be equal to number of CN states");
+                throw new ArgumentException("Size of CopyNumbersLikelihood should be equal to number of CN states");
             for (int index = 0; index < sampleNames.Count; index++)
             {
                 string sampleName = sampleNames[index];
@@ -1050,7 +1050,7 @@ namespace CanvasPedigreeCaller
             return singleSampleQualityScores;
         }
 
-        public double GetConditionalDeNovoQualityScore(CopyNumberDistribution density, int probandIndex,
+        public double GetConditionalDeNovoQualityScore(CopyNumbersLikelihood density, int probandIndex,
             int probandCopyNumber, string probandName, int parent1Index, int parent2Index,
             List<int> remainingProbandIndex)
         {

@@ -4,7 +4,7 @@ using System.Linq;
 
 namespace CanvasPedigreeCaller
 {
-    public class CopyNumberDistribution
+    public class CopyNumbersLikelihood
     {
         private readonly Array _probability;
         public List<string> SampleNames { get; }
@@ -12,7 +12,7 @@ namespace CanvasPedigreeCaller
         public List<int[]> Indices { get; }
         public double MaximalLikelihood;
 
-        public CopyNumberDistribution(int nCopyNumbers, List<string> names)
+        public CopyNumbersLikelihood(int nCopyNumbers, List<string> names)
         {
             int nSamples = names.Count;
             if (names.Count != nSamples)
