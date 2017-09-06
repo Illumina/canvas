@@ -22,11 +22,7 @@
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <OutputPath>..\x64\CanvasCore\</OutputPath>
-  </PropertyGroup>
-
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <OutputPath>..\x64\CanvasCore\</OutputPath>
+    <OutputPath>..\x64\CanvasCore\CanvasClean\</OutputPath>
   </PropertyGroup>
 
   <ItemGroup>

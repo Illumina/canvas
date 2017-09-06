@@ -23,11 +23,12 @@
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <OutputPath>..\x64\CanvasCore\</OutputPath>
+    <OutputPath>..\x64\CanvasCore\Canvas\</OutputPath>
   </PropertyGroup>
 
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <OutputPath>..\x64\CanvasCore\</OutputPath>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <DocumentationFile></DocumentationFile>
+    <OutputPath>bin\x64\Debug\</OutputPath>
   </PropertyGroup>
 
   <ItemGroup>

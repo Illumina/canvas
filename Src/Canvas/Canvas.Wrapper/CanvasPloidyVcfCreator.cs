@@ -3,9 +3,6 @@ using Illumina.SecondaryAnalysis.VariantCalling;
 using Isas.Framework.DataTypes;
 using Isas.SequencingFiles;
 using System.Collections.Generic;
-using Isas.Ploidy;
-using System;
-using System.Linq;
 using System.Text;
 
 namespace Canvas.Wrapper
