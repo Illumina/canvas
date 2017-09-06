@@ -182,12 +182,36 @@ namespace CanvasCommon
                     continue;
 
                 if (countRef + countAlt < minCounts) continue;
-                // as both lists are sorted linear search should achieve an average O(log(n)) complexity
-                int index = intervalByChromosome[chr].FindIndex(interval => interval.Start <= position && interval.End > position);
-                if (index == -1) continue;
+                // Binary search for the segment this variant hits:
+                int index = BinarySearch(intervalByChromosome[chr], position);
                 alleleCountsByChromosome[chr][index].Add(new Ballele(position, countRef, countAlt));
             }
             return alleleCountsByChromosome;
+        }
+
+        private static int BinarySearch(List<BedInterval> intervalByChromosome, int position)
+        {
+            int start = 0;
+            int end = intervalByChromosome.Count - 1;
+            if (start == end)
+                return 0;
+            int mid = (start + end) / 2;
+            while (start <= end)
+            {
+                if (intervalByChromosome[mid].End < position) // CanvasSegment.End is already 1-based
+                {
+                    start = mid + 1;
+                    mid = (start + end) / 2;
+                    continue;
+                }
+                if (intervalByChromosome[mid].Start + 1 > position) // Convert CanvasSegment.Begin to 1-based by adding 1
+                {
+                    end = mid - 1;
+                    mid = (start + end) / 2;
+                    continue;
+                }
+            }
+            return mid;
         }
     }
 }
