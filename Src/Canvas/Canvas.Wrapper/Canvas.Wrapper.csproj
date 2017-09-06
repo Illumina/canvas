@@ -18,7 +18,7 @@
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <OutputPath>..\x64\CanvasCore\Canvas.Wrapper\</OutputPath>
+    <OutputPath>bin\x64\Release\netcoreapp1.1\</OutputPath>
   </PropertyGroup>
 
   <ItemGroup>
