@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
@@ -142,7 +143,7 @@ namespace CanvasCommon
             return row[4];
         }
 
-        public void AddAlleles(Dictionary<string, List<Balleles>> allelesByChromosome)
+        public void AddAlleles(ConcurrentDictionary<string, List<Balleles>> allelesByChromosome)
         {
             foreach (string chr in GetChromosomes())
             {

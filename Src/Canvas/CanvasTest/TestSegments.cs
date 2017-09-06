@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -207,13 +208,12 @@ namespace CanvasTest
             var stringReader = new StringReader(variantCounts);
             using (var reader = new GzipOrTextReader(stringReader))
             {
-                Dictionary<string, List<Balleles>> allelesByChromosome =
+                ConcurrentDictionary<string, List<Balleles>> allelesByChromosome =
                     CanvasIO.ReadFrequencies(reader, intervalsByChromosome);
                 Assert.Equal(allelesByChromosome[chr].Count, intervals.Count);
                 Assert.Equal(2, allelesByChromosome[chr].First().Size());
                 Assert.Equal(1, allelesByChromosome[chr].Last().Size());
             }
         }
-
     }
 }

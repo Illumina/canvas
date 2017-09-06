@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.IO;
+using System.Threading.Tasks;
 using Illumina.Common;
 using Illumina.Common.Collections;
 using Illumina.Common.FileSystem;
@@ -150,7 +151,7 @@ namespace CanvasCommon
             return chromosomeNames;
         }
 
-        public static Dictionary<string, List<Balleles>> ReadFrequenciesWrapper(ILogger logger,
+        public static ConcurrentDictionary<string, List<Balleles>> ReadFrequenciesWrapper(ILogger logger,
             IFileLocation variantFrequencyFile, IReadOnlyDictionary<string, List<BedInterval>> intervalsByChromosome)
         {
             using (var reader = new GzipOrTextReader(variantFrequencyFile.FullName))
@@ -160,33 +161,37 @@ namespace CanvasCommon
             }
         }
 
-        public static Dictionary<string, List<Balleles>> ReadFrequencies(GzipOrTextReader variantFrequencyFileReader,
+        public static ConcurrentDictionary<string, List<Balleles>> ReadFrequencies(GzipOrTextReader variantFrequencyFileReader,
             IReadOnlyDictionary<string, List<BedInterval>> intervalByChromosome)
         {
             const int minCounts = 10;
-            var alleleCountsByChromosome = new Dictionary<string, List<Balleles>>();
-            foreach (string chr in intervalByChromosome.Keys)
-                alleleCountsByChromosome[chr] = new List<Balleles>(intervalByChromosome[chr].Select(counter => new Balleles()));
+            var alleleCountsByChromosome = new ConcurrentDictionary<string, List<Balleles>>();
+            Parallel.ForEach(
+                intervalByChromosome.Keys,
+                chromosome =>
+                {
+                    alleleCountsByChromosome[chromosome] = new List<Balleles>(intervalByChromosome[chromosome].Select(counter => new Balleles()));
+                    while (true)
+                    {
+                        string fileLine = variantFrequencyFileReader.ReadLine();
+                        if (fileLine == null) break;
+                        if (fileLine.Length == 0 || fileLine[0] == '#') continue; // Skip headers
+                        var columns = fileLine.Split('\t');
+                        string chr = columns[0];
+                        int position = int.Parse(columns[1]); // 1-based (from the input VCF to Canvas SNV)
+                        int countRef = int.Parse(columns[4]);
+                        int countAlt = int.Parse(columns[5]);
+                        if (chromosome != chr)
+                            continue;
 
-            while (true)
-            {
-                string fileLine = variantFrequencyFileReader.ReadLine();
-                if (fileLine == null) break;
-                if (fileLine.Length == 0 || fileLine[0] == '#') continue; // Skip headers
-                var columns = fileLine.Split('\t');
-                string chr = columns[0];
-                int position = int.Parse(columns[1]); // 1-based (from the input VCF to Canvas SNV)
-                int countRef = int.Parse(columns[4]);
-                int countAlt = int.Parse(columns[5]);
-                if (intervalByChromosome.Keys.All(chromosome => chromosome != chr))
-                    continue;
-
-                if (countRef + countAlt < minCounts) continue;
-                // Binary search for the segment this variant hits:
-                int index = BinarySearch(intervalByChromosome[chr], position);
-                if (index == -1) continue;
-                alleleCountsByChromosome[chr][index].Add(new Ballele(position, countRef, countAlt));
-            }
+                        if (countRef + countAlt < minCounts) continue;
+                        int index = intervalByChromosome[chr].FindIndex(interval => interval.Start <= position && interval.End > position);
+                        if (index == -1)
+                            continue;
+                        alleleCountsByChromosome[chr][index].Add(new Ballele(position, countRef, countAlt));
+                    }
+                }
+            );
             return alleleCountsByChromosome;
         }
 
