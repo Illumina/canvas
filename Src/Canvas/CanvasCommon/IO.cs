@@ -184,6 +184,7 @@ namespace CanvasCommon
                 if (countRef + countAlt < minCounts) continue;
                 // Binary search for the segment this variant hits:
                 int index = BinarySearch(intervalByChromosome[chr], position);
+                if (index == -1) continue;
                 alleleCountsByChromosome[chr][index].Add(new Ballele(position, countRef, countAlt));
             }
             return alleleCountsByChromosome;
@@ -210,8 +211,11 @@ namespace CanvasCommon
                     mid = (start + end) / 2;
                     continue;
                 }
+                break;
             }
-            return mid;
+            if (intervalByChromosome[mid].Start < position && intervalByChromosome[mid].End > position)
+                return mid;
+            return -1;
         }
     }
 }
