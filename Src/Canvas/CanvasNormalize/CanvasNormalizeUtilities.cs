@@ -31,12 +31,12 @@ namespace CanvasNormalize
             }
         }
 
-        public static void RatiosToCounts(IEnumerable<SampleGenomicBin> ratios, IFileLocation referencePloidyBedFile,
+        public static void RatiosToCounts(IEnumerable<SampleGenomicBin> ratios, IFileLocation referencePloidyVcfFile,
             IFileLocation outputPath)
         {
             PloidyInfo referencePloidy = null;
-            if (referencePloidyBedFile != null && referencePloidyBedFile.Exists)
-                referencePloidy = PloidyInfo.LoadPloidyFromBedFile(referencePloidyBedFile.FullName);
+            if (referencePloidyVcfFile != null && referencePloidyVcfFile.Exists)
+                referencePloidy = PloidyInfo.LoadPloidyFromVcfFileNoSampleId(referencePloidyVcfFile.FullName);
 
             CanvasIO.WriteToTextFile(outputPath.FullName, RatiosToCounts(ratios, referencePloidy));
         }

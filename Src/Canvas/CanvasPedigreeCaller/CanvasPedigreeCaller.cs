@@ -118,7 +118,7 @@ namespace CanvasPedigreeCaller
                 var coverageOutputPath = SingleSampleCallset.GetCoverageAndVariantFrequencyOutput(outputFolder,
                     sampleId.ToString());
                 CanvasSegment.WriteCoveragePlotData(mergedVariantCalledSegments[sampleId], pedigreeMembersInfo[sampleId].MeanCoverage,
-                    pedigreeMembersInfo[sampleId].Ploidy, coverageOutputPath.FullName, referenceFolder);
+                    pedigreeMembersInfo[sampleId].Ploidy, coverageOutputPath, referenceFolder);
             }
 
             var ploidies = offspringsIds.Union(parentsIds).Select(id => pedigreeMembersInfo[id].Ploidy).ToList();
@@ -223,7 +223,7 @@ namespace CanvasPedigreeCaller
                 var sampleId = new SampleId(sampleName);
                 var coverageOutputPath = SingleSampleCallset.GetCoverageAndVariantFrequencyOutput(outputFolder, sampleName);
                 CanvasSegment.WriteCoveragePlotData(mergedVariantCalledSegments[sampleId], pedigreeMembersInfo[sampleId].MeanCoverage,
-                    pedigreeMembersInfo[sampleId].Ploidy, coverageOutputPath.FullName, referenceFolder);
+                    pedigreeMembersInfo[sampleId].Ploidy, coverageOutputPath, referenceFolder);
                 var outputVcfPath = SingleSampleCallset.GetSingleSamplePedigreeVcfOutput(outputFolder, sampleName);
                 CanvasSegmentWriter.WriteSegments(outputVcfPath.FullName, mergedVariantCalledSegments[sampleId],
                     pedigreeMembersInfo[sampleId].MeanCoverage, referenceFolder, sampleName, null, pedigreeMembersInfo[sampleId].Ploidy,
@@ -276,8 +276,9 @@ namespace CanvasPedigreeCaller
                         $"Chromosome names in a common CNVs bed file {commonCNVsbedPath} does not match " +
                         $"chromosomes in {segmentFile}");
 
-                var segmentIntervalsByChromosome = new Dictionary<string, List<BedInterval>>();
-                Parallel.ForEach(commonRegions.Keys, chr => segmentIntervalsByChromosome[chr] =
+                var segmentIntervalsByChromosome = new ConcurrentDictionary<string, List<BedInterval>>();
+                var chromosomes = commonRegions.Keys.Where(chromosome => coverage.StartByChr.ContainsKey(chromosome));
+                Parallel.ForEach(chromosomes, chr => segmentIntervalsByChromosome[chr] =
                 CanvasSegment.RemapCommonRegions(commonRegions[chr], coverage.StartByChr[chr], coverage.EndByChr[chr]));
                 var allelesByChromosomeCommonSegs = CanvasIO.ReadFrequenciesWrapper(_logger, new FileLocation(variantFrequencyFile), segmentIntervalsByChromosome);
                 var segmentsSetByChromosome = new ConcurrentDictionary<string, List<CanvasSegmentsSet>>();

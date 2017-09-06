@@ -32,7 +32,7 @@ namespace Canvas
         private CanvasCallset GetCallset(ILogger logger)
         {
             AnalysisDetails analysisDetails = new AnalysisDetails(CommonOptions.OutputDirectory,CommonOptions.WholeGenomeFasta, 
-                CommonOptions.KmerFasta,CommonOptions.FilterBed, SingleSampleCommonOptions.PloidyBed, null);
+                CommonOptions.KmerFasta,CommonOptions.FilterBed, SingleSampleCommonOptions.PloidyVcf, null);
             IFileLocation outputVcfPath = CommonOptions.OutputDirectory.GetFileLocation("CNV.vcf.gz");
             var manifest = new NexteraManifest(_somaticEnrichmentOptions.Manifest.FullName, null, logger.Error);
             // TODO: refactor and remove the following two lines

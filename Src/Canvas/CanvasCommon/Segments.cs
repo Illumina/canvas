@@ -143,7 +143,7 @@ namespace CanvasCommon
             return row[4];
         }
 
-        public void AddAlleles(ConcurrentDictionary<string, List<Balleles>> allelesByChromosome)
+        public void AddAlleles(IDictionary<string, List<Balleles>> allelesByChromosome)
         {
             foreach (string chr in GetChromosomes())
             {

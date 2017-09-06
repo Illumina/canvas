@@ -371,7 +371,7 @@ namespace CanvasDiploidCaller
             Console.WriteLine(">>> Wrote report of CNV calls versus reference calls to {0}", debugPath);
         }
 
-        public int CallVariants(string variantFrequencyFile, string inFile, string outFile, string ploidyBedPath, string referenceFolder, string sampleName,
+        public int CallVariants(string variantFrequencyFile, string inFile, string outFile, string ploidyVcfPath, string referenceFolder, string sampleName,
             string truthDataPath)
         {
             if (!string.IsNullOrEmpty(truthDataPath))
@@ -391,7 +391,7 @@ namespace CanvasDiploidCaller
                 return 0;
             }
             PloidyInfo ploidy = null;
-            if (!string.IsNullOrEmpty(ploidyBedPath)) ploidy = PloidyInfo.LoadPloidyFromBedFile(ploidyBedPath);
+            if (!string.IsNullOrEmpty(ploidyVcfPath)) ploidy = PloidyInfo.LoadPloidyFromVcfFileNoSampleId(ploidyVcfPath);
 
             // load MAF
             var allelesByChromosome = CanvasIO.ReadFrequenciesWrapper(_logger, new FileLocation(variantFrequencyFile), _segments.IntervalsByChromosome);
@@ -463,7 +463,7 @@ namespace CanvasDiploidCaller
             CanvasSegment.FilterSegments(QualityFilterThreshold, mergedSegments); 
 
             List<string> extraHeaders = new List<string>();
-            string coverageOutputPath = SingleSampleCallset.GetCoverageAndVariantFrequencyOutputPath(outFile);
+            var coverageOutputPath = SingleSampleCallset.GetCoverageAndVariantFrequencyOutputPath(outFile);
             CanvasSegment.WriteCoveragePlotData(mergedSegments, Model.DiploidCoverage, ploidy, coverageOutputPath, referenceFolder);
 
             if (this.CNOracle != null)

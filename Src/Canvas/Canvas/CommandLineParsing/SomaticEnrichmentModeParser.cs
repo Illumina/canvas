@@ -54,19 +54,19 @@ namespace Canvas.CommandLineParsing
 
     internal class SomaticEnrichmentOptionsParser : Option<SomaticEnrichmentOptions>
     {
-        public static string ControlPloidyBedOptionName = $"control-{SingleSampleCommonOptionsParser.PloidyBedOptionName}";
+        public static string ControlPloidyVcfOptionName = $"control-{SingleSampleCommonOptionsParser.PloidyVcfOptionName}";
         private static readonly FileOption Bam = FileOption.CreateRequired("tumor sample .bam file", "b", "bam");
         private static readonly FileOption Manifest = FileOption.CreateRequired("Nextera manifest file", "manifest");
         private static readonly MultiValueOption<IFileLocation> ControlBams = new MultiValueOption<IFileLocation>(FileOption.Create("Bam file of an unmatched control sample", "control-bam"));
         private static readonly FileOption ControlBinned = FileOption.Create("Canvas .binned file containing precomputed control bin data to use for normalization", "control-binned");
         private static readonly ValueOption<uint?> ControlBinSize = ValueOption<uint?>.Create("bin size for control .binned file", "control-bin-size");
-        private static readonly FileOption ControlPloidyBed = FileOption.Create(".bed file containing regions of known ploidy for the control .binned file", ControlPloidyBedOptionName);
+        private static readonly FileOption ControlPloidyVcf = FileOption.Create(".vcf file containing regions of known ploidy for the control .binned file", ControlPloidyVcfOptionName);
 
         public override OptionCollection<SomaticEnrichmentOptions> GetOptions()
         {
             return new OptionCollection<SomaticEnrichmentOptions>
             {
-               Bam, Manifest, ControlBams, ControlBinned, ControlBinSize, ControlPloidyBed
+               Bam, Manifest, ControlBams, ControlBinned, ControlBinSize, ControlPloidyVcf
             };
         }
 
@@ -77,11 +77,11 @@ namespace Canvas.CommandLineParsing
             var controlBams = parseInput.Get(ControlBams);
             var controlBinned = parseInput.Get(ControlBinned);
             var controlBinSize = parseInput.Get(ControlBinSize);
-            var controlPloidy = parseInput.Get(ControlPloidyBed);
+            var controlPloidy = parseInput.Get(ControlPloidyVcf);
 
             var controlBinnedBools = new List<bool> { controlBinned != null, controlBinSize != null, controlPloidy != null };
             if (controlBams.Any() && controlBinnedBools.Any(controlBinnedBool => controlBinnedBool))
-                return ParsingResult<SomaticEnrichmentOptions>.FailedResult($"Error: option {ControlBams.Info.Name} cannot be combined with any of {ControlBinned.Info.Name}, {ControlBinSize.Info.Name}, {ControlPloidyBed.Info.Name} ");
+                return ParsingResult<SomaticEnrichmentOptions>.FailedResult($"Error: option {ControlBams.Info.Name} cannot be combined with any of {ControlBinned.Info.Name}, {ControlBinSize.Info.Name}, {ControlPloidyVcf.Info.Name} ");
 
             if (controlBinned != null && controlBinSize == null)
                 return ParsingResult<SomaticEnrichmentOptions>.FailedResult($"Error: {ControlBinSize.Info.Name} is required when using the {ControlBinned.Info.Name} option");

@@ -534,7 +534,7 @@ namespace CanvasCommon
         /// This file can be used to generate a pretty plot of coverage versus MAF.  
         /// </summary>
         public static void WriteCoveragePlotData(IReadOnlyList<CanvasSegment> segments, double? normalDiploidCoverage, PloidyInfo referencePloidy,
-            string filePath, string referenceFolder)
+            IFileLocation file, string referenceFolder)
         {
             int pointLength = 100000;
             int minimumBinsToPlot = GetMinimumBinsForCoveragePlotPoint(segments, pointLength);
@@ -547,7 +547,8 @@ namespace CanvasCommon
             List<float> counts = new List<float>();
             List<float> MAF = new List<float>();
             List<float> VF = new List<float>();
-            using (FileStream stream = new FileStream(filePath, FileMode.Create, FileAccess.Write))
+            file.Directory.Create();
+            using (FileStream stream = new FileStream(file.FullName, FileMode.Create, FileAccess.Write))
             using (StreamWriter writer = new StreamWriter(stream))
             {
                 writer.NewLine = "\n";

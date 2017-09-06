@@ -208,7 +208,7 @@ namespace CanvasTest
             var stringReader = new StringReader(variantCounts);
             using (var reader = new GzipOrTextReader(stringReader))
             {
-                ConcurrentDictionary<string, List<Balleles>> allelesByChromosome =
+                var allelesByChromosome =
                     CanvasIO.ReadFrequencies(reader, intervalsByChromosome);
                 Assert.Equal(allelesByChromosome[chr].Count, intervals.Count);
                 Assert.Equal(2, allelesByChromosome[chr].First().Size());

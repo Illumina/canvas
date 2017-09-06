@@ -3,7 +3,6 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.IO;
-using System.Threading.Tasks;
 using Illumina.Common;
 using Illumina.Common.Collections;
 using Illumina.Common.FileSystem;
@@ -151,7 +150,7 @@ namespace CanvasCommon
             return chromosomeNames;
         }
 
-        public static ConcurrentDictionary<string, List<Balleles>> ReadFrequenciesWrapper(ILogger logger,
+        public static Dictionary<string, List<Balleles>> ReadFrequenciesWrapper(ILogger logger,
             IFileLocation variantFrequencyFile, IReadOnlyDictionary<string, List<BedInterval>> intervalsByChromosome)
         {
             using (var reader = new GzipOrTextReader(variantFrequencyFile.FullName))
@@ -161,66 +160,34 @@ namespace CanvasCommon
             }
         }
 
-        public static ConcurrentDictionary<string, List<Balleles>> ReadFrequencies(GzipOrTextReader variantFrequencyFileReader,
+        public static Dictionary<string, List<Balleles>> ReadFrequencies(GzipOrTextReader variantFrequencyFileReader,
             IReadOnlyDictionary<string, List<BedInterval>> intervalByChromosome)
         {
             const int minCounts = 10;
-            var alleleCountsByChromosome = new ConcurrentDictionary<string, List<Balleles>>();
-            Parallel.ForEach(
-                intervalByChromosome.Keys,
-                chromosome =>
-                {
-                    alleleCountsByChromosome[chromosome] = new List<Balleles>(intervalByChromosome[chromosome].Select(counter => new Balleles()));
-                    while (true)
-                    {
-                        string fileLine = variantFrequencyFileReader.ReadLine();
-                        if (fileLine == null) break;
-                        if (fileLine.Length == 0 || fileLine[0] == '#') continue; // Skip headers
-                        var columns = fileLine.Split('\t');
-                        string chr = columns[0];
-                        int position = int.Parse(columns[1]); // 1-based (from the input VCF to Canvas SNV)
-                        int countRef = int.Parse(columns[4]);
-                        int countAlt = int.Parse(columns[5]);
-                        if (chromosome != chr)
-                            continue;
+            var alleleCountsByChromosome = new Dictionary<string, List<Balleles>>();
+            foreach (string chr in intervalByChromosome.Keys)
+                alleleCountsByChromosome[chr] = new List<Balleles>(intervalByChromosome[chr].Select(counter => new Balleles()));
 
-                        if (countRef + countAlt < minCounts) continue;
-                        int index = intervalByChromosome[chr].FindIndex(interval => interval.Start <= position && interval.End > position);
-                        if (index == -1)
-                            continue;
-                        alleleCountsByChromosome[chr][index].Add(new Ballele(position, countRef, countAlt));
-                    }
-                }
-            );
-            return alleleCountsByChromosome;
-        }
-
-        private static int BinarySearch(List<BedInterval> intervalByChromosome, int position)
-        {
-            int start = 0;
-            int end = intervalByChromosome.Count - 1;
-            if (start == end)
-                return 0;
-            int mid = (start + end) / 2;
-            while (start <= end)
+            while (true)
             {
-                if (intervalByChromosome[mid].End < position) // CanvasSegment.End is already 1-based
-                {
-                    start = mid + 1;
-                    mid = (start + end) / 2;
+                string fileLine = variantFrequencyFileReader.ReadLine();
+                if (fileLine == null) break;
+                if (fileLine.Length == 0 || fileLine[0] == '#') continue; // Skip headers
+                var columns = fileLine.Split('\t');
+                string chr = columns[0];
+                int position = int.Parse(columns[1]); // 1-based (from the input VCF to Canvas SNV)
+                int countRef = int.Parse(columns[4]);
+                int countAlt = int.Parse(columns[5]);
+                if (intervalByChromosome.Keys.All(chromosome => chromosome != chr))
                     continue;
-                }
-                if (intervalByChromosome[mid].Start + 1 > position) // Convert CanvasSegment.Begin to 1-based by adding 1
-                {
-                    end = mid - 1;
-                    mid = (start + end) / 2;
-                    continue;
-                }
-                break;
+
+                if (countRef + countAlt < minCounts) continue;
+                // as both lists are sorted linear search should achieve an average O(log(n)) complexity
+                int index = intervalByChromosome[chr].FindIndex(interval => interval.Start <= position && interval.End > position);
+                if (index == -1) continue;
+                alleleCountsByChromosome[chr][index].Add(new Ballele(position, countRef, countAlt));
             }
-            if (intervalByChromosome[mid].Start < position && intervalByChromosome[mid].End > position)
-                return mid;
-            return -1;
+            return alleleCountsByChromosome;
         }
     }
 }
