@@ -15,21 +15,16 @@
     <GenerateAssemblyInformationalVersionAttribute>false</GenerateAssemblyInformationalVersionAttribute>
     <GenerateAssemblyCompanyAttribute>false</GenerateAssemblyCompanyAttribute>
     <GenerateAssemblyCopyrightAttribute>false</GenerateAssemblyCopyrightAttribute>
-    <Platforms>AnyCPU;x64</Platforms>
+    <Platforms>x64</Platforms>
   </PropertyGroup>
 
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
-    <OutputPath>..\x64\CanvasCore\</OutputPath>
-  </PropertyGroup>
-
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <OutputPath>..\x64\CanvasCore\</OutputPath>
-  </PropertyGroup>
-
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <OutputPath>..\x64\CanvasCore\</OutputPath>
-  </PropertyGroup>
-
+  <Target Name="CanvasCopyTargetBuild" AfterTargets="Build">
+    <Exec Command="robocopy /MIR $(TargetDir) $(MSBuildThisFileDirectory)..\$(Platform)\$(Configuration)\$(TargetFramework)\  || if %ERRORLEVEL% LSS 8 exit 0" />
+  </Target>
+  <Target Name="CanvasCopyTargetPublish" AfterTargets="Publish">
+    <Exec Command="robocopy /MIR $(TargetDir) $(MSBuildThisFileDirectory)..\$(Platform)\$(Configuration)\$(TargetFramework)\publish\  || if %ERRORLEVEL% LSS 8 exit 0" />
+  </Target>
+  
   <ItemGroup>
     <ProjectReference Include="..\CanvasBin\CanvasBin.csproj" />
     <ProjectReference Include="..\CanvasCommon\CanvasCommon.csproj" />
