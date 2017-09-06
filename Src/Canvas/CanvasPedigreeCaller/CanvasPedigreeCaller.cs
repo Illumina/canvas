@@ -339,7 +339,7 @@ namespace CanvasPedigreeCaller
             List<SampleId> parentIDs, List<SampleId> offspringIDs, CanvasSegmentIndex index, CopyNumberDistribution copyNumberLikelihoods)
         {
             var cnStates = GetCnStates(pedigreeMembers, parentIDs, offspringIDs, index, CallerParameters.MaximumCopyNumber);
-            var names = parentIDs.Union(offspringIDs).Select(x => ToString()).ToList();
+            var names = parentIDs.Union(offspringIDs).Select(x => x.ToString()).ToList();
 
             var singleSampleQualityScores = GetSingleSampleQualityScores(copyNumberLikelihoods, cnStates, names);
             var counter = 0;
@@ -603,7 +603,7 @@ namespace CanvasPedigreeCaller
                 List<List<Genotype>> offspringsGenotypes)
         {
             int nCopies = CallerParameters.MaximumCopyNumber;
-            var names = offspringIDs.Union(parentIDs).Select(x => ToString()).ToList();
+            var names = offspringIDs.Union(parentIDs).Select(x => x.ToString()).ToList();
             var density = new CopyNumberDistribution(nCopies, names);
             InitializeCn(index, samples);
             density.MaximalLikelihood = 0;
