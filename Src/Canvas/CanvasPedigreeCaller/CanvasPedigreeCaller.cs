@@ -123,7 +123,7 @@ namespace CanvasPedigreeCaller
 
             var ploidies = offspringsIds.Union(parentsIds).Select(id => pedigreeMembersInfo[id].Ploidy).ToList();
             var diploidCoverage = offspringsIds.Union(parentsIds).Select(id => pedigreeMembersInfo[id].MeanCoverage).ToList();
-            var names = offspringsIds.Union(parentsIds).Select(x => ToString()).ToList();
+            var names = offspringsIds.Union(parentsIds).Select(x => x.ToString()).ToList();
             CanvasSegmentWriter.WriteMultiSampleSegments(outVcfFile, mergedVariantCalledSegments, diploidCoverage, referenceFolder, names,
                 null, ploidies, QualityFilterThreshold, isPedigreeInfoSupplied: true, denovoQualityThreshold: DeNovoQualityFilterThreshold);
 
@@ -789,7 +789,7 @@ namespace CanvasPedigreeCaller
             foreach (PedigreeMember sample in samples.SampleData)
                 sample.GetCanvasSegment(index).CopyNumber = defaultCn;
             int nCopies = CallerParameters.MaximumCopyNumber;
-            var names = samples.SampleIds.Select(x => ToString()).ToList();
+            var names = samples.SampleIds.Select(x => x.ToString()).ToList();
             var totalLikelihoods = new List<double>();
             foreach (var copyNumberCombination in copyNumberCombinations)
             {
