@@ -18,11 +18,15 @@
     <Platforms>x64</Platforms>
   </PropertyGroup>
 
-  <Target Name="CanvasCopyTargetBuild" AfterTargets="Build">
-    <Exec Command="robocopy /MIR $(TargetDir) $(MSBuildThisFileDirectory)..\$(Platform)\$(Configuration)\$(TargetFramework)\$(PackageId)  || if %ERRORLEVEL% LSS 8 exit 0" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" />
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" />
+
+  <Target Name="CanvasPartitionCopyTargetBuild" AfterTargets="Build">
+    <Exec Command="robocopy /MIR $(TargetDir) $(MSBuildThisFileDirectory)..\Canvas\bin\$(Platform)\$(Configuration)\$(TargetFramework)\$(PackageId)  || if %ERRORLEVEL% LSS 8 exit 0" />
   </Target>
-  <Target Name="CanvasCopyTargetPublish" AfterTargets="Publish">
-    <Exec Command="robocopy /MIR $(TargetDir) $(MSBuildThisFileDirectory)..\$(Platform)\$(Configuration)\$(TargetFramework)\publish\$(PackageId)  || if %ERRORLEVEL% LSS 8 exit 0" />
+  <Target Name="CanvasPartitionCopyTargetPublish" AfterTargets="Publish">
+    <Exec Command="robocopy /MIR $(TargetDir) $(MSBuildThisFileDirectory)..\Canvas\bin\$(Platform)\$(Configuration)\$(TargetFramework)\publish\$(PackageId)  || if %ERRORLEVEL% LSS 8 exit 0" />
   </Target>
 
   <ItemGroup>

@@ -18,6 +18,10 @@
     <Platforms>x64</Platforms>
   </PropertyGroup>
 
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" />
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" />
+
   <Target Name="CanvasCopyTargetBuild" AfterTargets="Build">
     <Exec Command="robocopy /MIR $(TargetDir) $(MSBuildThisFileDirectory)..\$(Platform)\$(Configuration)\$(TargetFramework)\  || if %ERRORLEVEL% LSS 8 exit 0" />
   </Target>
