@@ -32,8 +32,6 @@ namespace CanvasTest.Canvas
             string canvasExecutableStub = "CanvasBin";
             string dllName = canvasExecutableStub + ".dll";
             string fullName = canvasRunner.GetExecutablePath(canvasExecutableStub, commandLineBuilder);
-            var commandLine = commandLineBuilder.ToString();
-            var expectedCommandLine = prefix + Path.Combine(canvasFolder, canvasExecutableStub, dllName);
 
             Assert.Equal(Path.Combine(canvasFolder,dotnetPath), fullName);
             Assert.Equal(prefix + Path.Combine(canvasFolder, canvasExecutableStub, dllName) + " ", commandLineBuilder.ToString());
