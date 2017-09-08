@@ -23,7 +23,7 @@ namespace Canvas
     /// </summary>
     public class CanvasRunner
     {
-        internal static readonly string DefaultCanvasFolder = Path.Combine(Isas.Framework.Utilities.Utilities.GetAssemblyFolder(typeof(CanvasRunner)));
+        private static readonly string DefaultCanvasFolder = Path.Combine(Isas.Framework.Utilities.Utilities.GetAssemblyFolder(typeof(CanvasRunner)));
         #region Members
         private readonly string _canvasFolder;
         private readonly CanvasCoverageMode _coverageMode = CanvasCoverageMode.TruncatedDynamicRange;
