@@ -20,21 +20,20 @@ namespace CanvasTest.Canvas
             var logger = Substitute.For<ILogger>();
             var workManager = Substitute.For<IWorkManager>();
             var checkpointRunner = Substitute.For<ICheckpointRunner>();
-            string dotnetPath = Path.Combine("path", "to", "executable");
+            string dotnetPath = @"C:\path\to\dotnet.exe";
             var runtimeExecutable = new FileLocation(dotnetPath);
             bool isSomatic = true;
             var coverageMode = new CanvasCoverageMode();
             int countsPerBin = 0;
-            string canvasFolder = Path.Combine(Isas.Framework.Utilities.Utilities.GetAssemblyFolder(typeof(CanvasRunner)));
+            string canvasFolder = @"C:\path\to\Canvas\"; 
             var canvasRunner = new CanvasRunner(logger, workManager, checkpointRunner, runtimeExecutable, isSomatic, coverageMode, countsPerBin, null, canvasFolder);
             string prefix = "something before ";
             var commandLineBuilder = new StringBuilder(prefix);
             string canvasExecutableStub = "CanvasBin";
-            string dllName = canvasExecutableStub + ".dll";
             string fullName = canvasRunner.GetExecutablePath(canvasExecutableStub, commandLineBuilder);
 
-            Assert.Equal(Path.Combine(canvasFolder, dotnetPath), fullName);
-            Assert.Equal(prefix + Path.Combine(canvasFolder, canvasExecutableStub, dllName) + " ", commandLineBuilder.ToString());
+            Assert.Equal(@"C:\path\to\dotnet.exe", fullName);
+            Assert.Equal(@"something before C:\path\to\Canvas\CanvasBin\CanvasBin.dll ", commandLineBuilder.ToString());
         }
     }
 }
