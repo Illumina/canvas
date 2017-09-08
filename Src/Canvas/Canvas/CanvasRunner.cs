@@ -23,6 +23,7 @@ namespace Canvas
     /// </summary>
     public class CanvasRunner
     {
+        internal static readonly string DefaultCanvasFolder = Path.Combine(Isas.Framework.Utilities.Utilities.GetAssemblyFolder(typeof(CanvasRunner)));
         #region Members
         private readonly string _canvasFolder;
         private readonly CanvasCoverageMode _coverageMode = CanvasCoverageMode.TruncatedDynamicRange;
@@ -37,13 +38,13 @@ namespace Canvas
         #endregion
 
         public CanvasRunner(ILogger logger, IWorkManager workManager, ICheckpointRunner checkpointRunner, IFileLocation runtimeExecutable, bool isSomatic, CanvasCoverageMode coverageMode,
-            int countsPerBin, Dictionary<string, string> customParameters = null)
+            int countsPerBin, Dictionary<string, string> customParameters = null, string canvasFolder = null)
         {
             _logger = logger;
             _workManager = workManager;
             _checkpointRunner = checkpointRunner;
             _isSomatic = isSomatic;
-            _canvasFolder = Path.Combine(Isas.Framework.Utilities.Utilities.GetAssemblyFolder(typeof(CanvasRunner)));
+            _canvasFolder = canvasFolder ?? DefaultCanvasFolder;
             _coverageMode = coverageMode;
             _countsPerBin = countsPerBin;
             _runtimeExecutable = runtimeExecutable;
@@ -111,9 +112,9 @@ namespace Canvas
         /// .NET 4.x windows: GetExecutablePath("CanvasBin") -> /path/to/Canvas.exe, ''
         /// .NET 4.x mono: GetExecutablePath("CanvasBin") -> /path/to/mono, /path/toCanvasBin.exe
         /// </summary>
-        private string GetExecutablePath(string canvasExecutableStub, StringBuilder commandLineBuilder)
+        internal string GetExecutablePath(string canvasExecutableStub, StringBuilder commandLineBuilder)
         {
-            commandLineBuilder.Append(Path.Combine(_canvasFolder, string.Format("{0}.dll", canvasExecutableStub)));
+            commandLineBuilder.Append(Path.Combine(_canvasFolder, canvasExecutableStub, string.Format("{0}.dll", canvasExecutableStub)));
             commandLineBuilder.Append(" ");
             return _runtimeExecutable.FullName;
         }
