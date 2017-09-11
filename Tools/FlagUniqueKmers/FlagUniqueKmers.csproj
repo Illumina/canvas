@@ -20,13 +20,6 @@
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" />
 
-  <Target Name="FlagUniqueKmersCopyTargetBuild" AfterTargets="Build">
-    <Exec Command="robocopy /MIR $(TargetDir) $(MSBuildThisFileDirectory)..\Canvas\bin\$(Platform)\$(Configuration)\$(TargetFramework)\$(PackageId)  || if %ERRORLEVEL% LSS 8 exit 0" />
-  </Target>
-  <Target Name="FlagUniqueKmersCopyTargetPublish" AfterTargets="Publish">
-    <Exec Command="robocopy /MIR $(TargetDir) $(MSBuildThisFileDirectory)..\Canvas\bin\$(Platform)\$(Configuration)\$(TargetFramework)\publish\$(PackageId)  || if %ERRORLEVEL% LSS 8 exit 0" />
-  </Target>
-
   <ItemGroup>
     <PackageReference Include="Illumina.Common" Version="4.5.0.298" />
     <PackageReference Include="Isas.Framework" Version="7.8.4.572" />
