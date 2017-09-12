@@ -1593,8 +1593,8 @@ namespace CanvasSomaticCaller
                 somaticCallerParameters.MinimumVariantFrequenciesForInformativeSegment = Math.Max(5, somaticCallerParameters.MinimumVariantFrequenciesForInformativeSegment);
             }
             Console.WriteLine("Modeling overall coverage/purity across {0} segments", usableSegments.Count);
-            if (usableSegments.Count < 10)
-                throw new NotEnoughUsableSegementsException("Cannot model coverage/purity with less than 10 segments.");
+            if (usableSegments.Count < 3)
+                throw new NotEnoughUsableSegementsException("Cannot model coverage/purity with less than 3 segments.");
 
             // When computing distances between model and actual points, we want to provide roughly equal weight
             // to coverage (which covers a large range) and MAF, which falls in the range (0, 0.5).  
