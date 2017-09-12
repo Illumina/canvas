@@ -41,21 +41,17 @@ namespace CanvasPedigreeCaller
                 Indices.Add(indices);
         }
 
-        public List<double> GetMarginalProbability(int nSamples, int nCopies, string sampleName)
+        public List<double> GetMarginalProbability(int nCopies, string sampleName)
         {
             int sampleIndex = GetSampleIndex(sampleName);
             var marginalProbability = Enumerable.Repeat(0.0, nCopies).ToList();
 
-            double normalizationFactor = 0.0;
             foreach (int copyNumberState in Enumerable.Range(0, nCopies))
             {
                 foreach (var copyNumberIndex in Indices.Where(x => x[sampleIndex] == copyNumberState).ToArray())
                 {
                     if (GetJointProbability(copyNumberIndex.ToArray()) > 0.0)
-                    {
                         marginalProbability[copyNumberState] += GetJointProbability(copyNumberIndex.ToArray());
-                        normalizationFactor += GetJointProbability(copyNumberIndex.ToArray());
-                    }
                 }
             }
             return marginalProbability;
