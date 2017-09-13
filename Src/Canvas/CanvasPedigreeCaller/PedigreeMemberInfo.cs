@@ -35,11 +35,11 @@ namespace CanvasPedigreeCaller
         public static PedigreeMemberInfo GetPedigreeMemberInfo(Segments segments, string ploidyBedPath, int numberOfTrimmedBins, SampleId id)
         {
             double meanMafCoverage = segments.AllSegments.SelectMany(x => x.Balleles.TotalCoverage).Average();
-            double variance = Utilities.Variance(segments.AllSegments.Select(x => x.MedianCount).ToList());
+            double variance = Utilities.Variance(segments.AllSegments.Select(x => x.TruncatedMedianCount(numberOfTrimmedBins)).ToList());
             double mafVariance = Utilities.Variance(segments.AllSegments.Where(x => x.Balleles.TotalCoverage.Count > 0)
                 .Select(x => x.Balleles.TotalCoverage.Average()).ToList());
-            double meanCoverage = segments.AllSegments.Select(x => x.MedianCount).Average();
-            int maxCoverage = Convert.ToInt16(segments.AllSegments.Select(x => x.MedianCount).Max()) + 10;
+            double meanCoverage = segments.AllSegments.Select(x => x.TruncatedMedianCount(numberOfTrimmedBins)).Average();
+            int maxCoverage = Convert.ToInt16(segments.AllSegments.Select(x => x.TruncatedMedianCount(numberOfTrimmedBins)).Max()) + 10;
             var ploidy = new PloidyInfo();
             if (!ploidyBedPath.IsNullOrEmpty() && File.Exists(ploidyBedPath))
                 ploidy = PloidyInfo.LoadPloidyFromVcfFile(ploidyBedPath, id.ToString());

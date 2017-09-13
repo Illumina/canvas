@@ -259,19 +259,12 @@ namespace CanvasCommon
         /// </summary>
         public double TruncatedMedianCount(int bins2Remove)
         {
-            var tmpMedian = new SortedList<double>();
             int start = bins2Remove;
             int end = Counts.Count - bins2Remove;
-            if (end - start > 5)
-            {
-                for (int index = bins2Remove; index < end; index++)
-                {
-                    tmpMedian.Add(Counts[index]);
-                }
-                return tmpMedian.Median();
-
-            }
-            var sorted = new SortedList<double>(Counts.Select(Convert.ToDouble));
+            int length = end - start;
+            var sorted = length > 5 ?
+            new SortedList<double>(Counts.Skip(start).Take(length).Select(Convert.ToDouble)) :
+            new SortedList<double>(Counts.Select(Convert.ToDouble));
             return sorted.Median();
         }
         public CnvType GetCnvType(int referenceCopyNumber)
