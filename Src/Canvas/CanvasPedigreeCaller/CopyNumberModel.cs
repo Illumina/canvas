@@ -16,6 +16,8 @@ namespace CanvasPedigreeCaller
         {
             double haploidMafMean = info.MeanMafCoverage / 2.0;
             double haploidMean = info.MeanCoverage / 2.0;
+            double mafVariance = info.MeanMafCoverage * 2.5;
+            double variance = info.MeanCoverage * 2.5;
             _maxCoverage = info.MaxCoverage;
 
 
@@ -31,7 +33,7 @@ namespace CanvasPedigreeCaller
                 // increase triploid mean by 10% to offset FP CN=3 calls 
                 if (copyNumber == 3)
                     multiplier *= 1.1;
-                CnDistribution.Add(DistributionUtilities.NegativeBinomialWrapper(haploidMean * multiplier, info.Variance, info.MaxCoverage, 
+                CnDistribution.Add(DistributionUtilities.NegativeBinomialWrapper(haploidMean * multiplier, variance, info.MaxCoverage, 
                     adjustClumpingParameter: true));
             }
 
@@ -44,8 +46,8 @@ namespace CanvasPedigreeCaller
             {
                 for (int gt2 = 0; gt2 < numCnStates; gt2++)
                 {
-                    var gt1Probabilities = DistributionUtilities.NegativeBinomialWrapper(haploidMafMean * gt1, info.MafVariance, info.MaxCoverage);
-                    var gt2Probabilities = DistributionUtilities.NegativeBinomialWrapper(haploidMafMean * gt2, info.MafVariance, info.MaxCoverage);
+                    var gt1Probabilities = DistributionUtilities.NegativeBinomialWrapper(haploidMafMean * gt1, mafVariance, info.MaxCoverage);
+                    var gt2Probabilities = DistributionUtilities.NegativeBinomialWrapper(haploidMafMean * gt2, mafVariance, info.MaxCoverage);
                     _alleleDistribution[gt1][gt2] = new Tuple<List<double>, List<double>>(gt1Probabilities, gt2Probabilities);
                 }
             }
