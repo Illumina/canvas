@@ -58,7 +58,7 @@ namespace CanvasCommon
             filteredDensityClustering.GetDistanceArray();
             var distanceThreshold = filteredDensityClustering.EstimateDc();
             filteredDensityClustering.GaussianLocalDensity(distanceThreshold);
-            var nearestNeighborHigherRho = filteredDensityClustering.CalDistanceToNearestHeavierNeighbor();
+            var nearestNeighborHigherRho = filteredDensityClustering.CalculateDistanceToNearestHeavierNeighbor();
             clusterCount = filteredDensityClustering.FindClusters(nearestNeighborHigherRho, densityCutoff);
             // return DensityClusteringModel including segments with their ClusterId updated
             return new DensityClusteringModel(segments, coverageWeightingFactor, outlierDistanceCutoff, distanceToNearestHeavierNeighborCutoff);
@@ -86,7 +86,7 @@ namespace CanvasCommon
             {
                 for (int j = i + 1; j < Segments.Count; j++)
                 {
-                    _distanceArray[IndexMappingPointsToDistance(i, j)] = CalEuclideanDistance(Segments[i], Segments[j]);
+                    _distanceArray[IndexMappingPointsToDistance(i, j)] = CalculateEuclideanDistance(Segments[i], Segments[j]);
                 }
             }
         }
@@ -122,7 +122,7 @@ namespace CanvasCommon
                         var centroid = new SegmentInfo();
                         centroid.Coverage = centroidsCoverage[clusterId];
                         centroid.MAF = centroidsMaFs[clusterId];
-                        tmpDistance.Add(CalEuclideanDistance(segment, centroid));
+                        tmpDistance.Add(CalculateEuclideanDistance(segment, centroid));
                     }
                 }
                 centroidsEuclideanDistance.Add(tmpDistance.Average()); 
@@ -161,7 +161,7 @@ namespace CanvasCommon
         /// <summary>
         /// Return the squared euclidean distance between (coverage, maf) and (coverage2, maf2) in scaled coverage/MAF space.
         /// </summary>
-        private static double CalEuclideanDistance(SegmentInfo segment1, SegmentInfo segment2)
+        private static double CalculateEuclideanDistance(SegmentInfo segment1, SegmentInfo segment2)
         {
             return Math.Sqrt(Math.Pow(segment1.Coverage - segment2.Coverage, 2) +
                 Math.Pow(segment1.MAF - segment2.MAF, 2));
@@ -229,7 +229,7 @@ namespace CanvasCommon
         /// Estimate DistanceToNearestHeavierNeighbor value as
         /// DistanceToNearestHeavierNeighbor(i) = distance of the nearest data point of	higher density (min(d[i,j] for all j:=Densities(j)>Densities(i)))
         /// </summary>
-        public Dictionary<int, int> CalDistanceToNearestHeavierNeighbor()
+        public Dictionary<int, int> CalculateDistanceToNearestHeavierNeighbor()
         {
             // default DistanceToNearestHeavierNeighbor value for each segment
             _distanceToNearestHeavierNeighbor = Enumerable.Repeat(double.MaxValue, Segments.Count).ToList();
@@ -291,7 +291,7 @@ namespace CanvasCommon
                     clusterId++;
                     //this.Segments[index].ClusterId = CentroidsIndex.FindIndex(x => x == index) + 1;
                 }
-                else if (Segments[index].DistToKnn > _outlierDistanceCutoff)
+                else if (Segments[index].SumDistToKNearestNeighbours > _outlierDistanceCutoff)
                 {
                     Segments[index].ClusterId = PloidyInfo.OutlierClusterFlag;
                 }

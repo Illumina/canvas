@@ -1524,7 +1524,7 @@ namespace CanvasSomaticCaller
                 {
                     distance += tempModelDistanceList[k];
                 }
-                usableSegments[i].DistToKnn = distance;
+                usableSegments[i].SumDistToKNearestNeighbours = distance;
                 knearestNeighbourList.Add(distance);
             }
 
@@ -1723,7 +1723,7 @@ namespace CanvasSomaticCaller
                             // Step5: Cluster remaining underpartitioned segments (remainingSegments) and merge new clusters with the earlier cluster set
                             int remainingBestNumClusters = 0;
                             DensityClusteringModel remainingDensityClustering = DensityClusteringModel.RunDensityClustering(usableSegments, CoverageWeightingFactor, knearestNeighbourCutoff, centroidCutoff, out remainingBestNumClusters, 1.0);
-                            remainingDensityClustering.CalDistanceToNearestHeavierNeighbor();
+                            remainingDensityClustering.CalculateDistanceToNearestHeavierNeighbor();
                             List<double> remainingCentroidsMAF = remainingDensityClustering.GetCentroidsMaf();
                             List<double> remainingCentroidsCoverage = remainingDensityClustering.GetCentroidsCoverage();
                             MergeClusters(remainingSegments, usableSegments, centroidsMAF, remainingCentroidsMAF,
