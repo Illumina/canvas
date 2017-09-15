@@ -22,15 +22,21 @@ namespace CanvasTest
             {
                 segmentTwo,
                 segmentTwo,
+                segmentTwo,
+                segmentTwo,
+                segmentTwo,
                 segmentOne
             };
-            var clustering = new DensityClusteringModel(segments, .5, 2, 2);
+            int clusterCount;
+            var clusters = DensityClusteringModel.RunDensityClustering(segments, .5, 2, 0.3, out clusterCount);
+            /*
             clustering.EstimateDistance();
             double distanceThreshold = clustering.EstimateDc();
             clustering.GaussianLocalDensity(distanceThreshold);
-            clustering.FindCentroids();
+            clustering.CalculateDistanceToNearestHeavierNeighbor();
             var clusterCount = clustering.FindClusters(2);
-            Assert.Equal(0, clusterCount);
+            */
+            Assert.Equal(1, clusterCount);
         }
 
         [Fact]
@@ -40,19 +46,19 @@ namespace CanvasTest
             double tmpLow = Double.MaxValue;
             double tmpHigh = Double.MinValue;
             /** SK: The logic is incorrect
-                for Distance = {6,5,4,3,2,1}, tmpLow and tmpHigh would 1 and Double.MinValue, respectively
+                for DistanceArray = {6,5,4,3,2,1}, tmpLow and tmpHigh would 1 and Double.MinValue, respectively
             **/
 
             foreach (double? element in distances)
             {
                 if (element.HasValue && element < tmpLow && element > 0)
                     tmpLow = (double)element;
-                else if (element.HasValue && element > tmpHigh)
+                if (element.HasValue && element > tmpHigh)
                     tmpHigh = (double)element;
             }
 
             Assert.Equal(tmpLow, 1D);
-            Assert.Equal(tmpHigh, Double.MinValue);
+            Assert.Equal(tmpHigh, 6);
         }
     }
 }
