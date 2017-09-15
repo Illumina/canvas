@@ -42,8 +42,8 @@ namespace CanvasTest
             // transform into "haplotype" segments
             // canvasSegment:   ----------------------------------
             // commonSegment:   -----  ----------------- ---------
-            Assert.Equal(haplotypeSegments.HaplotypeA.Count, 1);
-            Assert.Equal(haplotypeSegments.HaplotypeB.Count, 3);
+            Assert.Equal(haplotypeSegments.SetA.Count, 1);
+            Assert.Equal(haplotypeSegments.SetB.Count, 3);
         }
 
         [Fact]
@@ -82,8 +82,8 @@ namespace CanvasTest
             // transform into "haplotype" segments
             // canvasSegment:   ------------------------------------------------
             // commonSegment:   ---------  ------------     -------------------
-            Assert.Equal(haplotypeSegments.HaplotypeA.Count, 1);
-            Assert.Equal(haplotypeSegments.HaplotypeB.Count, 3);
+            Assert.Equal(haplotypeSegments.SetA.Count, 1);
+            Assert.Equal(haplotypeSegments.SetB.Count, 3);
         }
 
         [Fact]
@@ -121,8 +121,8 @@ namespace CanvasTest
             // transform into "haplotype" segments
             // canvasSegment:   --------------  --------
             // commonSegment:   ---------   ------------ 
-            Assert.Equal(haplotypeSegments.HaplotypeA.Count, 2);
-            Assert.Equal(haplotypeSegments.HaplotypeB.Count, 2);
+            Assert.Equal(haplotypeSegments.SetA.Count, 2);
+            Assert.Equal(haplotypeSegments.SetB.Count, 2);
         }
 
         [Fact]
@@ -159,8 +159,8 @@ namespace CanvasTest
             // transform into "haplotype" segments
             // canvasSegment:   ----------------------
             // commonSegment:   ---------   ---------- 
-            Assert.Equal(haplotypeSegments.HaplotypeA.Count, 1);
-            Assert.Equal(haplotypeSegments.HaplotypeB.Count, 2);
+            Assert.Equal(haplotypeSegments.SetA.Count, 1);
+            Assert.Equal(haplotypeSegments.SetB.Count, 2);
         }
 
         [Fact]
@@ -198,8 +198,8 @@ namespace CanvasTest
             // transform into "haplotype" segments
             // canvasSegment:   -------------------      --------
             // commonSegment:   -------- ---------------------------------
-            Assert.Equal(haplotypeSegments.HaplotypeA.Count, 2);
-            Assert.Equal(haplotypeSegments.HaplotypeB.Count, 2);
+            Assert.Equal(haplotypeSegments.SetA.Count, 2);
+            Assert.Equal(haplotypeSegments.SetB.Count, 2);
         }
         
         [Fact]
@@ -236,8 +236,8 @@ namespace CanvasTest
             // transform into "haplotype" segments
             // canvasSegment:             --------------
             // commonSegment:    ------------  ---------
-            Assert.Equal(haplotypeSegments.HaplotypeA.Count, 1);
-            Assert.Equal(haplotypeSegments.HaplotypeB.Count, 2);
+            Assert.Equal(haplotypeSegments.SetA.Count, 1);
+            Assert.Equal(haplotypeSegments.SetB.Count, 2);
         }
 
         [Fact]
@@ -264,10 +264,10 @@ namespace CanvasTest
             var commonSegments = new List<CanvasSegment> { new CanvasSegment(slice.First().GenomicBin.Chromosome, slice.First().Start, slice.Last().Stop, slice) };
             var segmentHaplotypeses = CanvasSegment.MergeCommonCnvSegments(canvasSegments, commonSegments, alleleThreshold);
             Assert.Equal(2, segmentHaplotypeses.Count);
-            Assert.Equal(canvasSegments, segmentHaplotypeses.First().HaplotypeA);
-            Assert.Equal(null, segmentHaplotypeses.First().HaplotypeB);
-            Assert.Equal(null, segmentHaplotypeses.Last().HaplotypeA);
-            Assert.Equal(commonSegments, segmentHaplotypeses.Last().HaplotypeB);
+            Assert.Equal(canvasSegments, segmentHaplotypeses.First().SetA);
+            Assert.Equal(null, segmentHaplotypeses.First().SetB);
+            Assert.Equal(null, segmentHaplotypeses.Last().SetA);
+            Assert.Equal(commonSegments, segmentHaplotypeses.Last().SetB);
 
             // common segment comes before Canvas segment and does not overlap it
             slice = counts.Skip(1).Take(3).ToList();
@@ -276,10 +276,10 @@ namespace CanvasTest
             canvasSegments = new List<CanvasSegment> { new CanvasSegment(slice.First().GenomicBin.Chromosome, slice.First().Start, slice.Last().Stop, slice) };
             segmentHaplotypeses = CanvasSegment.MergeCommonCnvSegments(canvasSegments, commonSegments, alleleThreshold);
             Assert.Equal(2, segmentHaplotypeses.Count);
-            Assert.Equal(null, segmentHaplotypeses.First().HaplotypeA);
-            Assert.Equal(commonSegments, segmentHaplotypeses.First().HaplotypeB);
-            Assert.Equal(canvasSegments, segmentHaplotypeses.Last().HaplotypeA);
-            Assert.Equal(null, segmentHaplotypeses.Last().HaplotypeB);
+            Assert.Equal(null, segmentHaplotypeses.First().SetA);
+            Assert.Equal(commonSegments, segmentHaplotypeses.First().SetB);
+            Assert.Equal(canvasSegments, segmentHaplotypeses.Last().SetA);
+            Assert.Equal(null, segmentHaplotypeses.Last().SetB);
 
             // Canvas segment and common segment have the same coordinates
             slice = counts.Skip(1).Take(3).ToList();
@@ -288,8 +288,8 @@ namespace CanvasTest
             canvasSegments = new List<CanvasSegment> { new CanvasSegment(slice.First().GenomicBin.Chromosome, slice.First().Start, slice.Last().Stop, slice) };
             segmentHaplotypeses = CanvasSegment.MergeCommonCnvSegments(canvasSegments, commonSegments, alleleThreshold);
             Assert.Equal(1, segmentHaplotypeses.Count);
-            Assert.Equal(null, segmentHaplotypeses.First().HaplotypeA);
-            Assert.Equal(commonSegments, segmentHaplotypeses.First().HaplotypeB);
+            Assert.Equal(null, segmentHaplotypeses.First().SetA);
+            Assert.Equal(commonSegments, segmentHaplotypeses.First().SetB);
 
         }
     }

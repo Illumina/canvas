@@ -10,7 +10,9 @@ namespace CanvasPedigreeCaller
 {
     public class PedigreeMemberInfo
     {
-        private PedigreeMemberInfo(double meanCoverage, double meanMafCoverage, double variance, double mafVariance, int maxCoverage, PloidyInfo ploidy, SampleId id)
+
+        private PedigreeMemberInfo(double meanCoverage, double meanMafCoverage, double variance, 
+            double mafVariance, int maxCoverage, PloidyInfo ploidy, SampleId id)
         {
             MeanCoverage = meanCoverage;
             MeanMafCoverage = meanMafCoverage;
@@ -28,6 +30,7 @@ namespace CanvasPedigreeCaller
         public double MafVariance { get; }
         public int MaxCoverage { get; }
         public PloidyInfo Ploidy { get; }
+
         public int GetPloidy(CanvasSegment segment)
         {
             return Ploidy?.GetReferenceCopyNumber(segment) ?? 2;
