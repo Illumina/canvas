@@ -404,7 +404,8 @@ namespace EvaluateCNV
                             continue;
                         if (!variant.Identifier.Contains("REF"))
                             continue;
-                        if (Double.Parse(variant.GenotypeColumns.Single()["DQ"]) < DQscoreThreshold.Value)
+                        if (variant.GenotypeColumns.Single()["DQ"] != "." && 
+                            Double.Parse(variant.GenotypeColumns.Single()["DQ"]) < DQscoreThreshold.Value)
                             continue;
                     }
                     yield return new CNVCall(variant.ReferenceName, variant.ReferencePosition, end, CN, variant.VariantAlleles.First());
