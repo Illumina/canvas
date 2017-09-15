@@ -264,6 +264,11 @@ namespace CanvasPedigreeCaller
             int defaultAlleleCountThreshold, string commonCNVsbedPath, SampleList<Segments> segments)
         {
             var canvasSegmentsSetBySample = new SampleList<List<CanvasSegmentsSet>>();
+            if (commonCNVsbedPath == null)
+            {
+                segments.ForEach(set => canvasSegmentsSetBySample.Add(set.Key, set.Value.AllSegments.Select(seg => new CanvasSegmentsSet(new List<CanvasSegment> { seg }, null)).ToList()));
+                return GetSegmentsSetBySeampleId(canvasSegmentsSetBySample);
+            }
 
             var commonRegions = ReadCommonRegions(commonCNVsbedPath);
             var chromosomes = segments.SampleData.First().GetChromosomes();
