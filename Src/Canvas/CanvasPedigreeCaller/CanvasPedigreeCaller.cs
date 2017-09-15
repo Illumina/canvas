@@ -12,6 +12,8 @@ using Illumina.Common.FileSystem;
 using Isas.Framework.DataTypes;
 using Isas.Framework.Logging;
 using Isas.SequencingFiles;
+using Isas.SequencingFiles.Vcf;
+using Genotype = CanvasCommon.Genotype;
 
 
 namespace CanvasPedigreeCaller
@@ -48,8 +50,7 @@ namespace CanvasPedigreeCaller
         #endregion
 
         internal int CallVariantsInPedigree(List<string> variantFrequencyFiles, List<string> segmentFiles,
-            string outVcfFile, string ploidyBedPath,
-            string referenceFolder, List<string> sampleNames, string commonCNVsbedPath, string pedigreeFile)
+            string outVcfFile, string ploidyBedPath, string referenceFolder, List<string> sampleNames, string commonCNVsbedPath, string pedigreeFile)
         {
             // load files
             // initialize data structures and classes
@@ -265,75 +266,84 @@ namespace CanvasPedigreeCaller
         {
             var pedigreeMember = new PedigreeMember(sampleId, kinship);
 
-            if (commonCNVsbedPath != null)
-            {
-                var segmentsByChromosome = CanvasSegment.GetSegmentsByChromosome(segments.AllSegments);
-                var coverage = CanvasSegment.ReadBEDInput(segmentFile);
-                var commonRegions = Utilities.LoadBedFile(commonCNVsbedPath);
-                Utilities.SortAndOverlapCheck(commonRegions, commonCNVsbedPath);
-                if (IdenticalChromosomeNames(commonRegions, coverage) == 0)
-                    throw new ArgumentException(
-                        $"Chromosome names in a common CNVs bed file {commonCNVsbedPath} does not match " +
-                        $"chromosomes in {segmentFile}");
-
-                var segmentIntervalsByChromosome = new ConcurrentDictionary<string, List<BedInterval>>();
-                var chromosomes = commonRegions.Keys.Where(chromosome => coverage.StartByChr.ContainsKey(chromosome));
-                Parallel.ForEach(chromosomes, chr => segmentIntervalsByChromosome[chr] =
-                CanvasSegment.RemapCommonRegions(commonRegions[chr], coverage.StartByChr[chr], coverage.EndByChr[chr]));
-                var allelesByChromosomeCommonSegs = CanvasIO.ReadFrequenciesWrapper(_logger, new FileLocation(variantFrequencyFile), segmentIntervalsByChromosome);
-                var segmentsSetByChromosome = new ConcurrentDictionary<string, List<CanvasSegmentsSet>>();
-                Parallel.ForEach(
-                    segmentsByChromosome.Keys,
-                    chr =>
-                    {
-                        Console.WriteLine($"SegmentsFromCommonCnvs for {chr} started");
-
-                        if (commonRegions.Keys.Any(chromosome => chromosome == chr))
-                        {
-                            Console.WriteLine($"CreateSegmentsFromCommonCnvs for {chr} ");
-                            var commonCnvCanvasSegments = CanvasSegment.CreateSegmentsFromCommonCnvs(coverage, chr,
-                                segmentIntervalsByChromosome[chr]);
-                            for (var index = 0; index < commonCnvCanvasSegments.Count; index++)
-                            {
-                                commonCnvCanvasSegments[index].Balleles.Add(allelesByChromosomeCommonSegs[chr][index]);
-                            }
-                            segmentsSetByChromosome[chr] = CanvasSegment.MergeCommonCnvSegments(segmentsByChromosome[chr], commonCnvCanvasSegments, chr, defaultAlleleCountThreshold) ??
-                            segmentsByChromosome[chr].Select(segment => new CanvasSegmentsSet(setA: new List<CanvasSegment> { segment }, setB: null)).ToList();
-
-                            Console.WriteLine($"SegmentsFromCommonCnvs for {chr} count {segmentsByChromosome[chr].Count}");
-
-                            Console.WriteLine($"SegmentsFromCommonCnvs for {chr} returned");
-                        }
-                        else
-                        {
-                            segmentsSetByChromosome[chr] = segmentsByChromosome[chr].Select(segment =>
-                            new CanvasSegmentsSet(setA: new List<CanvasSegment> { segment }, setB: null)).ToList();
-                            Console.WriteLine($"SegmentsFromCommonCnvs for {chr} count {segmentsByChromosome[chr].Count}");
-                            Console.WriteLine($"SegmentsFromCommonCnvs for {chr} returned");
-                        }
-                        Console.WriteLine($"SegmentsFromCommonCnvs for {chr} finished");
-
-                    });
-                Console.WriteLine($"SegmentSets for {sampleId} ");
-                pedigreeMember.SegmentSets.AddRange(segmentsSetByChromosome.OrderBy(i => i.Key).Select(x => x.Value).SelectMany(x => x).ToList());
-            }
-            else
-            {
-                pedigreeMember.SegmentSets =
-                    segments.AllSegments.Select(
-                            segment =>
-                                new CanvasSegmentsSet(setA: new List<CanvasSegment> { segment }, setB: null))
-                        .ToList();
-            }
-
             return pedigreeMember;
         }
 
-        private static int IdenticalChromosomeNames(Dictionary<string, List<SampleGenomicBin>> commonRegions,
-            CoverageInfo coverage)
+        /// <summary>
+        /// Create CanvasSegments from common CNVs bed file and overlap with CanvasPartition
+        /// segments to create SegmentHaplotypes
+        /// </summary>
+        /// <param name="variantFrequencyFile"></param>
+        /// <param name="segmentFile"></param>
+        /// <param name="defaultAlleleCountThreshold"></param>
+        /// <param name="commonCNVsbedPath"></param>
+        /// <param name="pedigreeMember"></param>
+        /// <returns></returns>
+        private List<SegmentHaplotypes> CreateHaplotypesFromCommonCnvs(string variantFrequencyFile, string segmentFile,
+            int defaultAlleleCountThreshold, string commonCNVsbedPath, PedigreeMember pedigreeMember)
         {
-            var chromsomes = new HashSet<string>(coverage.CoverageByChr.Keys);
-            return commonRegions.Keys.Count(chromosome => chromsomes.Contains(chromosome));
+            var commonRegions = ReadCommonRegions(segmentFile, commonCNVsbedPath, pedigreeMember);
+
+            var segmentIntervalsByChromosome = new Dictionary<string, List<BedInterval>>();
+            var genomicBinsByChromosome = new Dictionary<string, IReadOnlyList<SampleGenomicBin>>();
+
+            Parallel.ForEach(pedigreeMember.SegmentsByChromosome.GetChromosomes(),
+                chr =>
+                {
+                    genomicBinsByChromosome[chr] = pedigreeMember.SegmentsByChromosome.GetGenomicBinsForChromosome(chr);
+                    segmentIntervalsByChromosome[chr] = CanvasSegment.RemapGenomicToBinCoordinates(commonRegions[chr], genomicBinsByChromosome[chr]);
+                });
+
+            var allelesByChromosomeCommonSegs = CanvasIO.ReadFrequenciesWrapper(_logger, new FileLocation(variantFrequencyFile),
+                segmentIntervalsByChromosome);
+            var segmentsSetByChromosome = new ConcurrentDictionary<string, List<SegmentHaplotypes>>();
+
+            Parallel.ForEach(
+                pedigreeMember.SegmentsByChromosome.GetChromosomes(),
+                chr =>
+                {
+                    Console.WriteLine($"Segments From Common Cnvs for {chr} started");
+
+                    if (commonRegions.Keys.Any(chromosome => chromosome == chr))
+                    {
+                        var commonCnvCanvasSegments = CanvasSegment.CreateSegmentsFromCommonCnvs(genomicBinsByChromosome[chr],
+                            segmentIntervalsByChromosome[chr], allelesByChromosomeCommonSegs[chr]);
+
+                        var segmentsByChromosome = pedigreeMember.SegmentsByChromosome.GetSegmentsForChromosome(chr).ToList();
+
+                        segmentsSetByChromosome[chr] = CanvasSegment.MergeCommonCnvSegments(segmentsByChromosome, commonCnvCanvasSegments, defaultAlleleCountThreshold) ??
+                        segmentsByChromosome.Select(segment => new SegmentHaplotypes(new List<CanvasSegment> { segment }, null)).ToList();
+                    }
+                    else
+                    {
+                        segmentsSetByChromosome[chr] = pedigreeMember.SegmentsByChromosome.GetSegmentsForChromosome(chr).Select(
+                            segment => new SegmentHaplotypes(new List<CanvasSegment> { segment }, null)).ToList();
+                    }
+                    Console.WriteLine($"Segments From Common Cnvs for {chr} finished");
+                });
+            return segmentsSetByChromosome.OrderBy(i => i.Key).Select(x => x.Value).SelectMany(x => x).ToList();
+        }
+
+        private static Dictionary<string, List<BedEntry>> ReadCommonRegions(string segmentFile, string commonCNVsbedPath, PedigreeMember pedigreeMember)
+        {
+            Dictionary<string, List<BedEntry>> commonRegions;
+            using (var reader = new BedReader(new GzipOrTextReader(commonCNVsbedPath)))
+            {
+                var commonTmpRegions = reader.LoadAllEntries();
+                if (IsIdenticalChromosomeNames(commonTmpRegions, pedigreeMember.SegmentsByChromosome.GetChromosomes()))
+                    throw new ArgumentException(
+                        $"Chromosome names in a common CNVs bed file {commonCNVsbedPath} does not match " +
+                        $"chromosomes in {segmentFile}");
+                commonRegions = Utilities.SortAndOverlapCheck(commonTmpRegions, commonCNVsbedPath);
+            }
+            return commonRegions;
+        }
+
+        private static bool IsIdenticalChromosomeNames(Dictionary<string, List<BedEntry>> commonRegions,
+            ICollection<string> chromsomeNames)
+        {
+            var chromsomes = new HashSet<string>(chromsomeNames);
+            return commonRegions.Keys.Count(chromosome => chromsomes.Contains(chromosome)) == 0;
         }
 
         private void EstimateQScoresWithPedigreeInfo(SampleList<PedigreeMember> pedigreeMembers, SampleList<PedigreeMemberInfo> pedigreeMembersInfo, 
@@ -473,7 +483,7 @@ namespace CanvasPedigreeCaller
         public void CallVariant(SampleList<PedigreeMember> pedigreeMembers, SampleList<PedigreeMemberInfo> pedigreeMembersInfo, SampleList<CopyNumberModel> model,
             int setPosition, List<List<int>> copyNumbers, Dictionary<int, List<Genotype>> genotypes)
         {
-            SegmentsSet segmentsSet;
+            Haplotype haplotype;
 
             if (pedigreeMembers.SampleData.First().SegmentSets[setPosition].SetA == null)
                 segmentsSet = SegmentsSet.SetB;
@@ -530,7 +540,7 @@ namespace CanvasPedigreeCaller
                         List<SampleId> parentIDs, List<SampleId> offspringIDs, int setPosition, double[][] transitionMatrix, List<List<Genotype>> offspringsGenotypes,
                         Dictionary<int, List<Genotype>> genotypes)
         {
-            SegmentsSet segmentsSet;
+            Haplotype haplotype;
 
             if (pedigreeMembers[parentIDs.First()].SegmentSets[setPosition].SetA == null)
                 segmentsSet = SegmentsSet.SetB;

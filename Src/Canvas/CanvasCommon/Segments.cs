@@ -33,12 +33,18 @@ namespace CanvasCommon
         {
             return _segments.Keys;
         }
+
         public IReadOnlyList<CanvasSegment> GetSegmentsForChromosome(string chromosome)
         {
             return _segments[chromosome];
         }
 
-        public static Segments ReadSegments(ILogger logger, IFileLocation partitionedFile)
+        public IReadOnlyList<SampleGenomicBin> GetGenomicBinsForChromosome(string chromosome)
+        {
+            return _segments[chromosome].SelectMany(segment=>segment.GenomicBins).ToList();
+        }
+
+            public static Segments ReadSegments(ILogger logger, IFileLocation partitionedFile)
         {
             using (var reader = new GzipOrTextReader(partitionedFile.FullName))
             {
