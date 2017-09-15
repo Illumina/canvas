@@ -333,7 +333,7 @@ namespace CanvasCommon
             // scenario: common segment within Canvas segment
             // canvasSegment:   ----------------------------------
             // commonSegment:         -----------------
-            if (commonSegments[commonSegmentsIndex].Begin > canvasSegments[canvasSegmentsIndex].Begin && 
+            if (commonSegments[commonSegmentsIndex].Begin > canvasSegments[canvasSegmentsIndex].Begin &&
                 commonSegments[commonSegmentsIndex].End < canvasSegments[canvasSegmentsIndex].End)
             {
                 int begin = canvasSegments[canvasSegmentsIndex].Begin;
@@ -433,7 +433,7 @@ namespace CanvasCommon
             // scenario: common segment part-overlaps Canvas segment and comes first
             // canvasSegment:           --------------------
             // commonSegment:   ------------------
-            if (commonSegments[commonSegmentsIndex].Begin <= canvasSegments[canvasSegmentsIndex].Begin && commonSegments[commonSegmentsIndex].End > 
+            if (commonSegments[commonSegmentsIndex].Begin <= canvasSegments[canvasSegmentsIndex].Begin && commonSegments[commonSegmentsIndex].End >
                 canvasSegments[canvasSegmentsIndex].Begin && canvasSegments[canvasSegmentsIndex].End > commonSegments[commonSegmentsIndex].End)
             {
                 haplotypebSegments.Add(commonSegments[commonSegmentsIndex]);
@@ -828,7 +828,7 @@ namespace CanvasCommon
             }
 
             if (canvasSegmentsIndex < sortedCanvasSegments.Count)
-                mergedSegments.AddRange(sortedCanvasSegments.Skip(canvasSegmentsIndex).Select(segment=> new CanvasSegmentsSet(new List<CanvasSegment> { segment }, null)));
+                mergedSegments.AddRange(sortedCanvasSegments.Skip(canvasSegmentsIndex).Select(segment => new CanvasSegmentsSet(new List<CanvasSegment> { segment }, null)));
 
             else if (commonSegmentsIndex < sortedCommonCnvSegments.Count)
                 mergedSegments.AddRange(sortedCommonCnvSegments.Skip(commonSegmentsIndex).Select(segment => new CanvasSegmentsSet(null, new List<CanvasSegment> { segment })));
@@ -1148,12 +1148,12 @@ namespace CanvasCommon
             var segments = new List<CanvasSegment>();
             if (commonSegmentIntervals.Last().End > sampleGenomicBins.Count)
                 throw new IndexOutOfRangeException("Coverage bin index exceeds chromosome size (in Canvas bins)");
-            foreach ( var seg in commonSegmentIntervals.Zip(allelesForCommonSegments, (s, a) => (interval: s, alleles: a)))
+            foreach (var seg in commonSegmentIntervals.Zip(allelesForCommonSegments, (s, a) => (interval: s, alleles: a)))
             {
                 int length = seg.interval.End - seg.interval.Start;
                 var segment = new CanvasSegment(sampleGenomicBins[seg.interval.Start].GenomicBin.Chromosome,
                     sampleGenomicBins[seg.interval.Start].Start,
-                    sampleGenomicBins[seg.interval.End].Stop, 
+                    sampleGenomicBins[seg.interval.End].Stop,
                     sampleGenomicBins.Skip(seg.interval.Start).Take(length).ToList(),
                     seg.alleles)
                 {

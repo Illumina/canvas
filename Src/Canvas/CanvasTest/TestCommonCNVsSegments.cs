@@ -201,7 +201,7 @@ namespace CanvasTest
             Assert.Equal(haplotypeSegments.SetA.Count, 2);
             Assert.Equal(haplotypeSegments.SetB.Count, 2);
         }
-        
+
         [Fact]
         public void TestSplitCommonCNVPartOverlapsCanvasCNVEndComesFirst()
         {
