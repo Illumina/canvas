@@ -157,23 +157,6 @@ namespace CanvasCommon
     }
 
     /// <summary>
-    /// Stores information needed to retrieve CanvasSegment from CanvasSegmentsSet
-    /// </summary>
-    public class CanvasSegmentIndex
-    {
-        public int SetPosition { get; }
-        public SegmentsSet Set { get; }
-        public int SegmentPosition { get; }
-
-        public CanvasSegmentIndex(int setPosition, SegmentsSet segmentsSet, int segmentPosition)
-        {
-            SetPosition = setPosition;
-            Set = segmentsSet;
-            SegmentPosition = segmentPosition;
-        }
-    }
-
-    /// <summary>
     /// Contains information about a genomic interval. Has functions for computing copy numbers and their likelihoods.
     /// </summary>
     public partial class CanvasSegment
