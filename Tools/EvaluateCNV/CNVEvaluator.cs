@@ -283,8 +283,6 @@ namespace EvaluateCNV
 
             // Report stats:
             outputWriter.WriteLine(includePassingOnly ? "Results for PASSing variants" : "Results for all variants");
-            outputWriter.WriteLine("TruthSet\t{0}", truthSetPath);
-            outputWriter.WriteLine("CNVCalls\t{0}", cnvCallsPath);
             outputWriter.WriteLine("Accuracy\t{0:F4}", 100 * totalBasesRight / (double)totalBases);
             outputWriter.WriteLine("DirectionAccuracy\t{0:F4}", 100 * totalBasesRightDirection / (double)totalBases);
             outputWriter.WriteLine("Recall\t{0:F4}",
