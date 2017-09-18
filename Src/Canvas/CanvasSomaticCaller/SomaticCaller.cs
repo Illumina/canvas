@@ -1524,7 +1524,7 @@ namespace CanvasSomaticCaller
                 {
                     distance += tempModelDistanceList[k];
                 }
-                usableSegments[i].SumDistToKNearestNeighbours = distance;
+                usableSegments[i].KnearestNeighbour = distance;
                 knearestNeighbourList.Add(distance);
             }
 
@@ -1557,6 +1557,17 @@ namespace CanvasSomaticCaller
                 }
             }
             return bestCoverageWeightingFactor;
+        }
+
+        public static DensityClusteringModel RunDensityClustering(List<SegmentInfo> usableSegments, double coverageWeightingFactor, double knearestNeighbourCutoff, double centoridCutoff, out int clusterCount, double rhoCutoff = DensityClusteringModel.RhoCutoff)
+        {
+            DensityClusteringModel densityClustering = new DensityClusteringModel(usableSegments, coverageWeightingFactor, knearestNeighbourCutoff, centoridCutoff);
+            densityClustering.EstimateDistance();
+            double distanceThreshold = densityClustering.EstimateDc();
+            densityClustering.GaussianLocalDensity(distanceThreshold);
+            densityClustering.FindCentroids();
+            clusterCount = densityClustering.FindClusters(rhoCutoff);
+            return densityClustering;
         }
 
         /// <summary>
@@ -1662,7 +1673,7 @@ namespace CanvasSomaticCaller
                         List<SegmentInfo> remainingSegments = new List<SegmentInfo>();
                         foreach (double centoridCutoff in centroidCutoffs)
                         {
-                            DensityClusteringModel.RunDensityClustering(usableSegments, CoverageWeightingFactor, knearestNeighbourCutoff, centoridCutoff, out clusterCount);
+                            RunDensityClustering(usableSegments, CoverageWeightingFactor, knearestNeighbourCutoff, centoridCutoff, out clusterCount);
                             numOfClusters.Add(clusterCount);
                             Console.WriteLine(">>> Running density clustering for cutoff {0:F5} , number of clusters {1}", centoridCutoff, clusterCount);
                         }
@@ -1699,10 +1710,10 @@ namespace CanvasSomaticCaller
                         }
                         // Step3: Use best parameters for density clustering, parameter sweep
                         Console.WriteLine(">>> Running density clustering selected cutoff {0:F5}", centroidCutoff);
-                        DensityClusteringModel optimizedDensityClustering = DensityClusteringModel.RunDensityClustering(usableSegments, CoverageWeightingFactor, knearestNeighbourCutoff, centroidCutoff, out bestNumClusters);
-                        centroidsMAF = optimizedDensityClustering.GetCentroidsMaf();
+                        DensityClusteringModel optimizedDensityClustering = RunDensityClustering(usableSegments, CoverageWeightingFactor, knearestNeighbourCutoff, centroidCutoff, out bestNumClusters);
+                        centroidsMAF = optimizedDensityClustering.GetCentroidsMAF();
                         centroidsCoverage = optimizedDensityClustering.GetCentroidsCoverage();
-                        List<double> clusterVariance = optimizedDensityClustering.GetCentroidsEuclideanDistance(centroidsMAF, centroidsCoverage, bestNumClusters);
+                        List<double> clusterVariance = optimizedDensityClustering.GetCentroidsVariance(centroidsMAF, centroidsCoverage, bestNumClusters);
                         List<int> clustersSize = optimizedDensityClustering.GetClustersSize(bestNumClusters);
 
                         // Step4: Identify which clusters are under-partitioned (largeClusters), extract segments from these clusters (remainingSegments)                     
@@ -1722,9 +1733,9 @@ namespace CanvasSomaticCaller
 
                             // Step5: Cluster remaining underpartitioned segments (remainingSegments) and merge new clusters with the earlier cluster set
                             int remainingBestNumClusters = 0;
-                            DensityClusteringModel remainingDensityClustering = DensityClusteringModel.RunDensityClustering(usableSegments, CoverageWeightingFactor, knearestNeighbourCutoff, centroidCutoff, out remainingBestNumClusters, 1.0);
-                            remainingDensityClustering.CalculateDistanceToNearestHeavierNeighbor();
-                            List<double> remainingCentroidsMAF = remainingDensityClustering.GetCentroidsMaf();
+                            DensityClusteringModel remainingDensityClustering = RunDensityClustering(usableSegments, CoverageWeightingFactor, knearestNeighbourCutoff, centroidCutoff, out remainingBestNumClusters, 1.0);
+                            remainingDensityClustering.FindCentroids();
+                            List<double> remainingCentroidsMAF = remainingDensityClustering.GetCentroidsMAF();
                             List<double> remainingCentroidsCoverage = remainingDensityClustering.GetCentroidsCoverage();
                             MergeClusters(remainingSegments, usableSegments, centroidsMAF, remainingCentroidsMAF,
                                 centroidsCoverage, remainingCentroidsCoverage, bestNumClusters - largeClusters.Count);
