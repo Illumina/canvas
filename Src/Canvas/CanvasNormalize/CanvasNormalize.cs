@@ -17,7 +17,7 @@ namespace CanvasNormalize
         {
             _referenceGenerator.Run(parameters.weightedAverageNormalBedFile);
             var ratios = _ratioCalculator.Run(parameters.tumorBedFile, parameters.weightedAverageNormalBedFile);
-            CanvasNormalizeUtilities.RatiosToCounts(ratios, parameters.ploidyBedFile, parameters.outBedFile);
+            CanvasNormalizeUtilities.RatiosToCounts(ratios, parameters.ploidyVcfFile, parameters.outBedFile);
             CanvasNormalizeUtilities.WriteCndFile(parameters.tumorBedFile, parameters.weightedAverageNormalBedFile,
                 ratios, new FileLocation(parameters.outBedFile.FullName + CndFileSuffix));
             

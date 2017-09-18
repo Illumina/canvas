@@ -23,6 +23,7 @@ namespace Canvas
     /// </summary>
     public class CanvasRunner
     {
+        private static readonly string DefaultCanvasFolder = Path.Combine(Isas.Framework.Utilities.Utilities.GetAssemblyFolder(typeof(CanvasRunner)));
         #region Members
         private readonly string _canvasFolder;
         private readonly CanvasCoverageMode _coverageMode = CanvasCoverageMode.TruncatedDynamicRange;
@@ -37,13 +38,13 @@ namespace Canvas
         #endregion
 
         public CanvasRunner(ILogger logger, IWorkManager workManager, ICheckpointRunner checkpointRunner, IFileLocation runtimeExecutable, bool isSomatic, CanvasCoverageMode coverageMode,
-            int countsPerBin, Dictionary<string, string> customParameters = null)
+            int countsPerBin, Dictionary<string, string> customParameters = null, string canvasFolder = null)
         {
             _logger = logger;
             _workManager = workManager;
             _checkpointRunner = checkpointRunner;
             _isSomatic = isSomatic;
-            _canvasFolder = Path.Combine(Isas.Framework.Utilities.Utilities.GetAssemblyFolder(typeof(CanvasRunner)));
+            _canvasFolder = canvasFolder ?? DefaultCanvasFolder;
             _coverageMode = coverageMode;
             _countsPerBin = countsPerBin;
             _runtimeExecutable = runtimeExecutable;
@@ -111,9 +112,9 @@ namespace Canvas
         /// .NET 4.x windows: GetExecutablePath("CanvasBin") -> /path/to/Canvas.exe, ''
         /// .NET 4.x mono: GetExecutablePath("CanvasBin") -> /path/to/mono, /path/toCanvasBin.exe
         /// </summary>
-        private string GetExecutablePath(string canvasExecutableStub, StringBuilder commandLineBuilder)
+        internal string GetExecutablePath(string canvasExecutableStub, StringBuilder commandLineBuilder)
         {
-            commandLineBuilder.Append(Path.Combine(_canvasFolder, string.Format("{0}.dll", canvasExecutableStub)));
+            commandLineBuilder.Append(Path.Combine(_canvasFolder, canvasExecutableStub, string.Format("{0}.dll", canvasExecutableStub)));
             commandLineBuilder.Append(" ");
             return _runtimeExecutable.FullName;
         }
@@ -170,7 +171,7 @@ namespace Canvas
         /// <summary>
         /// Invoke CanvasBin.  Return null if this fails and we need to abort CNV calling for this sample.
         /// </summary>
-        protected IFileLocation InvokeCanvasBin(CanvasCallset callset, string canvasReferencePath, string canvasBedPath, string ploidyBedPath)
+        protected IFileLocation InvokeCanvasBin(CanvasCallset callset, string canvasReferencePath, string canvasBedPath, string ploidyVcfPath)
         {
             // use bam as input
             if (callset.SingleSampleCallset.Bam == null)
@@ -181,18 +182,18 @@ namespace Canvas
 
             if (_coverageMode == CanvasCoverageMode.Fragment)
             {
-                return InvokeCanvasBinFragment(callset, canvasReferencePath, canvasBedPath, ploidyBedPath);
+                return InvokeCanvasBinFragment(callset, canvasReferencePath, canvasBedPath, ploidyVcfPath);
             }
             else
             {
-                return InvokeCanvasBin35Mers(callset, canvasReferencePath, canvasBedPath, ploidyBedPath);
+                return InvokeCanvasBin35Mers(callset, canvasReferencePath, canvasBedPath, ploidyVcfPath);
             }
         }
 
         /// <summary>
         /// Invoke CanvasBin in a mode that is not the Fragment mode.  Return null if this fails and we need to abort CNV calling for this sample.
         /// </summary>
-        protected IFileLocation InvokeCanvasBin35Mers(CanvasCallset callset, string canvasReferencePath, string canvasBedPath, string ploidyBedPath)
+        protected IFileLocation InvokeCanvasBin35Mers(CanvasCallset callset, string canvasReferencePath, string canvasBedPath, string ploidyVcfPath)
         {
             StringBuilder commandLine = new StringBuilder();
 
@@ -240,7 +241,7 @@ namespace Canvas
             var outputPath = tumorBinnedPath;
             if (callset.NormalBamPaths.Any() || (callset.IsEnrichment && callset.Manifest.CanvasControlAvailable))
             {
-                outputPath = InvokeCanvasNormalize(callset, tumorBinnedPath, bamToBinned, ploidyBedPath);
+                outputPath = InvokeCanvasNormalize(callset, tumorBinnedPath, bamToBinned, ploidyVcfPath);
             }
             return outputPath;
         }
@@ -383,7 +384,7 @@ namespace Canvas
         /// <summary>
         /// Invoke CanvasBin in the Fragment mode.  Return null if this fails and we need to abort CNV calling for this sample.
         /// </summary>
-        protected IFileLocation InvokeCanvasBinFragment(CanvasCallset callset, string canvasReferencePath, string canvasBedPath, string ploidyBedPath)
+        protected IFileLocation InvokeCanvasBinFragment(CanvasCallset callset, string canvasReferencePath, string canvasBedPath, string ploidyVcfPath)
         {
             StringBuilder commandLine = new StringBuilder();
 
@@ -444,7 +445,7 @@ namespace Canvas
             }
             _workManager.DoWorkParallel(binJobs, new TaskResourceRequirements(8, 25)); // CanvasBin itself is multi-threaded
 
-            return NormalizeCoverage(callset, bamToBinned, ploidyBedPath);
+            return NormalizeCoverage(callset, bamToBinned, ploidyVcfPath);
         }
 
         private string GetPredefinedBinsPath()
@@ -466,7 +467,7 @@ namespace Canvas
             return path;
         }
 
-        protected IFileLocation NormalizeCoverage(CanvasCallset callset, Dictionary<IFileLocation, IFileLocation> bamToBinned, string ploidyBedPath)
+        protected IFileLocation NormalizeCoverage(CanvasCallset callset, Dictionary<IFileLocation, IFileLocation> bamToBinned, string ploidyVcfPath)
         {
             var tumorBinnedPath = bamToBinned[callset.SingleSampleCallset.Bam.BamFile]; // binned tumor sample
             var outputPath = tumorBinnedPath;
@@ -474,7 +475,7 @@ namespace Canvas
                 (callset.IsEnrichment && (callset.Manifest.CanvasControlAvailable)) ||
                 _normalizeMode == CanvasNormalizeMode.PCA)
             {
-                outputPath = InvokeCanvasNormalize(callset, tumorBinnedPath, bamToBinned, ploidyBedPath);
+                outputPath = InvokeCanvasNormalize(callset, tumorBinnedPath, bamToBinned, ploidyVcfPath);
             }
 
             return outputPath;
@@ -486,7 +487,7 @@ namespace Canvas
         /// <param name="callset"></param>
         /// <returns>path to the bin ratio bed file</returns>
         protected IFileLocation InvokeCanvasNormalize(CanvasCallset callset, IFileLocation tumorBinnedPath, Dictionary<IFileLocation, IFileLocation> bamToBinned,
-            string ploidyBedPath)
+            string ploidyVcfPath)
         {
             var ratioBinnedPath = callset.SingleSampleCallset.SampleOutputFolder.GetFileLocation($"{callset.SingleSampleCallset.SampleName}.ratio.binned");
             StringBuilder commandLine = new StringBuilder();
@@ -519,9 +520,9 @@ namespace Canvas
 
             commandLine.AppendFormat("-m {0} ", _normalizeMode);
 
-            if (!string.IsNullOrEmpty(ploidyBedPath))
+            if (!string.IsNullOrEmpty(ploidyVcfPath))
             {
-                commandLine.AppendFormat("-p \"{0}\" ", ploidyBedPath);
+                commandLine.AppendFormat("-p \"{0}\" ", ploidyVcfPath);
             }
 
             UnitOfWork normalizeJob = new UnitOfWork()
@@ -782,10 +783,10 @@ namespace Canvas
                 InvokeCanvasSnv(callset, isSomatic: _isSomatic) : InvokeCanvasSnv(callset));
 
             // Prepare ploidy file:
-            string ploidyBedPath = callset.AnalysisDetails.PloidyVcf?.FullName;
+            string ploidyVcfPath = callset.AnalysisDetails.PloidyVcf?.FullName;
 
             // CanvasBin:
-            var binnedPath = _checkpointRunner.RunCheckpoint("CanvasBin", () => InvokeCanvasBin(callset, canvasReferencePath, canvasBedPath, ploidyBedPath));
+            var binnedPath = _checkpointRunner.RunCheckpoint("CanvasBin", () => InvokeCanvasBin(callset, canvasReferencePath, canvasBedPath, ploidyVcfPath));
             if (binnedPath == null) return;
 
             // CanvasClean:
@@ -807,11 +808,11 @@ namespace Canvas
             {
                 if (_isSomatic)
                 {
-                    RunSomaticCalling(partitionedPath, callset, canvasBedPath, ploidyBedPath, canvasCleanOutput.FfpePath, canvasSnvPath);
+                    RunSomaticCalling(partitionedPath, callset, canvasBedPath, ploidyVcfPath, canvasCleanOutput.FfpePath, canvasSnvPath);
                 }
                 else
                 {
-                    RunGermlineCalling(partitionedPath, callset, ploidyBedPath, canvasSnvPath);
+                    RunGermlineCalling(partitionedPath, callset, ploidyVcfPath, canvasSnvPath);
                 }
             });
         }
@@ -879,7 +880,7 @@ namespace Canvas
                     {
                         foreach (MultiSampleGenomicBin genomicBin in normalizedCanvasClean[chr])
                         {
-                            string outLine = string.Format($"{genomicBin.Bin.Chromosome}\t{genomicBin.Bin.Interval.OneBasedStart}\t{genomicBin.Bin.Interval.OneBasedEnd}");
+                            string outLine = string.Format($"{genomicBin.Bin.Chromosome}\t{genomicBin.Bin.Interval.Start}\t{genomicBin.Bin.Interval.End}");
                             outLine += string.Format($"\t{genomicBin.Counts[fileCounter]}");
                             writer.WriteLine(outLine);
                         }
@@ -1031,7 +1032,7 @@ namespace Canvas
         }
 
         protected void RunSomaticCalling(IFileLocation partitionedPath, CanvasCallset callset, string canvasBedPath,
-            string ploidyBedPath, IFileLocation ffpePath, IFileLocation canvasSnvPath)
+            string ploidyVcfPath, IFileLocation ffpePath, IFileLocation canvasSnvPath)
         {
 
             // get somatic SNV output:
@@ -1046,8 +1047,8 @@ namespace Canvas
             commandLine.Append($" -i {partitionedPath}");
             commandLine.Append($" -o {cnvVcfPath}");
             commandLine.Append($" -b {canvasBedPath}");
-            if (!string.IsNullOrEmpty(ploidyBedPath))
-                commandLine.Append($" -p {ploidyBedPath}");
+            if (!string.IsNullOrEmpty(ploidyVcfPath))
+                commandLine.Append($" -p {ploidyVcfPath}");
             commandLine.Append($" -n {callset.SingleSampleCallset.SampleName}");
             if (callset.IsEnrichment)
                 commandLine.Append(" -e");
@@ -1149,7 +1150,7 @@ namespace Canvas
             return outFile;
         }
 
-        protected void RunGermlineCalling(IFileLocation partitionedPath, CanvasCallset callset, string ploidyBedPath, IFileLocation canvasSnvPath)
+        protected void RunGermlineCalling(IFileLocation partitionedPath, CanvasCallset callset, string ploidyVcfPath, IFileLocation canvasSnvPath)
         {
             StringBuilder commandLine = new StringBuilder();
             ////////////////////////////////////////////////////////
@@ -1162,9 +1163,9 @@ namespace Canvas
             commandLine.AppendFormat("-o \"{0}\" ", cnvVcfPath);
             commandLine.AppendFormat("-n \"{0}\" ", callset.SingleSampleCallset.SampleName);
             commandLine.AppendFormat("-r \"{0}\" ", callset.AnalysisDetails.WholeGenomeFastaFolder);
-            if (!string.IsNullOrEmpty(ploidyBedPath))
+            if (!string.IsNullOrEmpty(ploidyVcfPath))
             {
-                commandLine.AppendFormat("-p \"{0}\" ", ploidyBedPath);
+                commandLine.AppendFormat("-p \"{0}\" ", ploidyVcfPath);
             }
             if (callset.SingleSampleCallset.IsDbSnpVcf) // a dbSNP VCF file is used in place of the normal VCF file
                 commandLine.AppendFormat("-d ");

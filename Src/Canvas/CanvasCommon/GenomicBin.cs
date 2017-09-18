@@ -21,13 +21,13 @@ namespace CanvasCommon
         {
         }
 
-        public GenomicBin(string chromosome, Interval interval)
+        public GenomicBin(string chromosome, BedInterval interval)
         {
             Chromosome = chromosome;
             Interval = interval;
         }
 
-        public GenomicBin(string chromosome, Interval interval, int gc)
+        public GenomicBin(string chromosome, BedInterval interval, int gc)
         {
             Chromosome = chromosome;
             Interval = interval;
@@ -36,7 +36,7 @@ namespace CanvasCommon
 
         public string Chromosome { get; set; }
         public int GC { get; set; }
-        public Interval Interval { get; set; }
+        public BedInterval Interval { get; set; }
     }
 
     /// <summary>
@@ -53,7 +53,7 @@ namespace CanvasCommon
         {
             _genomicBin = new GenomicBin();
             GenomicBin.Chromosome = chr;
-            GenomicBin.Interval = new Interval(start, stop);
+            GenomicBin.Interval = new BedInterval(start, stop);
             GenomicBin.GC = gc;
             this.Count = count;
             this.CountDeviation = MadOfDIffs;
@@ -63,30 +63,45 @@ namespace CanvasCommon
         {
             _genomicBin = new GenomicBin();
             GenomicBin.Chromosome = chr;
-            GenomicBin.Interval = new Interval(start, stop);
+            GenomicBin.Interval = new BedInterval(start, stop);
             GenomicBin.GC = gc;
             this.CountDeviation = -1;
         }
 
+        public SampleGenomicBin(string chr, int start, int stop, float count)
+        {
+            _genomicBin = new GenomicBin();
+            GenomicBin.Chromosome = chr;
+            GenomicBin.Interval = new BedInterval(start, stop);
+            this.Count = count;
+        }
 
         public SampleGenomicBin(string chr, int start, int stop, int gc, float count)
         {
-            _genomicBin = new GenomicBin(chr, new Interval(start, stop), gc);
+            _genomicBin = new GenomicBin(chr, new BedInterval(start, stop), gc);
             this.Count = count;
             this.CountDeviation = -1;
         }
 
         public int Size
         {
-            get { return GenomicBin.Interval.OneBasedEnd - GenomicBin.Interval.OneBasedStart; }
+            get { return GenomicBin.Interval.End - GenomicBin.Interval.Start; }
         }
+
+        /// <summary>
+        /// zero based inclusive start
+        /// </summary>
         public int Start
         {
-            get { return GenomicBin.Interval.OneBasedStart; }
+            get { return GenomicBin.Interval.Start; }
         }
+
+        /// <summary>
+        /// one-based inclusive end (or eqivalently the zero based exclusive end)
+        /// </summary>
         public int Stop
         {
-            get { return GenomicBin.Interval.OneBasedEnd; }
+            get { return GenomicBin.Interval.End; }
         }
 
         public GenomicBin GenomicBin
@@ -97,7 +112,7 @@ namespace CanvasCommon
 
         public bool IsSameBin(SampleGenomicBin bin)
         {
-            return GenomicBin.Chromosome == bin.GenomicBin.Chromosome && GenomicBin.Interval.OneBasedStart == bin.GenomicBin.Interval.OneBasedStart && GenomicBin.Interval.OneBasedEnd == bin.GenomicBin.Interval.OneBasedEnd;
+            return GenomicBin.Chromosome == bin.GenomicBin.Chromosome && GenomicBin.Interval.Start == bin.GenomicBin.Interval.Start && GenomicBin.Interval.End == bin.GenomicBin.Interval.End;
         }
     }
 }

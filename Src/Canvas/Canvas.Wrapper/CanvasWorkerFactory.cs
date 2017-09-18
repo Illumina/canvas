@@ -1,17 +1,13 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using Illumina.Common;
-using Illumina.Common.FileSystem;
+﻿using Illumina.Common.FileSystem;
 using Illumina.SecondaryAnalysis.VariantCalling;
 using Isas.ClassicBioinfoTools.Tabix;
-using Isas.Framework;
-using Isas.Framework.FrameworkFactory;
 using Isas.Framework.Logging;
 using Isas.Framework.Settings;
 using Isas.Framework.WorkManagement;
 using Isas.Framework.WorkManagement.CommandBuilding;
 using Isas.SequencingFiles;
+using System;
+using System.Collections.Generic;
 
 namespace Canvas.Wrapper
 {
@@ -62,39 +58,14 @@ namespace Canvas.Wrapper
                 annotationProvider,
                 GetCanvasSingleSampleInputCommandLineBuilderWithSomaticQualityThreshold(annotationProvider),
                 new CanvasEnrichmentInputCreator<CanvasEnrichmentInput>(),
-                GetCanvasPloidyBedCreator());
+                GetCanvasPloidyVcfCreator());
             return GetCanvasWorker(canvasCnvCaller, CanvasEnrichmentOutput.GetFromStub);
-        }
-
-        public ICanvasWorker<CanvasResequencingInput, CanvasOutput> GetCanvasResequencingWorker(bool smallVariantCallingDisabled)
-        {
-            // special case: we don't do CNV calling when variant caller is disabled and we are not using a custom dbsnp vcf
-            if (!CustomDbSnpVcf() && smallVariantCallingDisabled)
-            {
-                _logger.Info("Not running Canvas when small variant calling is disabled, unless a custom dbSNP VCF file is provided");
-                if (RunCnvDetection(false))
-                    throw new ArgumentException("CNV calling must be disabled when small variant calling is disabled, unless a custom dbSNP VCF file is provided");
-                return new NullCanvasWorker<CanvasResequencingInput, CanvasOutput>();
-            }
-
-            var annotationProvider = GetAnnotationFileProvider();
-            var runtimeExecutable = GetRuntimeExecutable();
-            var canvasCnvCaller = new CanvasResequencingCnvCaller(
-                _workManager,
-                _logger,
-                GetCanvasExe(),
-                runtimeExecutable,
-                annotationProvider,
-                GetCanvasSingleSampleInputCommandLineBuilder(annotationProvider),
-                GetCanvasPloidyBedCreator());
-            return GetCanvasWorker(canvasCnvCaller, CanvasOutput.GetFromStub);
         }
 
         private bool CustomDbSnpVcf()
         {
             return GetDbSnpVcfPath() != null;
         }
-
         public ICanvasWorker<CanvasTumorNormalWgsInput, CanvasOutput> GetCanvasTumorNormalWorker()
         {
             var annotationProvider = GetAnnotationFileProvider();
@@ -106,7 +77,7 @@ namespace Canvas.Wrapper
                 runtimeExecutable,
                 annotationProvider,
                 GetCanvasSingleSampleInputCommandLineBuilderWithSomaticQualityThreshold(annotationProvider),
-                GetCanvasPloidyBedCreator());
+                GetCanvasPloidyVcfCreator());
             return GetCanvasWorker(canvasCnvCaller, CanvasOutput.GetFromStub);
         }
 
@@ -122,13 +93,13 @@ namespace Canvas.Wrapper
                 annotationProvider,
                 GetCanvasSingleSampleInputCommandLineBuilderWithSomaticQualityThreshold(annotationProvider),
                 new CanvasEnrichmentInputCreator<CanvasTumorNormalEnrichmentInput>(),
-                GetCanvasPloidyBedCreator());
+                GetCanvasPloidyVcfCreator());
             return GetCanvasWorker(canvasCnvCaller, CanvasOutput.GetFromStub);
         }
 
-        private CanvasPloidyBedCreator GetCanvasPloidyBedCreator()
+        private CanvasPloidyVcfCreator GetCanvasPloidyVcfCreator()
         {
-            return new CanvasPloidyBedCreator(_logger, _workManager, GetPloidyCorrector());
+            return new CanvasPloidyVcfCreator(GetPloidyCorrector());
         }
 
         internal PloidyCorrector GetPloidyCorrector()

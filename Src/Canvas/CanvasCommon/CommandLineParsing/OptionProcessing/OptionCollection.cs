@@ -1,10 +1,10 @@
-using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using CanvasCommon.CommandLineParsing.CoreOptionTypes;
 using Illumina.Common;
+using static CanvasCommon.CommandLineParsing.CoreOptionTypes.OptionExtensions;
 
 namespace CanvasCommon.CommandLineParsing.OptionProcessing
 {
@@ -126,7 +126,7 @@ namespace CanvasCommon.CommandLineParsing.OptionProcessing
 
         private static IParsingResult GetParseResult(OptionInfo<List<string>> multiOptionInfo, OptionData optionData)
         {
-            return multiOptionInfo.Parse(new SuccessfulResultCollection(multiOptionInfo, ParsingResult<List<string>>.SuccessfulResult(optionData.Data.Select(list=>list.FirstOrDefault()).ToList())));
+            return multiOptionInfo.Parse(new SuccessfulResultCollection(multiOptionInfo, ParsingResult<List<string>>.SuccessfulResult(optionData.Data.Select(list => list.FirstOrDefault()).ToList())));
         }
 
         private static IParsingResult GetParseResult(OptionInfo<List<List<string>>> positionalInfo, OptionData optionData)
@@ -164,9 +164,18 @@ namespace CanvasCommon.CommandLineParsing.OptionProcessing
             return leafs;
         }
 
-        public void ShowHelp(TextWriter writer)
+        public void ShowHelp(WriteLine writeLine)
         {
-            GetOptionSet().WriteOptionDescriptions(writer);
+            var stringWriter = new StringWriter();
+            GetOptionSet().WriteOptionDescriptions(stringWriter);
+            stringWriter.ToString().Split(stringWriter.NewLine).ForEach(message =>
+            {
+                if (message == "")
+                {
+                    message = " ";
+                }
+                writeLine(message);
+            });
         }
 
         IResultCollection IOptionCollection.ParseInternal(IEnumerable<string> args)

@@ -13,14 +13,18 @@
     <GenerateAssemblyCopyrightAttribute>false</GenerateAssemblyCopyrightAttribute>
     <GenerateAssemblyVersionAttribute>false</GenerateAssemblyVersionAttribute>
     <GenerateAssemblyFileVersionAttribute>false</GenerateAssemblyFileVersionAttribute>
+    <Platforms>x64</Platforms>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" />
 
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" />
+
   <ItemGroup>
-    <PackageReference Include="Illumina.Common" Version="4.3.0.280" />
-    <PackageReference Include="Isas.Framework" Version="7.4.4.511" />
-    <PackageReference Include="Isas.SequencingFiles" Version="5.0.4.343" />
+    <PackageReference Include="Illumina.Common" Version="4.5.0.298" />
+    <PackageReference Include="Isas.Framework" Version="7.8.4.572" />
+    <PackageReference Include="Isas.SequencingFiles" Version="5.3.2.365" />
+    <PackageReference Include="protobuf-net" Version="2.3.2" />
   </ItemGroup>
 
 </Project>

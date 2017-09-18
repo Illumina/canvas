@@ -33,7 +33,7 @@ namespace Canvas
                 _input.CommonOptions.WholeGenomeFasta,
                 _input.CommonOptions.KmerFasta,
                 _input.CommonOptions.FilterBed,
-                _input.SingleSampleCommonOptions.PloidyBed,
+                _input.SingleSampleCommonOptions.PloidyVcf,
                 null);
             CanvasCallset callSet = new CanvasCallset(
                 _input.Bam,

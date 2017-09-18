@@ -1,12 +1,12 @@
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
-VisualStudioVersion = 15.0.26403.7
+VisualStudioVersion = 15.0.26430.16
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{9E50841F-8F99-4A4C-A84B-1606360EBFD9}"
 	ProjectSection(SolutionItems) = preProject
 		..\..\..\.gitignore = ..\..\..\.gitignore
-		Canvas.nuspec = Canvas.nuspec
-		Canvas.targets = Canvas.targets
+		..\..\..\Canvas.nuspec = ..\..\..\Canvas.nuspec
+		..\..\..\Canvas.targets = ..\..\..\Canvas.targets
 		..\..\..\Tools\global.json = ..\..\..\Tools\global.json
 		NuGet.config = NuGet.config
 		..\..\..\version.txt = ..\..\..\version.txt
@@ -40,9 +40,9 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CanvasPedigreeCaller", "..\
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "EvaluateCNV", "..\..\..\Tools\EvaluateCNV\EvaluateCNV.csproj", "{A2A8ACB4-7FC9-48C7-86BC-3D71E0F777D4}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CanvasSmooth", "..\CanvasSmooth\CanvasSmooth.csproj", "{09ACB774-90C8-4F30-9688-B0DDA37C9725}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CanvasSmooth", "..\CanvasSmooth\CanvasSmooth.csproj", "{09ACB774-90C8-4F30-9688-B0DDA37C9725}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CanvasTest", "..\CanvasTest\CanvasTest.csproj", "{73839B41-DF3E-4B48-A327-3D6CCEC7B372}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CanvasTest", "..\CanvasTest\CanvasTest.csproj", "{73839B41-DF3E-4B48-A327-3D6CCEC7B372}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -117,5 +117,8 @@ Global
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {8050A36C-7F21-4C8B-BC7C-068EF94E2D03}
 	EndGlobalSection
 EndGlobal

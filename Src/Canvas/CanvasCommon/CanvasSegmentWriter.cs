@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using Illumina.Common.FileSystem;
+using Isas.Framework.DataTypes;
 using Isas.SequencingFiles;
 
 namespace CanvasCommon
@@ -74,6 +75,7 @@ namespace CanvasCommon
             writer.WriteLine("##INFO=<ID=END,Number=1,Type=Integer,Description=\"End position of the variant described in this record\">");
             writer.WriteLine("##INFO=<ID=SVTYPE,Number=1,Type=String,Description=\"Type of structural variant\">");
             writer.WriteLine("##INFO=<ID=SUBCLONAL,Number=0,Type=Flag,Description=\"Subclonal variant\">");
+            writer.WriteLine("##INFO=<ID=COMMONCNV,Number=0,Type=Flag,Description=\"Common CNV variant identified from pre-specified bed intervals\">");
             writer.WriteLine("##FORMAT=<ID=RC,Number=1,Type=Float,Description=\"Mean counts per bin in the region\">");
             writer.WriteLine("##FORMAT=<ID=BC,Number=1,Type=Float,Description=\"Number of bins in the region\">");
             writer.WriteLine("##FORMAT=<ID=CN,Number=1,Type=Integer,Description=\"Copy number genotype for imprecise events\">");
@@ -166,7 +168,7 @@ namespace CanvasCommon
                 writer.Write($"\t{segment.MeanCount:F2}:{segment.BinCount}:{ segment.CopyNumber}:{mcc}:{mccq}:{segment.QScore:F2}");
                 if (reportDQ)
                 {
-                    string dqscore = segment.DQScore.HasValue ? $"{segment.DQScore.Value:F2}" : nullValue;
+                    string dqscore = segment.DqScore.HasValue ? $"{segment.DqScore.Value:F2}" : nullValue;
                     writer.Write($":{dqscore}");
                 }
             }
@@ -200,6 +202,9 @@ namespace CanvasCommon
             if (segment.IsHeterogeneous)
                 writer.Write("SUBCLONAL;");
 
+            if (segment.IsCommonCnv)
+                writer.Write("COMMONCNV;");
+            
             writer.Write($"END={segment.End}");
 
             if (cnvType != CnvType.Reference)
@@ -224,30 +229,16 @@ namespace CanvasCommon
             }
         }
 
-        public static void WriteMultiSampleSegments(string outVcfPath, List<List<CanvasSegment>> segments, List<double?> diploidCoverage,
+        public static void WriteMultiSampleSegments(string outVcfPath, SampleList<List<CanvasSegment>> segments, List<double> diploidCoverage,
         string wholeGenomeFastaDirectory, List<string> sampleNames, List<string> extraHeaders, List<PloidyInfo> ploidies, int qualityThreshold,
         bool isPedigreeInfoSupplied = true, int? denovoQualityThreshold = null)
         {
             using (BgzipOrStreamWriter writer = new BgzipOrStreamWriter(outVcfPath))
             {
-                var genome = WriteVcfHeader(segments.First(), GetMean(diploidCoverage), wholeGenomeFastaDirectory, sampleNames,
+                var genome = WriteVcfHeader(segments.SampleData.First(), diploidCoverage.Average(), wholeGenomeFastaDirectory, sampleNames,
                     extraHeaders, qualityThreshold, writer, denovoQualityThreshold);
-                WriteVariants(segments, ploidies, genome, writer, isPedigreeInfoSupplied, denovoQualityThreshold);
+                WriteVariants(segments.SampleData.ToList(), ploidies, genome, writer, isPedigreeInfoSupplied, denovoQualityThreshold);
             }
         }
-
-        private static double GetMean(IEnumerable<double?> values)
-        {
-            double result = 0;
-            int count = 0;
-            foreach (double? value in values)
-            {
-                if (value == null) continue;
-                result += (double)value;
-                count++;
-            }
-            return result / count;
-        }
-
     }
 }

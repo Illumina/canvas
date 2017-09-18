@@ -77,9 +77,9 @@ namespace CanvasPartition
 
             if (!useVaf)
             {
-                var breakpoints = LaunchWavelets(segmentationInput.CoverageByChr, segmentationInput.StartByChr,
-                    segmentationInput.EndByChr);
-                adjustedBreakpoints = AdjustBreakpoints(segmentationInput.CoverageByChr, segmentationInput, breakpoints, vafContainingBinsByChr: null);
+                var breakpoints = LaunchWavelets(segmentationInput.CoverageInfo.CoverageByChr, segmentationInput.CoverageInfo.StartByChr,
+                    segmentationInput.CoverageInfo.EndByChr);
+                adjustedBreakpoints = AdjustBreakpoints(segmentationInput.CoverageInfo.CoverageByChr, segmentationInput, breakpoints, vafContainingBinsByChr: null);
             }
             else
             {
@@ -92,15 +92,15 @@ namespace CanvasPartition
                     vafContainingBinsByChr[chr] = segmentationInput.VafByChr[chr].Select(coverageToVafMapper => coverageToVafMapper.Index).ToArray();
                     vafByChr[chr] = WaveletMeanSmoother(tmpVaf);
                 }
-                var breakpoints = LaunchWavelets(vafByChr, segmentationInput.StartByChr, segmentationInput.EndByChr);
+                var breakpoints = LaunchWavelets(vafByChr, segmentationInput.CoverageInfo.StartByChr, segmentationInput.CoverageInfo.EndByChr);
                 adjustedBreakpoints = AdjustBreakpoints(vafByChr, segmentationInput, breakpoints, vafContainingBinsByChr);
             }
 
             var segments = new Dictionary<string, SegmentationInput.Segment[]>();
             foreach (string chr in segmentationInput.VafByChr.Keys)
             {
-                segments[chr] = SegmentationInput.DeriveSegments(adjustedBreakpoints[chr], segmentationInput.CoverageByChr[chr].Length,
-                    segmentationInput.StartByChr[chr], segmentationInput.EndByChr[chr]);
+                segments[chr] = SegmentationInput.DeriveSegments(adjustedBreakpoints[chr], segmentationInput.CoverageInfo.CoverageByChr[chr].Length,
+                    segmentationInput.CoverageInfo.StartByChr[chr], segmentationInput.CoverageInfo.EndByChr[chr]);
             }
             return segments;
         }
@@ -168,11 +168,6 @@ namespace CanvasPartition
             var adjustedBreakpoints = new Dictionary<string, List<int>>(breakpoints);
             // load common CNV segments
             Dictionary<string, List<SampleGenomicBin>> commonCNVintervals = null;
-            if (_parameters.CommonCNVs != null)
-            {
-                commonCNVintervals = CanvasCommon.Utilities.LoadBedFile(_parameters.CommonCNVs);
-                CanvasCommon.Utilities.SortAndOverlapCheck(commonCNVintervals, _parameters.CommonCNVs);
-            }
 
             foreach (string chr in binsByChr.Keys)
             {
@@ -183,13 +178,6 @@ namespace CanvasPartition
                             $"breakpoint {breakpoints.Max()} is larger then the zero-based size of the " +
                             $"vafToCoverageIndex '{vafContainingBinsByChr.Count - 1}'");
                     adjustedBreakpoints[chr] = breakpoints[chr].Select(breakpoint => vafContainingBinsByChr[chr][breakpoint]).ToList();
-                }
-
-                if (commonCNVintervals != null && commonCNVintervals.ContainsKey(chr))
-                {
-                    var remappedCommonCNVintervals = SegmentationInput.RemapCommonRegions(commonCNVintervals[chr],
-                        segmentationInput.StartByChr[chr], segmentationInput.EndByChr[chr]);
-                    adjustedBreakpoints[chr] = SegmentationInput.OverlapCommonRegions(adjustedBreakpoints[chr], remappedCommonCNVintervals);
                 }
             }
             return adjustedBreakpoints;

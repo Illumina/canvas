@@ -25,16 +25,12 @@ namespace CanvasPartition
 
         public Dictionary<string, SegmentationInput.Segment[]> Run(List<SegmentationInput> segmentation) {
             Dictionary<string, List<SampleGenomicBin>> commonCNVintervals = null;
-            if (_commonCnVs != null)
-            {
-                commonCNVintervals = CanvasCommon.Utilities.LoadBedFile(_commonCnVs);
-                CanvasCommon.Utilities.SortAndOverlapCheck(commonCNVintervals, _commonCnVs);
-            }
+
             var segmentByChr = new Dictionary<string, SegmentationInput.Segment[]>();
 
             var cts = new CancellationTokenSource();
             Parallel.ForEach(
-                segmentation.First().CoverageByChr.Keys,
+                segmentation.First().CoverageInfo.CoverageByChr.Keys,
                 new ParallelOptions
                 {
                     CancellationToken = cts.Token,
@@ -44,12 +40,12 @@ namespace CanvasPartition
                 chr =>
                 {
                     var breakpoints = new List<int>();
-                    int length = segmentation.First().CoverageByChr[chr].Length;
-                    var startByChr = segmentation.First().StartByChr[chr];
-                    var endByChr = segmentation.First().EndByChr[chr];
+                    int length = segmentation.First().CoverageInfo.CoverageByChr[chr].Length;
+                    var startByChr = segmentation.First().CoverageInfo.StartByChr[chr];
+                    var endByChr = segmentation.First().CoverageInfo.EndByChr[chr];
                     var multiSampleCoverage = new List<List<double>>(length);
                     for (int i = 0; i < length; i++)
-                        multiSampleCoverage.Add(segmentation.Select(x=>x.CoverageByChr[chr][i]).ToList());
+                        multiSampleCoverage.Add(segmentation.Select(x=>x.CoverageInfo.CoverageByChr[chr][i]).ToList());
 
                     if (length > _minSize)
                     {
@@ -68,17 +64,6 @@ namespace CanvasPartition
                             if (bestPathViterbi[i] - bestPathViterbi[i - 1] != 0)
                             {
                                 breakpoints.Add(i);
-                            }
-                        }
-
-
-                        if (_commonCnVs != null)
-                        {
-                            if (commonCNVintervals.ContainsKey(chr))
-                            {
-                                var remappedCommonCNVintervals = SegmentationInput.RemapCommonRegions(commonCNVintervals[chr], startByChr, endByChr);
-                                var oldbreakpoints = breakpoints;
-                                breakpoints = SegmentationInput.OverlapCommonRegions(oldbreakpoints, remappedCommonCNVintervals);
                             }
                         }
 

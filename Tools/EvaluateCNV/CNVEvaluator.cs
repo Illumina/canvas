@@ -1,9 +1,11 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using CanvasCommon;
 using Illumina.Common;
+using Illumina.Common.FileSystem;
 
 namespace EvaluateCNV
 {
@@ -77,10 +79,14 @@ namespace EvaluateCNV
                     fileName += baseCounter.MaxSize == int.MaxValue ? "+" : $"_{ Math.Round(baseCounter.MaxSize / 1000.0)}kb";
                 }
                 fileName += ".txt";
-                using (FileStream stream = new FileStream(Path.Combine(outputPath, fileName), includePassingOnly ?
+                var outputDir = new DirectoryLocation(outputPath);
+                outputDir.Create();
+                var outputFile = outputDir.GetFileLocation(fileName);
+                using (FileStream stream = new FileStream(outputFile.FullName, includePassingOnly ?
                 FileMode.Create : FileMode.Append, FileAccess.Write))
                 using (StreamWriter outputWriter = new StreamWriter(stream))
                 {
+                    outputWriter.NewLine = "\n";
                     WriteResults(truthSetPath, cnvCallsPath, outputWriter, baseCounter, includePassingOnly);
                 }
             }
@@ -217,7 +223,7 @@ namespace EvaluateCNV
                               $" for variants sizes {baseCounter.MinSize} to {baseCounter.MaxSize}");
         }
 
-        static void WriteResults(string truthSetPath, string cnvCallsPath, StreamWriter outputWriter, BaseCounter baseCounter, bool includePassingOnly)
+        private void WriteResults(string truthSetPath, string cnvCallsPath, StreamWriter outputWriter, BaseCounter baseCounter, bool includePassingOnly)
         {
             // Compute overall stats:
             long totalBases = 0;
@@ -272,11 +278,11 @@ namespace EvaluateCNV
                 }
             }
 
+            // load and append VCF header information 
+            _cnvChecker.HandleVcfHeaderInfo(outputWriter, new FileLocation(cnvCallsPath));
+
             // Report stats:
             outputWriter.WriteLine(includePassingOnly ? "Results for PASSing variants" : "Results for all variants");
-
-            outputWriter.WriteLine("TruthSet\t{0}", truthSetPath);
-            outputWriter.WriteLine("CNVCalls\t{0}", cnvCallsPath);
             outputWriter.WriteLine("Accuracy\t{0:F4}", 100 * totalBasesRight / (double)totalBases);
             outputWriter.WriteLine("DirectionAccuracy\t{0:F4}", 100 * totalBasesRightDirection / (double)totalBases);
             outputWriter.WriteLine("Recall\t{0:F4}",

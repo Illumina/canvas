@@ -4,14 +4,15 @@ using System.Linq;
 
 namespace CanvasPedigreeCaller
 {
-    public class CopyNumberDistribution
+    public class CopyNumbersLikelihood
     {
         private readonly Array _probability;
         public List<string> SampleNames { get; }
         public int Count { get; }
         public List<int[]> Indices { get; }
+        public double MaximalLikelihood;
 
-        public CopyNumberDistribution(int nCopyNumbers, List<string> names)
+        public CopyNumbersLikelihood(int nCopyNumbers, List<string> names)
         {
             int nSamples = names.Count;
             if (names.Count != nSamples)
@@ -40,21 +41,17 @@ namespace CanvasPedigreeCaller
                 Indices.Add(indices);
         }
 
-        public List<double> GetMarginalProbability(int nSamples, int nCopies, string sampleName)
+        public List<double> GetMarginalProbability(int nCopies, string sampleName)
         {
             int sampleIndex = GetSampleIndex(sampleName);
             var marginalProbability = Enumerable.Repeat(0.0, nCopies).ToList();
 
-            double normalizationFactor = 0.0;
             foreach (int copyNumberState in Enumerable.Range(0, nCopies))
             {
                 foreach (var copyNumberIndex in Indices.Where(x => x[sampleIndex] == copyNumberState).ToArray())
                 {
                     if (GetJointProbability(copyNumberIndex.ToArray()) > 0.0)
-                    {
                         marginalProbability[copyNumberState] += GetJointProbability(copyNumberIndex.ToArray());
-                        normalizationFactor += GetJointProbability(copyNumberIndex.ToArray());
-                    }
                 }
             }
             return marginalProbability;

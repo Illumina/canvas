@@ -28,7 +28,8 @@ namespace Canvas.Wrapper.SmallPedigree
 
         public CanvasSmallPedigreeOutput Run(CanvasSmallPedigreeInput input, IDirectoryLocation sandbox, IFileMover fileMover)
         {
-            var output = _wrapper.Run(input, sandbox);
+            CanvasSmallPedigreeOutput output = _wrapper.Run(input, sandbox);
+            if (output == null) return null;
             _move(output, fileMover);
             return _load(input);
         }

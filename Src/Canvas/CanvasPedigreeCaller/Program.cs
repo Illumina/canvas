@@ -5,12 +5,14 @@ using Newtonsoft.Json;
 using System.Linq;
 using Illumina.Common;
 using Illumina.Common.FileSystem;
+using Isas.Framework.Logging;
 using Isas.Framework.Utilities;
 
 namespace CanvasPedigreeCaller
 {
     class Program
     {
+
         /// <summary>
         /// Command line help message.
         /// </summary>
@@ -37,9 +39,10 @@ namespace CanvasPedigreeCaller
             bool needHelp = false;
             int? qScoreThreshold = null;
             int? dqScoreThreshold = null;
+            string commonCNVsbedPath = null;
             string parameterconfigPath = Path.Combine(Utilities.GetAssemblyFolder(typeof(Program)), "PedigreeCallerParameters.json");
-
-            var caller = new CanvasPedigreeCaller();
+            var logger = new Logger(new[] { Console.Out }, new[] { Console.Error });
+            var caller = new CanvasPedigreeCaller(logger);
 
             var p = new OptionSet()
             {
@@ -52,6 +55,7 @@ namespace CanvasPedigreeCaller
                 { "p|ploidyBed=",     "bed file specifying reference ploidy (e.g. for sex chromosomes) (optional)",                     v => ploidyBedPath = v },
                 { "h|help",           "show this message and exit",                                                                     v => needHelp = v != null },
                 { "q|qscore=",        $"quality filter threshold (default {caller.QualityFilterThreshold})",                            v => qScoreThreshold = int.Parse(v) },
+                { "commoncnvs=",      "bed file with common CNVs (always include these intervals into segmentation results)",           v => commonCNVsbedPath = v },
                 { "d|dqscore=",       $"de novo quality filter threshold (default {caller.DeNovoQualityFilterThreshold})",              v => dqScoreThreshold = int.Parse(v) },
                 { "c|config=",        $"parameter configuration path (default {parameterconfigPath})",                                  v => parameterconfigPath = v}
             };
@@ -102,13 +106,22 @@ namespace CanvasPedigreeCaller
                 return 1;
             }
 
+            if (commonCNVsbedPath != null)
+            {
+                if (!File.Exists(commonCNVsbedPath))
+                {
+                    Console.WriteLine($"CanvasPedigreeCaller.exe: File {commonCNVsbedPath} does not exist! Exiting.");
+                    return 1;
+                }
+            }
+
             var parameterconfigFile = new FileLocation(parameterconfigPath);
             caller.CallerParameters = Deserialize<PedigreeCallerParameters>(parameterconfigFile);
 
             if (pedigreeFile.IsNullOrEmpty())
             {
                 Console.WriteLine($"CanvasPedigreeCaller.exe: pedigreeFile option is not used! Calling CNV variants without family information.");
-                return caller.CallVariants(variantFrequencyFiles, segmentFiles, outDir, ploidyBedPath, referenceFolder, sampleNames);
+                return caller.CallVariants(variantFrequencyFiles, segmentFiles, outDir, ploidyBedPath, referenceFolder, sampleNames, commonCNVsbedPath);
             }
 
             if (qScoreThreshold.HasValue & qScoreThreshold > 0 & qScoreThreshold < caller.CallerParameters.MaxQscore)
@@ -130,7 +143,7 @@ namespace CanvasPedigreeCaller
                 return 1;
             }
 
-            return caller.CallVariantsInPedigree(variantFrequencyFiles, segmentFiles, outDir, ploidyBedPath, referenceFolder, sampleNames, pedigreeFile);
+            return caller.CallVariantsInPedigree(variantFrequencyFiles, segmentFiles, outDir, ploidyBedPath, referenceFolder, sampleNames, commonCNVsbedPath, pedigreeFile);
         }
 
         private static T Deserialize<T>(IFileLocation path)
