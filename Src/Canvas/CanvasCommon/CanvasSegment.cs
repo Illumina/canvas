@@ -1056,6 +1056,7 @@ namespace CanvasCommon
 
         /// <summary>
         /// Remap GenomicBin from genome coordiantes into CanvasBin coordiantes
+        /// TODO: Stoping using this method. We don't want to use indexes and we certainly don't want to create bed intervals to represent ranges of indexes 
         /// </summary>
         public static List<BedInterval> RemapGenomicToBinCoordinates(List<BedEntry> commonRegions, IReadOnlyList<SampleGenomicBin> sampleGenomicBins)
         {

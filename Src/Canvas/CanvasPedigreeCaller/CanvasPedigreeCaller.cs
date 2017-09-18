@@ -267,7 +267,7 @@ namespace CanvasPedigreeCaller
             if (commonCNVsbedPath == null)
             {
                 segments.ForEach(set => canvasSegmentsSetBySample.Add(set.Key, set.Value.AllSegments.Select(seg => new CanvasSegmentsSet(new List<CanvasSegment> { seg }, null)).ToList()));
-                return GetSegmentsSetBySeampleId(canvasSegmentsSetBySample);
+                return GetSegmentsSetBySampleId(canvasSegmentsSetBySample);
             }
 
             var commonRegions = ReadCommonRegions(commonCNVsbedPath);
@@ -290,17 +290,18 @@ namespace CanvasPedigreeCaller
 
             foreach (var sampleId in segments.SampleIds)
             {
+                var commonIntervals = commonRegions.ToDictionary(kvp => kvp.Key, kvp => kvp.Value.Select(bedEntry => bedEntry.Interval).ToList());
                 var allelesByChromosomeCommonSegs = CanvasIO.ReadFrequenciesWrapper(_logger,
-                    new FileLocation(variantFrequencyFiles[sampleId]), segmentIntervalsByChromosome);
+                    new FileLocation(variantFrequencyFiles[sampleId]), commonIntervals);
                 var segmentsSetByChromosome = GetSegmentSets(defaultAlleleCountThreshold, commonRegions,
                     genomicBinsByChromosome, segmentIntervalsByChromosome, allelesByChromosomeCommonSegs, segments[sampleId]);
                 canvasSegmentsSetBySample.Add(sampleId, segmentsSetByChromosome);
             }
 
-            return GetSegmentsSetBySeampleId(canvasSegmentsSetBySample);
+            return GetSegmentsSetBySampleId(canvasSegmentsSetBySample);
         }
 
-        private static List<SampleList<CanvasSegmentsSet>> GetSegmentsSetBySeampleId(SampleList<List<CanvasSegmentsSet>> canvasSegmentsSetBySample)
+        private static List<SampleList<CanvasSegmentsSet>> GetSegmentsSetBySampleId(SampleList<List<CanvasSegmentsSet>> canvasSegmentsSetBySample)
         {
             int size = canvasSegmentsSetBySample.First().Value.Count;
             var canvasSegmentsSetBySegment = new List<SampleList<CanvasSegmentsSet>>(size);
