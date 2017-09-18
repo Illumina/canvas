@@ -918,24 +918,25 @@ namespace CanvasCommon
             return multiSampleGenomicBins;
         }
 
-        static public void SortAndOverlapCheck(Dictionary<string, List<SampleGenomicBin>> intervals, string bedPath)
+        public static Dictionary<string, List<BedEntry>> SortAndOverlapCheck(Dictionary<string, List<BedEntry>> bedEntries, string bedPath)
         {
-            List<string> chrs = new List<string>(intervals.Keys);
-            for (int chrIndex = 0; chrIndex < chrs.Count; chrIndex++)
+            var newIntervals = new Dictionary<string, List<BedEntry>>();
+            var chrs = new List<string>(bedEntries.Keys);
+            foreach (string chr in chrs)
             {
-                string chr = chrs[chrIndex];
-                if (intervals[chr].Count < 2)
+                if (bedEntries[chr].Count < 2)
                     continue;
-                List<SampleGenomicBin> intervalByChrSorted = intervals[chr].OrderBy(o => o.Start).ToList();
+                var intervalByChrSorted = bedEntries[chr].OrderBy(o => o.Start).ToList();
                 for (int index = 0; index < intervalByChrSorted.Count - 1; index++)
                 {
-                    if (intervalByChrSorted[index + 1].Start < intervalByChrSorted[index].Stop)
+                    if (intervalByChrSorted[index + 1].Start < intervalByChrSorted[index].End)
                     {
                         throw new Exception(string.Format($"Bed interval file {bedPath} could only contain non-overlapping intervals"));
                     }
                 }
-                intervals[chr] = intervalByChrSorted;
+                newIntervals[chr] = intervalByChrSorted;
             }
+            return newIntervals;
         }
 
         /// <summary>

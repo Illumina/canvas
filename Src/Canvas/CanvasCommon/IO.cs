@@ -153,6 +153,7 @@ namespace CanvasCommon
         public static Dictionary<string, List<Balleles>> ReadFrequenciesWrapper(ILogger logger,
             IFileLocation variantFrequencyFile, IReadOnlyDictionary<string, List<BedInterval>> intervalsByChromosome)
         {
+
             using (var reader = new GzipOrTextReader(variantFrequencyFile.FullName))
             {
                 logger.Info($"Load variant frequencies from {variantFrequencyFile}");

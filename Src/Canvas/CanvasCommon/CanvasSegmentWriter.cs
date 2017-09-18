@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using Illumina.Common.FileSystem;
+using Isas.Framework.DataTypes;
 using Isas.SequencingFiles;
 
 namespace CanvasCommon
@@ -228,30 +229,16 @@ namespace CanvasCommon
             }
         }
 
-        public static void WriteMultiSampleSegments(string outVcfPath, List<List<CanvasSegment>> segments, List<double?> diploidCoverage,
+        public static void WriteMultiSampleSegments(string outVcfPath, SampleList<List<CanvasSegment>> segments, List<double> diploidCoverage,
         string wholeGenomeFastaDirectory, List<string> sampleNames, List<string> extraHeaders, List<PloidyInfo> ploidies, int qualityThreshold,
         bool isPedigreeInfoSupplied = true, int? denovoQualityThreshold = null)
         {
             using (BgzipOrStreamWriter writer = new BgzipOrStreamWriter(outVcfPath))
             {
-                var genome = WriteVcfHeader(segments.First(), GetMean(diploidCoverage), wholeGenomeFastaDirectory, sampleNames,
+                var genome = WriteVcfHeader(segments.SampleData.First(), diploidCoverage.Average(), wholeGenomeFastaDirectory, sampleNames,
                     extraHeaders, qualityThreshold, writer, denovoQualityThreshold);
-                WriteVariants(segments, ploidies, genome, writer, isPedigreeInfoSupplied, denovoQualityThreshold);
+                WriteVariants(segments.SampleData.ToList(), ploidies, genome, writer, isPedigreeInfoSupplied, denovoQualityThreshold);
             }
         }
-
-        private static double GetMean(IEnumerable<double?> values)
-        {
-            double result = 0;
-            int count = 0;
-            foreach (double? value in values)
-            {
-                if (value == null) continue;
-                result += (double)value;
-                count++;
-            }
-            return result / count;
-        }
-
     }
 }

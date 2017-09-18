@@ -10,9 +10,17 @@ namespace CanvasPedigreeCaller
         public List<Tuple<int,int>> Genotypes = new List<Tuple<int, int>>();
         public List<List<double>> CnDistribution = new List<List<double>>();
         readonly Tuple<List<double>, List<double>> [][] _alleleDistribution;
+        private readonly int _maxCoverage;
 
-        public CopyNumberModel(int numCnStates, double haploidMean, double haploidMafMean, double variance, double mafVariance, int maxValue)
+        public CopyNumberModel(int numCnStates, PedigreeMemberInfo info)
         {
+            double haploidMafMean = info.MeanMafCoverage / 2.0;
+            double haploidMean = info.MeanCoverage / 2.0;
+            double mafVariance = info.MeanMafCoverage * 2.5;
+            double variance = info.MeanCoverage * 2.5;
+            _maxCoverage = info.MaxCoverage;
+
+
             for (int copyNumber = 0; copyNumber  < numCnStates; copyNumber ++)
             {
                 var multiplier = copyNumber * 1.0;
@@ -25,7 +33,7 @@ namespace CanvasPedigreeCaller
                 // increase triploid mean by 10% to offset FP CN=3 calls 
                 if (copyNumber == 3)
                     multiplier *= 1.1;
-                CnDistribution.Add(DistributionUtilities.NegativeBinomialWrapper(haploidMean * multiplier, variance, maxValue, 
+                CnDistribution.Add(DistributionUtilities.NegativeBinomialWrapper(haploidMean * multiplier, variance, info.MaxCoverage, 
                     adjustClumpingParameter: true));
             }
 
@@ -38,8 +46,8 @@ namespace CanvasPedigreeCaller
             {
                 for (int gt2 = 0; gt2 < numCnStates; gt2++)
                 {
-                    var gt1Probabilities = DistributionUtilities.NegativeBinomialWrapper(haploidMafMean * gt1, mafVariance, maxValue);
-                    var gt2Probabilities = DistributionUtilities.NegativeBinomialWrapper(haploidMafMean * gt2, mafVariance, maxValue);
+                    var gt1Probabilities = DistributionUtilities.NegativeBinomialWrapper(haploidMafMean * gt1, mafVariance, info.MaxCoverage);
+                    var gt2Probabilities = DistributionUtilities.NegativeBinomialWrapper(haploidMafMean * gt2, mafVariance, info.MaxCoverage);
                     _alleleDistribution[gt1][gt2] = new Tuple<List<double>, List<double>>(gt1Probabilities, gt2Probabilities);
                 }
             }
@@ -73,14 +81,14 @@ namespace CanvasPedigreeCaller
             return likelihood;
         }
 
-        public double GetGtLikelihoodScore(List<Tuple<int, int>> gtObservedCounts, List<Genotype> gtModelCounts, ref int? selectedGtState, int maxCoverage)
+        public double GetGtLikelihoodScore(List<Tuple<int, int>> gtObservedCounts, List<Genotype> gtModelCounts, ref int? selectedGtState)
         {
             const int maxGQscore = 60;
             var gtLikelihoods = Enumerable.Repeat(0.0, gtModelCounts.Count).ToList();
             var gtModelCounter = 0;
             foreach (var gtModelCount in gtModelCounts)
             {
-                gtLikelihoods[gtModelCounter] = GetCurrentGtLikelihood(maxCoverage, gtObservedCounts, gtModelCount);
+                gtLikelihoods[gtModelCounter] = GetCurrentGtLikelihood(gtObservedCounts, gtModelCount);
                 gtModelCounter++;
             }
             if (!selectedGtState.HasValue)
@@ -92,13 +100,13 @@ namespace CanvasPedigreeCaller
             return Double.IsNaN(gqscore) || Double.IsInfinity(gqscore) ? 0 : gqscore;
         }
 
-        public double GetCurrentGtLikelihood(int maxCoverage, List<Tuple<int, int>> gtObservedCounts, Genotype gtModelCount)
+        public double GetCurrentGtLikelihood(List<Tuple<int, int>> gtObservedCounts, Genotype gtModelCount)
         {
             double currentLikelihood = 0;
             foreach (var gtCount in gtObservedCounts)
             {
-                int rowId = Math.Min(gtCount.Item1, maxCoverage - 1);
-                int colId = Math.Min(gtCount.Item2, maxCoverage - 1);
+                int rowId = Math.Min(gtCount.Item1, _maxCoverage - 1);
+                int colId = Math.Min(gtCount.Item2, _maxCoverage - 1);
                 currentLikelihood += _alleleDistribution[gtModelCount.CountsA][gtModelCount.CountsB].Item1[rowId] *
                                        _alleleDistribution[gtModelCount.CountsA][gtModelCount.CountsB].Item2[colId];
             }
