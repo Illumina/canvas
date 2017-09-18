@@ -11,6 +11,7 @@ using Illumina.Common;
 using Illumina.Common.FileSystem;
 using Isas.Framework.Logging;
 using Isas.SequencingFiles;
+using MathNet.Numerics.Statistics;
 
 
 namespace CanvasPedigreeCaller
@@ -306,6 +307,7 @@ namespace CanvasPedigreeCaller
                             .Select(x => x.Balleles.TotalCoverage.Average())
                             .ToArray()), 2);
             pedigreeMember.MeanCoverage = pedigreeMember.Segments.Any() ? pedigreeMember.Segments.Select(x => x.TruncatedMedianCount(numberOfTrimmedBins)).Average() : 0;
+            pedigreeMember.MedianCoverage = pedigreeMember.Segments.Any() ? pedigreeMember.Segments.Select(x => x.MedianCount).Median() : 0;
             pedigreeMember.MaxCoverage = pedigreeMember.Segments.Any() ? (int)(pedigreeMember.Segments.Select(x => x.TruncatedMedianCount(numberOfTrimmedBins)).Max() + 10) : 0;
             if (!ploidyVcfPath.IsNullOrEmpty() && File.Exists(ploidyVcfPath))
                 pedigreeMember.Ploidy = PloidyInfo.LoadPloidyFromVcfFile(ploidyVcfPath, pedigreeMember.Name);
