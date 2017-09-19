@@ -188,7 +188,7 @@ namespace CanvasPedigreeCaller
                 CallerParameters.DefaultReadCountsThreshold, commonCNVsbedPath, sampleSegments);
 
             var genotypes = GenerateGenotypeCombinations(CallerParameters.MaximumCopyNumber);
-            int maxAlleleNumber = Math.Min(CallerParameters.MaxAlleleNumber, pedigreeMembersInfo.Count());
+            int maxAlleleNumber = Math.Min(CallerParameters.MaxAlleleNumber, pedigreeMembersInfo.Count());         
             var copyNumberCombinations = GenerateCopyNumberCombinations(CallerParameters.MaximumCopyNumber, maxAlleleNumber);
 
             Parallel.ForEach(
@@ -512,7 +512,7 @@ namespace CanvasPedigreeCaller
 
             for (var canvasSegmentIndex = 0; canvasSegmentIndex < nSegments; canvasSegmentIndex++)
             {
-                var ll = AssignCopyNumberNoPedigreeInfo(canvasSegmentsSet, pedigreeMembersInfo, model, canvasSegmentIndex, copyNumbers);
+                var ll = AssignCopyNumberNoPedigreeInfo(canvasSegmentsSet, pedigreeMembersInfo, model, canvasSegmentIndex);
                 EstimateQScoresNoPedigreeInfo(canvasSegmentsSet, canvasSegmentIndex, ll);
                 AssignMccNoPedigreeInfo(canvasSegmentsSet, pedigreeMembersInfo, model, canvasSegmentIndex, genotypes);
             }
@@ -528,7 +528,7 @@ namespace CanvasPedigreeCaller
             for (var canvasSegmentIndex = 0; canvasSegmentIndex < nSegments; canvasSegmentIndex++)
             {
                 segmentSetLikelihood += Utilities.MaxValue(AssignCopyNumberNoPedigreeInfo(canvasSegmentsSet, samplesInfo, copyNumberModel,
-                    canvasSegmentIndex, copyNumberCombination));
+                    canvasSegmentIndex));
             }
             segmentSetLikelihood /= nSegments;
 
@@ -793,58 +793,23 @@ namespace CanvasPedigreeCaller
         /// <param name="segmentPosition"></param>
         /// <param name="copyNumberCombinations"></param>
         public double[][] AssignCopyNumberNoPedigreeInfo(SampleList<CanvasSegmentsSet> canvasSegmentsSet, SampleList<PedigreeMemberInfo> samplesInfo,
-            SampleList<CopyNumberModel> copyNumberModel, int canvasSegmentIndex, List<List<int>> copyNumberCombinations)
+            SampleList<CopyNumberModel> copyNumberModel, int canvasSegmentIndex)
         {
             const int defaultCn = 2;
             const double maxCoverageMultiplier = 3.0;
-
-            double maximalLikelihood;
+            
             foreach (var canvasSegmentSet in canvasSegmentsSet.SampleData)
                 canvasSegmentSet.GetSet()[canvasSegmentIndex].CopyNumber = defaultCn;
-            int nCopies = CallerParameters.MaximumCopyNumber;
             var names = canvasSegmentsSet.SampleIds.Select(x => x.ToString()).ToList();
-            var totalLikelihoods = new List<double>();
-            foreach (var copyNumberCombination in copyNumberCombinations)
-            {
-                double totalLikelihood = 0;
-                foreach (var sampleId in canvasSegmentsSet.SampleIds)
-                {
-                    maximalLikelihood = 0;
-                    foreach (var copyNumber in copyNumberCombination)
-                    {
-                        double currentLikelihood =
-                            copyNumberModel[sampleId].GetCnLikelihood(
-                                Math.Min(canvasSegmentsSet[sampleId].GetSet()[canvasSegmentIndex].MedianCount,
-                                    samplesInfo[sampleId].MeanCoverage * maxCoverageMultiplier))[copyNumber];
-                        currentLikelihood = Double.IsNaN(currentLikelihood) || Double.IsInfinity(currentLikelihood)
-                            ? 0
-                            : currentLikelihood;
-                        if (currentLikelihood > maximalLikelihood)
-                            maximalLikelihood = currentLikelihood;
-                    }
-                    totalLikelihood += maximalLikelihood;
-                }
-                totalLikelihoods.Add(totalLikelihood);
-            }
-
+            
             var density = new double[canvasSegmentsSet.Count()][];
-            // no need to iterate over multiple genotypes for n (segmentsSet.Count) = 1
-            if (canvasSegmentsSet.Count() == 1)
-            {
-                canvasSegmentsSet.Single().Value.GetSet()[canvasSegmentIndex].CopyNumber =
-                    copyNumberCombinations[totalLikelihoods.IndexOf(totalLikelihoods.Max())].First();
-                density[0] = totalLikelihoods.ToArray();
-                return density;
-            }
-
-            var bestCopyNumberCombination = copyNumberCombinations[totalLikelihoods.IndexOf(totalLikelihoods.Max())];
             int counter = 0;
             foreach (var sampleId in canvasSegmentsSet.SampleIds)
             {
-                maximalLikelihood = 0;
-                density[counter] = new double[nCopies];
+                double maximalLikelihood = 0;
+                density[counter] = new double[CallerParameters.MaximumCopyNumber];
                 counter++;
-                foreach (var copyNumber in bestCopyNumberCombination)
+                foreach (var copyNumber in Enumerable.Range(0, CallerParameters.MaximumCopyNumber))
                 {
                     double currentLikelihood =
                         copyNumberModel[sampleId].GetCnLikelihood(
@@ -914,8 +879,8 @@ namespace CanvasPedigreeCaller
             var allCombinations = new List<List<int>>();
             for (int currentAlleleNumber = 1; currentAlleleNumber <= maxAlleleNumber; currentAlleleNumber++)
             {
-                var permutations = new Combinations<int>(cnStates, currentAlleleNumber);
-                var list = permutations.Select(x => x.ToList()).ToList();
+                var currentCombination = new Combinations<int>(cnStates, currentAlleleNumber);
+                var list = currentCombination.Select(x => x.ToList()).ToList();
                 allCombinations.AddRange(list);
             }
             return allCombinations;
