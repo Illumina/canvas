@@ -395,10 +395,10 @@ namespace CanvasPedigreeCaller
                 if (IsCommonCnv(canvasSegmentsSet, samplesInfo, parentIDs, probandId, canvasSegmentIndex))
                     continue;
                 // other offsprings are ALT
-                if (!offspringIDs.Except(probandId.ToEnumerable()).All(id => IsReferenceVariant(canvasSegmentsSet, samplesInfo, id, canvasSegmentIndex)))
+                if (offspringIDs.Count > 1 && !offspringIDs.Except(probandId.ToEnumerable()).All(id => IsReferenceVariant(canvasSegmentsSet, samplesInfo, id, canvasSegmentIndex)))
                     continue;
                 // not all q-scores are above the threshold
-                if (parentIDs.Select(id => !IsPassVariant(canvasSegmentsSet, id, canvasSegmentIndex)).Any() || !IsPassVariant(canvasSegmentsSet, probandId, canvasSegmentIndex))
+                if (parentIDs.Any(id => !IsPassVariant(canvasSegmentsSet, id, canvasSegmentIndex)) || !IsPassVariant(canvasSegmentsSet, probandId, canvasSegmentIndex))
                     continue;
 
                 double deNovoQualityScore = GetConditionalDeNovoQualityScore(copyNumberLikelihoods, probandId, canvasSegmentsSet, canvasSegmentIndex, names, parentIDs);
