@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
@@ -22,16 +23,28 @@ namespace CanvasCommon
             _segments = segments;
             AllSegments = new ReadOnlyCollection<CanvasSegment>(allSegments);
         }
+
+        public static Segments CreateSegments(List<CanvasSegment> allSegments)
+        {
+            return new Segments(allSegments.GroupBy(x => x.Chr).ToOrderedDictionary(kvp=>kvp.Key,kvp=>kvp.ToList()), allSegments);
+        }
+
         public ICollection<string> GetChromosomes()
         {
             return _segments.Keys;
         }
+
         public IReadOnlyList<CanvasSegment> GetSegmentsForChromosome(string chromosome)
         {
             return _segments[chromosome];
         }
 
-        public static Segments ReadSegments(ILogger logger, IFileLocation partitionedFile)
+        public IReadOnlyList<SampleGenomicBin> GetGenomicBinsForChromosome(string chromosome)
+        {
+            return _segments[chromosome].SelectMany(segment=>segment.GenomicBins).ToList();
+        }
+
+            public static Segments ReadSegments(ILogger logger, IFileLocation partitionedFile)
         {
             using (var reader = new GzipOrTextReader(partitionedFile.FullName))
             {
@@ -47,7 +60,6 @@ namespace CanvasCommon
             var rows = partitionedFileReader.ReadLines().Select(line => line.Split('\t'));
             var rowsByChr = rows.GroupByAdjacent(GetChromosome);
             var segments = rowsByChr.ToOrderedDictionary(kvp => kvp.Key, kvp => CreateSegments(kvp.Value));
-
             var allSegments = segments.SelectMany(kvp => kvp.Value).ToList();
             return new Segments(segments, allSegments);
         }
@@ -137,7 +149,7 @@ namespace CanvasCommon
             return row[4];
         }
 
-        public void AddAlleles(Dictionary<string, List<Balleles>> allelesByChromosome)
+        public void AddAlleles(IDictionary<string, List<Balleles>> allelesByChromosome)
         {
             foreach (string chr in GetChromosomes())
             {
@@ -149,18 +161,8 @@ namespace CanvasCommon
                 }
             }
         }
-        public Dictionary<string, List<BedInterval>> GetIntervalsByChromosome()
-        {
-            var intervalsByChromosome = new Dictionary<string, List<BedInterval>>();
-            foreach (string chr in GetChromosomes())
-            {
-                intervalsByChromosome[chr] = new List<BedInterval>();
-                foreach (var canvasSegment in GetSegmentsForChromosome(chr))
-                {
-                    intervalsByChromosome[chr].Add(new BedInterval(canvasSegment.Begin, canvasSegment.End));
-                }
-            }
-            return intervalsByChromosome;
-        }
+        public IReadOnlyDictionary<string, List<BedInterval>> IntervalsByChromosome =>
+            _segments.ToDictionary(kvp => kvp.Key, kvp => kvp.Value.Select(segment => new BedInterval(segment.Begin, segment.End)).ToList());
+
     }
 }

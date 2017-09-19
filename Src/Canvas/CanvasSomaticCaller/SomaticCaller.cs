@@ -384,7 +384,7 @@ namespace CanvasSomaticCaller
                 this.DebugModelSegmentCoverageByCN();
             }
 
-            var allelesByChromosome = CanvasIO.ReadFrequenciesWrapper(_logger, new FileLocation(variantFrequencyFile), SegmentsByChromosome.GetIntervalsByChromosome());
+            var allelesByChromosome = CanvasIO.ReadFrequenciesWrapper(_logger, new FileLocation(variantFrequencyFile), SegmentsByChromosome.IntervalsByChromosome);
             SegmentsByChromosome.AddAlleles(allelesByChromosome);
             this.MeanCoverage = allelesByChromosome.SelectMany(x => x.Value).SelectMany(y => y.TotalCoverage).Average();
 
@@ -449,17 +449,12 @@ namespace CanvasSomaticCaller
             // merging segments requires quality scores so we do it after quality scores have been assigned
             // Enrichment is not allowed to merge non-adjacent segments, since many of those merges would
             // jump across non-manifest intervals.
-            if (this.IsEnrichment)
-            {
-                CanvasSegment.MergeSegments(ref Segments, somaticCallerParameters.MinimumCallSize, 1);
-            }
-            else
-            {
-                CanvasSegment.MergeSegmentsUsingExcludedIntervals(ref Segments, somaticCallerParameters.MinimumCallSize, ExcludedIntervals);
-            }
+            var mergedSegments = this.IsEnrichment ? CanvasSegment.MergeSegments(Segments, somaticCallerParameters.MinimumCallSize, 1) :
+            CanvasSegment.MergeSegmentsUsingExcludedIntervals(Segments, somaticCallerParameters.MinimumCallSize, ExcludedIntervals);
+
             // recalculating quality scores doesn't seem to have any effect, but we do it for consistency with the diploid caller where it seems to matter
-            CanvasSegment.AssignQualityScores(Segments, CanvasSegment.QScoreMethod.Logistic, this.somaticCallerQscoreParameters);
-            CanvasSegment.FilterSegments(QualityFilterThreshold, Segments);
+            CanvasSegment.AssignQualityScores(mergedSegments, CanvasSegment.QScoreMethod.Logistic, this.somaticCallerQscoreParameters);
+            CanvasSegment.FilterSegments(QualityFilterThreshold, mergedSegments);
 
             if (this.CNOracle != null)
             {
@@ -471,7 +466,7 @@ namespace CanvasSomaticCaller
             ExtraHeaders.Add($"##EstimatedChromosomeCount={this.EstimateChromosomeCount():F2}");
 
             // Write out results.  Note that model may be null here, in training mode, if we hit an UncallableDataException:
-            CanvasSegmentWriter.WriteSegments(outputVCFPath, this.Segments, Model?.DiploidCoverage, referenceFolder, name, ExtraHeaders,
+            CanvasSegmentWriter.WriteSegments(outputVCFPath, mergedSegments, Model?.DiploidCoverage, referenceFolder, name, ExtraHeaders,
                 this.ReferencePloidy, QualityFilterThreshold, isPedigreeInfoSupplied: false);
 
             return 0;
@@ -1593,8 +1588,8 @@ namespace CanvasSomaticCaller
                 somaticCallerParameters.MinimumVariantFrequenciesForInformativeSegment = Math.Max(5, somaticCallerParameters.MinimumVariantFrequenciesForInformativeSegment);
             }
             Console.WriteLine("Modeling overall coverage/purity across {0} segments", usableSegments.Count);
-            if (usableSegments.Count < 10)
-                throw new NotEnoughUsableSegementsException("Cannot model coverage/purity with less than 10 segments.");
+            if (usableSegments.Count < 3)
+                throw new NotEnoughUsableSegementsException("Cannot model coverage/purity with less than 3 segments.");
 
             // When computing distances between model and actual points, we want to provide roughly equal weight
             // to coverage (which covers a large range) and MAF, which falls in the range (0, 0.5).  

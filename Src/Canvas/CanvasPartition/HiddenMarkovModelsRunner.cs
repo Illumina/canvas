@@ -25,11 +25,7 @@ namespace CanvasPartition
 
         public Dictionary<string, SegmentationInput.Segment[]> Run(List<SegmentationInput> segmentation) {
             Dictionary<string, List<SampleGenomicBin>> commonCNVintervals = null;
-            if (_commonCnVs != null)
-            {
-                commonCNVintervals = CanvasCommon.Utilities.LoadBedFile(_commonCnVs);
-                CanvasCommon.Utilities.SortAndOverlapCheck(commonCNVintervals, _commonCnVs);
-            }
+
             var segmentByChr = new Dictionary<string, SegmentationInput.Segment[]>();
 
             var cts = new CancellationTokenSource();
@@ -68,17 +64,6 @@ namespace CanvasPartition
                             if (bestPathViterbi[i] - bestPathViterbi[i - 1] != 0)
                             {
                                 breakpoints.Add(i);
-                            }
-                        }
-
-
-                        if (_commonCnVs != null)
-                        {
-                            if (commonCNVintervals.ContainsKey(chr))
-                            {
-                                var remappedCommonCNVintervals = CanvasSegment.RemapCommonRegions(commonCNVintervals[chr], startByChr, endByChr);
-                                var oldbreakpoints = breakpoints;
-                                breakpoints = SegmentationInput.OverlapCommonRegions(oldbreakpoints, remappedCommonCNVintervals);
                             }
                         }
 
