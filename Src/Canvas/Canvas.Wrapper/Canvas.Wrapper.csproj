@@ -32,7 +32,7 @@
     <PackageReference Include="Isas.Framework" Version="7.8.4.572" />
     <PackageReference Include="Isas.Manifests" Version="4.6.2.131" />
     <PackageReference Include="Isas.Ploidy" Version="3.0.0.78" />
-    <PackageReference Include="Isas.SequencingFiles" Version="5.3.2.365" />
+    <PackageReference Include="Isas.SequencingFiles" Version="5.4.0-O00382CANV-104" />
     <PackageReference Include="protobuf-net" Version="2.3.2" />
   </ItemGroup>
 

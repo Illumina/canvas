@@ -2,7 +2,10 @@
 using System.IO;
 using System.Linq;
 using CanvasCommon;
+using Illumina.Common;
+using Illumina.Common.FileSystem;
 using Isas.SequencingFiles;
+using Isas.SequencingFiles.Bed;
 using Xunit;
 
 namespace CanvasTest
@@ -78,12 +81,52 @@ namespace CanvasTest
     {
         public void Write(IEnumerable<CanvasSegment> segments, BgzipOrStreamWriter coverageFile, double normalizationFactor)
         {
+            var normalizedBins = segments.SelectMany(segment => segment.GenomicBins.Select(bin => (new ReferenceInterval(chromosome, BedI))))
             foreach (var segment in segments)
             {
                 foreach (var bin in segment.GenomicBins)
                 {
-                    coverageFile.WriteLine($"{bin.GenomicBin.Chromosome}\t{bin.GenomicBin.Interval.Start}\t{bin.GenomicBin.Interval.End}\t{bin.Count / normalizationFactor}");
+                    coverageFile.WriteLine(
+                        $"{bin.GenomicBin.Chromosome}\t{bin.GenomicBin.Interval.Start}\t{bin.GenomicBin.Interval.End}\t{bin.Count / normalizationFactor}");
                 }
+            }
+        }
+    }
+
+    public class BedGraphWriter
+    {
+        private readonly BgzipOrStreamWriter _writer;
+
+        public BedGraphWriter(BgzipOrStreamWriter writer)
+        {
+            _writer = writer;
+        }
+
+        public void WriteLine(BedGraphEntry entry)
+        {
+            var bedGraphLine = GetBedGraphLine(entry);
+            _writer.WriteLine(bedGraphLine);
+        }
+
+        private static string GetBedGraphLine(BedGraphEntry entry)
+        {
+            return $"{entry.Chromosome}\t{entry.Interval.Start}\t{entry.Interval.End}\t{entry.Value}";
+        }
+    }
+
+    public static class BedGraphWriterExtensions
+    {
+        public static void WriteLines(this BedGraphWriter writer, IEnumerable<BedGraphEntry> entries)
+        {
+            entries.ForEach(writer.WriteLine);
+        }
+
+        public static void WriteLines(this IFileLocation location, IEnumerable<BedGraphEntry> entries)
+        {
+            using (var streamWriter = new BgzipOrStreamWriter(location.FullName))
+            {
+                var writer = new BedGraphWriter(streamWriter);
+                writer.WriteLines(entries);
             }
         }
     }
