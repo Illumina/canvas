@@ -320,12 +320,10 @@ namespace CanvasPedigreeCaller
         private List<SampleList<OverlappingSegmentsRegion>> CreateSegmentSetsFromCommonCnvs(SampleList<string> variantFrequencyFiles,
             int defaultAlleleCountThreshold, string commonCNVsbedPath, SampleList<Segments> sampleSegments)
         {
-            var canvasSegmentsSetBySample = new SampleList<List<OverlappingSegmentsRegion>>();
             if (commonCNVsbedPath == null)
             {
-                //return sampleSegments.SelectData(segments => segments.AllSegments.Select())
-                sampleSegments.ForEach(set => canvasSegmentsSetBySample.Add(set.Key, set.Value.AllSegments.Select(seg => new OverlappingSegmentsRegion(new List<CanvasSegment> { seg }, null)).ToList()));
-                return GetSegmentsSetBySampleId(canvasSegmentsSetBySample);
+                var sampleOverlappingSegments = sampleSegments.SelectData(segments => segments.AllSegments.Select(segment => new OverlappingSegmentsRegion(segment)).ToList());
+                return GetSegmentsSetBySampleId(sampleOverlappingSegments);
             }
 
             var commonRegions = ReadCommonRegions(commonCNVsbedPath);
@@ -346,6 +344,7 @@ namespace CanvasPedigreeCaller
                         CanvasSegment.RemapGenomicToBinCoordinates(commonRegions[chr], genomicBinsByChromosome[chr]);
                 });
 
+            var canvasSegmentsSetBySample = new SampleList<List<OverlappingSegmentsRegion>>();
             foreach (var sampleId in sampleSegments.SampleIds)
             {
                 var commonIntervals = commonRegions.ToDictionary(kvp => kvp.Key, kvp => kvp.Value.Select(bedEntry => bedEntry.Interval).ToList());

@@ -154,6 +154,17 @@ namespace CanvasCommon
             SetB = setB;
             SelectedSet = SegmentsSet.SetA;
         }
+
+        /// <summary>
+        /// Used when there is just a single segment without any overlapping segments
+        /// </summary>
+        /// <param name="segment"></param>
+        public OverlappingSegmentsRegion(CanvasSegment segment)
+        {
+            SetA = segment.ToEnumerable().ToList();
+            SetB = null;
+            SelectedSet = SegmentsSet.SetA;
+        }
     }
 
     /// <summary>
