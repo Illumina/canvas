@@ -137,7 +137,7 @@ namespace CanvasPedigreeCaller
             return 0;
         }
 
-        private List<SampleList<CanvasSegment>> GetHighestLikelihoodSegments(List<SampleList<CanvasSegmentsSet>> segmentSetsFromCommonCnvs, SampleList<PedigreeMemberInfo> pedigreeMembersInfo,
+        private List<SampleList<CanvasSegment>> GetHighestLikelihoodSegments(List<SampleList<OverlappingSegmentsRegion>> segmentSetsFromCommonCnvs, SampleList<PedigreeMemberInfo> pedigreeMembersInfo,
             SampleList<CopyNumberModel> copyNumberModels, List<SampleId> parentsIds, List<SampleId> offspringsIds, double[][] transitionMatrix,
             List<List<Genotype>> offspringsGenotypes)
         {
@@ -167,7 +167,7 @@ namespace CanvasPedigreeCaller
         }
 
 
-        private List<SampleList<CanvasSegment>> GetHighestLikelihoodSegments(List<SampleList<CanvasSegmentsSet>> segmentSetsFromCommonCnvs, 
+        private List<SampleList<CanvasSegment>> GetHighestLikelihoodSegments(List<SampleList<OverlappingSegmentsRegion>> segmentSetsFromCommonCnvs, 
             SampleList<PedigreeMemberInfo> pedigreeMembersInfo, SampleList<CopyNumberModel> copyNumberModel, List<List<int>> copyNumberCombinations)
         {
 
@@ -320,18 +320,19 @@ namespace CanvasPedigreeCaller
         /// <param name="commonCNVsbedPath"></param>
         /// <param name="pedigreeMember"></param>
         /// <returns></returns>
-        private List<SampleList<CanvasSegmentsSet>> CreateSegmentSetsFromCommonCnvs(SampleList<string> variantFrequencyFiles,
-            int defaultAlleleCountThreshold, string commonCNVsbedPath, SampleList<Segments> segments)
+        private List<SampleList<OverlappingSegmentsRegion>> CreateSegmentSetsFromCommonCnvs(SampleList<string> variantFrequencyFiles,
+            int defaultAlleleCountThreshold, string commonCNVsbedPath, SampleList<Segments> sampleSegments)
         {
-            var canvasSegmentsSetBySample = new SampleList<List<CanvasSegmentsSet>>();
+            var canvasSegmentsSetBySample = new SampleList<List<OverlappingSegmentsRegion>>();
             if (commonCNVsbedPath == null)
             {
-                segments.ForEach(set => canvasSegmentsSetBySample.Add(set.Key, set.Value.AllSegments.Select(seg => new CanvasSegmentsSet(new List<CanvasSegment> { seg }, null)).ToList()));
+                //return sampleSegments.SelectData(segments => segments.AllSegments.Select())
+                sampleSegments.ForEach(set => canvasSegmentsSetBySample.Add(set.Key, set.Value.AllSegments.Select(seg => new OverlappingSegmentsRegion(new List<CanvasSegment> { seg }, null)).ToList()));
                 return GetSegmentsSetBySampleId(canvasSegmentsSetBySample);
             }
 
             var commonRegions = ReadCommonRegions(commonCNVsbedPath);
-            var chromosomes = segments.SampleData.First().GetChromosomes();
+            var chromosomes = sampleSegments.SampleData.First().GetChromosomes();
             if (IsIdenticalChromosomeNames(commonRegions, chromosomes))
                 throw new ArgumentException(
                     $"Chromosome names in a common CNVs bed file {commonCNVsbedPath} does not match the genome reference");
@@ -343,32 +344,32 @@ namespace CanvasPedigreeCaller
                 chromosomes,
                 chr =>
                 {
-                    genomicBinsByChromosome[chr] = segments.SampleData.First().GetGenomicBinsForChromosome(chr);
+                    genomicBinsByChromosome[chr] = sampleSegments.SampleData.First().GetGenomicBinsForChromosome(chr);
                     segmentIntervalsByChromosome[chr] =
                         CanvasSegment.RemapGenomicToBinCoordinates(commonRegions[chr], genomicBinsByChromosome[chr]);
                 });
 
-            foreach (var sampleId in segments.SampleIds)
+            foreach (var sampleId in sampleSegments.SampleIds)
             {
                 var commonIntervals = commonRegions.ToDictionary(kvp => kvp.Key, kvp => kvp.Value.Select(bedEntry => bedEntry.Interval).ToList());
                 var allelesByChromosomeCommonSegs = CanvasIO.ReadFrequenciesWrapper(_logger,
                     new FileLocation(variantFrequencyFiles[sampleId]), commonIntervals);
-                var segmentsSetByChromosome = GetSegmentSets(defaultAlleleCountThreshold, commonRegions,
-                    genomicBinsByChromosome, segmentIntervalsByChromosome, allelesByChromosomeCommonSegs, segments[sampleId]);
-                canvasSegmentsSetBySample.Add(sampleId, segmentsSetByChromosome);
+                var segmentsSets = GetSegmentSets(defaultAlleleCountThreshold, commonRegions,
+                    genomicBinsByChromosome, segmentIntervalsByChromosome, allelesByChromosomeCommonSegs, sampleSegments[sampleId]);
+                canvasSegmentsSetBySample.Add(sampleId, segmentsSets);
             }
 
             return GetSegmentsSetBySampleId(canvasSegmentsSetBySample);
 
         }
 
-        private static List<SampleList<CanvasSegmentsSet>> GetSegmentsSetBySampleId(SampleList<List<CanvasSegmentsSet>> canvasSegmentsSetBySample)
+        private static List<SampleList<OverlappingSegmentsRegion>> GetSegmentsSetBySampleId(SampleList<List<OverlappingSegmentsRegion>> canvasSegmentsSetBySample)
         {
             int size = canvasSegmentsSetBySample.First().Value.Count;
-            var canvasSegmentsSetBySegment = new List<SampleList<CanvasSegmentsSet>>(size);
+            var canvasSegmentsSetBySegment = new List<SampleList<OverlappingSegmentsRegion>>(size);
             for (int segmentIndex = 0; segmentIndex < size; segmentIndex++)
             {
-                canvasSegmentsSetBySegment.Add(new SampleList<CanvasSegmentsSet>());
+                canvasSegmentsSetBySegment.Add(new SampleList<OverlappingSegmentsRegion>());
             }
             foreach (var sampleId in canvasSegmentsSetBySample.SampleIds)
             {
@@ -380,11 +381,11 @@ namespace CanvasPedigreeCaller
             return canvasSegmentsSetBySegment;
         }
 
-        private static List<CanvasSegmentsSet> GetSegmentSets(int defaultAlleleCountThreshold, Dictionary<string, List<BedEntry>> commonRegions,
+        private static List<OverlappingSegmentsRegion> GetSegmentSets(int defaultAlleleCountThreshold, Dictionary<string, List<BedEntry>> commonRegions,
             Dictionary<string, IReadOnlyList<SampleGenomicBin>> genomicBinsByChromosome, Dictionary<string, List<BedInterval>> segmentIntervalsByChromosome,
             Dictionary<string, List<Balleles>> allelesByChromosomeCommonSegs, Segments segments)
         {
-            var segmentsSetByChromosome = new ConcurrentDictionary<string, List<CanvasSegmentsSet>>();
+            var segmentsSetByChromosome = new ConcurrentDictionary<string, List<OverlappingSegmentsRegion>>();
             Parallel.ForEach(
                 segments.GetChromosomes(),
                 chr =>
@@ -402,7 +403,7 @@ namespace CanvasPedigreeCaller
                     else
                     {
                         segmentsSetByChromosome[chr] = segmentsByChromosome.Select(
-                            segment => new CanvasSegmentsSet(new List<CanvasSegment> { segment }, null)).ToList();
+                            segment => new OverlappingSegmentsRegion(new List<CanvasSegment> { segment }, null)).ToList();
                     }
                 });
             return segmentsSetByChromosome.OrderBy(i => i.Key).Select(x => x.Value).SelectMany(x => x).ToList();
@@ -563,7 +564,7 @@ namespace CanvasPedigreeCaller
             AssignMccNoPedigreeInfo(canvasSegments, pedigreeMembersInfo, model, genotypes);
         }
 
-        private void GetHighestLikelihoodSegmentsSet(SampleList<CanvasSegmentsSet> canvasSegmentsSet, SampleList<PedigreeMemberInfo> pedigreeMembersInfo,
+        private void GetHighestLikelihoodSegmentsSet(SampleList<OverlappingSegmentsRegion> canvasSegmentsSet, SampleList<PedigreeMemberInfo> pedigreeMembersInfo,
             SampleList<CopyNumberModel> model, List<List<int>> copyNumbers)
         {
             SegmentsSet segmentSet;
@@ -583,7 +584,7 @@ namespace CanvasPedigreeCaller
             canvasSegmentsSet.SampleIds.ForEach(id => canvasSegmentsSet[id].SetSet(segmentSet));
         }
 
-        private double GetSegmentSetLikelihoodNoPedigreeInfo(SampleList<CanvasSegmentsSet> canvasSegmentsSet, SampleList<PedigreeMemberInfo> samplesInfo,
+        private double GetSegmentSetLikelihoodNoPedigreeInfo(SampleList<OverlappingSegmentsRegion> canvasSegmentsSet, SampleList<PedigreeMemberInfo> samplesInfo,
             SampleList<CopyNumberModel> copyNumberModel, List<List<int>> copyNumberCombination, SegmentsSet segmentsSet)
         {
             double segmentSetLikelihood = 0;
@@ -632,7 +633,7 @@ namespace CanvasPedigreeCaller
                         offspringIDs, genotypes);
         }
 
-        private void GetHighestLikelihoodSegmentsSet(SampleList<CanvasSegmentsSet> canvasSegmentsSet, SampleList<PedigreeMemberInfo> pedigreeMembersInfo,
+        private void GetHighestLikelihoodSegmentsSet(SampleList<OverlappingSegmentsRegion> canvasSegmentsSet, SampleList<PedigreeMemberInfo> pedigreeMembersInfo,
             SampleList<CopyNumberModel> model, List<SampleId> parentIDs, List<SampleId> offspringIDs, double[][] transitionMatrix, List<List<Genotype>> offspringsGenotypes)
         {
             SegmentsSet segmentsSet;
@@ -652,7 +653,7 @@ namespace CanvasPedigreeCaller
             canvasSegmentsSet.SampleIds.ForEach(id => canvasSegmentsSet[id].SetSet(segmentsSet));
         }
 
-        private double GetSegmentSetLikelihood(SampleList<CanvasSegmentsSet> canvasSegmentsSet,
+        private double GetSegmentSetLikelihood(SampleList<OverlappingSegmentsRegion> canvasSegmentsSet,
             SampleList<PedigreeMemberInfo> pedigreeMembersInfo, SampleList<CopyNumberModel> model, List<SampleId> parentIDs,
             List<SampleId> offspringIDs, SegmentsSet segmentsSet, double[][] transitionMatrix,
             List<List<Genotype>> offspringsGenotypes)
