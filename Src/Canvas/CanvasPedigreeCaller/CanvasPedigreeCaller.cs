@@ -427,8 +427,8 @@ namespace CanvasPedigreeCaller
             int parent1Ploidy = samplesInfo[probandId].GetPloidy(parent1Segment);
             int parent2Ploidy = samplesInfo[probandId].GetPloidy(parent2Segment);
             int probandPloidy = samplesInfo[probandId].GetPloidy(probandSegment);
-            bool isCommoCnv = parent1Genotypes.Intersect(probandGenotypes).Any() && parent1Ploidy == probandPloidy ||
-                              parent2Genotypes.Intersect(probandGenotypes).Any() && parent2Ploidy == probandPloidy;
+            bool isCommoCnv = parent1CopyNumber == probandCopyNumber && parent1Ploidy == probandPloidy ||
+                              parent2CopyNumber == probandCopyNumber && parent2Ploidy == probandPloidy;
             return isCommoCnv;
         }
 
