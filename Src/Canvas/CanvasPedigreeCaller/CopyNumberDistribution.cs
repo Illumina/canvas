@@ -4,23 +4,18 @@ using System.Linq;
 
 namespace CanvasPedigreeCaller
 {
-    public class CopyNumbersLikelihood
+    public class CopyNumbersLikelihoods
     {
         private readonly Array _probability;
         public List<string> SampleNames { get; }
         public int Count { get; }
         public List<int[]> Indices { get; }
         public double MaximalLikelihood;
+        public Dictionary<int, double> Density { get; }
 
-        public CopyNumbersLikelihood(int nCopyNumbers, List<string> names)
+        public CopyNumbersLikelihoods(Dictionary<int, double> density)
         {
-            int nSamples = names.Count;
-            if (names.Count != nSamples)
-                throw new ArgumentException($"List of sample names must be equal to the number of samples ");
-            var dimensionSizes = Enumerable.Repeat(nCopyNumbers, nSamples).ToArray();
-            _probability = Array.CreateInstance(typeof(double), dimensionSizes);
-            SampleNames = names;
-            Count = nSamples;
+            this.Density = density;
             Indices = new List<int[]>();
         }
 
