@@ -398,7 +398,7 @@ namespace CanvasPedigreeCaller
                 if (!offspringIDs.Except(probandId.ToEnumerable()).All(id => IsReferenceVariant(canvasSegmentsSet, samplesInfo, id, canvasSegmentIndex)))
                     continue;
                 // not all q-scores are above the threshold
-                if (parentIDs.Union(probandId).Any(id => !IsPassVariant(canvasSegmentsSet, id, canvasSegmentIndex)))
+                if (parentIDs.Concat(probandId).Any(id => !IsPassVariant(canvasSegmentsSet, id, canvasSegmentIndex)))
                     continue;
 
                 double deNovoQualityScore = GetConditionalDeNovoQualityScore(copyNumberLikelihoods, probandId, canvasSegmentsSet, canvasSegmentIndex, names, parentIDs);
