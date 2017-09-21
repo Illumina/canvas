@@ -14,11 +14,13 @@ namespace CanvasPedigreeCaller
         public double MaximalLikelihood { get; set; }
         public SampleList<Dictionary<int, double>> SingleSampleLikelihoods { get; }
 
-        public CopyNumbersLikelihoods(SampleList<Dictionary<int, double>> singleSampleLikelihoods)
+        public CopyNumbersLikelihoods(SampleList<Dictionary<int, double>> singleSampleLikelihoods, int nCopyNumbers)
         {
             this.SingleSampleLikelihoods = singleSampleLikelihoods;
             Indices = new List<int[]>();
             this.SampleNames = singleSampleLikelihoods.SampleIds.Select(id => id.ToString()).ToList();
+            var dimensionSizes = Enumerable.Repeat(nCopyNumbers, this.SampleNames.Count).ToArray();
+            _probability = Array.CreateInstance(typeof(double), dimensionSizes);
         }
 
         private int GetSampleIndex(string sampleName)
@@ -36,6 +38,7 @@ namespace CanvasPedigreeCaller
             _probability.SetValue(probability, indices);
             if (!skipIndex && !Indices.Exists(index => index.SequenceEqual(indices)) && probability > 0)
                 Indices.Add(indices);
+
 
         }
 

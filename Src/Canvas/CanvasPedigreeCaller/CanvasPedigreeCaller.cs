@@ -818,7 +818,7 @@ namespace CanvasPedigreeCaller
                 }
                 singleSampleLikelihoods.Add(sampleId, density);
             }
-            return new CopyNumbersLikelihoods(singleSampleLikelihoods);
+            return new CopyNumbersLikelihoods(singleSampleLikelihoods, CallerParameters.MaximumCopyNumber);
         }
 
         /// <summary>
