@@ -322,8 +322,9 @@ namespace CanvasPedigreeCaller
         {
             if (commonCNVsbedPath == null)
             {
-                var sampleOverlappingSegments = sampleSegments.SelectData(segments => segments.AllSegments.Select(segment => new OverlappingSegmentsRegion(segment)).ToList());
-                return GetSegmentsSetBySampleId(sampleOverlappingSegments);
+                var defaultSampleRegions = sampleSegments
+                    .SelectData(segments => segments.AllSegments.Select(segment => new OverlappingSegmentsRegion(segment)).ToList());
+                return GetOverlappingSegmentsRegionSampleLists(defaultSampleRegions);
             }
 
             var commonRegions = ReadCommonRegions(commonCNVsbedPath);
@@ -344,7 +345,7 @@ namespace CanvasPedigreeCaller
                         CanvasSegment.RemapGenomicToBinCoordinates(commonRegions[chr], genomicBinsByChromosome[chr]);
                 });
 
-            var canvasSegmentsSetBySample = new SampleList<List<OverlappingSegmentsRegion>>();
+            var sampleRegions = new SampleList<List<OverlappingSegmentsRegion>>();
             foreach (var sampleId in sampleSegments.SampleIds)
             {
                 var commonIntervals = commonRegions.ToDictionary(kvp => kvp.Key, kvp => kvp.Value.Select(bedEntry => bedEntry.Interval).ToList());
@@ -352,29 +353,18 @@ namespace CanvasPedigreeCaller
                     new FileLocation(variantFrequencyFiles[sampleId]), commonIntervals);
                 var segmentsSets = GetSegmentSets(defaultAlleleCountThreshold, commonRegions,
                     genomicBinsByChromosome, segmentIntervalsByChromosome, allelesByChromosomeCommonSegs, sampleSegments[sampleId]);
-                canvasSegmentsSetBySample.Add(sampleId, segmentsSets);
+                sampleRegions.Add(sampleId, segmentsSets);
             }
 
-            return GetSegmentsSetBySampleId(canvasSegmentsSetBySample);
-
+            return GetOverlappingSegmentsRegionSampleLists(sampleRegions);
         }
 
-        private static List<SampleList<OverlappingSegmentsRegion>> GetSegmentsSetBySampleId(SampleList<List<OverlappingSegmentsRegion>> canvasSegmentsSetBySample)
+        private static List<SampleList<OverlappingSegmentsRegion>> GetOverlappingSegmentsRegionSampleLists(SampleList<List<OverlappingSegmentsRegion>> sampleRegions)
         {
-            int size = canvasSegmentsSetBySample.First().Value.Count;
-            var canvasSegmentsSetBySegment = new List<SampleList<OverlappingSegmentsRegion>>(size);
-            for (int segmentIndex = 0; segmentIndex < size; segmentIndex++)
-            {
-                canvasSegmentsSetBySegment.Add(new SampleList<OverlappingSegmentsRegion>());
-            }
-            foreach (var sampleId in canvasSegmentsSetBySample.SampleIds)
-            {
-                for (int segmentIndex = 0; segmentIndex < size; segmentIndex++)
-                {
-                    canvasSegmentsSetBySegment[segmentIndex].Add(sampleId, canvasSegmentsSetBySample[sampleId][segmentIndex]);
-                }
-            }
-            return canvasSegmentsSetBySegment;
+            return sampleRegions
+                .SelectData((sampleId, regions) => regions.Select(region => (sampleId, region))).SampleData
+                .ZipMany(sampleRegion => sampleRegion.ToSampleList())
+                .ToList();
         }
 
         private static List<OverlappingSegmentsRegion> GetSegmentSets(int defaultAlleleCountThreshold, Dictionary<string, List<BedEntry>> commonRegions,
