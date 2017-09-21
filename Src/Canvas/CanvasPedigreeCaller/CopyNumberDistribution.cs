@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using Isas.Framework.DataTypes;
 
 namespace CanvasPedigreeCaller
 {
@@ -10,13 +11,14 @@ namespace CanvasPedigreeCaller
         public List<string> SampleNames { get; }
         public int Count { get; }
         public List<int[]> Indices { get; }
-        public double MaximalLikelihood;
-        public Dictionary<int, double> Density { get; }
+        public double MaximalLikelihood { get; set; }
+        public SampleList<Dictionary<int, double>> SingleSampleLikelihoods { get; }
 
-        public CopyNumbersLikelihoods(Dictionary<int, double> density)
+        public CopyNumbersLikelihoods(SampleList<Dictionary<int, double>> singleSampleLikelihoods)
         {
-            this.Density = density;
+            this.SingleSampleLikelihoods = singleSampleLikelihoods;
             Indices = new List<int[]>();
+            this.SampleNames = singleSampleLikelihoods.SampleIds.Select(id => id.ToString()).ToList();
         }
 
         private int GetSampleIndex(string sampleName)
@@ -34,6 +36,7 @@ namespace CanvasPedigreeCaller
             _probability.SetValue(probability, indices);
             if (!skipIndex && !Indices.Exists(index => index.SequenceEqual(indices)) && probability > 0)
                 Indices.Add(indices);
+
         }
 
         public List<double> GetMarginalProbability(int nCopies, string sampleName)

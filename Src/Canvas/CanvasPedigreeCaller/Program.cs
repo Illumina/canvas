@@ -121,7 +121,7 @@ namespace CanvasPedigreeCaller
             if (pedigreeFile.IsNullOrEmpty())
             {
                 Console.WriteLine($"CanvasPedigreeCaller.exe: pedigreeFile option is not used! Calling CNV variants without family information.");
-                return caller.CallVariants(variantFrequencyFiles, segmentFiles, outDir, ploidyBedPath, referenceFolder, sampleNames, commonCNVsbedPath);
+                return 0;
             }
 
             if (qScoreThreshold.HasValue & qScoreThreshold > 0 & qScoreThreshold < caller.CallerParameters.MaxQscore)
@@ -143,7 +143,7 @@ namespace CanvasPedigreeCaller
                 return 1;
             }
 
-            return caller.CallVariantsInPedigree(variantFrequencyFiles, segmentFiles, outDir, ploidyBedPath, referenceFolder, sampleNames, commonCNVsbedPath, pedigreeFile);
+            return caller.CallVariants(variantFrequencyFiles, segmentFiles, outDir, ploidyBedPath, referenceFolder, sampleNames, commonCNVsbedPath, pedigreeFile);
         }
 
         private static T Deserialize<T>(IFileLocation path)
