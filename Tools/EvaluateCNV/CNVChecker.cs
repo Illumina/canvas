@@ -400,7 +400,7 @@ namespace EvaluateCNV
                     if (includePassingOnly && variant.Filters != "PASS") continue;
                     if (DQscoreThreshold.HasValue)
                     {
-                        if (variant.GenotypeTagOrder.All(x => x != "DQ"))
+                        if (!variant.GenotypeColumns.Single().Keys.Contains("DQ"))
                             continue;
                         if (variant.Identifier.Contains("REF"))
                             continue;
