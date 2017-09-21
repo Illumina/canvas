@@ -170,18 +170,8 @@ namespace CanvasPedigreeCaller
                 },
                 segmentSet => GetHighestLikelihoodSegmentsSet(segmentSet, pedigreeMembersInfo, copyNumberModel)
             );
-            var highestLikelihoodSegments = new List<SampleList<CanvasSegment>>();
-            foreach (var sampleList in segmentSetsFromCommonCnvs)
-            {
-                foreach (var segmentSet in sampleList)
-                {
-                    var newSampleList = new SampleList<CanvasSegment>();
-                    foreach (var segment in segmentSet.Value.GetSet())
-                        newSampleList.Add(segmentSet.Key, segment);
-                    highestLikelihoodSegments.Add(newSampleList);
-                }
-            }
-            return highestLikelihoodSegments;
+            return segmentSetsFromCommonCnvs.Select(sampleList => sampleList.Select(x => x.Value.GetSet().Select(y => (x.Key, y))).
+                ZipMany(sampleRegion => sampleRegion.ToSampleList())).SelectMany(x => x).ToList();
         }
         /// <summary>
         /// Derives metrics from b-allele counts within each segment and determines whereas to use them for calculating MCC
