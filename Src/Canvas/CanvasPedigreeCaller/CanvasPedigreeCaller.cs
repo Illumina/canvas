@@ -802,6 +802,7 @@ namespace CanvasPedigreeCaller
             canvasSegments.SampleData.ForEach(segment => segment.CopyNumber = defaultCn);
             var singleSampleLikelihoods = new SampleList<Dictionary<int, double>>();
             var density = new Dictionary<int, double>();
+
             foreach (var sampleId in canvasSegments.SampleIds)
             {
                 foreach (int copyNumber in Enumerable.Range(0, CallerParameters.MaximumCopyNumber))
