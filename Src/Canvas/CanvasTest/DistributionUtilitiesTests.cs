@@ -33,5 +33,17 @@ namespace CanvasTest
                 new []{ 1 }.ToList(),
             }.ToList(), result);
         }
+
+        [Fact]
+        public void TestNegativeBinomialWrapperMaxDensityEqualsMean()
+        {
+            const double mean = 50.0;
+            const double variance = 50.0;
+            const int maxValue = 200;
+            var result = DistributionUtilities.NegativeBinomialWrapper(mean, variance, maxValue);
+            double medianIndex = 49;
+            int maxIndex = result.IndexOf(result.Max());
+            Assert.Equal(medianIndex, maxIndex);
+        }
     }
 }

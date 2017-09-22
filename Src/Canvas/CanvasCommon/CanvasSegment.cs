@@ -127,10 +127,10 @@ namespace CanvasCommon
     }
 
     /// <summary>
-    /// Groups overlapping genomic intervals into sets / blocks. 
+    /// A group of overlapping genomic intervals. 
     /// Used for keeping track of merged common and Canvas-called intervals when common CNV option is used.   
     /// </summary>
-    public class CanvasSegmentsSet
+    public class OverlappingSegmentsRegion
     {
         public List<CanvasSegment> SetA { get; }
         public List<CanvasSegment> SetB { get; }
@@ -148,10 +148,21 @@ namespace CanvasCommon
         }
 
 
-        public CanvasSegmentsSet(List<CanvasSegment> setA, List<CanvasSegment> setB)
+        public OverlappingSegmentsRegion(List<CanvasSegment> setA, List<CanvasSegment> setB)
         {
             SetA = setA;
             SetB = setB;
+            SelectedSet = SegmentsSet.SetA;
+        }
+
+        /// <summary>
+        /// Used when there is just a single segment without any overlapping segments
+        /// </summary>
+        /// <param name="segment"></param>
+        public OverlappingSegmentsRegion(CanvasSegment segment)
+        {
+            SetA = segment.ToEnumerable().ToList();
+            SetB = null;
             SelectedSet = SegmentsSet.SetA;
         }
     }
@@ -307,7 +318,7 @@ namespace CanvasCommon
         /// <param name="canvasSegmentsIndex"></param>
         /// <param name="commonSegmentsIndex"></param>
         /// <returns></returns>
-        public static CanvasSegmentsSet SplitCanvasSegments(List<CanvasSegment> canvasSegments, List<CanvasSegment> commonSegments, int defaultAlleleCountThreshold,
+        public static OverlappingSegmentsRegion SplitCanvasSegments(List<CanvasSegment> canvasSegments, List<CanvasSegment> commonSegments, int defaultAlleleCountThreshold,
             ref int canvasSegmentsIndex, ref int commonSegmentsIndex)
         {
             var haplotypebSegments = new List<CanvasSegment>();
@@ -341,7 +352,7 @@ namespace CanvasCommon
                     }
                     haplotypeaSegments.Add(canvasSegments[canvasSegmentsIndex]);
                     canvasSegmentsIndex++;
-                    return new CanvasSegmentsSet(haplotypeaSegments, haplotypebSegments);
+                    return new OverlappingSegmentsRegion(haplotypeaSegments, haplotypebSegments);
                 }
 
                 begin = commonSegments[commonSegmentsIndex].End;
@@ -354,7 +365,7 @@ namespace CanvasCommon
                 haplotypeaSegments.Add(canvasSegments[canvasSegmentsIndex]);
                 canvasSegmentsIndex++;
                 commonSegmentsIndex++;
-                return new CanvasSegmentsSet(haplotypeaSegments, haplotypebSegments);
+                return new OverlappingSegmentsRegion(haplotypeaSegments, haplotypebSegments);
             }
 
             // scenario: Canvas segment part-overlaps common segment and comes first
@@ -381,7 +392,7 @@ namespace CanvasCommon
                     haplotypebSegments.Add(commonSegments[commonSegmentsIndex]);
                     canvasSegmentsIndex++;
                     commonSegmentsIndex++;
-                    return new CanvasSegmentsSet(haplotypeaSegments, haplotypebSegments);
+                    return new OverlappingSegmentsRegion(haplotypeaSegments, haplotypebSegments);
                 }
 
                 // scenario: common segment spans more than one Canvas segment
@@ -398,7 +409,7 @@ namespace CanvasCommon
                     }
                     haplotypebSegments.Add(commonSegments[commonSegmentsIndex]);
                     commonSegmentsIndex++;
-                    return new CanvasSegmentsSet(haplotypeaSegments, haplotypebSegments);
+                    return new OverlappingSegmentsRegion(haplotypeaSegments, haplotypebSegments);
                 }
 
                 haplotypebSegments.Add(commonSegments[commonSegmentsIndex]);
@@ -410,7 +421,7 @@ namespace CanvasCommon
                 if (!countsSubRange.Empty())
                     haplotypeaSegments.Add(new CanvasSegment(commonSegments[commonSegmentsIndex].Chr, begin, end, countsSubRange, allelesSubRange));
                 canvasSegments[commonSegmentsIndex].Begin = commonSegments[commonSegmentsIndex].End + 1;
-                return new CanvasSegmentsSet(haplotypeaSegments, haplotypebSegments);
+                return new OverlappingSegmentsRegion(haplotypeaSegments, haplotypebSegments);
             }
 
             // scenario: common segment part-overlaps Canvas segment and comes first
@@ -432,12 +443,12 @@ namespace CanvasCommon
 
                 canvasSegmentsIndex++;
                 commonSegmentsIndex++;
-                return new CanvasSegmentsSet(haplotypeaSegments, haplotypebSegments);
+                return new OverlappingSegmentsRegion(haplotypeaSegments, haplotypebSegments);
             }
 
             // default: for now do now handle other conditions
             canvasSegmentsIndex++;
-            return new CanvasSegmentsSet(new List<CanvasSegment> { canvasSegments[canvasSegmentsIndex] }, null);
+            return new OverlappingSegmentsRegion(new List<CanvasSegment> { canvasSegments[canvasSegmentsIndex] }, null);
         }
 
         public int BinCount => Counts.Count;
@@ -737,18 +748,18 @@ namespace CanvasCommon
         /// <param name="chr"></param>
         /// <param name="defaultAlleleCountThreshold"></param>
         /// <returns></returns>
-        public static List<CanvasSegmentsSet> MergeCommonCnvSegments(List<CanvasSegment> canvasSegments,
+        public static List<OverlappingSegmentsRegion> MergeCommonCnvSegments(List<CanvasSegment> canvasSegments,
             List<CanvasSegment> commonCnvSegments, int defaultAlleleCountThreshold)
         {
             const int segmentOverlapThreshold = 10;
-            var mergedSegments = new List<CanvasSegmentsSet>(canvasSegments.Count + commonCnvSegments.Count * 3);
+            var mergedSegments = new List<OverlappingSegmentsRegion>(canvasSegments.Count + commonCnvSegments.Count * 3);
             var sortedCanvasSegments = canvasSegments.OrderBy(o => o.Begin).ToList();
             var sortedCommonCnvSegments = commonCnvSegments.OrderBy(o => o.Begin).ToList();
             var canvasSegmentsIndex = 0;
             var commonSegmentsIndex = 0;
             if (sortedCanvasSegments[canvasSegmentsIndex].End <= sortedCommonCnvSegments[commonSegmentsIndex].Begin)
             {
-                mergedSegments.Add(new CanvasSegmentsSet(new List<CanvasSegment> { sortedCanvasSegments[0] }, null));
+                mergedSegments.Add(new OverlappingSegmentsRegion(new List<CanvasSegment> { sortedCanvasSegments[0] }, null));
                 canvasSegmentsIndex++;
             }
 
@@ -765,14 +776,14 @@ namespace CanvasCommon
                 // Canvas segment comes before common segment and does not overlap it
                 if (sortedCanvasSegments[canvasSegmentsIndex].End <= sortedCommonCnvSegments[commonSegmentsIndex].Begin)
                 {
-                    mergedSegments.Add(new CanvasSegmentsSet(new List<CanvasSegment> { sortedCanvasSegments[canvasSegmentsIndex] }, null));
+                    mergedSegments.Add(new OverlappingSegmentsRegion(new List<CanvasSegment> { sortedCanvasSegments[canvasSegmentsIndex] }, null));
                     canvasSegmentsIndex++;
                     continue;
                 }
                 // common segment comes before Canvas segment and does not overlap it
                 if (sortedCanvasSegments[canvasSegmentsIndex].Begin >= sortedCommonCnvSegments[commonSegmentsIndex].End)
                 {
-                    mergedSegments.Add(new CanvasSegmentsSet(null, new List<CanvasSegment> { sortedCommonCnvSegments[commonSegmentsIndex] }));
+                    mergedSegments.Add(new OverlappingSegmentsRegion(null, new List<CanvasSegment> { sortedCommonCnvSegments[commonSegmentsIndex] }));
                     commonSegmentsIndex++;
                     continue;
                 }
@@ -780,7 +791,7 @@ namespace CanvasCommon
                 if (sortedCanvasSegments[canvasSegmentsIndex].Begin == sortedCommonCnvSegments[commonSegmentsIndex].Begin &&
                     sortedCanvasSegments[canvasSegmentsIndex].End == sortedCommonCnvSegments[commonSegmentsIndex].End)
                 {
-                    mergedSegments.Add(new CanvasSegmentsSet(null, new List<CanvasSegment> { sortedCommonCnvSegments[commonSegmentsIndex] }));
+                    mergedSegments.Add(new OverlappingSegmentsRegion(null, new List<CanvasSegment> { sortedCommonCnvSegments[commonSegmentsIndex] }));
                     canvasSegmentsIndex++;
                     commonSegmentsIndex++;
                     continue;
@@ -790,7 +801,7 @@ namespace CanvasCommon
                     Math.Abs(sortedCanvasSegments[canvasSegmentsIndex].End - sortedCommonCnvSegments[commonSegmentsIndex].End) < OverlapWindowThreshold &&
                     sortedCommonCnvSegments[commonSegmentsIndex].Length > OverlapWindowThreshold * 4)
                 {
-                    mergedSegments.Add(new CanvasSegmentsSet(null, new List<CanvasSegment> { sortedCommonCnvSegments[commonSegmentsIndex] }));
+                    mergedSegments.Add(new OverlappingSegmentsRegion(null, new List<CanvasSegment> { sortedCommonCnvSegments[commonSegmentsIndex] }));
                     canvasSegmentsIndex++;
                     commonSegmentsIndex++;
                     continue;
@@ -804,17 +815,17 @@ namespace CanvasCommon
                 }
                 else
                 {
-                    mergedSegments.Add(new CanvasSegmentsSet(new List<CanvasSegment> { sortedCanvasSegments[canvasSegmentsIndex] }, null));
+                    mergedSegments.Add(new OverlappingSegmentsRegion(new List<CanvasSegment> { sortedCanvasSegments[canvasSegmentsIndex] }, null));
                     canvasSegmentsIndex++;
                     commonSegmentsIndex++;
                 }
             }
 
             if (canvasSegmentsIndex < sortedCanvasSegments.Count)
-                mergedSegments.AddRange(sortedCanvasSegments.Skip(canvasSegmentsIndex).Select(segment => new CanvasSegmentsSet(new List<CanvasSegment> { segment }, null)));
+                mergedSegments.AddRange(sortedCanvasSegments.Skip(canvasSegmentsIndex).Select(segment => new OverlappingSegmentsRegion(new List<CanvasSegment> { segment }, null)));
 
             else if (commonSegmentsIndex < sortedCommonCnvSegments.Count)
-                mergedSegments.AddRange(sortedCommonCnvSegments.Skip(commonSegmentsIndex).Select(segment => new CanvasSegmentsSet(null, new List<CanvasSegment> { segment })));
+                mergedSegments.AddRange(sortedCommonCnvSegments.Skip(commonSegmentsIndex).Select(segment => new OverlappingSegmentsRegion(null, new List<CanvasSegment> { segment })));
 
             return mergedSegments;
         }
