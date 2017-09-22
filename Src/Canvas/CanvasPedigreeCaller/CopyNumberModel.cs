@@ -12,7 +12,7 @@ namespace CanvasPedigreeCaller
         readonly Tuple<List<double>, List<double>> [][] _alleleDistribution;
         private readonly int _maxCoverage;
 
-        public CopyNumberModel(int numCnStates, PedigreeMemberInfo info)
+        public CopyNumberModel(int numCnStates, SamplesInfo info)
         {
             double haploidMafMean = info.MeanMafCoverage / 2.0;
             double haploidMean = info.MeanCoverage / 2.0;
