@@ -59,8 +59,17 @@ namespace CanvasPedigreeCaller
             var sampleSegments = new SampleList<Segments>();
             var copyNumberModels = new SampleList<CopyNumberModel>();
             var variantFrequencyFilesSampleList = new SampleList<string>();
+            var kinships = new SampleList<Kinship>();
+            if (pedigreeFile != null)
+            {
+                kinships = ReadPedigreeFile(pedigreeFile);
+                sampleNames = kinships.OrderByDescending(x => x.Value).Select(x=>x.Key.ToString()).ToList();
+            }
+            else
+            {
+                sampleNames.ForEach(name => kinships.Add(new SampleId(name), Kinship.Other));
+            }
 
-            // TODO: make sure proband sample name comes first
             foreach (string sampleName in sampleNames)
             {
                 var sampleId = new SampleId(sampleName);
@@ -968,7 +977,9 @@ namespace CanvasPedigreeCaller
 
         public enum Kinship
         {
-            Other, Parent, Proband
+            Other = 0,
+            Parent = 1,
+            Proband = 2,
         }
         public static SampleList<Kinship> ReadPedigreeFile(string pedigreeFile)
         {
