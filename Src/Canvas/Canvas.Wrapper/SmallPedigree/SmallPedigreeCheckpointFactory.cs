@@ -89,7 +89,7 @@ namespace Canvas.Wrapper.SmallPedigree
             {
                 fileMover.Move(output.Partitioned, SingleSampleCallset.GetPartitionedPath(stub));
                 fileMover.Move(output.VariantFrequencies, SingleSampleCallset.GetVfSummaryPath(stub));
-                fileMover.Move(output.VariantFrequenciesBaf, SingleSampleCallset.GetVfSummaryPath(stub));
+                fileMover.Move(output.VariantFrequenciesBaf, SingleSampleCallset.GetVfSummaryBafPath(stub));
             }
         }
 

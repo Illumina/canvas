@@ -187,7 +187,6 @@ namespace CanvasPedigreeCaller
             ZipMany(sampleRegion => sampleRegion.ToSampleList())).SelectMany(x => x).ToList(); 
         }
 
-
         private List<SampleList<CanvasSegment>> GetHighestLikelihoodSegments(List<SampleList<OverlappingSegmentsRegion>> segmentSetsFromCommonCnvs,
             SampleList<PedigreeMemberInfo> pedigreeMembersInfo, SampleList<CopyNumberModel> copyNumberModel)
         {
@@ -394,7 +393,7 @@ namespace CanvasPedigreeCaller
                 if (!offspringIDs.Except(probandId.ToEnumerable()).All(id => IsReferenceVariant(canvasSegments, samplesInfo, id)))
                     continue;
                 // not all q-scores are above the threshold
-                if (parentIDs.Select(id => !IsPassVariant(canvasSegments, id)).Any() || !IsPassVariant(canvasSegments, probandId))
+                if (parentIDs.Concat(probandId).Any(id => !IsPassVariant(canvasSegments, id)))
                     continue;
 
                 double deNovoQualityScore = GetConditionalDeNovoQualityScore(copyNumberLikelihoods, probandId, canvasSegments, parentIDs);
