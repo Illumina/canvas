@@ -35,7 +35,7 @@ namespace CanvasPedigreeCaller
         {
             return Ploidy?.GetReferenceCopyNumber(segment) ?? 2;
         }
-        public static SamplesInfo GetPedigreeMemberInfo(Segments segments, string ploidyBedPath, int numberOfTrimmedBins, SampleId id)
+        public static SamplesInfo GetSampleInfo(Segments segments, string ploidyBedPath, int numberOfTrimmedBins, SampleId id)
         {
             double meanMafCoverage = segments.AllSegments.SelectMany(x => x.Balleles.TotalCoverage).Average();
             double variance = Utilities.Variance(segments.AllSegments.Select(x => x.TruncatedMedianCount(numberOfTrimmedBins)).ToList());

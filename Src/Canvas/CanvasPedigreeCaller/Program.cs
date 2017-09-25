@@ -118,12 +118,6 @@ namespace CanvasPedigreeCaller
             var parameterconfigFile = new FileLocation(parameterconfigPath);
             caller.CallerParameters = Deserialize<PedigreeCallerParameters>(parameterconfigFile);
 
-            if (pedigreeFile.IsNullOrEmpty())
-            {
-                Console.WriteLine($"CanvasPedigreeCaller.exe: pedigreeFile option is not used! Calling CNV variants without family information.");
-                return 0;
-            }
-
             if (qScoreThreshold.HasValue & qScoreThreshold > 0 & qScoreThreshold < caller.CallerParameters.MaxQscore)
             {
                 caller.QualityFilterThreshold = qScoreThreshold.Value;
@@ -135,12 +129,6 @@ namespace CanvasPedigreeCaller
             {
                 caller.DeNovoQualityFilterThreshold = dqScoreThreshold.Value;
                 Console.WriteLine($"CanvasPedigreeCaller.exe: Using user-supplied de novo quality score threshold {qScoreThreshold}.");
-            }
-
-            if (!File.Exists(pedigreeFile))
-            {
-                Console.WriteLine($"CanvasPedigreeCaller.exe: File {pedigreeFile} does not exist! Exiting.");
-                return 1;
             }
 
             return caller.CallVariants(variantFrequencyFiles, segmentFiles, outDir, ploidyBedPath, referenceFolder, sampleNames, commonCNVsbedPath, pedigreeFile);
