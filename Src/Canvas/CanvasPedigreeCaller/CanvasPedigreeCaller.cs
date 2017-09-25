@@ -65,8 +65,7 @@ namespace CanvasPedigreeCaller
                 kinships = ReadPedigreeFile(pedigreeFile);
                 // In Kinship enum Proband gets the highest int value 
                 var newSampleNames = kinships.OrderByDescending(x => x.Value).Select(x => x.Key.ToString()).ToList();
-                var remapIndices = newSampleNames.Select(newname => sampleNames.FindIndex(name => name == newname))
-                    .ToList();
+                var remapIndices = newSampleNames.Select(newname => sampleNames.FindIndex(name => name == newname)).ToList();
                 segmentFiles = remapIndices.Select(index => segmentFiles[index]).ToList();
                 variantFrequencyFiles = remapIndices.Select(index => variantFrequencyFiles[index]).ToList();
                 sampleNames = newSampleNames;               
@@ -490,26 +489,31 @@ namespace CanvasPedigreeCaller
                                                  copyNumbersLikelihoods.SingleSampleLikelihoods[child][copyNumberChild];
                         }
 
-                        currentLikelihood = Double.IsNaN(currentLikelihood) || Double.IsInfinity(currentLikelihood)
-                            ? 0
-                            : currentLikelihood;
-                        var copyNumbers = new[] { copyNumberParent1, copyNumberParent2 }
-                            .Concat(offspringGtStates.Select(x => x.CountsA + x.CountsB)).ToArray();
-                        copyNumbersLikelihoods.SetJointProbability(currentLikelihood, copyNumbers);
+                        currentLikelihood = Double.IsNaN(currentLikelihood) || Double.IsInfinity(currentLikelihood) ? 0 : currentLikelihood;
+                        copyNumbersLikelihoods.SetJointLikelihood(currentLikelihood, GetSampleCopyNumbers(pedigreeInfo, copyNumberParent1, copyNumberParent2, offspringGtStates));
 
                         if (currentLikelihood > copyNumbersLikelihoods.MaximalLikelihood)
                         {
-                            sampleCopyNumbers = new SampleList<int>();
                             copyNumbersLikelihoods.MaximalLikelihood = currentLikelihood;
-                            sampleCopyNumbers.Add(pedigreeInfo.ParentsIds.First(), copyNumberParent1);
-                            sampleCopyNumbers.Add(pedigreeInfo.ParentsIds.Last(), copyNumberParent2);
-                            for (int counter = 0; counter < pedigreeInfo.OffspringsIds.Count; counter++)
-                            {
-                                sampleCopyNumbers.Add(pedigreeInfo.OffspringsIds[counter], offspringGtStates[counter].CountsA + offspringGtStates[counter].CountsB);
-                            }
+                            sampleCopyNumbers = GetSampleCopyNumbers(pedigreeInfo, copyNumberParent1, copyNumberParent2, offspringGtStates);
                         }
                     }
                 }
+            }
+            return sampleCopyNumbers;
+        }
+
+        private static SampleList<int> GetSampleCopyNumbers(PedigreeInfo pedigreeInfo, int copyNumberParent1, int copyNumberParent2, List<Genotype> offspringGtStates)
+        {
+            var sampleCopyNumbers = new SampleList<int>
+            {
+                {pedigreeInfo.ParentsIds.First(), copyNumberParent1},
+                {pedigreeInfo.ParentsIds.Last(), copyNumberParent2}
+            };
+            for (int counter = 0; counter < pedigreeInfo.OffspringsIds.Count; counter++)
+            {
+                sampleCopyNumbers.Add(pedigreeInfo.OffspringsIds[counter],
+                    offspringGtStates[counter].CountsA + offspringGtStates[counter].CountsB);
             }
             return sampleCopyNumbers;
         }
@@ -653,9 +657,10 @@ namespace CanvasPedigreeCaller
         {
             const double maxCoverageMultiplier = 3.0;
             var singleSampleLikelihoods = new SampleList<Dictionary<int, double>>();
+            var density = new Dictionary<int, double>();
+
             foreach (var sampleId in canvasSegments.SampleIds)
             {
-                var density = new Dictionary<int, double>();
                 foreach (int copyNumber in Enumerable.Range(0, CallerParameters.MaximumCopyNumber))
                 {
                     double currentLikelihood =
@@ -775,6 +780,7 @@ namespace CanvasPedigreeCaller
             Parent = 1,
             Proband = 2
         }
+
         public static SampleList<Kinship> ReadPedigreeFile(string pedigreeFile)
         {
             var kinships = new SampleList<Kinship>();
@@ -815,23 +821,16 @@ namespace CanvasPedigreeCaller
             var numerator = 0.0;
             var denominator = 0.0;
             const int diploidState = 2;
-            var names = copyNumbersLikelihoods.SampleNames;
-            int parent1Index = names.IndexOf(parentIDs.First().ToString());
-            int parent2Index = names.IndexOf(parentIDs.Last().ToString());
-            int probandIndex = names.IndexOf(probandId.ToString());
-
-            var probandMarginalProbabilities = copyNumbersLikelihoods.GetMarginalProbability(CallerParameters.MaximumCopyNumber, probandId.ToString());
-            int probandCopyNumber = GetCnState(canvasSegments, probandId, CallerParameters.MaximumCopyNumber);
+            var probandCopyNumber = canvasSegments[probandId].CopyNumber;
+            var probandMarginalProbabilities = copyNumbersLikelihoods.GetMarginalProbability(CallerParameters.MaximumCopyNumber, probandId);
             double normalization = probandMarginalProbabilities[probandCopyNumber] + probandMarginalProbabilities[diploidState];
             double probandMarginalAlt = probandMarginalProbabilities[probandCopyNumber] / normalization;
 
-            foreach (var copyNumberIndex in copyNumbersLikelihoods.Indices.Where(x => x[probandIndex] == probandCopyNumber))
+            foreach (var copyNumberIndex in copyNumbersLikelihoods.CopyNumbers.Where(copyNumbers=> copyNumbers[probandId] == canvasSegments[probandId].CopyNumber))
             {
-                if (!(copyNumbersLikelihoods.GetJointProbability(copyNumberIndex.ToArray()) > 0.0))
-                    continue;
-                double holder = copyNumbersLikelihoods.GetJointProbability(copyNumberIndex);
+                double holder = copyNumbersLikelihoods.GetJointLikelihood(copyNumberIndex);
                 denominator += holder;
-                if (copyNumberIndex[parent1Index] == diploidState && copyNumberIndex[parent2Index] == diploidState)
+                if (copyNumberIndex[parentIDs.First()] == diploidState && copyNumberIndex[parentIDs.Last()] == diploidState)
                     numerator += holder;
             }
 
