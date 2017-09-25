@@ -18,7 +18,7 @@ namespace CanvasPedigreeCaller
             double haploidMean = meanCoverage / 2.0;
             double mafVariance = meanMafCoverage * 2.5;
             double variance = meanCoverage * 2.5;
-
+            _maxCoverage = maxCoverage;
 
             for (int copyNumber = 0; copyNumber  < numCnStates; copyNumber ++)
             {

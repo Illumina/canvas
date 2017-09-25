@@ -14,7 +14,7 @@ namespace CanvasPedigreeCaller
 
         public CopyNumbersLikelihoods(SampleList<Dictionary<int, double>> singleSampleLikelihoods, int nCopyNumbers)
         {
-            this.SingleSampleLikelihoods = singleSampleLikelihoods;
+            SingleSampleLikelihoods = singleSampleLikelihoods;
             CopyNumbers = new List<SampleList<int>>();
             var dimensionSizes = Enumerable.Repeat(nCopyNumbers, singleSampleLikelihoods.Count()).ToArray();
             _jointLikelihoods = Array.CreateInstance(typeof(double), dimensionSizes);
