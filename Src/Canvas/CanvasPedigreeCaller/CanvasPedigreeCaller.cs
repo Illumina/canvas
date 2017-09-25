@@ -657,10 +657,11 @@ namespace CanvasPedigreeCaller
         {
             const double maxCoverageMultiplier = 3.0;
             var singleSampleLikelihoods = new SampleList<Dictionary<int, double>>();
-            var density = new Dictionary<int, double>();
 
             foreach (var sampleId in canvasSegments.SampleIds)
             {
+                var density = new Dictionary<int, double>();
+
                 foreach (int copyNumber in Enumerable.Range(0, CallerParameters.MaximumCopyNumber))
                 {
                     double currentLikelihood =
