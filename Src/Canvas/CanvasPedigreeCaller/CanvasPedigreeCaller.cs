@@ -83,7 +83,7 @@ namespace CanvasPedigreeCaller
                 segment.AddAlleles(CanvasIO.ReadFrequenciesWrapper(_logger, new FileLocation(variantFrequencyFiles[fileCounter]), segment.IntervalsByChromosome));
                 sampleSegments.Add(sampleId, segment);
                 var sampleInfo = SamplesInfo.GetSampleInfo(segment, ploidyBedPath, CallerParameters.NumberOfTrimmedBins, sampleId);
-                var copyNumberModel = new CopyNumberModel(CallerParameters.MaximumCopyNumber, sampleInfo);
+                var copyNumberModel = new CopyNumberModel(CallerParameters.MaximumCopyNumber, sampleInfo.MeanMafCoverage, sampleInfo.MeanCoverage, sampleInfo.MaxCoverage);
                 samplesInfo.Add(sampleId, sampleInfo);
                 copyNumberModels.Add(sampleId, copyNumberModel);
                 variantFrequencyFilesSampleList.Add(sampleId, variantFrequencyFiles[fileCounter]);
@@ -310,8 +310,7 @@ namespace CanvasPedigreeCaller
         {
             foreach (var sampleId in canvasSegments.SampleIds)
             {
-                double singleSampleQualityScore = GetSingleSampleQualityScore(copyNumberLikelihoods.SingleSampleLikelihoods[sampleId], copyNumbers[sampleId], sampleId.ToString());
-                canvasSegments[sampleId].QScore = singleSampleQualityScore;
+                canvasSegments[sampleId].QScore = GetSingleSampleQualityScore(copyNumberLikelihoods.SingleSampleLikelihoods[sampleId], copyNumbers[sampleId], sampleId.ToString());
                 canvasSegments[sampleId].CopyNumber = copyNumbers[sampleId];
                 if (canvasSegments[sampleId].QScore < QualityFilterThreshold)
                     canvasSegments[sampleId].Filter = $"q{QualityFilterThreshold}";
@@ -654,10 +653,9 @@ namespace CanvasPedigreeCaller
         {
             const double maxCoverageMultiplier = 3.0;
             var singleSampleLikelihoods = new SampleList<Dictionary<int, double>>();
-            var density = new Dictionary<int, double>();
-
             foreach (var sampleId in canvasSegments.SampleIds)
             {
+                var density = new Dictionary<int, double>();
                 foreach (int copyNumber in Enumerable.Range(0, CallerParameters.MaximumCopyNumber))
                 {
                     double currentLikelihood =
@@ -775,7 +773,7 @@ namespace CanvasPedigreeCaller
         {
             Other = 0,
             Parent = 1,
-            Proband = 2,
+            Proband = 2
         }
         public static SampleList<Kinship> ReadPedigreeFile(string pedigreeFile)
         {
