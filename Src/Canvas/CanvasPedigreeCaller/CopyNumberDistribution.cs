@@ -1,72 +1,52 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using Isas.Framework.DataTypes;
+using Isas.Framework.DataTypes.Maps;
 
 namespace CanvasPedigreeCaller
 {
-    public class CopyNumbersLikelihood
+    public class CopyNumbersLikelihoods
     {
-        private readonly Array _probability;
-        public List<string> SampleNames { get; }
-        public int Count { get; }
-        public List<int[]> Indices { get; }
-        public double MaximalLikelihood;
+        private readonly Array _jointLikelihoods;
+        public List<ISampleMap<int>> CopyNumbers { get; }
+        public double MaximalLikelihood { get; set; }
+        public ISampleMap<Dictionary<int, double>> SingleSampleLikelihoods { get; }
 
-        public CopyNumbersLikelihood(int nCopyNumbers, List<string> names)
+        public CopyNumbersLikelihoods(ISampleMap<Dictionary<int, double>> singleSampleLikelihoods, int nCopyNumbers)
         {
-            int nSamples = names.Count;
-            if (names.Count != nSamples)
-                throw new ArgumentException($"List of sample names must be equal to the number of samples ");
-            var dimensionSizes = Enumerable.Repeat(nCopyNumbers, nSamples).ToArray();
-            _probability = Array.CreateInstance(typeof(double), dimensionSizes);
-            SampleNames = names;
-            Count = nSamples;
-            Indices = new List<int[]>();
+            SingleSampleLikelihoods = singleSampleLikelihoods;
+            CopyNumbers = new List<ISampleMap<int>>();
+            var dimensionSizes = Enumerable.Repeat(nCopyNumbers, singleSampleLikelihoods.Count()).ToArray();
+            _jointLikelihoods = Array.CreateInstance(typeof(double), dimensionSizes);
         }
 
-        private int GetSampleIndex(string sampleName)
+        public double GetJointLikelihood(ISampleMap<int> copyNumbers)
         {
-            return SampleNames.FindIndex(x => x.StartsWith(sampleName));
+            var copyNumberIndices = copyNumbers.Values.ToArray();
+            return Convert.ToDouble(_jointLikelihoods.GetValue(copyNumberIndices));
         }
 
-        public double GetJointProbability(int [] indices)
+        public void SetJointLikelihood(double probability, ISampleMap<int> copyNumbers, bool skipIndex = false)
         {
-            return Convert.ToDouble(_probability.GetValue(indices));
+            var copyNumberIndices = copyNumbers.Values.ToArray();
+            _jointLikelihoods.SetValue(probability, copyNumberIndices);
+            if (!skipIndex && !CopyNumbers.Exists(index => index.SequenceEqual(copyNumbers)) && probability > 0)
+                CopyNumbers.Add(copyNumbers);
         }
 
-        public void SetJointProbability(double probability, int[] indices, bool skipIndex = false)
+        public List<double> GetMarginalProbability(int nCopies, SampleId sampleId)
         {
-            _probability.SetValue(probability, indices);
-            if (!skipIndex && !Indices.Exists(index => index.SequenceEqual(indices)) && probability > 0)
-                Indices.Add(indices);
-        }
-
-        public List<double> GetMarginalProbability(int nCopies, string sampleName)
-        {
-            int sampleIndex = GetSampleIndex(sampleName);
             var marginalProbability = Enumerable.Repeat(0.0, nCopies).ToList();
 
             foreach (int copyNumberState in Enumerable.Range(0, nCopies))
             {
-                foreach (var copyNumberIndex in Indices.Where(x => x[sampleIndex] == copyNumberState).ToArray())
-                {
-                    if (GetJointProbability(copyNumberIndex.ToArray()) > 0.0)
-                        marginalProbability[copyNumberState] += GetJointProbability(copyNumberIndex.ToArray());
-                }
+                foreach (var copyNumberIndex in CopyNumbers.Where(x => x[sampleId] == copyNumberState).ToArray())
+
+                    marginalProbability[copyNumberState] += GetJointLikelihood(copyNumberIndex);
             }
             return marginalProbability;
         }
 
-
-
-        public void SetConditionalProbability(int nSamples, int nCopies, string sampleName, int sampleCnValue, double sampleMarginalProbability)
-        {
-            int sampleIndex = GetSampleIndex(sampleName);
-
-            foreach (var index in Indices.Where(x => x[sampleIndex] == sampleCnValue))
-            {
-                SetJointProbability(GetJointProbability(index.ToArray()) / sampleMarginalProbability, index.ToArray(), true);
-            }
-        }
     }
 }

@@ -238,7 +238,7 @@ namespace CanvasCommon
             }
         }
 
-        public static void WriteMultiSampleSegments(string outVcfPath, SampleMap<List<CanvasSegment>> segments, List<double> diploidCoverage,
+        public static void WriteMultiSampleSegments(string outVcfPath, ISampleMap<List<CanvasSegment>> segments, List<double> diploidCoverage,
         string wholeGenomeFastaDirectory, List<string> sampleNames, List<string> extraHeaders, List<PloidyInfo> ploidies, int qualityThreshold,
         bool isPedigreeInfoSupplied = true, int? denovoQualityThreshold = null)
         {

@@ -115,14 +115,17 @@ namespace CanvasPedigreeCaller
                 }
             }
 
+            if (pedigreeFile != null)
+            {
+                if (!File.Exists(pedigreeFile))
+                {
+                    Console.WriteLine($"CanvasPedigreeCaller.exe: File {pedigreeFile} does not exist! Exiting.");
+                    return 1;
+                }
+            }
+
             var parameterconfigFile = new FileLocation(parameterconfigPath);
             caller.CallerParameters = Deserialize<PedigreeCallerParameters>(parameterconfigFile);
-
-            if (pedigreeFile.IsNullOrEmpty())
-            {
-                Console.WriteLine($"CanvasPedigreeCaller.exe: pedigreeFile option is not used! Calling CNV variants without family information.");
-                return caller.CallVariants(variantFrequencyFiles, segmentFiles, outDir, ploidyBedPath, referenceFolder, sampleNames, commonCNVsbedPath);
-            }
 
             if (qScoreThreshold.HasValue & qScoreThreshold > 0 & qScoreThreshold < caller.CallerParameters.MaxQscore)
             {
@@ -137,13 +140,7 @@ namespace CanvasPedigreeCaller
                 Console.WriteLine($"CanvasPedigreeCaller.exe: Using user-supplied de novo quality score threshold {qScoreThreshold}.");
             }
 
-            if (!File.Exists(pedigreeFile))
-            {
-                Console.WriteLine($"CanvasPedigreeCaller.exe: File {pedigreeFile} does not exist! Exiting.");
-                return 1;
-            }
-
-            return caller.CallVariantsInPedigree(variantFrequencyFiles, segmentFiles, outDir, ploidyBedPath, referenceFolder, sampleNames, commonCNVsbedPath, pedigreeFile);
+            return caller.CallVariants(variantFrequencyFiles, segmentFiles, outDir, ploidyBedPath, referenceFolder, sampleNames, commonCNVsbedPath, pedigreeFile);
         }
 
         private static T Deserialize<T>(IFileLocation path)
