@@ -2,33 +2,34 @@
 using System.Collections.Generic;
 using System.Linq;
 using Isas.Framework.DataTypes;
+using Isas.Framework.DataTypes.Maps;
 
 namespace CanvasPedigreeCaller
 {
     public class CopyNumbersLikelihoods
     {
         private readonly Array _jointLikelihoods;
-        public List<SampleList<int>> CopyNumbers { get; }
+        public List<ISampleMap<int>> CopyNumbers { get; }
         public double MaximalLikelihood { get; set; }
-        public SampleList<Dictionary<int, double>> SingleSampleLikelihoods { get; }
+        public ISampleMap<Dictionary<int, double>> SingleSampleLikelihoods { get; }
 
-        public CopyNumbersLikelihoods(SampleList<Dictionary<int, double>> singleSampleLikelihoods, int nCopyNumbers)
+        public CopyNumbersLikelihoods(ISampleMap<Dictionary<int, double>> singleSampleLikelihoods, int nCopyNumbers)
         {
             SingleSampleLikelihoods = singleSampleLikelihoods;
-            CopyNumbers = new List<SampleList<int>>();
+            CopyNumbers = new List<ISampleMap<int>>();
             var dimensionSizes = Enumerable.Repeat(nCopyNumbers, singleSampleLikelihoods.Count()).ToArray();
             _jointLikelihoods = Array.CreateInstance(typeof(double), dimensionSizes);
         }
 
-        public double GetJointLikelihood(SampleList<int> copyNumbers)
+        public double GetJointLikelihood(ISampleMap<int> copyNumbers)
         {
-            var copyNumberIndices = copyNumbers.SampleData.ToArray();
+            var copyNumberIndices = copyNumbers.Values.ToArray();
             return Convert.ToDouble(_jointLikelihoods.GetValue(copyNumberIndices));
         }
 
-        public void SetJointLikelihood(double probability, SampleList<int> copyNumbers, bool skipIndex = false)
+        public void SetJointLikelihood(double probability, ISampleMap<int> copyNumbers, bool skipIndex = false)
         {
-            var copyNumberIndices = copyNumbers.SampleData.ToArray();
+            var copyNumberIndices = copyNumbers.Values.ToArray();
             _jointLikelihoods.SetValue(probability, copyNumberIndices);
             if (!skipIndex && !CopyNumbers.Exists(index => index.SequenceEqual(copyNumbers)) && probability > 0)
                 CopyNumbers.Add(copyNumbers);

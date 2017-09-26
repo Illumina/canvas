@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using CanvasCommon;
 using Isas.Framework.DataTypes;
+using Isas.Framework.DataTypes.Maps;
 using MathNet.Numerics.Distributions;
 
 namespace CanvasPedigreeCaller
@@ -30,7 +31,7 @@ namespace CanvasPedigreeCaller
             TransitionMatrix = transitionMatrix;
         }
 
-        public static PedigreeInfo GetPedigreeInfo(SampleList<CanvasPedigreeCaller.Kinship> kinships, PedigreeCallerParameters callerParameters)
+        public static PedigreeInfo GetPedigreeInfo(ISampleMap<CanvasPedigreeCaller.Kinship> kinships, PedigreeCallerParameters callerParameters)
         {
             var parentsIds = kinships.Where(kin => kin.Value.Equals(CanvasPedigreeCaller.Kinship.Parent)).Select(kin => kin.Key)
                 .ToList();

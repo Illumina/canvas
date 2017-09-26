@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using Illumina.Common.FileSystem;
 using Isas.Framework.DataTypes;
+using Isas.Framework.DataTypes.Maps;
 using Isas.SequencingFiles;
 
 namespace CanvasCommon
@@ -237,15 +238,15 @@ namespace CanvasCommon
             }
         }
 
-        public static void WriteMultiSampleSegments(string outVcfPath, SampleList<List<CanvasSegment>> segments, List<double> diploidCoverage,
+        public static void WriteMultiSampleSegments(string outVcfPath, ISampleMap<List<CanvasSegment>> segments, List<double> diploidCoverage,
         string wholeGenomeFastaDirectory, List<string> sampleNames, List<string> extraHeaders, List<PloidyInfo> ploidies, int qualityThreshold,
         bool isPedigreeInfoSupplied = true, int? denovoQualityThreshold = null)
         {
             using (BgzipOrStreamWriter writer = new BgzipOrStreamWriter(outVcfPath))
             {
-                var genome = WriteVcfHeader(segments.SampleData.First(), diploidCoverage.Average(), wholeGenomeFastaDirectory, sampleNames,
+                var genome = WriteVcfHeader(segments.Values.First(), diploidCoverage.Average(), wholeGenomeFastaDirectory, sampleNames,
                     extraHeaders, qualityThreshold, writer, denovoQualityThreshold);
-                WriteVariants(segments.SampleData.ToList(), ploidies, genome, writer, isPedigreeInfoSupplied, denovoQualityThreshold);
+                WriteVariants(segments.Values.ToList(), ploidies, genome, writer, isPedigreeInfoSupplied, denovoQualityThreshold);
             }
         }
     }
