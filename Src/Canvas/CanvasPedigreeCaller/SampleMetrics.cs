@@ -8,11 +8,11 @@ using Illumina.Common;
 
 namespace CanvasPedigreeCaller
 {
-    public class SamplesInfo
+    public class SampleMetrics
     {
 
-        private SamplesInfo(double meanCoverage, double meanMafCoverage, double variance, 
-            double mafVariance, int maxCoverage, PloidyInfo ploidy, SampleId id)
+        private SampleMetrics(double meanCoverage, double meanMafCoverage, double variance, 
+            double mafVariance, int maxCoverage, PloidyInfo ploidy)
         {
             MeanCoverage = meanCoverage;
             MeanMafCoverage = meanMafCoverage;
@@ -20,11 +20,9 @@ namespace CanvasPedigreeCaller
             MafVariance = mafVariance;
             MaxCoverage = maxCoverage;
             Ploidy = ploidy;
-            SampleId = id;
         }
 
         public double MeanCoverage { get; }
-        public SampleId SampleId { get; }
         public double MeanMafCoverage { get; }
         public double Variance { get; }
         public double MafVariance { get; }
@@ -35,7 +33,7 @@ namespace CanvasPedigreeCaller
         {
             return Ploidy?.GetReferenceCopyNumber(segment) ?? 2;
         }
-        public static SamplesInfo GetSampleInfo(Segments segments, string ploidyBedPath, int numberOfTrimmedBins, SampleId id)
+        public static SampleMetrics GetSampleInfo(Segments segments, string ploidyBedPath, int numberOfTrimmedBins, SampleId id)
         {
             double meanMafCoverage = segments.AllSegments.SelectMany(x => x.Balleles.TotalCoverage).Average();
             double variance = Utilities.Variance(segments.AllSegments.Select(x => x.TruncatedMedianCount(numberOfTrimmedBins)).ToList());
@@ -46,7 +44,7 @@ namespace CanvasPedigreeCaller
             var ploidy = new PloidyInfo();
             if (!ploidyBedPath.IsNullOrEmpty() && File.Exists(ploidyBedPath))
                 ploidy = PloidyInfo.LoadPloidyFromVcfFile(ploidyBedPath, id.ToString());
-            return new SamplesInfo(meanCoverage, meanMafCoverage, variance, mafVariance, maxCoverage, ploidy, id);
+            return new SampleMetrics(meanCoverage, meanMafCoverage, variance, mafVariance, maxCoverage, ploidy);
         }
     }
 }

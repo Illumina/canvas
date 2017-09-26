@@ -60,7 +60,7 @@ namespace CanvasPedigreeCaller
                 { "c|config=",        $"parameter configuration path (default {parameterconfigPath})",                                  v => parameterconfigPath = v}
             };
 
-                var extraArgs = p.Parse(args);
+            var extraArgs = p.Parse(args);
 
             if (extraArgs.Count > 0)
             {
@@ -111,6 +111,15 @@ namespace CanvasPedigreeCaller
                 if (!File.Exists(commonCNVsbedPath))
                 {
                     Console.WriteLine($"CanvasPedigreeCaller.exe: File {commonCNVsbedPath} does not exist! Exiting.");
+                    return 1;
+                }
+            }
+
+            if (pedigreeFile != null)
+            {
+                if (!File.Exists(pedigreeFile))
+                {
+                    Console.WriteLine($"CanvasPedigreeCaller.exe: File {pedigreeFile} does not exist! Exiting.");
                     return 1;
                 }
             }

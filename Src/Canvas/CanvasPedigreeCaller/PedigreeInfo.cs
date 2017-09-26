@@ -12,9 +12,8 @@ namespace CanvasPedigreeCaller
     {
         public List<SampleId> ParentsIds { get; }
         public List<SampleId> OffspringIds { get; }
-
         public List<Genotype> ParentalGenotypes { get; }
-        public List<List<Genotype>> OffspringsGenotypes { get; }
+        public List<List<Genotype>> OffspringGenotypes { get; }
         public double[][] TransitionMatrix { get; }
 
         public PedigreeInfo()
@@ -22,12 +21,12 @@ namespace CanvasPedigreeCaller
 
         }
 
-        private PedigreeInfo(List<SampleId> offspringIds, List<SampleId> parentsIds, List<Genotype> parentalGenotypes, List<List<Genotype>> offspringsGenotypes, double[][] transitionMatrix)
+        private PedigreeInfo(List<SampleId> offspringIds, List<SampleId> parentsIds, List<Genotype> parentalGenotypes, List<List<Genotype>> offspringGenotypes, double[][] transitionMatrix)
         {
             OffspringIds = offspringIds;
             ParentsIds = parentsIds;
             ParentalGenotypes = parentalGenotypes;
-            OffspringsGenotypes = offspringsGenotypes;
+            OffspringGenotypes = offspringGenotypes;
             TransitionMatrix = transitionMatrix;
         }
 
