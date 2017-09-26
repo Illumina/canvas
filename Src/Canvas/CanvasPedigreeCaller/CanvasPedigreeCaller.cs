@@ -476,7 +476,7 @@ namespace CanvasPedigreeCaller
             {
                 foreach (int copyNumberParent2 in copyNumbersRange)
                 {
-                    foreach (var offspringGtStates in pedigreeInfo.OffspringsGenotypes)
+                    foreach (var offspringGtStates in pedigreeInfo.OffspringGenotypes)
                     {
                         double currentLikelihood = parent1Likelihood[copyNumberParent1] * parent2Likelihood[copyNumberParent2];
                         for (var counter = 0; counter < pedigreeInfo.OffspringIds.Count; counter++)
