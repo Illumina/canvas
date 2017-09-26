@@ -95,7 +95,7 @@ namespace CanvasPedigreeCaller
             var genotypes = GenerateGenotypeCombinations(CallerParameters.MaximumCopyNumber);
             PedigreeInfo pedigreeInfo = null;
             if (kinships.SampleData.Any(kin => kin == Kinship.Proband))
-                pedigreeInfo = new PedigreeInfo(kinships, CallerParameters);
+                pedigreeInfo = PedigreeInfo.GetPedigreeInfo(kinships, CallerParameters);
             Parallel.ForEach(
                 segmentsForVariantCalling,
                 new ParallelOptions
@@ -315,7 +315,7 @@ namespace CanvasPedigreeCaller
                     canvasSegments[sampleId].Filter = $"q{QualityFilterThreshold}";
             }
             if (pedigreeInfo != null)
-                SetDenovoQualityScores(canvasSegments, pedigreeMembersInfo, pedigreeInfo.ParentsIds, pedigreeInfo.OffspringsIds, copyNumberLikelihoods);
+                SetDenovoQualityScores(canvasSegments, pedigreeMembersInfo, pedigreeInfo.ParentsIds, pedigreeInfo.OffspringIds, copyNumberLikelihoods);
         }
 
         private void SetDenovoQualityScores(SampleList<CanvasSegment> canvasSegments, SampleList<SamplesInfo> samplesInfo, List<SampleId> parentIDs, List<SampleId> offspringIDs,
@@ -479,9 +479,9 @@ namespace CanvasPedigreeCaller
                     foreach (var offspringGtStates in pedigreeInfo.OffspringsGenotypes)
                     {
                         double currentLikelihood = parent1Likelihood[copyNumberParent1] * parent2Likelihood[copyNumberParent2];
-                        for (var counter = 0; counter < pedigreeInfo.OffspringsIds.Count; counter++)
+                        for (var counter = 0; counter < pedigreeInfo.OffspringIds.Count; counter++)
                         {
-                            var child = pedigreeInfo.OffspringsIds[counter];
+                            var child = pedigreeInfo.OffspringIds[counter];
                             int copyNumberChild = Math.Min(offspringGtStates[counter].CountsA + offspringGtStates[counter].CountsB,
                                     CallerParameters.MaximumCopyNumber - 1);
                             currentLikelihood *= pedigreeInfo.TransitionMatrix[copyNumberParent1][offspringGtStates[counter].CountsA] *
@@ -510,9 +510,9 @@ namespace CanvasPedigreeCaller
                 {pedigreeInfo.ParentsIds.First(), copyNumberParent1},
                 {pedigreeInfo.ParentsIds.Last(), copyNumberParent2}
             };
-            for (int counter = 0; counter < pedigreeInfo.OffspringsIds.Count; counter++)
+            for (int counter = 0; counter < pedigreeInfo.OffspringIds.Count; counter++)
             {
-                sampleCopyNumbers.Add(pedigreeInfo.OffspringsIds[counter],
+                sampleCopyNumbers.Add(pedigreeInfo.OffspringIds[counter],
                     offspringGtStates[counter].CountsA + offspringGtStates[counter].CountsB);
             }
             return sampleCopyNumbers;
@@ -555,7 +555,7 @@ namespace CanvasPedigreeCaller
                 {
                     var bestChildGtStates = new List<Genotype>();
                     double currentLikelihood = 1;
-                    foreach (SampleId child in pedigreeInfo.OffspringsIds)
+                    foreach (SampleId child in pedigreeInfo.OffspringIds)
                     {
                         int childCopyNumber = canvasSegments[child].CopyNumber;
                         bool isInheritedCnv = !canvasSegments[child].DqScore.HasValue;
@@ -579,7 +579,7 @@ namespace CanvasPedigreeCaller
                         AssignMCC(canvasSegments[pedigreeInfo.ParentsIds.First()], model[pedigreeInfo.ParentsIds.First()], genotypes, parent1GtStates, parent1CopyNumber);
                         AssignMCC(canvasSegments[pedigreeInfo.ParentsIds.Last()], model[pedigreeInfo.ParentsIds.Last()], genotypes, parent2GtStates, parent2CopyNumber);
                         var counter = 0;
-                        foreach (SampleId child in pedigreeInfo.OffspringsIds)
+                        foreach (SampleId child in pedigreeInfo.OffspringIds)
                         {
                             if (bestChildGtStates[counter] == null) continue;
                             int childCopyNumber = canvasSegments[child].CopyNumber;

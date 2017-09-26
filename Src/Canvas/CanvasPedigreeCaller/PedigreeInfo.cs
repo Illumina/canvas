@@ -11,32 +11,47 @@ namespace CanvasPedigreeCaller
     class PedigreeInfo
     {
         public List<SampleId> ParentsIds { get; }
-        public List<SampleId> OffspringsIds { get; }
+        public List<SampleId> OffspringIds { get; }
 
         public List<Genotype> ParentalGenotypes { get; }
         public List<List<Genotype>> OffspringsGenotypes { get; }
         public double[][] TransitionMatrix { get; }
 
-        public PedigreeInfo(SampleList<CanvasPedigreeCaller.Kinship> kinships, PedigreeCallerParameters callerParameters)
+        public PedigreeInfo()
         {
-            ParentsIds = kinships.Where(kin => kin.Value.Equals(CanvasPedigreeCaller.Kinship.Parent)).Select(kin => kin.Key)
+
+        }
+
+        private PedigreeInfo(List<SampleId> offspringIds, List<SampleId> parentsIds, List<Genotype> parentalGenotypes, List<List<Genotype>> offspringsGenotypes, double[][] transitionMatrix)
+        {
+            OffspringIds = offspringIds;
+            ParentsIds = parentsIds;
+            ParentalGenotypes = parentalGenotypes;
+            OffspringsGenotypes = offspringsGenotypes;
+            TransitionMatrix = transitionMatrix;
+        }
+
+        public static PedigreeInfo GetPedigreeInfo(SampleList<CanvasPedigreeCaller.Kinship> kinships, PedigreeCallerParameters callerParameters)
+        {
+            var parentsIds = kinships.Where(kin => kin.Value.Equals(CanvasPedigreeCaller.Kinship.Parent)).Select(kin => kin.Key)
                 .ToList();
-            OffspringsIds = kinships.Where(kin => kin.Value.Equals(CanvasPedigreeCaller.Kinship.Proband)).Select(kin => kin.Key)
+            var offspringIds = kinships.Where(kin => kin.Value.Equals(CanvasPedigreeCaller.Kinship.Proband)).Select(kin => kin.Key)
                 .ToList();
-            ParentalGenotypes = GenerateParentalGenotypes(callerParameters.MaximumCopyNumber);
-            OffspringsGenotypes =
-                new List<List<Genotype>>(Convert.ToInt32(Math.Pow(ParentalGenotypes.Count, OffspringsIds.Count)));
-            GenerateOffspringGenotypes(OffspringsGenotypes, ParentalGenotypes, OffspringsIds.Count, new List<Genotype>());
-            if (OffspringsGenotypes.Count > callerParameters.MaxNumOffspringGenotypes)
+            var parentalGenotypes = GenerateParentalGenotypes(callerParameters.MaximumCopyNumber);
+            var offspringsGenotypes =
+                new List<List<Genotype>>(Convert.ToInt32(Math.Pow(parentalGenotypes.Count, offspringIds.Count)));
+            GenerateOffspringGenotypes(offspringsGenotypes, parentalGenotypes, offspringIds.Count, new List<Genotype>());
+            if (offspringsGenotypes.Count > callerParameters.MaxNumOffspringGenotypes)
             {
-                OffspringsGenotypes.Shuffle();
-                OffspringsGenotypes = OffspringsGenotypes.Take(callerParameters.MaxNumOffspringGenotypes).ToList();
+                offspringsGenotypes.Shuffle();
+                offspringsGenotypes = offspringsGenotypes.Take(callerParameters.MaxNumOffspringGenotypes).ToList();
             }
-            TransitionMatrix = GetTransitionMatrix(callerParameters.MaximumCopyNumber);
+            var transitionMatrix = GetTransitionMatrix(callerParameters.MaximumCopyNumber);
+            return new PedigreeInfo(offspringIds, parentsIds, parentalGenotypes, offspringsGenotypes, transitionMatrix);
         }
 
 
-        public List<Genotype> GenerateParentalGenotypes(int numCnStates)
+        public static List<Genotype> GenerateParentalGenotypes(int numCnStates)
         {
             var genotypes = new List<Genotype>();
             for (int cn = 0; cn < numCnStates; cn++)
@@ -49,7 +64,7 @@ namespace CanvasPedigreeCaller
             return genotypes;
         }
 
-        public void GenerateOffspringGenotypes(List<List<Genotype>> offspringGenotypes, List<Genotype> genotypeSet,
+        public static void GenerateOffspringGenotypes(List<List<Genotype>> offspringGenotypes, List<Genotype> genotypeSet,
             int nOffsprings, List<Genotype> partialGenotypes)
         {
             if (nOffsprings > 0)
@@ -66,7 +81,7 @@ namespace CanvasPedigreeCaller
             }
         }
 
-        public double[][] GetTransitionMatrix(int numCnStates)
+        public static double[][] GetTransitionMatrix(int numCnStates)
         {
             double[][] transitionMatrix = Utilities.MatrixCreate(numCnStates, numCnStates);
             transitionMatrix[0][0] = 1.0;
