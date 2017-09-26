@@ -400,9 +400,14 @@ namespace EvaluateCNV
                     if (includePassingOnly && variant.Filters != "PASS") continue;
                     if (DQscoreThreshold.HasValue)
                     {
-                        if (!variant.InfoFields.ContainsKey("DQ") && CN != 2)
+                        var genotypeColumn = variant.GenotypeColumns.Single();
+                        if (!genotypeColumn.Keys.Contains("DQ"))
                             continue;
-                        if (variant.InfoFields.ContainsKey("DQ") && double.Parse(variant.InfoFields["DQ"]) < DQscoreThreshold.Value)
+                        if (variant.Identifier.Contains("REF"))
+                            continue;
+                        if (genotypeColumn["DQ"] == ".")
+                            continue;
+                        if (Double.Parse(genotypeColumn["DQ"]) < DQscoreThreshold.Value)
                             continue;
                     }
                     yield return new CNVCall(variant.ReferenceName, variant.ReferencePosition, end, CN, variant.VariantAlleles.First());

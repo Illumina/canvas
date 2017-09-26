@@ -1,6 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
-  <PropertyGroup>    
+  <PropertyGroup>
     <TargetFramework>netcoreapp1.1</TargetFramework>
     <GenerateAssemblyTitleAttribute>false</GenerateAssemblyTitleAttribute>
     <GenerateAssemblyDescriptionAttribute>false</GenerateAssemblyDescriptionAttribute>
@@ -14,20 +14,26 @@
     <Platforms>x64</Platforms>
   </PropertyGroup>
 
+  <PropertyGroup>
+    <WarningsAsErrors>NU1605</WarningsAsErrors>
+  </PropertyGroup>
+
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" />
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" />
 
   <ItemGroup>
-    <PackageReference Include="Illumina.Common" Version="4.5.0.298" />
-    <PackageReference Include="Isas.Framework.UnitTestUtilities" Version="7.8.4.572" />
-    <PackageReference Include="Isas.SequencingFiles" Version="5.4.0-O00382CANV-104" />
+    <PackageReference Include="Castle.Core" Version="4.1.1" />
+    <PackageReference Include="Illumina.Common" Version="4.9.0.317" />
+    <PackageReference Include="Isas.Framework.UnitTestUtilities" Version="7.11.1.596" />
+    <PackageReference Include="Isas.SequencingFiles" Version="5.4.0.383" />
     <PackageReference Include="JetBrains.Annotations" Version="11.0.0" />
-    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="15.0.0" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="15.3.0" />
     <PackageReference Include="NSubstitute" Version="2.0.3" />
     <PackageReference Include="protobuf-net" Version="2.3.2" />
-    <PackageReference Include="xunit" Version="2.2.0" />
-    <PackageReference Include="xunit.runner.visualstudio" Version="2.2.0" />
+    <PackageReference Include="xunit" Version="2.3.0-beta5-build3769" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.3.0-beta5-build3769" />
+    <DotNetCliToolReference Include="dotnet-xunit" Version="2.3.0-beta5-build3769" />
   </ItemGroup>
 
   <ItemGroup>

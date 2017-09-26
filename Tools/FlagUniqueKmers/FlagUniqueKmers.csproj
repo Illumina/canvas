@@ -21,9 +21,9 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" />
 
   <ItemGroup>
-    <PackageReference Include="Illumina.Common" Version="4.5.0.298" />
-    <PackageReference Include="Isas.Framework" Version="7.8.4.572" />
-    <PackageReference Include="Isas.SequencingFiles" Version="5.4.0-O00382CANV-104" />
+    <PackageReference Include="Illumina.Common" Version="4.9.0.317" />
+    <PackageReference Include="Isas.Framework" Version="7.11.1.596" />
+    <PackageReference Include="Isas.SequencingFiles" Version="5.4.0.383" />
     <PackageReference Include="protobuf-net" Version="2.3.2" />
   </ItemGroup>
 
