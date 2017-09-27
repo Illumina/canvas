@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using CanvasCommon;
@@ -22,7 +23,7 @@ namespace CanvasTest
             using (coverageFile)
             using (var writer = new BgzipOrStreamWriter(coverageFile))
             {
-                normalizedCoverageWriter.Write(segments, writer, 1);
+                //normalizedCoverageWriter.Write(segments, writer, 1);
             }
 
             Assert.Empty(coverageFile.ToString());
@@ -46,7 +47,7 @@ namespace CanvasTest
             using (coverageFile)
             using (var writer = new BgzipOrStreamWriter(coverageFile))
             {
-                normalizedCoverageWriter.Write(segments, writer, 1);
+                //normalizedCoverageWriter.Write(segments, writer, 1);
             }
 
             Assert.Equal("chr1\t0\t1\t2\nchr1\t1\t2\t3\n", coverageFile.ToString());
@@ -70,7 +71,7 @@ namespace CanvasTest
             using (coverageFile)
             using (var writer = new BgzipOrStreamWriter(coverageFile))
             {
-                normalizedCoverageWriter.Write(segments, writer, 2);
+                //normalizedCoverageWriter.Write(segments, writer, 2);
             }
 
             Assert.Equal("chr1\t0\t1\t1\nchr1\t1\t2\t1.5\n", coverageFile.ToString());
@@ -79,17 +80,29 @@ namespace CanvasTest
 
     public class NormalizedCoverageWriter
     {
-        public void Write(IEnumerable<CanvasSegment> segments, BgzipOrStreamWriter coverageFile, double normalizationFactor)
+        public void Write(IEnumerable<CanvasSegment> segments, IFileLocation coverageFile)
         {
-            var normalizedBins = segments.SelectMany(segment => segment.GenomicBins.Select(bin => (new ReferenceInterval(chromosome, BedI))))
+            var normalizationFactor = ComputeWeightedNormalizationFactor(segments);
+        }
+
+        /// <summary>
+        /// iterate through segments keeping a weighted sum of the normalization factor
+        /// </summary>
+        /// <param name="segments"></param>
+        /// <returns></returns>
+        private double ComputeWeightedNormalizationFactor(IEnumerable<CanvasSegment> segments)
+        {
+            var weightedSum = 0d;
             foreach (var segment in segments)
             {
-                foreach (var bin in segment.GenomicBins)
-                {
-                    coverageFile.WriteLine(
-                        $"{bin.GenomicBin.Chromosome}\t{bin.GenomicBin.Interval.Start}\t{bin.GenomicBin.Interval.End}\t{bin.Count / normalizationFactor}");
-                }
+                var normalizationFactor = ComputeNormalizationFactor(segment);
             }
+            return weightedSum;
+        }
+
+        private double ComputeNormalizationFactor(CanvasSegment segment)
+        {
+            throw new NotSupportedException();
         }
     }
 
