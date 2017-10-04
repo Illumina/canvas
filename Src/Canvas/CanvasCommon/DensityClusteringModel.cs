@@ -35,8 +35,7 @@ namespace CanvasCommon
         // SK: MaxClusterNumber not used
         public const int MaxClusterNumber = 7; // too many clusters suggest incorrect cluster partitioning 
 
-        private const double NeighborRateLow = 0.02;
-        private const double NeighborRateHigh = 0.03;
+        private const double NeighborRate = 0.02;
 
         #endregion
 
@@ -126,54 +125,14 @@ namespace CanvasCommon
         /// <summary>
         /// neighborRate = average of number of elements of comb per row that are less than dc minus 1 divided by size
         /// </summary>
-        public double EstimateDc(double neighborRateLow = NeighborRateLow, double neighborRateHigh = NeighborRateHigh)
+
+        public double EstimateDc(double neighborRate = NeighborRate)
         {
-            double tmpLow = Double.MaxValue;
-            double tmpHigh = Double.MinValue;
-            /** SK: The logic is incorrect
-                for Distance = {6,5,4,3,2,1}, tmpLow and tmpHigh would 1 and Double.MinValue, respectively
-            **/
-            foreach (double? element in this.Distance)
-            {
-                if (element.HasValue && element < tmpLow && element > 0)
-                    tmpLow = (double) element;
-                if (element.HasValue && element > tmpHigh)
-                    tmpHigh = (double) element;
-            }
-
-            double neighborRate = 0;
-            int segmentsLength = GetSegmentsForClustering(this.Segments); // SK: method name is confusing
-            double distanceThreshold = 0;
-            var iterations = 0;
-            var maxIterations = 100000;
-            while (true)
-            {
-                double neighborRateTmp = 0;
-                distanceThreshold = (tmpLow + tmpHigh) / 2; // SK: tmpHigh could be incorrect here
-                foreach (double? element in this.Distance)
-                    if (element.HasValue && element < distanceThreshold)
-                        neighborRateTmp++;
-                if (distanceThreshold > 0) // SK: can this value <= 0?
-                    neighborRateTmp = neighborRateTmp + segmentsLength; // ?
-
-                neighborRate = (neighborRateTmp * 2 / segmentsLength - 1) / segmentsLength; // ??
-
-                if (neighborRate >= neighborRateLow && neighborRate <= neighborRateHigh)
-                    break;
-
-                if (neighborRate < neighborRateLow)
-                {
-                    tmpLow = distanceThreshold;
-                }
-                else
-                {
-                    tmpHigh = distanceThreshold;
-                }
-                iterations++;
-                if (iterations > maxIterations)
-                    break;
-            }
-            return distanceThreshold;
+            var distances = Distance.Where(x => x.HasValue).ToArray();
+            if (distances.Length == 0)
+                throw new Exception("Empty Distance Array!");
+            // convert distances to float[] as GetPercentileNoNaNs method not implemented for double[]
+            return MathSupportFunctions.GetPercentileNoNaNs(distances.Select(x => (float)x).ToArray(), 0, distances.Length - 1, (Decimal)(1 - neighborRate));
         }
 
         // SK: this is the method used in the paper but not used in CANVAS?
@@ -213,7 +172,7 @@ namespace CanvasCommon
             {
                 if (this.Distance[index].HasValue)
                 {
-                    double combOver = (double) this.Distance[index] / distanceThreshold;
+                    double combOver = (double)this.Distance[index] / distanceThreshold;
                     double negSq = Math.Pow(combOver, 2) * -1;
                     half[index] = Math.Exp(negSq);
                 }
@@ -284,7 +243,7 @@ namespace CanvasCommon
                         i++;
                         continue;
                     }
-                    double newValue = (double) this.Distance[i];
+                    double newValue = (double)this.Distance[i];
                     double rhoRow = this.Rho[row]; // this is very confusing. better not to use row and col
                     double rhoCol = this.Rho[col];
 
@@ -392,7 +351,7 @@ namespace CanvasCommon
                                 if (tmpDistance < minDistance)
                                 {
                                     minRhoElementIndex = tmpIndex;
-                                    minDistance = (double) tmpDistance;
+                                    minDistance = (double)tmpDistance;
                                 }
                             }
                         }
