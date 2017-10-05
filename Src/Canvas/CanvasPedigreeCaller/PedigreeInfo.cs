@@ -35,7 +35,7 @@ namespace CanvasPedigreeCaller
         {
             var parentsIds = kinships.Where(kin => kin.Value.Equals(CanvasPedigreeCaller.Kinship.Parent)).Select(kin => kin.Key)
                 .ToList();
-            var offspringIds = kinships.Where(kin => kin.Value.Equals(CanvasPedigreeCaller.Kinship.Proband)).Select(kin => kin.Key)
+            var offspringIds = kinships.Where(kin => kin.Value.Equals(CanvasPedigreeCaller.Kinship.Proband) || kin.Value.Equals(CanvasPedigreeCaller.Kinship.Sibling)).Select(kin => kin.Key)
                 .ToList();
             var parentalGenotypes = GenerateParentalGenotypes(callerParameters.MaximumCopyNumber);
             var offspringsGenotypes =

@@ -780,7 +780,8 @@ namespace CanvasPedigreeCaller
         {
             Other = 0,
             Parent = 1,
-            Proband = 2
+            Sibling = 2,
+            Proband = 3
         }
 
         public static ISampleMap<Kinship> ReadPedigreeFile(string pedigreeFile)
@@ -800,6 +801,8 @@ namespace CanvasPedigreeCaller
                         kinships.Add(new SampleId(fields[1]), Kinship.Parent);
                     else if (proband == "affected")
                         kinships.Add(new SampleId(fields[1]), Kinship.Proband);
+                    else if (maternalId != "0" && paternallId != "0" && proband != "affected")
+                        kinships.Add(new SampleId(fields[1]), Kinship.Sibling);
                     else
                         Console.WriteLine($"Unused pedigree member: {row}");
                 }
