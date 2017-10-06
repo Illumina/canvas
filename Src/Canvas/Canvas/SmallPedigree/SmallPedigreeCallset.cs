@@ -22,10 +22,12 @@ namespace Canvas.SmallPedigree
     {
         public AnalysisDetails AnalysisDetails { get; }
         public List<PedigreeSample> PedigreeSample;
-        public SmallPedigreeCallset(List<PedigreeSample> pedigreeSample, AnalysisDetails analysisDetails)
+        public bool HasPedigreeStructure { get; }
+        public SmallPedigreeCallset(List<PedigreeSample> pedigreeSample, AnalysisDetails analysisDetails, bool hasPedigreeStructure)
         {
             PedigreeSample = pedigreeSample;
             AnalysisDetails = analysisDetails;
+            HasPedigreeStructure = hasPedigreeStructure;
         }
 
         internal IEnumerable<string> NormalBinnedPath
