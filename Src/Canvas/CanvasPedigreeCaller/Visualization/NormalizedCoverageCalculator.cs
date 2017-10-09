@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using CanvasCommon;
+using Illumina.Common;
 using Illumina.Common.MathUtilities;
 using Isas.SequencingFiles.Bed;
 
@@ -10,6 +11,9 @@ namespace CanvasPedigreeCaller.Visualization
     {
         public IEnumerable<BedGraphEntry> Calculate(IReadOnlyList<CanvasSegment> segments)
         {
+            if (segments.Empty())
+                return Enumerable.Empty<BedGraphEntry>();
+
             var normalizationFactor = ComputeNormalizationFactor(segments);
             return segments.SelectMany(segment => GetBedGraphEntries(segment, normalizationFactor));
         }
@@ -27,10 +31,15 @@ namespace CanvasPedigreeCaller.Visualization
 
         private static double ComputeNormalizationFactor(IReadOnlyList<CanvasSegment> segments)
         {
-            var segmentsForEstimation = GetSegmentsForNormalizationEstimation(segments);
+            var segmentsForEstimation = GetSegmentsForNormalizationEstimation(segments)
+                .Where(segment => segment.CopyNumber != 0).ToReadOnlyList();
+            if (!segmentsForEstimation.Any())
+            {
+                // if all segments have CN=0 then use normalization factor of 0
+                return 0;
+            }
             var weightedNormalizationFactors = segmentsForEstimation
                 .AsParallel()
-                .Where(segment => segment.CopyNumber != 0)
                 .Select(segment => (GetNormalizationFactor(segment), GetWeight(segment)));
             return WeightedMedian.Median(weightedNormalizationFactors);
         }

@@ -1,10 +1,7 @@
 ﻿using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using CanvasCommon;
-using CanvasPedigreeCaller;
 using CanvasPedigreeCaller.Visualization;
-using Isas.SequencingFiles;
 using Xunit;
 
 namespace CanvasTest
@@ -15,11 +12,34 @@ namespace CanvasTest
         public void NormalizedCoverageCalculator_NoBins_ReturnsNoBedGraphEntries()
         {
             var calculator = new NormalizedCoverageCalculator();
-            var segments = new List<CanvasSegment>();
+            var segments = Enumerable.Empty<CanvasSegment>().ToList();
 
             var results = calculator.Calculate(segments);
 
             Assert.Empty(results);
+        }
+
+        [Fact]
+        public void NormalizedCoverageCalculator_OneSegmentOneBinCopyNumberZero_ReturnsBedGraphEntryWithZeroCoverage()
+        {
+            var calculator = new NormalizedCoverageCalculator();
+            var segments = new List<CanvasSegment>
+            {
+                new CanvasSegment("chr1", 0, 1, new List<SampleGenomicBin>
+                {
+                    new SampleGenomicBin("chr1", 0, 1, 3f)
+                })
+                {
+                    CopyNumber = 0
+                }
+            };
+
+            var result = calculator.Calculate(segments).Single();
+
+            Assert.Equal("chr1", result.Chromosome);
+            Assert.Equal(0, result.Interval.Start);
+            Assert.Equal(1, result.Interval.End);
+            Assert.Equal(0, result.Value);
         }
 
         [Fact]
@@ -28,45 +48,82 @@ namespace CanvasTest
             var calculator = new NormalizedCoverageCalculator();
             var segments = new List<CanvasSegment>
             {
-                new CanvasSegment("chr1", 1, 2, new List<SampleGenomicBin>
+                new CanvasSegment("chr1", 0, 1, new List<SampleGenomicBin>
                 {
-                    new SampleGenomicBin("chr1", 0, 1, 3f),
+                    new SampleGenomicBin("chr1", 0, 1, 3f)
                 })
                 {
                     CopyNumber = 2
                 }
             };
 
-            var results = calculator.Calculate(segments).ToList();
-            var result = results.Single();
+            var result = calculator.Calculate(segments).Single();
 
-            Assert.Equal("chr1", result.Chromosome);
-            Assert.Equal(0, result.Interval.Start);
-            Assert.Equal(2, results.Single().Value);
+            Assert.Equal(2, result.Value);
         }
 
         [Fact]
-        public void NormalizedCoverageCalculator_NoNormalization2_WritesBinCounts()
+        public void NormalizedCoverageCalculator_OneSegmentPassOneSegmentFiltered_ReturnsBedGraphEntriesNormalizedByPassingSegmentCopyNumber()
         {
-            var normalizedCoverageCalculator = new NormalizedCoverageCalculator();
+            var calculator = new NormalizedCoverageCalculator();
             var segments = new List<CanvasSegment>
             {
+                new CanvasSegment("chr1", 0, 1, new List<SampleGenomicBin>
+                {
+                    new SampleGenomicBin("chr1",0, 1, 3f)
+                })
+                {
+                    CopyNumber = 1,
+                    Filter = "PASS"
+                },
                 new CanvasSegment("chr1", 1, 2, new List<SampleGenomicBin>
                 {
-                    new SampleGenomicBin("chr1", 0, 1, 2f),
-                    new SampleGenomicBin("chr1", 1, 2, 3f),
+                    new SampleGenomicBin("chr1", 1, 2, 6f)
                 })
+                {
+                    CopyNumber = 10,
+                    Filter = "Filtered"
+                }
             };
 
-            var coverageFile = new StringWriter();
-            coverageFile.NewLine = "\n";
-            using (coverageFile)
-            using (var writer = new BgzipOrStreamWriter(coverageFile))
-            {
-                //normalizedCoverageWriter.Write(segments, writer, 2);
-            }
+            var results = calculator.Calculate(segments).ToList();
 
-            Assert.Equal("chr1\t0\t1\t1\nchr1\t1\t2\t1.5\n", coverageFile.ToString());
+            Assert.Equal(2, results.Count);
+            Assert.Equal(1, results[0].Value);
+            Assert.Equal(2, results[1].Value);
+        }
+
+        [Fact]
+        public void NormalizedCoverageCalculator_TwoSegmentsPassingEqualWeighting_ReturnsBedGraphEntriesNormalizedByMedianCopyNumber()
+        {
+            var calculator = new NormalizedCoverageCalculator();
+            var segments = new List<CanvasSegment>
+            {
+                new CanvasSegment("chr1", 0, 1, new List<SampleGenomicBin>
+                {
+                    new SampleGenomicBin("chr1", 0, 1, 4f)
+                })
+                {
+                    CopyNumber = 3,
+                    Filter = "PASS"
+                },
+                new CanvasSegment("chr1", 1, 2, new List<SampleGenomicBin>
+                {
+                    new SampleGenomicBin("chr1", 1, 2, 8f)
+                })
+                {
+                    CopyNumber = 2,
+                    Filter = "PASS"
+                }
+            };
+
+            var results = calculator.Calculate(segments).ToList();
+
+            Assert.Equal(2, results.Count);
+
+            // normalization factor is average of 3/4 and 2/8 = 0.5 
+            Assert.Equal(2, results[0].Value);
+            Assert.Equal(4, results[1].Value);
         }
     }
 }

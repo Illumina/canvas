@@ -1104,8 +1104,8 @@ namespace Canvas
                 commandLine.AppendFormat("-v \"{0}\" ", callset.Sample.VfSummaryPath);
                 commandLine.AppendFormat("-n \"{0}\" ", callset.Sample.SampleName);
             }
-            var vcf = callsets.AnalysisDetails.OutputFolder.GetFileLocation("CNV.vcf.gz");
-            commandLine.Append($"-o \"{vcf}\" ");
+            var outDir = callsets.AnalysisDetails.OutputFolder;
+            commandLine.Append($"-o \"{outDir}\" ");
             commandLine.AppendFormat("-r \"{0}\" ", callsets.AnalysisDetails.WholeGenomeFastaFolder);
             if (haveTrio)
             {

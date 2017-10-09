@@ -3,10 +3,15 @@ using System.Collections.Generic;
 using System.IO;
 using Newtonsoft.Json;
 using System.Linq;
+using CanvasPedigreeCaller.Visualization;
 using Illumina.Common;
 using Illumina.Common.FileSystem;
+using Isas.ClassicBioinfoTools.KentUtils;
 using Isas.Framework.Logging;
+using Isas.Framework.Settings;
 using Isas.Framework.Utilities;
+using Isas.Framework.WorkManagement;
+using Isas.Framework.WorkManagement.CommandBuilding;
 using Isas.SequencingFiles;
 
 namespace CanvasPedigreeCaller
@@ -146,9 +151,19 @@ namespace CanvasPedigreeCaller
                 throw new IlluminaException($"De novo quality score threshold must be >= 0 and < {callerParameters.MaxQscore}");
 
             var logger = new Logger(new[] { Console.Out }, new[] { Console.Error });
-            var caller = new CanvasPedigreeCaller(logger, qScoreThreshold, dqScoreThreshold, callerParameters);
+            var settings = new SettingsProcessor();
+            var outputDirectory = new DirectoryLocation(outDir);
+            var workerDirectory = new DirectoryLocation(Utilities.GetAssemblyFolder(typeof(CanvasPedigreeCaller)));
+            var commandManager = new CommandManager(new ExecutableProcessor(settings, logger, workerDirectory));
+            var workManager = WorkManagerFactory.GetWorkManager(logger, outputDirectory, settings);
+            var bigWigConverter = new FormatConverterFactory(logger, workManager, commandManager).GetBedGraphToBigWigConverter();
+            var referenceGenome = new ReferenceGenomeFactory().GetReferenceGenome(new DirectoryLocation(referenceFolder));
+            var genomeMetadata = referenceGenome.GenomeMetadata;
+            var coverageBigWigWriter = new CoverageBigWigWriterFactory(bigWigConverter, genomeMetadata).Create();
+            var caller = new CanvasPedigreeCaller(logger, qScoreThreshold, dqScoreThreshold, callerParameters, coverageBigWigWriter);
 
-            return caller.CallVariants(variantFrequencyFiles, segmentFiles, outDir, ploidyBedPath, referenceFolder, sampleNames, commonCNVsbedPath, pedigreeFile);
+            var outVcf = outputDirectory.GetFileLocation("CNV.vcf.gz");
+            return caller.CallVariants(variantFrequencyFiles, segmentFiles, outVcf, ploidyBedPath, referenceFolder, sampleNames, commonCNVsbedPath, pedigreeFile);
         }
 
         private static T Deserialize<T>(IFileLocation path)
