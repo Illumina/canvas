@@ -141,8 +141,7 @@ namespace CanvasPedigreeCaller
             }
 
             var logger = new Logger(new[] { Console.Out }, new[] { Console.Error });
-            var referenceGenome = new ReferenceGenomeFactory().GetReferenceGenome(new DirectoryLocation(referenceFolder));
-            var caller = new CanvasPedigreeCaller(logger, qScoreThreshold, dqScoreThreshold, callerParameters, referenceGenome);
+            var caller = new CanvasPedigreeCaller(logger, qScoreThreshold, dqScoreThreshold, callerParameters);
 
             return caller.CallVariants(variantFrequencyFiles, segmentFiles, outDir, ploidyBedPath, referenceFolder, sampleNames, commonCNVsbedPath, pedigreeFile);
         }

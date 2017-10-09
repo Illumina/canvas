@@ -43,12 +43,10 @@ namespace CanvasPedigreeCaller
         public PedigreeCallerParameters CallerParameters { get; }
         protected double MedianCoverageThreshold = 4;
         private readonly ILogger _logger;
-        private readonly IReferenceGenome _referenceGenome;
 
-        public CanvasPedigreeCaller(ILogger logger, int qualityFilterThreshold, int deNovoQualityFilterThreshold, PedigreeCallerParameters callerParameters, IReferenceGenome referenceGenome)
+        public CanvasPedigreeCaller(ILogger logger, int qualityFilterThreshold, int deNovoQualityFilterThreshold, PedigreeCallerParameters callerParameters)
         {
             _logger = logger;
-            _referenceGenome = referenceGenome;
             QualityFilterThreshold = qualityFilterThreshold;
             DeNovoQualityFilterThreshold = deNovoQualityFilterThreshold;
             CallerParameters = callerParameters;
