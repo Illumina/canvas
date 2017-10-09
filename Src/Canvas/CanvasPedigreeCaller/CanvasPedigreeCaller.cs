@@ -36,16 +36,22 @@ namespace CanvasPedigreeCaller
     class CanvasPedigreeCaller
     {
         #region Members
-
-        public int QualityFilterThreshold { get; set; } = 7;
-        public int DeNovoQualityFilterThreshold { get; set; } = 20;
-        public PedigreeCallerParameters CallerParameters { get; set; }
+        public const int DefaultQualityFilterThreshold = 7;
+        public const int DefaultDeNovoQualityFilterThreshold = 20;
+        public int QualityFilterThreshold { get; }
+        public int DeNovoQualityFilterThreshold { get; }
+        public PedigreeCallerParameters CallerParameters { get; }
         protected double MedianCoverageThreshold = 4;
         private readonly ILogger _logger;
+        private readonly IReferenceGenome _referenceGenome;
 
-        public CanvasPedigreeCaller(ILogger logger)
+        public CanvasPedigreeCaller(ILogger logger, int qualityFilterThreshold, int deNovoQualityFilterThreshold, PedigreeCallerParameters callerParameters, IReferenceGenome referenceGenome)
         {
             _logger = logger;
+            _referenceGenome = referenceGenome;
+            QualityFilterThreshold = qualityFilterThreshold;
+            DeNovoQualityFilterThreshold = deNovoQualityFilterThreshold;
+            CallerParameters = callerParameters;
         }
 
         #endregion

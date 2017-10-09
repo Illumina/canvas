@@ -7,6 +7,7 @@ using Illumina.Common;
 using Illumina.Common.FileSystem;
 using Isas.Framework.Logging;
 using Isas.Framework.Utilities;
+using Isas.SequencingFiles;
 
 namespace CanvasPedigreeCaller
 {
@@ -37,13 +38,11 @@ namespace CanvasPedigreeCaller
             string referenceFolder = null;
             var sampleNames = new List<string>();
             bool needHelp = false;
-            int? qScoreThreshold = null;
-            int? dqScoreThreshold = null;
+            int? qScoreThresholdOption = null;
+            int? dqScoreThresholdOption = null;
             string commonCNVsbedPath = null;
             string parameterconfigPath = Path.Combine(Utilities.GetAssemblyFolder(typeof(Program)), "PedigreeCallerParameters.json");
-            var logger = new Logger(new[] { Console.Out }, new[] { Console.Error });
-            var caller = new CanvasPedigreeCaller(logger);
-
+            
             var p = new OptionSet()
             {
                 { "i|infile=",        "file containing bins, their counts, and assigned segments (obtained from CanvasPartition.exe)",  v => segmentFiles.Add(v) },
@@ -54,9 +53,9 @@ namespace CanvasPedigreeCaller
                 { "f|pedigree=",      "relationship within pedigree (parents/proband)",                                                 v => pedigreeFile = v },
                 { "p|ploidyBed=",     "bed file specifying reference ploidy (e.g. for sex chromosomes) (optional)",                     v => ploidyBedPath = v },
                 { "h|help",           "show this message and exit",                                                                     v => needHelp = v != null },
-                { "q|qscore=",        $"quality filter threshold (default {caller.QualityFilterThreshold})",                            v => qScoreThreshold = int.Parse(v) },
+                { "q|qscore=",        $"quality filter threshold (default {CanvasPedigreeCaller.DefaultQualityFilterThreshold})",                            v => qScoreThresholdOption = int.Parse(v) },
                 { "commoncnvs=",      "bed file with common CNVs (always include these intervals into segmentation results)",           v => commonCNVsbedPath = v },
-                { "d|dqscore=",       $"de novo quality filter threshold (default {caller.DeNovoQualityFilterThreshold})",              v => dqScoreThreshold = int.Parse(v) },
+                { "d|dqscore=",       $"de novo quality filter threshold (default {CanvasPedigreeCaller.DefaultDeNovoQualityFilterThreshold})",              v => dqScoreThresholdOption = int.Parse(v) },
                 { "c|config=",        $"parameter configuration path (default {parameterconfigPath})",                                  v => parameterconfigPath = v}
             };
 
@@ -74,12 +73,12 @@ namespace CanvasPedigreeCaller
                 return 0;
             }
 
-            if (!segmentFiles.Any()  || !variantFrequencyFiles.Any() || string.IsNullOrEmpty(referenceFolder) || string.IsNullOrEmpty(outDir))
+            if (!segmentFiles.Any() || !variantFrequencyFiles.Any() || string.IsNullOrEmpty(referenceFolder) || string.IsNullOrEmpty(outDir))
             {
                 ShowHelp(p);
                 return 0;
             }
-            
+
             foreach (string segmentFile in segmentFiles)
             {
                 if (File.Exists(segmentFile)) continue;
@@ -93,7 +92,7 @@ namespace CanvasPedigreeCaller
                 Console.WriteLine($"CanvasPedigreeCaller.exe: File {variantFrequencyFile} does not exist! Exiting.");
                 return 1;
             }
-            
+
             if (!File.Exists(Path.Combine(referenceFolder, "GenomeSize.xml")))
             {
                 Console.WriteLine($"CanvasPedigreeCaller.exe: File {Path.Combine(referenceFolder, "GenomeSize.xml")} does not exist! Exiting.");
@@ -125,20 +124,25 @@ namespace CanvasPedigreeCaller
             }
 
             var parameterconfigFile = new FileLocation(parameterconfigPath);
-            caller.CallerParameters = Deserialize<PedigreeCallerParameters>(parameterconfigFile);
+            var callerParameters = Deserialize<PedigreeCallerParameters>(parameterconfigFile);
 
-            if (qScoreThreshold.HasValue & qScoreThreshold > 0 & qScoreThreshold < caller.CallerParameters.MaxQscore)
+            int qScoreThreshold = CanvasPedigreeCaller.DefaultQualityFilterThreshold;
+            if (qScoreThresholdOption.HasValue & qScoreThresholdOption > 0 & qScoreThresholdOption < callerParameters.MaxQscore)
             {
-                caller.QualityFilterThreshold = qScoreThreshold.Value;
-                Console.WriteLine($"CanvasPedigreeCaller.exe: Using user-supplied quality score threshold {qScoreThreshold}.");
+                qScoreThreshold = qScoreThresholdOption.Value;
+                Console.WriteLine($"CanvasPedigreeCaller.exe: Using user-supplied quality score threshold {qScoreThresholdOption}.");
             }
 
-
-            if (dqScoreThreshold.HasValue & dqScoreThreshold > 0 & dqScoreThreshold < caller.CallerParameters.MaxQscore)
+            int dqScoreThreshold = CanvasPedigreeCaller.DefaultDeNovoQualityFilterThreshold;
+            if (dqScoreThresholdOption.HasValue & dqScoreThresholdOption > 0 & dqScoreThresholdOption < callerParameters.MaxQscore)
             {
-                caller.DeNovoQualityFilterThreshold = dqScoreThreshold.Value;
-                Console.WriteLine($"CanvasPedigreeCaller.exe: Using user-supplied de novo quality score threshold {qScoreThreshold}.");
+                dqScoreThreshold = dqScoreThresholdOption.Value;
+                Console.WriteLine($"CanvasPedigreeCaller.exe: Using user-supplied de novo quality score threshold {qScoreThresholdOption}.");
             }
+
+            var logger = new Logger(new[] { Console.Out }, new[] { Console.Error });
+            var referenceGenome = new ReferenceGenomeFactory().GetReferenceGenome(new DirectoryLocation(referenceFolder));
+            var caller = new CanvasPedigreeCaller(logger, qScoreThreshold, dqScoreThreshold, callerParameters, referenceGenome);
 
             return caller.CallVariants(variantFrequencyFiles, segmentFiles, outDir, ploidyBedPath, referenceFolder, sampleNames, commonCNVsbedPath, pedigreeFile);
         }
