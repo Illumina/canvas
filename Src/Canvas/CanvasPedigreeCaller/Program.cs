@@ -42,7 +42,7 @@ namespace CanvasPedigreeCaller
             int? dqScoreThresholdOption = null;
             string commonCNVsbedPath = null;
             string parameterconfigPath = Path.Combine(Utilities.GetAssemblyFolder(typeof(Program)), "PedigreeCallerParameters.json");
-            
+
             var p = new OptionSet()
             {
                 { "i|infile=",        "file containing bins, their counts, and assigned segments (obtained from CanvasPartition.exe)",  v => segmentFiles.Add(v) },
@@ -127,15 +127,19 @@ namespace CanvasPedigreeCaller
             var callerParameters = Deserialize<PedigreeCallerParameters>(parameterconfigFile);
 
             int qScoreThreshold = CanvasPedigreeCaller.DefaultQualityFilterThreshold;
-            if (qScoreThresholdOption.HasValue & qScoreThresholdOption > 0 & qScoreThresholdOption < callerParameters.MaxQscore)
+            if (qScoreThresholdOption.HasValue)
             {
+                if (qScoreThresholdOption < 0 || qScoreThresholdOption >= callerParameters.MaxQscore)
+                    throw new IlluminaException($"Quality score threshold must be >= 0 and < {callerParameters.MaxQscore}");
                 qScoreThreshold = qScoreThresholdOption.Value;
                 Console.WriteLine($"CanvasPedigreeCaller.exe: Using user-supplied quality score threshold {qScoreThresholdOption}.");
             }
 
             int dqScoreThreshold = CanvasPedigreeCaller.DefaultDeNovoQualityFilterThreshold;
-            if (dqScoreThresholdOption.HasValue & dqScoreThresholdOption > 0 & dqScoreThresholdOption < callerParameters.MaxQscore)
+            if (dqScoreThresholdOption.HasValue)
             {
+                if (dqScoreThresholdOption < 0 || dqScoreThresholdOption >= callerParameters.MaxQscore)
+                    throw new IlluminaException($"De novo quality score threshold must be >= 0 and < {callerParameters.MaxQscore}");
                 dqScoreThreshold = dqScoreThresholdOption.Value;
                 Console.WriteLine($"CanvasPedigreeCaller.exe: Using user-supplied de novo quality score threshold {qScoreThresholdOption}.");
             }
