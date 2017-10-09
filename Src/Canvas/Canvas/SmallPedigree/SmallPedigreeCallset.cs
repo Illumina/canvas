@@ -22,13 +22,22 @@ namespace Canvas.SmallPedigree
     {
         public AnalysisDetails AnalysisDetails { get; }
         public List<PedigreeSample> PedigreeSample;
-        public bool HasPedigreeStructure { get; }
-        public SmallPedigreeCallset(List<PedigreeSample> pedigreeSample, AnalysisDetails analysisDetails, bool hasPedigreeStructure)
+        public SmallPedigreeCallset(List<PedigreeSample> pedigreeSample, AnalysisDetails analysisDetails)
         {
             PedigreeSample = pedigreeSample;
             AnalysisDetails = analysisDetails;
-            HasPedigreeStructure = hasPedigreeStructure;
         }
+
+        public bool HasPedigreeStructure => HasTrio || HasQuad;
+
+        private bool HasTrio => PedigreeSample.Any(x => x.SampleType == SampleType.Proband) &&
+                                PedigreeSample.Any(x => x.SampleType == SampleType.Father) &&
+                                PedigreeSample.Any(x => x.SampleType == SampleType.Mother);
+
+        private bool HasQuad => PedigreeSample.Any(x => x.SampleType == SampleType.Proband) &&
+                                PedigreeSample.Any(x => x.SampleType == SampleType.Father) &&
+                                PedigreeSample.Any(x => x.SampleType == SampleType.Mother) &&
+                                PedigreeSample.Any(x => x.SampleType == SampleType.Sibling);
 
         internal IEnumerable<string> NormalBinnedPath
         {

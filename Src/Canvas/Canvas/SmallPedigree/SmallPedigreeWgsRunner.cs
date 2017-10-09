@@ -55,22 +55,7 @@ namespace Canvas.SmallPedigree
                 SmallPedigreeOptions.MultiSamplePloidyVcf,
                 SmallPedigreeOptions.CommonCnvsBed);
 
-            // Pedigree checks
-            if (callSets.Count(x => x.SampleType == SampleType.Proband) > 1)
-                throw new Exception("There can only be one proband in a pedigree.");
-
-            bool haveProband = callSets.Any(x => x.SampleType == SampleType.Proband);
-            bool haveMother = callSets.Any(x => x.SampleType == SampleType.Mother);
-            bool haveFather = callSets.Any(x => x.SampleType == SampleType.Father);
-            bool haveSibling = callSets.Any(x => x.SampleType == SampleType.Sibling);
-            bool haveOther = callSets.Any(x => x.SampleType == SampleType.Other);
-
-            bool haveTrio = haveProband && haveMother && haveFather;
-            bool haveQuad = haveProband && haveMother && haveFather && haveSibling;
-
-            if ((haveTrio || haveQuad) && haveOther)
-                throw new Exception("SampleType other with trio or quad is not currently supported");
-            return new SmallPedigreeCallset(callSets, analysisDetails, haveTrio);
+            return new SmallPedigreeCallset(callSets, analysisDetails);
         }
     }
 }

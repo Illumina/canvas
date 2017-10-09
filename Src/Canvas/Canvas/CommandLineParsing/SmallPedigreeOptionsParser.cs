@@ -64,8 +64,37 @@ namespace Canvas.CommandLineParsing
             IParsingResult<SmallPedigreeOptions> failedResult;
             if (HasMoreThanOneSameSampleType(bams, out failedResult))
                 return failedResult;
+            if (HasUnavailableSampleTypeCombinations(bams, out failedResult))
+                return failedResult;
             return ParsingResult<SmallPedigreeOptions>.SuccessfulResult(new SmallPedigreeOptions(bams, commonCnvsBed, bAlleleSites.Result, bAlleleSites.MatchedOption.Equals(PopulationBAlleleSites), ploidyVcf));
         }
+
+        private bool HasUnavailableSampleTypeCombinations(List<SmallPedigreeSampleOptions> bams, out IParsingResult<SmallPedigreeOptions> failedResult)
+        {
+            failedResult = null;
+            if (bams.Count(x => x.SampleType == CommandLineParsing.SampleType.Proband) > 1)
+            {
+                failedResult = ParsingResult<SmallPedigreeOptions>.FailedResult("There can only be one proband in a pedigree.");
+                return true;
+            }
+
+            bool haveProband = bams.Any(x => x.SampleType == CommandLineParsing.SampleType.Proband);
+            bool haveMother = bams.Any(x => x.SampleType == CommandLineParsing.SampleType.Mother);
+            bool haveFather = bams.Any(x => x.SampleType == CommandLineParsing.SampleType.Father);
+            bool haveSibling = bams.Any(x => x.SampleType == CommandLineParsing.SampleType.Sibling);
+            bool haveOther = bams.Any(x => x.SampleType == CommandLineParsing.SampleType.Other);
+
+            bool haveTrio = haveProband && haveMother && haveFather;
+            bool haveQuad = haveProband && haveMother && haveFather && haveSibling;
+
+            if ((haveTrio || haveQuad) && haveOther)
+            {
+                failedResult = ParsingResult<SmallPedigreeOptions>.FailedResult("SampleType other with trio or quad is not currently supported");
+                return true;
+            }
+            return false;
+        }
+
 
         private bool HasMoreThanOneSameSampleType(List<SmallPedigreeSampleOptions> bams, out IParsingResult<SmallPedigreeOptions> failedResult)
         {
