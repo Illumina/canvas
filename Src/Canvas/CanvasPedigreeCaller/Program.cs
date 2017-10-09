@@ -129,20 +129,21 @@ namespace CanvasPedigreeCaller
             int qScoreThreshold = CanvasPedigreeCaller.DefaultQualityFilterThreshold;
             if (qScoreThresholdOption.HasValue)
             {
-                if (qScoreThresholdOption < 0 || qScoreThresholdOption >= callerParameters.MaxQscore)
-                    throw new IlluminaException($"Quality score threshold must be >= 0 and < {callerParameters.MaxQscore}");
                 qScoreThreshold = qScoreThresholdOption.Value;
                 Console.WriteLine($"CanvasPedigreeCaller.exe: Using user-supplied quality score threshold {qScoreThresholdOption}.");
             }
+            if (qScoreThreshold < 0 || qScoreThreshold >= callerParameters.MaxQscore)
+                throw new IlluminaException($"Quality score threshold must be >= 0 and < {callerParameters.MaxQscore}");
 
             int dqScoreThreshold = CanvasPedigreeCaller.DefaultDeNovoQualityFilterThreshold;
             if (dqScoreThresholdOption.HasValue)
             {
-                if (dqScoreThresholdOption < 0 || dqScoreThresholdOption >= callerParameters.MaxQscore)
-                    throw new IlluminaException($"De novo quality score threshold must be >= 0 and < {callerParameters.MaxQscore}");
+
                 dqScoreThreshold = dqScoreThresholdOption.Value;
                 Console.WriteLine($"CanvasPedigreeCaller.exe: Using user-supplied de novo quality score threshold {qScoreThresholdOption}.");
             }
+            if (dqScoreThreshold < 0 || dqScoreThreshold >= callerParameters.MaxQscore)
+                throw new IlluminaException($"De novo quality score threshold must be >= 0 and < {callerParameters.MaxQscore}");
 
             var logger = new Logger(new[] { Console.Out }, new[] { Console.Error });
             var caller = new CanvasPedigreeCaller(logger, qScoreThreshold, dqScoreThreshold, callerParameters);
