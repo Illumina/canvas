@@ -1,12 +1,15 @@
-using System;
 using System.Collections.Generic;
 using Illumina.Common;
-using Illumina.Common.FileSystem;
 using Isas.SequencingFiles;
 using Isas.SequencingFiles.Bed;
 
-namespace CanvasPedigreeCaller
+namespace CanvasPedigreeCaller.Visualization
 {
+    /// <summary> 
+    /// A class to write out lines in bedgraph format
+    /// Decimal values are written out with at most 29 digits of precision (trailing zeros ommitted)
+    /// Any necessary rounding should be done on the BedGraphEntry objects before writing them out
+    /// </summary>
     public class BedGraphWriter
     {
         private readonly BgzipOrStreamWriter _writer;
@@ -29,22 +32,10 @@ namespace CanvasPedigreeCaller
 
         private string GetValueAsString(decimal value)
         {
-            // decimal has at most 29 digits of precision
-            // trailing zeros will not be output
-            // any rounding should be done by the caller
             return value.ToString($"0.{new string('#', 29)}");
         }
-
-        public static void WriteLines(IFileLocation location, IEnumerable<BedGraphEntry> entries)
-        {
-            using (var streamWriter = new BgzipOrStreamWriter(location.FullName))
-            {
-                var writer = new BedGraphWriter(streamWriter);
-                writer.WriteLines(entries);
-            }
-        }
     }
-
+    
     public static class BedGraphWriterExtensions
     {
         public static void WriteLines(this BedGraphWriter writer, IEnumerable<BedGraphEntry> entries)
