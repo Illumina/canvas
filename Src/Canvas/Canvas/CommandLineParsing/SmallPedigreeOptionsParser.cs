@@ -72,12 +72,6 @@ namespace Canvas.CommandLineParsing
         private bool HasUnavailableSampleTypeCombinations(List<SmallPedigreeSampleOptions> bams, out IParsingResult<SmallPedigreeOptions> failedResult)
         {
             failedResult = null;
-            if (bams.Count(x => x.SampleType == CommandLineParsing.SampleType.Proband) > 1)
-            {
-                failedResult = ParsingResult<SmallPedigreeOptions>.FailedResult("There can only be one proband in a pedigree.");
-                return true;
-            }
-
             bool haveProband = bams.Any(x => x.SampleType == CommandLineParsing.SampleType.Proband);
             bool haveMother = bams.Any(x => x.SampleType == CommandLineParsing.SampleType.Mother);
             bool haveFather = bams.Any(x => x.SampleType == CommandLineParsing.SampleType.Father);
@@ -85,11 +79,15 @@ namespace Canvas.CommandLineParsing
             bool haveOther = bams.Any(x => x.SampleType == CommandLineParsing.SampleType.Other);
 
             bool haveTrio = haveProband && haveMother && haveFather;
-            bool haveQuad = haveProband && haveMother && haveFather && haveSibling;
 
-            if ((haveTrio || haveQuad) && haveOther)
+            if (haveTrio && haveOther)
             {
                 failedResult = ParsingResult<SmallPedigreeOptions>.FailedResult("SampleType other with trio or quad is not currently supported");
+                return true;
+            }
+            if (haveSibling && !haveProband)
+            {
+                failedResult = ParsingResult<SmallPedigreeOptions>.FailedResult("SampleType sibling without proband information is not currently supported");
                 return true;
             }
             return false;
