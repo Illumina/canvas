@@ -1098,7 +1098,7 @@ namespace Canvas
             {
                 commandLine.AppendFormat("-v \"{0}\" ", callset.Sample.VfSummaryPath);
                 commandLine.AppendFormat("-n \"{0}\" ", callset.Sample.SampleName);
-                commandLine.AppendFormat("-t \"{0}\" ", callset.SampleType);
+                commandLine.AppendFormat("-t \"{0}\" ", callset.SampleType.ToString());
             }
             var vcf = callsets.AnalysisDetails.OutputFolder.GetFileLocation("CNV.vcf.gz");
             commandLine.Append($"-o \"{vcf}\" ");
