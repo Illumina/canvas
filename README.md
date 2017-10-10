@@ -72,8 +72,10 @@ Options:
 
 #### Reference genome
 The required input files for Human reference genome builds GRCh37, hg19, and GRCh38 can be downloaded from S3 http://canvas-cnv-public.s3.amazonaws.com/. You can use the AWS CLI to download from S3:
+
 http://docs.aws.amazon.com/cli/latest/userguide/installing.html
 http://docs.aws.amazon.com/cli/latest/reference/s3/sync.html
+
 When using a custom reference genome the equivalent files need to be created. Use the FlagUniqueKmers project to generate the annotated fasta file (kmer.fa) for a custom reference genome. 
 
 ## Installation
