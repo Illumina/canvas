@@ -13,6 +13,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using Canvas.CommandLineParsing;
 using Isas.Framework.DataTypes.Maps;
 using Genotype = CanvasCommon.Genotype;
 
@@ -51,7 +52,7 @@ namespace CanvasPedigreeCaller
         #endregion
 
         internal int CallVariants(List<string> variantFrequencyFiles, List<string> segmentFiles,
-            string outVcfFile, string ploidyBedPath, string referenceFolder, List<string> sampleNames, string commonCNVsbedPath, string pedigreeFile)
+            string outVcfFile, string ploidyBedPath, string referenceFolder, List<string> sampleNames, string commonCNVsbedPath, List<SampleType> sampleTypes)
         {
             // load files
             // initialize data structures and classes
@@ -60,21 +61,20 @@ namespace CanvasPedigreeCaller
             var sampleSegments = new SampleMap<Segments>();
             var copyNumberModels = new SampleMap<CopyNumberModel>();
             var variantFrequencyFilesSampleList = new SampleMap<string>();
-            ISampleMap<Kinship> kinships;
-            if (pedigreeFile != null)
+            bool hasPedigree = sampleTypes.Any(x => x == SampleType.Proband) && sampleTypes.Any(x => x == SampleType.Father) && sampleTypes.Any(x => x == SampleType.Mother);
+            var kinships = new SampleMap<SampleType>();
+            sampleNames.Zip(sampleTypes).ForEach(kvp => kinships.Add(new SampleId(kvp.Item1), kvp.Item2));
+
+            if (hasPedigree)
             {
-                kinships = ReadPedigreeFile(pedigreeFile);
-                // In Kinship enum Proband gets the highest int value 
-                var newSampleNames = kinships.OrderByDescending(x => x.Value).Select(x => x.Key.ToString()).ToList();
+                // In Kinship enum Proband gets the lowest int value 
+                var newSampleNames = kinships.OrderBy(x => x.Value).Select(x => x.Key.ToString()).ToList();
                 var remapIndices = newSampleNames.Select(newname => sampleNames.FindIndex(name => name == newname)).ToList();
                 segmentFiles = remapIndices.Select(index => segmentFiles[index]).ToList();
                 variantFrequencyFiles = remapIndices.Select(index => variantFrequencyFiles[index]).ToList();
                 sampleNames = newSampleNames;
             }
-            else
-            {
-                kinships = sampleNames.Select(name => (new SampleId(name), Kinship.Other)).ToSampleMap();
-            }
+
 
             foreach (string sampleName in sampleNames)
             {
@@ -95,7 +95,7 @@ namespace CanvasPedigreeCaller
             var segmentsForVariantCalling = GetHighestLikelihoodSegments(segmentSetsFromCommonCnvs, samplesInfo, copyNumberModels);
             var genotypes = GenerateGenotypeCombinations(CallerParameters.MaximumCopyNumber);
             PedigreeInfo pedigreeInfo = null;
-            if (kinships.Values.Any(kin => kin == Kinship.Proband))
+            if (kinships.Values.Any(kin => kin == SampleType.Proband))
                 pedigreeInfo = PedigreeInfo.GetPedigreeInfo(kinships, CallerParameters);
             Parallel.ForEach(
                 segmentsForVariantCalling,
@@ -774,40 +774,6 @@ namespace CanvasPedigreeCaller
                 gt2Parent == gt1Offspring || gt2Parent == gt2Offspring)
                 return 0.5;
             return CallerParameters.DeNovoRate;
-        }
-
-        public enum Kinship
-        {
-            Other = 0,
-            Parent = 1,
-            Sibling = 2,
-            Proband = 3
-        }
-
-        public static ISampleMap<Kinship> ReadPedigreeFile(string pedigreeFile)
-        {
-            var kinships = new SampleMap<Kinship>();
-            using (FileStream stream = new FileStream(pedigreeFile, FileMode.Open, FileAccess.Read))
-            using (StreamReader reader = new StreamReader(stream))
-            {
-                string row;
-                while ((row = reader.ReadLine()) != null)
-                {
-                    string[] fields = row.Split('\t');
-                    string maternalId = fields[2];
-                    string paternallId = fields[3];
-                    string proband = fields[5];
-                    if (maternalId == "0" && paternallId == "0")
-                        kinships.Add(new SampleId(fields[1]), Kinship.Parent);
-                    else if (proband == "affected")
-                        kinships.Add(new SampleId(fields[1]), Kinship.Proband);
-                    else if (maternalId != "0" && paternallId != "0" && proband != "affected")
-                        kinships.Add(new SampleId(fields[1]), Kinship.Sibling);
-                    else
-                        Console.WriteLine($"Unused pedigree member: {row}");
-                }
-            }
-            return kinships;
         }
 
         public double GetSingleSampleQualityScore(Dictionary<int, double> copyNumbersLikelihoods, int cnState, string sampleName)

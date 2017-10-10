@@ -28,12 +28,6 @@ namespace Canvas.SmallPedigree
             AnalysisDetails = analysisDetails;
         }
 
-        public bool HasPedigreeStructure => HasTrio;
-
-        private bool HasTrio => PedigreeSample.Any(x => x.SampleType == SampleType.Proband) &&
-                                PedigreeSample.Any(x => x.SampleType == SampleType.Father) &&
-                                PedigreeSample.Any(x => x.SampleType == SampleType.Mother);
-
         internal IEnumerable<string> NormalBinnedPath
         {
             get { return PedigreeSample.Select(sample => Path.Combine(sample.Sample.SampleOutputFolder.FullName, $"{sample.Sample.SampleName}.normal.binned")); }

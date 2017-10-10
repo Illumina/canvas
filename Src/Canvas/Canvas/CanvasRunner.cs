@@ -1098,15 +1098,12 @@ namespace Canvas
             {
                 commandLine.AppendFormat("-v \"{0}\" ", callset.Sample.VfSummaryPath);
                 commandLine.AppendFormat("-n \"{0}\" ", callset.Sample.SampleName);
+                commandLine.AppendFormat("-t \"{0}\" ", callset.SampleType);
             }
             var vcf = callsets.AnalysisDetails.OutputFolder.GetFileLocation("CNV.vcf.gz");
             commandLine.Append($"-o \"{vcf}\" ");
             commandLine.AppendFormat("-r \"{0}\" ", callsets.AnalysisDetails.WholeGenomeFastaFolder);
-            if (callsets.HasPedigreeStructure)
-            {
-                string pedigreeFile = WritePedigreeFile(callsets);
-                commandLine.AppendFormat("-f \"{0}\" ", pedigreeFile);
-            }
+
             if (callsets.AnalysisDetails.PloidyVcf != null)
                 commandLine.AppendFormat("-p \"{0}\" ", callsets.AnalysisDetails.PloidyVcf);
 

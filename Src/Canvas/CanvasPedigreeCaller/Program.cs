@@ -32,6 +32,8 @@ namespace CanvasPedigreeCaller
             string outDir = null;
             var segmentFiles = new List<string>();
             var variantFrequencyFiles = new List<string>();
+            var sampleTypesString = new List<string>();
+            var sampleTypesEnum = new List<Canvas.CommandLineParsing.SampleType>();
             string ploidyBedPath = null;
             string pedigreeFile = null;
             string referenceFolder = null;
@@ -48,10 +50,10 @@ namespace CanvasPedigreeCaller
             {
                 { "i|infile=",        "file containing bins, their counts, and assigned segments (obtained from CanvasPartition.exe)",  v => segmentFiles.Add(v) },
                 { "v|varfile=",       "file containing variant frequencies (obtained from CanvasSNV.exe)",                              v => variantFrequencyFiles.Add(v) },
+                { "v|varfile=",       "sample types",                                                                                   v => sampleTypesString.Add(v) },
                 { "o|outdir=",        "name of output directory",                                                                       v => outDir = v },
                 { "r|reference=",     "reference genome folder that contains GenomeSize.xml",                                           v => referenceFolder = v },
                 { "n|sampleName=",    "sample name for output VCF header (optional)",                                                   v => sampleNames.Add(v)},
-                { "f|pedigree=",      "relationship within pedigree (parents/proband)",                                                 v => pedigreeFile = v },
                 { "p|ploidyBed=",     "bed file specifying reference ploidy (e.g. for sex chromosomes) (optional)",                     v => ploidyBedPath = v },
                 { "h|help",           "show this message and exit",                                                                     v => needHelp = v != null },
                 { "q|qscore=",        $"quality filter threshold (default {caller.QualityFilterThreshold})",                            v => qScoreThreshold = int.Parse(v) },
@@ -93,7 +95,19 @@ namespace CanvasPedigreeCaller
                 Console.WriteLine($"CanvasPedigreeCaller.exe: File {variantFrequencyFile} does not exist! Exiting.");
                 return 1;
             }
-            
+
+            foreach (string sampleType in sampleTypesString)
+            {
+                Canvas.CommandLineParsing.SampleType sampleTypeEnum;
+                if (Enum.TryParse(sampleType, out sampleTypeEnum))
+                    sampleTypesEnum.Add(sampleTypeEnum);
+                else
+                {
+                    Console.WriteLine($"CanvasPedigreeCaller.exe: sample type {sampleType} does not exist! Exiting.");
+                    return 1;
+                }
+            }
+
             if (!File.Exists(Path.Combine(referenceFolder, "GenomeSize.xml")))
             {
                 Console.WriteLine($"CanvasPedigreeCaller.exe: File {Path.Combine(referenceFolder, "GenomeSize.xml")} does not exist! Exiting.");
@@ -115,15 +129,6 @@ namespace CanvasPedigreeCaller
                 }
             }
 
-            if (pedigreeFile != null)
-            {
-                if (!File.Exists(pedigreeFile))
-                {
-                    Console.WriteLine($"CanvasPedigreeCaller.exe: File {pedigreeFile} does not exist! Exiting.");
-                    return 1;
-                }
-            }
-
             var parameterconfigFile = new FileLocation(parameterconfigPath);
             caller.CallerParameters = Deserialize<PedigreeCallerParameters>(parameterconfigFile);
 
@@ -140,7 +145,7 @@ namespace CanvasPedigreeCaller
                 Console.WriteLine($"CanvasPedigreeCaller.exe: Using user-supplied de novo quality score threshold {qScoreThreshold}.");
             }
 
-            return caller.CallVariants(variantFrequencyFiles, segmentFiles, outDir, ploidyBedPath, referenceFolder, sampleNames, commonCNVsbedPath, pedigreeFile);
+            return caller.CallVariants(variantFrequencyFiles, segmentFiles, outDir, ploidyBedPath, referenceFolder, sampleNames, commonCNVsbedPath, sampleTypesEnum);
         }
 
         private static T Deserialize<T>(IFileLocation path)
