@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using CanvasCommon;
 using Illumina.Common.FileSystem;
 using Isas.SequencingFiles;
+using Isas.SequencingFiles.Bed;
 
 namespace CanvasPedigreeCaller.Visualization
 {

@@ -139,7 +139,7 @@ namespace CanvasPedigreeCaller
                     samplesInfo[sampleId].MeanCoverage, referenceFolder, sampleId.ToString(), null,
                     samplesInfo[sampleId].Ploidy, QualityFilterThreshold, isPedigreeInfoSupplied, denovoQualityThreshold);
 
-                var visualizationTemp = outputFolder.GetDirectoryLocation($"VisualizationTemp{sampleId}");
+                var visualizationTemp = outputFolder.CreateSubdirectory($"VisualizationTemp{sampleId}");
                 var bigWig = _coverageBigWigWriter.Write(mergedVariantCalledSegments[sampleId], visualizationTemp);
                 bigWig.MoveTo(SingleSampleCallset.GetSingleSamplePedigreeCoverageBigWig(outputFolder, sampleId.ToString()));
             }
