@@ -3,9 +3,9 @@
     public enum SampleType
     {
         Proband,
-        Sibling,
         Mother,
         Father,
-        Other
+        Other,
+        Sibling
     }
 }
