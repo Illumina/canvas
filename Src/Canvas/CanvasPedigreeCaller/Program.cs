@@ -50,7 +50,7 @@ namespace CanvasPedigreeCaller
             {
                 { "i|infile=",        "file containing bins, their counts, and assigned segments (obtained from CanvasPartition.exe)",  v => segmentFiles.Add(v) },
                 { "v|varfile=",       "file containing variant frequencies (obtained from CanvasSNV.exe)",                              v => variantFrequencyFiles.Add(v) },
-                { "v|varfile=",       "sample types",                                                                                   v => sampleTypesString.Add(v) },
+                { "t|sampleType=",       "sample types",                                                                                v => sampleTypesString.Add(v) },
                 { "o|outdir=",        "name of output directory",                                                                       v => outDir = v },
                 { "r|reference=",     "reference genome folder that contains GenomeSize.xml",                                           v => referenceFolder = v },
                 { "n|sampleName=",    "sample name for output VCF header (optional)",                                                   v => sampleNames.Add(v)},
