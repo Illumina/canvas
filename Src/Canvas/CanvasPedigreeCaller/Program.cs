@@ -159,7 +159,7 @@ namespace CanvasPedigreeCaller
             var bigWigConverter = new FormatConverterFactory(logger, workManager, commandManager).GetBedGraphToBigWigConverter();
             var referenceGenome = new ReferenceGenomeFactory().GetReferenceGenome(new DirectoryLocation(referenceFolder));
             var genomeMetadata = referenceGenome.GenomeMetadata;
-            var coverageBigWigWriter = new CoverageBigWigWriterFactory(bigWigConverter, genomeMetadata).Create();
+            var coverageBigWigWriter = new CoverageBigWigWriterFactory(logger, bigWigConverter, genomeMetadata).Create();
             var caller = new CanvasPedigreeCaller(logger, qScoreThreshold, dqScoreThreshold, callerParameters, coverageBigWigWriter);
 
             var outVcf = outputDirectory.GetFileLocation("CNV.vcf.gz");
