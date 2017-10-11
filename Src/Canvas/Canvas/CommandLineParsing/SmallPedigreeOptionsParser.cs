@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using CanvasCommon;
 using CanvasCommon.CommandLineParsing.CoreOptionTypes;
 using CanvasCommon.CommandLineParsing.OptionProcessing;
 using Illumina.Common.FileSystem;
@@ -12,7 +13,7 @@ namespace Canvas.CommandLineParsing
     internal class SmallPedigreeOptionsParser : Option<SmallPedigreeOptions>
     {
         public const string PloidyVcfOptionName = "ploidy-vcf";
-        internal static readonly ValueOption<SampleType> SampleType = ValueOption<SampleType>.CreateWithDefault(CommandLineParsing.SampleType.Other, "Pedigree member type (either proband, mother, father or other). Default is other", "pedigree-member");
+        internal static readonly ValueOption<SampleType> SampleType = ValueOption<SampleType>.CreateWithDefault(CanvasCommon.SampleType.Other, "Pedigree member type (either proband, mother, father or other). Default is other", "pedigree-member");
         private static readonly StringOption SampleName = StringOption.Create("sample name. Default is SM tag in RG header of the .bam", SingleSampleCommonOptionsParser.SampleName.Info.Names.ToArray());
         internal static readonly PositionalOption<IFileLocation, SampleType, string, SmallPedigreeSampleOptions> Bams =
             new PositionalOption<IFileLocation, SampleType, string, SmallPedigreeSampleOptions>(Parse, true,
@@ -72,11 +73,11 @@ namespace Canvas.CommandLineParsing
         private bool HasUnavailableSampleTypeCombinations(List<SmallPedigreeSampleOptions> bams, out IParsingResult<SmallPedigreeOptions> failedResult)
         {
             failedResult = null;
-            bool haveProband = bams.Any(x => x.SampleType == CommandLineParsing.SampleType.Proband);
-            bool haveMother = bams.Any(x => x.SampleType == CommandLineParsing.SampleType.Mother);
-            bool haveFather = bams.Any(x => x.SampleType == CommandLineParsing.SampleType.Father);
-            bool haveSibling = bams.Any(x => x.SampleType == CommandLineParsing.SampleType.Sibling);
-            bool haveOther = bams.Any(x => x.SampleType == CommandLineParsing.SampleType.Other);
+            bool haveProband = bams.Any(x => x.SampleType == CanvasCommon.SampleType.Proband);
+            bool haveMother = bams.Any(x => x.SampleType == CanvasCommon.SampleType.Mother);
+            bool haveFather = bams.Any(x => x.SampleType == CanvasCommon.SampleType.Father);
+            bool haveSibling = bams.Any(x => x.SampleType == CanvasCommon.SampleType.Sibling);
+            bool haveOther = bams.Any(x => x.SampleType == CanvasCommon.SampleType.Other);
 
             bool haveTrio = haveProband && haveMother && haveFather;
 
@@ -97,9 +98,9 @@ namespace Canvas.CommandLineParsing
         private bool HasMoreThanOneSameSampleType(List<SmallPedigreeSampleOptions> bams, out IParsingResult<SmallPedigreeOptions> failedResult)
         {
             failedResult = null;
-            if (HasMoreThanOne(bams, CommandLineParsing.SampleType.Mother, out failedResult) ||
-                HasMoreThanOne(bams, CommandLineParsing.SampleType.Father, out failedResult) ||
-                HasMoreThanOne(bams, CommandLineParsing.SampleType.Proband, out failedResult))
+            if (HasMoreThanOne(bams, CanvasCommon.SampleType.Mother, out failedResult) ||
+                HasMoreThanOne(bams, CanvasCommon.SampleType.Father, out failedResult) ||
+                HasMoreThanOne(bams, CanvasCommon.SampleType.Proband, out failedResult))
                 return true;
             return false;
         }

@@ -29,7 +29,6 @@
   </Target>
   <ItemGroup>
     <ProjectReference Include="..\CanvasCommon\CanvasCommon.csproj" />
-    <ProjectReference Include="..\Canvas\Canvas.csproj" />
   </ItemGroup>
   <ItemGroup>
     <None Include="PedigreeCallerParameters.json">

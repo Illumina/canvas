@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using Canvas.CommandLineParsing;
 using CanvasCommon;
 using Isas.Framework.DataTypes;
 using Isas.Framework.DataTypes.Maps;

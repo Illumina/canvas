@@ -1,4 +1,4 @@
-﻿namespace Canvas.CommandLineParsing
+﻿namespace CanvasCommon
 {
     public enum SampleType
     {

@@ -3,10 +3,11 @@ using System.Collections.Generic;
 using System.IO;
 using Newtonsoft.Json;
 using System.Linq;
+using CanvasCommon;
 using Illumina.Common;
 using Illumina.Common.FileSystem;
 using Isas.Framework.Logging;
-using Isas.Framework.Utilities;
+using Utilities = Isas.Framework.Utilities.Utilities;
 
 namespace CanvasPedigreeCaller
 {
@@ -33,7 +34,6 @@ namespace CanvasPedigreeCaller
             var segmentFiles = new List<string>();
             var variantFrequencyFiles = new List<string>();
             var sampleTypesString = new List<string>();
-            var sampleTypesEnum = new List<Canvas.CommandLineParsing.SampleType>();
             string ploidyBedPath = null;
             string pedigreeFile = null;
             string referenceFolder = null;
@@ -96,17 +96,7 @@ namespace CanvasPedigreeCaller
                 return 1;
             }
 
-            foreach (string sampleType in sampleTypesString)
-            {
-                Canvas.CommandLineParsing.SampleType sampleTypeEnum;
-                if (Enum.TryParse(sampleType, out sampleTypeEnum))
-                    sampleTypesEnum.Add(sampleTypeEnum);
-                else
-                {
-                    Console.WriteLine($"CanvasPedigreeCaller.exe: sample type {sampleType} does not exist! Exiting.");
-                    return 1;
-                }
-            }
+            var sampleTypesEnum = sampleTypesString.Select(GetSampleType).ToList();
 
             if (!File.Exists(Path.Combine(referenceFolder, "GenomeSize.xml")))
             {
@@ -146,6 +136,13 @@ namespace CanvasPedigreeCaller
             }
 
             return caller.CallVariants(variantFrequencyFiles, segmentFiles, outDir, ploidyBedPath, referenceFolder, sampleNames, commonCNVsbedPath, sampleTypesEnum);
+        }
+
+        private static SampleType GetSampleType(string sampleType)
+        {
+            if (Enum.TryParse(sampleType, out SampleType sampleTypeEnum))
+                return sampleTypeEnum;
+            throw new ArgumentException($"CanvasPedigreeCaller.exe: SampleType {sampleType} does not exist!");
         }
 
         private static T Deserialize<T>(IFileLocation path)
