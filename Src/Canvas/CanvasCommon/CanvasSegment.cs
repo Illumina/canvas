@@ -55,7 +55,7 @@ namespace CanvasCommon
     public class Balleles
     {
 
-        private List<Ballele> Range;
+        internal List<Ballele> Range;
 
         public Balleles()
         {
@@ -288,14 +288,26 @@ namespace CanvasCommon
             {
                 this.StartConfidenceInterval = s.StartConfidenceInterval;
                 this.Begin = s.Begin;
+                GenomicBins = s.GenomicBins.Concat(GenomicBins).ToList();
+                if (this.Balleles != null && s.Balleles != null)
+                {
+                    Balleles = new Balleles();
+                    Balleles.Add(s.Balleles);
+                    Balleles.Add(Balleles);
+                }
             }
             if (s.End > this.End)
             {
                 this.EndConfidenceInterval = s.EndConfidenceInterval;
                 this.End = s.End;
+                GenomicBins = GenomicBins.Concat(s.GenomicBins).ToList();
+                if (this.Balleles != null && s.Balleles != null)
+                {
+                    Balleles = new Balleles();
+                    Balleles.Add(Balleles);
+                    Balleles.Add(s.Balleles);
+                }
             }
-            this.GenomicBins.AddRange(s.GenomicBins);
-            if (this.Balleles != null && s.Balleles != null) Balleles.Add(s.Balleles);
         }
 
         public int SizeOveralp(CanvasSegment segment)
