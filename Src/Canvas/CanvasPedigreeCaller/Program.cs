@@ -7,7 +7,8 @@ using CanvasCommon;
 using Illumina.Common;
 using Illumina.Common.FileSystem;
 using Isas.Framework.Logging;
-using Utilities = Isas.Framework.Utilities.Utilities;
+using Isas.Framework.Utilities;
+using Isas.SequencingFiles;
 
 namespace CanvasPedigreeCaller
 {
@@ -39,12 +40,10 @@ namespace CanvasPedigreeCaller
             string referenceFolder = null;
             var sampleNames = new List<string>();
             bool needHelp = false;
-            int? qScoreThreshold = null;
-            int? dqScoreThreshold = null;
+            int? qScoreThresholdOption = null;
+            int? dqScoreThresholdOption = null;
             string commonCNVsbedPath = null;
             string parameterconfigPath = Path.Combine(Utilities.GetAssemblyFolder(typeof(Program)), "PedigreeCallerParameters.json");
-            var logger = new Logger(new[] { Console.Out }, new[] { Console.Error });
-            var caller = new CanvasPedigreeCaller(logger);
 
             var p = new OptionSet()
             {
@@ -56,9 +55,9 @@ namespace CanvasPedigreeCaller
                 { "n|sampleName=",    "sample name for output VCF header (optional)",                                                   v => sampleNames.Add(v)},
                 { "p|ploidyBed=",     "bed file specifying reference ploidy (e.g. for sex chromosomes) (optional)",                     v => ploidyBedPath = v },
                 { "h|help",           "show this message and exit",                                                                     v => needHelp = v != null },
-                { "q|qscore=",        $"quality filter threshold (default {caller.QualityFilterThreshold})",                            v => qScoreThreshold = int.Parse(v) },
+                { "q|qscore=",        $"quality filter threshold (default {CanvasPedigreeCaller.DefaultQualityFilterThreshold})",                            v => qScoreThresholdOption = int.Parse(v) },
                 { "commoncnvs=",      "bed file with common CNVs (always include these intervals into segmentation results)",           v => commonCNVsbedPath = v },
-                { "d|dqscore=",       $"de novo quality filter threshold (default {caller.DeNovoQualityFilterThreshold})",              v => dqScoreThreshold = int.Parse(v) },
+                { "d|dqscore=",       $"de novo quality filter threshold (default {CanvasPedigreeCaller.DefaultDeNovoQualityFilterThreshold})",              v => dqScoreThresholdOption = int.Parse(v) },
                 { "c|config=",        $"parameter configuration path (default {parameterconfigPath})",                                  v => parameterconfigPath = v}
             };
 
@@ -120,20 +119,29 @@ namespace CanvasPedigreeCaller
             }
 
             var parameterconfigFile = new FileLocation(parameterconfigPath);
-            caller.CallerParameters = Deserialize<PedigreeCallerParameters>(parameterconfigFile);
+            var callerParameters = Deserialize<PedigreeCallerParameters>(parameterconfigFile);
 
-            if (qScoreThreshold.HasValue & qScoreThreshold > 0 & qScoreThreshold < caller.CallerParameters.MaxQscore)
+            int qScoreThreshold = CanvasPedigreeCaller.DefaultQualityFilterThreshold;
+            if (qScoreThresholdOption.HasValue)
             {
-                caller.QualityFilterThreshold = qScoreThreshold.Value;
-                Console.WriteLine($"CanvasPedigreeCaller.exe: Using user-supplied quality score threshold {qScoreThreshold}.");
+                qScoreThreshold = qScoreThresholdOption.Value;
+                Console.WriteLine($"CanvasPedigreeCaller.exe: Using user-supplied quality score threshold {qScoreThresholdOption}.");
             }
+            if (qScoreThreshold < 0 || qScoreThreshold >= callerParameters.MaxQscore)
+                throw new IlluminaException($"Quality score threshold must be >= 0 and < {callerParameters.MaxQscore}");
 
-
-            if (dqScoreThreshold.HasValue & dqScoreThreshold > 0 & dqScoreThreshold < caller.CallerParameters.MaxQscore)
+            int dqScoreThreshold = CanvasPedigreeCaller.DefaultDeNovoQualityFilterThreshold;
+            if (dqScoreThresholdOption.HasValue)
             {
-                caller.DeNovoQualityFilterThreshold = dqScoreThreshold.Value;
-                Console.WriteLine($"CanvasPedigreeCaller.exe: Using user-supplied de novo quality score threshold {qScoreThreshold}.");
+
+                dqScoreThreshold = dqScoreThresholdOption.Value;
+                Console.WriteLine($"CanvasPedigreeCaller.exe: Using user-supplied de novo quality score threshold {qScoreThresholdOption}.");
             }
+            if (dqScoreThreshold < 0 || dqScoreThreshold >= callerParameters.MaxQscore)
+                throw new IlluminaException($"De novo quality score threshold must be >= 0 and < {callerParameters.MaxQscore}");
+
+            var logger = new Logger(new[] { Console.Out }, new[] { Console.Error });
+            var caller = new CanvasPedigreeCaller(logger, qScoreThreshold, dqScoreThreshold, callerParameters);
 
             return caller.CallVariants(variantFrequencyFiles, segmentFiles, outDir, ploidyBedPath, referenceFolder, sampleNames, commonCNVsbedPath, sampleTypesEnum);
         }
