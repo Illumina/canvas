@@ -7,8 +7,6 @@ using CanvasCommon;
 using Illumina.Common;
 using Illumina.Common.FileSystem;
 using Isas.Framework.Logging;
-using Isas.Framework.Utilities;
-using Isas.SequencingFiles;
 
 namespace CanvasPedigreeCaller
 {
@@ -43,7 +41,7 @@ namespace CanvasPedigreeCaller
             int? qScoreThresholdOption = null;
             int? dqScoreThresholdOption = null;
             string commonCNVsbedPath = null;
-            string parameterconfigPath = Path.Combine(Utilities.GetAssemblyFolder(typeof(Program)), "PedigreeCallerParameters.json");
+            string parameterconfigPath = Path.Combine(Isas.Framework.Utilities.Utilities.GetAssemblyFolder(typeof(Program)), "PedigreeCallerParameters.json");
 
             var p = new OptionSet()
             {
