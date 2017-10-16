@@ -54,8 +54,8 @@ namespace CanvasPedigreeCaller
 
         #endregion
 
-        internal int CallVariants(List<string> variantFrequencyFiles, List<string> segmentFiles,
-            string outVcfFile, string ploidyBedPath, string referenceFolder, List<string> sampleNames, string commonCNVsbedPath, List<SampleType> sampleTypes)
+        internal int CallVariants(List<string> inputVariantFrequencyFiles, List<string> segmentFiles,
+            string outVcfFile, string ploidyBedPath, string referenceFolder, List<string> inputSampleNames, string commonCNVsbedPath, List<SampleType> sampleTypes)
         {
             // load files
             // initialize data structures and classes
@@ -64,32 +64,27 @@ namespace CanvasPedigreeCaller
             var sampleSegments = new SampleMap<Segments>();
             var copyNumberModels = new SampleMap<CopyNumberModel>();
             var variantFrequencyFilesSampleList = new SampleMap<string>();
-            bool hasPedigree = sampleTypes.Any(x => x == SampleType.Proband) && sampleTypes.Any(x => x == SampleType.Father) && sampleTypes.Any(x => x == SampleType.Mother);
             var kinships = new SampleMap<SampleType>();
-            sampleNames.Zip(sampleTypes).ForEach(kvp => kinships.Add(new SampleId(kvp.Item1), kvp.Item2));
-
-            if (hasPedigree)
-            {
-                // In Kinship enum Proband gets the lowest int value 
-                var newSampleNames = kinships.OrderBy(x => x.Value).Select(x => x.Key.ToString()).ToList();
-                var remapIndices = newSampleNames.Select(newname => sampleNames.FindIndex(name => name == newname)).ToList();
-                segmentFiles = remapIndices.Select(index => segmentFiles[index]).ToList();
-                variantFrequencyFiles = remapIndices.Select(index => variantFrequencyFiles[index]).ToList();
-                sampleNames = newSampleNames;
-            }
+            // move proband to the front of collection 
+            inputSampleNames.Zip(sampleTypes).ForEach(kvp => kinships.Add(new SampleId(kvp.Item1), kvp.Item2));
+            // In Kinship enum Proband gets the lowest int value 
+            var sampleNames = kinships.OrderBy(x => x.Value).Select(x => x.Key.ToString()).ToList();
+            var remapIndices = sampleNames.Select(newname => inputSampleNames.FindIndex(name => name == newname)).ToList();
+            segmentFiles = remapIndices.Select(index => segmentFiles[index]).ToList();
+            inputVariantFrequencyFiles = remapIndices.Select(index => inputVariantFrequencyFiles[index]).ToList();
 
 
-            foreach (string sampleName in sampleNames)
+            foreach (string sampleName in inputSampleNames)
             {
                 var sampleId = new SampleId(sampleName);
                 var segment = Segments.ReadSegments(_logger, new FileLocation(segmentFiles[fileCounter]));
-                segment.AddAlleles(CanvasIO.ReadFrequenciesWrapper(_logger, new FileLocation(variantFrequencyFiles[fileCounter]), segment.IntervalsByChromosome));
+                segment.AddAlleles(CanvasIO.ReadFrequenciesWrapper(_logger, new FileLocation(inputVariantFrequencyFiles[fileCounter]), segment.IntervalsByChromosome));
                 sampleSegments.Add(sampleId, segment);
                 var sampleInfo = SampleMetrics.GetSampleInfo(segment, ploidyBedPath, CallerParameters.NumberOfTrimmedBins, sampleId);
                 var copyNumberModel = new CopyNumberModel(CallerParameters.MaximumCopyNumber, sampleInfo.MeanMafCoverage, sampleInfo.MeanCoverage, sampleInfo.MaxCoverage);
                 samplesInfo.Add(sampleId, sampleInfo);
                 copyNumberModels.Add(sampleId, copyNumberModel);
-                variantFrequencyFilesSampleList.Add(sampleId, variantFrequencyFiles[fileCounter]);
+                variantFrequencyFilesSampleList.Add(sampleId, inputVariantFrequencyFiles[fileCounter]);
                 fileCounter++;
             }
             var segmentSetsFromCommonCnvs = CreateSegmentSetsFromCommonCnvs(variantFrequencyFilesSampleList,
