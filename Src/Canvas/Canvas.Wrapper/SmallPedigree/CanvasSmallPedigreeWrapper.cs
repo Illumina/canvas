@@ -60,8 +60,7 @@ namespace Canvas.Wrapper.SmallPedigree
             commandLine.Append($" --output \"{sampleSandbox}\"");
             return commandLine;
         }
-
-
+        
         public CanvasSmallPedigreeOutput Run(CanvasSmallPedigreeInput input, IDirectoryLocation sampleSandbox)
         {
             if (!_annotationFileProvider.IsSupported(input.GenomeMetadata))

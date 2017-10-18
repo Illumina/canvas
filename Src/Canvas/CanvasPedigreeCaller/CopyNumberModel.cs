@@ -58,28 +58,6 @@ namespace CanvasPedigreeCaller
             return CnDistribution.Select(x => x[Convert.ToInt32(dimension)]).ToList();
         }
 
-        public double[][] GetMedianGtLikelihood(List<Tuple<int, int>> gtCounts)
-        {
-            int nrows = _alleleDistribution.Length;
-            int ncols = _alleleDistribution.First().Length;
-            double[][] likelihood = Utilities.MatrixCreate(nrows, ncols);
-            foreach (var gtCount in gtCounts)
-            {
-                for (int i = 0; i < nrows; i++)
-                {
-                    for (int j = 0; j < ncols; j++)
-                    {
-                        if (_alleleDistribution[i][j] != null)
-                            likelihood[i][j] += _alleleDistribution[i][j].Item1[gtCount.Item1] *
-                                               _alleleDistribution[i][j].Item2[gtCount.Item2];
-                        else
-                            likelihood[i][j] += 0;
-                    }
-                }
-            }
-            return likelihood;
-        }
-
         public double GetGtLikelihoodScore(List<Tuple<int, int>> gtObservedCounts, List<Genotype> gtModelCounts, ref int? selectedGtState)
         {
             const int maxGQscore = 60;
