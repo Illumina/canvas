@@ -8,7 +8,7 @@ using Isas.Framework.DataTypes.Maps;
 
 namespace CanvasPedigreeCaller
 {
-    class VariantCaller
+    class VariantCaller : IVariantCaller
     {
         private readonly CopyNumberLikelihoodCalculator _copyNumberLikelihoodCalculator;
         private readonly PedigreeCallerParameters _callerParameters;

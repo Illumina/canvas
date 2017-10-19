@@ -26,11 +26,11 @@ namespace CanvasPedigreeCaller
         private readonly PedigreeCallerParameters _callerParameters;
 
         private readonly ILogger _logger;
-        private readonly VariantCaller _variantCaller;
+        private readonly IVariantCaller _variantCaller;
         private readonly CopyNumberLikelihoodCalculator _copyNumberLikelihoodCalculator;
         #endregion
 
-        public CanvasPedigreeCaller(ILogger logger, int qualityFilterThreshold, int deNovoQualityFilterThreshold, PedigreeCallerParameters callerParameters, CopyNumberLikelihoodCalculator copyNumberLikelihoodCalculator, VariantCaller variantCaller)
+        public CanvasPedigreeCaller(ILogger logger, int qualityFilterThreshold, int deNovoQualityFilterThreshold, PedigreeCallerParameters callerParameters, CopyNumberLikelihoodCalculator copyNumberLikelihoodCalculator, IVariantCaller variantCaller)
         {
             _logger = logger;
             _qualityFilterThreshold = qualityFilterThreshold;
