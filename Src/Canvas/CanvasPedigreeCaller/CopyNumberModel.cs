@@ -7,8 +7,7 @@ namespace CanvasPedigreeCaller
 {
     public class CopyNumberModel
     {
-        public List<Tuple<int,int>> Genotypes = new List<Tuple<int, int>>();
-        public List<List<double>> CnDistribution = new List<List<double>>();
+        public readonly List<List<double>> CnDistribution = new List<List<double>>();
         readonly Tuple<List<double>, List<double>> [][] _alleleDistribution;
         private readonly int _maxCoverage;
 

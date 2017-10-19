@@ -10,7 +10,6 @@ namespace CanvasPedigreeCaller
 {
     class VariantCaller
     {
-        protected double MedianCoverageThreshold = 4;
         private readonly CopyNumberLikelihoodCalculator _copyNumberLikelihoodCalculator;
         private readonly PedigreeCallerParameters _callerParameters;
         private readonly int _qualityFilterThreshold;
@@ -47,23 +46,12 @@ namespace CanvasPedigreeCaller
         /// Derives metrics from b-allele counts within each segment and determines whereas to use them for calculating MCC
         /// </summary>
         /// <param name="canvasSegments"></param>
-        /// <param name="segmentIndex"></param>
         /// <returns></returns>
         private bool UseMafInformation(ISampleMap<CanvasSegment> canvasSegments)
         {
             var alleles = canvasSegments.Values.Select(segments => segments.Balleles?.TotalCoverage);
             var alleleCounts = alleles.Select(allele => allele?.Count ?? 0).ToList();
-            bool lowAlleleCounts = alleleCounts.Select(x => x < _callerParameters.DefaultReadCountsThreshold).Any(c => c == true);
-            var coverageCounts = canvasSegments.Values.Select(segments => segments.MedianCount).ToList();
-            var isSkewedHetHomRatio = false;
-            double alleleDensity = canvasSegments.Values.First().Length /
-                                   Math.Max(alleleCounts.Average(), 1.0);
-            bool useCnLikelihood = lowAlleleCounts ||
-                                   alleleDensity < _callerParameters.DefaultAlleleDensityThreshold ||
-                                   alleleCounts.Any(x => x > _callerParameters.DefaultPerSegmentAlleleMaxCounts) ||
-                                   coverageCounts.Any(coverage => coverage < MedianCoverageThreshold) ||
-                                   isSkewedHetHomRatio;
-            // for now only use lowAlleleCounts metric
+            bool lowAlleleCounts = alleleCounts.Select(x => x < _callerParameters.DefaultReadCountsThreshold).Any(c => c);
             return lowAlleleCounts;
         }
 
@@ -184,7 +172,7 @@ namespace CanvasPedigreeCaller
             var copyNumbersLikelihoods = _copyNumberLikelihoodCalculator.GetCopyNumbersLikelihoods(canvasSegments, samplesInfo, copyNumberModel);
 
             var copyNumbers = pedigreeInfo != null
-                ? GetCopyNumbersWithPedigreeInfo(canvasSegments, copyNumberModel, pedigreeInfo, copyNumbersLikelihoods)
+                ? GetCopyNumbersWithPedigreeInfo(canvasSegments, pedigreeInfo, copyNumbersLikelihoods)
                 : CanvasPedigreeCaller.GetCopyNumbersNoPedigreeInfo(canvasSegments, copyNumbersLikelihoods);
 
             EstimateQScores(canvasSegments, samplesInfo, pedigreeInfo, copyNumbersLikelihoods, copyNumbers);
@@ -258,14 +246,14 @@ namespace CanvasPedigreeCaller
                     if (currentLikelihood > maximalLikelihood)
                     {
                         maximalLikelihood = currentLikelihood;
-                        AssignMCC(canvasSegments[pedigreeInfo.ParentsIds.First()], model[pedigreeInfo.ParentsIds.First()], parent1GtStates, parent1CopyNumber);
-                        AssignMCC(canvasSegments[pedigreeInfo.ParentsIds.Last()], model[pedigreeInfo.ParentsIds.Last()], parent2GtStates, parent2CopyNumber);
+                        AssignMcc(canvasSegments[pedigreeInfo.ParentsIds.First()], model[pedigreeInfo.ParentsIds.First()], parent1GtStates, parent1CopyNumber);
+                        AssignMcc(canvasSegments[pedigreeInfo.ParentsIds.Last()], model[pedigreeInfo.ParentsIds.Last()], parent2GtStates, parent2CopyNumber);
                         var counter = 0;
                         foreach (SampleId child in pedigreeInfo.OffspringIds)
                         {
                             if (bestChildGtStates[counter] == null) continue;
                             int childCopyNumber = canvasSegments[child].CopyNumber;
-                            AssignMCC(canvasSegments[child], model[child], bestChildGtStates[counter], childCopyNumber);
+                            AssignMcc(canvasSegments[child], model[child], bestChildGtStates[counter], childCopyNumber);
                             counter++;
                         }
                     }
@@ -302,7 +290,7 @@ namespace CanvasPedigreeCaller
             return false;
         }
         
-        private void AssignMCC(CanvasSegment canvasSegment, CopyNumberModel copyNumberModel,
+        private void AssignMcc(CanvasSegment canvasSegment, CopyNumberModel copyNumberModel,
             Genotype gtStates, int copyNumber)
         {
             const int diploidCopyNumber = 2;
@@ -333,11 +321,10 @@ namespace CanvasPedigreeCaller
         /// <summary>
         /// Calculates maximal likelihood for copy numbers. Updated CanvasSegment CopyNumber only. 
         /// </summary>
-        private ISampleMap<int> GetCopyNumbersWithPedigreeInfo(ISampleMap<CanvasSegment> segments, ISampleMap<CopyNumberModel> model,
+        private ISampleMap<int> GetCopyNumbersWithPedigreeInfo(ISampleMap<CanvasSegment> segments,
             PedigreeInfo pedigreeInfo, CopyNumbersLikelihoods copyNumbersLikelihoods)
         {
-            var sampleCopyNumbers = new SampleMap<int>();
-            segments.SampleIds.ForEach(id => sampleCopyNumbers.Add(id, 2));
+            var sampleCopyNumbers = segments.SelectValues(value => 2);
             var parent1Likelihood = copyNumbersLikelihoods.SingleSampleLikelihoods[pedigreeInfo.ParentsIds.First()];
             var parent2Likelihood = copyNumbersLikelihoods.SingleSampleLikelihoods[pedigreeInfo.ParentsIds.Last()];
             var copyNumbersRange = Enumerable.Range(0, _callerParameters.MaximumCopyNumber).ToList();

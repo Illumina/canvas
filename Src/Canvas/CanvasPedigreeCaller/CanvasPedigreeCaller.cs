@@ -6,7 +6,6 @@ using Isas.Framework.DataTypes;
 using Isas.Framework.Logging;
 using Isas.SequencingFiles;
 using Isas.SequencingFiles.Vcf;
-using MathNet.Numerics.Distributions;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -14,38 +13,17 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Isas.Framework.DataTypes.Maps;
-using Genotype = CanvasCommon.Genotype;
-
 
 namespace CanvasPedigreeCaller
 {
-
-    internal class SegmentIndexRange
-    {
-        public int Start { get; }
-        public int End { get; }
-
-        public SegmentIndexRange(int start, int end)
-        {
-            Start = start;
-            End = end;
-        }
-    }
-
-
     class CanvasPedigreeCaller
     {
         #region Members
         public const int DefaultQualityFilterThreshold = 7;
         public const int DefaultDeNovoQualityFilterThreshold = 20;
-        public int QualityFilterThreshold { get; }
-        public int DeNovoQualityFilterThreshold { get; }
-        public PedigreeCallerParameters CallerParameters { get; }
-
-        public CopyNumberLikelihoodCalculator CopyNumberLikelihoodCalculator
-        {
-            get { return _copyNumberLikelihoodCalculator; }
-        }
+        private readonly int _qualityFilterThreshold;
+        private readonly int _deNovoQualityFilterThreshold;
+        private readonly PedigreeCallerParameters _callerParameters;
 
         private readonly ILogger _logger;
         private readonly VariantCaller _variantCaller;
@@ -55,9 +33,9 @@ namespace CanvasPedigreeCaller
         public CanvasPedigreeCaller(ILogger logger, int qualityFilterThreshold, int deNovoQualityFilterThreshold, PedigreeCallerParameters callerParameters, CopyNumberLikelihoodCalculator copyNumberLikelihoodCalculator, VariantCaller variantCaller)
         {
             _logger = logger;
-            QualityFilterThreshold = qualityFilterThreshold;
-            DeNovoQualityFilterThreshold = deNovoQualityFilterThreshold;
-            CallerParameters = callerParameters;
+            _qualityFilterThreshold = qualityFilterThreshold;
+            _deNovoQualityFilterThreshold = deNovoQualityFilterThreshold;
+            _callerParameters = callerParameters;
             _copyNumberLikelihoodCalculator = copyNumberLikelihoodCalculator;
             _variantCaller = variantCaller;
         }
@@ -94,25 +72,25 @@ namespace CanvasPedigreeCaller
                 var segment = Segments.ReadSegments(_logger, new FileLocation(segmentFiles[fileCounter]));
                 segment.AddAlleles(CanvasIO.ReadFrequenciesWrapper(_logger, new FileLocation(variantFrequencyFiles[fileCounter]), segment.IntervalsByChromosome));
                 sampleSegments.Add(sampleId, segment);
-                var sampleInfo = SampleMetrics.GetSampleInfo(segment, ploidyBedPath, CallerParameters.NumberOfTrimmedBins, sampleId);
-                var copyNumberModel = new CopyNumberModel(CallerParameters.MaximumCopyNumber, sampleInfo.MeanMafCoverage, sampleInfo.MeanCoverage, sampleInfo.MaxCoverage);
+                var sampleInfo = SampleMetrics.GetSampleInfo(segment, ploidyBedPath, _callerParameters.NumberOfTrimmedBins, sampleId);
+                var copyNumberModel = new CopyNumberModel(_callerParameters.MaximumCopyNumber, sampleInfo.MeanMafCoverage, sampleInfo.MeanCoverage, sampleInfo.MaxCoverage);
                 samplesInfo.Add(sampleId, sampleInfo);
                 copyNumberModels.Add(sampleId, copyNumberModel);
                 variantFrequencyFilesSampleList.Add(sampleId, variantFrequencyFiles[fileCounter]);
                 fileCounter++;
             }
             var segmentSetsFromCommonCnvs = CreateSegmentSetsFromCommonCnvs(variantFrequencyFilesSampleList,
-                CallerParameters.DefaultReadCountsThreshold, commonCNVsbedPath, sampleSegments);
+                _callerParameters.DefaultReadCountsThreshold, commonCNVsbedPath, sampleSegments);
 
-            var segmentsForVariantCalling = GetHighestLikelihoodSegments(segmentSetsFromCommonCnvs, samplesInfo, copyNumberModels);
+            var segmentsForVariantCalling = GetHighestLikelihoodSegments(segmentSetsFromCommonCnvs, samplesInfo, copyNumberModels).ToList();
             PedigreeInfo pedigreeInfo = null;
             if (kinships.Values.Any(kin => kin == Kinship.Proband))
-                pedigreeInfo = PedigreeInfo.GetPedigreeInfo(kinships, CallerParameters);
+                pedigreeInfo = PedigreeInfo.GetPedigreeInfo(kinships, _callerParameters);
             Parallel.ForEach(
                 segmentsForVariantCalling,
                 new ParallelOptions
                 {
-                    MaxDegreeOfParallelism = Math.Min(Environment.ProcessorCount, CallerParameters.MaxCoreNumber)
+                    MaxDegreeOfParallelism = Math.Min(Environment.ProcessorCount, _callerParameters.MaxCoreNumber)
                 },
                 segments => _variantCaller.CallVariant(segments, samplesInfo, copyNumberModels, pedigreeInfo)
             );
@@ -120,7 +98,7 @@ namespace CanvasPedigreeCaller
             foreach (var key in samplesInfo.SampleIds)
                 variantCalledSegments.Add(key, segmentsForVariantCalling.Select(segment => segment[key]).ToList());
 
-            var mergedVariantCalledSegments = MergeSegments(variantCalledSegments, CallerParameters.MinimumCallSize);
+            var mergedVariantCalledSegments = MergeSegments(variantCalledSegments, _callerParameters.MinimumCallSize);
             var outputFolder = new FileLocation(outVcfFile).Directory;
             foreach (var sampleId in samplesInfo.SampleIds)
             {
@@ -130,12 +108,12 @@ namespace CanvasPedigreeCaller
                     samplesInfo[sampleId].Ploidy, coverageOutputPath, referenceFolder);
             }
             bool isPedigreeInfoSupplied = pedigreeInfo != null;
-            var denovoQualityThreshold = isPedigreeInfoSupplied ? (int?)DeNovoQualityFilterThreshold : null;
+            var denovoQualityThreshold = isPedigreeInfoSupplied ? (int?)_deNovoQualityFilterThreshold : null;
             var ploidies = samplesInfo.Select(info => info.Value.Ploidy).ToList();
             var diploidCoverage = samplesInfo.Select(info => info.Value.MeanCoverage).ToList();
             var names = samplesInfo.SampleIds.Select(id => id.ToString()).ToList();
             CanvasSegmentWriter.WriteMultiSampleSegments(outVcfFile, mergedVariantCalledSegments, diploidCoverage, referenceFolder, names,
-                null, ploidies, QualityFilterThreshold, isPedigreeInfoSupplied, denovoQualityThreshold);
+                null, ploidies, _qualityFilterThreshold, isPedigreeInfoSupplied, denovoQualityThreshold);
 
             outputFolder = new FileLocation(outVcfFile).Directory;
             foreach (var sampleId in samplesInfo.SampleIds)
@@ -143,7 +121,7 @@ namespace CanvasPedigreeCaller
                 var outputVcfPath = SingleSampleCallset.GetSingleSamplePedigreeVcfOutput(outputFolder, sampleId.ToString());
                 CanvasSegmentWriter.WriteSegments(outputVcfPath.FullName, mergedVariantCalledSegments[sampleId],
                     samplesInfo[sampleId].MeanCoverage, referenceFolder, sampleId.ToString(), null,
-                    samplesInfo[sampleId].Ploidy, QualityFilterThreshold, isPedigreeInfoSupplied, denovoQualityThreshold);
+                    samplesInfo[sampleId].Ploidy, _qualityFilterThreshold, isPedigreeInfoSupplied, denovoQualityThreshold);
             }
             return 0;
         }
@@ -154,7 +132,7 @@ namespace CanvasPedigreeCaller
             var updatedSegmentSets = segmentSetsFromCommonCnvs
                 .AsParallel()
                 .AsOrdered()
-                .WithDegreeOfParallelism(Math.Min(Environment.ProcessorCount, CallerParameters.MaxCoreNumber))
+                .WithDegreeOfParallelism(Math.Min(Environment.ProcessorCount, _callerParameters.MaxCoreNumber))
                 .Select(segmentSet =>
                 {
                     GetHighestLikelihoodSegmentsSet(segmentSet, pedigreeMembersInfo, copyNumberModel);
@@ -339,8 +317,8 @@ namespace CanvasPedigreeCaller
             }
             foreach (var canvasSegment in canvasSegments)
             {
-                var copyNumbersLikelihoods = CopyNumberLikelihoodCalculator.GetCopyNumbersLikelihoods(canvasSegment, samplesInfo, copyNumberModel);
-                var copyNumbers = GetCopyNumbersNoPedigreeInfo(canvasSegment, copyNumbersLikelihoods);
+                var copyNumbersLikelihoods = _copyNumberLikelihoodCalculator.GetCopyNumbersLikelihoods(canvasSegment, samplesInfo, copyNumberModel);
+                GetCopyNumbersNoPedigreeInfo(canvasSegment, copyNumbersLikelihoods);
                 segmentSetLikelihood += copyNumbersLikelihoods.MaximalLikelihood;
             }
 
@@ -357,13 +335,30 @@ namespace CanvasPedigreeCaller
             double maximalLikelihood = 1;
             foreach (var sampleId in segments.SampleIds)
             {
-                double maxSampleLikelihoods = copyNumbersLikelihoods.SingleSampleLikelihoods[sampleId].Max(x => x.Value);
-                maximalLikelihood *= maxSampleLikelihoods;
-                int copyNumber = copyNumbersLikelihoods.SingleSampleLikelihoods[sampleId].First(x => x.Value == maxSampleLikelihoods).Key;
+                var (copyNumber, maxSampleLikelihood) = MaxBy(copyNumbersLikelihoods.SingleSampleLikelihoods[sampleId], x => x.Value);
+                maximalLikelihood *= maxSampleLikelihood;
                 sampleCopyNumbers.Add(sampleId, copyNumber);
             }
             copyNumbersLikelihoods.MaximalLikelihood = maximalLikelihood;
             return sampleCopyNumbers;
+        }
+
+        public static T MaxBy<T>(IEnumerable<T> items, Func<T, double> transform)
+        {
+            bool any = false;
+            var maxValue = double.MinValue;
+            var itemWithMaxValue = default(T);
+            foreach (var item in items)
+            {
+                any = true;
+                var value = transform(item);
+                if (value <= maxValue) continue;
+                itemWithMaxValue = item;
+                maxValue = value;
+            }
+            if (!any)
+                throw new IlluminaException("Cannot get max value from an empty enumerable");
+            return itemWithMaxValue;
         }
 
         /// <summary>
@@ -412,7 +407,7 @@ namespace CanvasPedigreeCaller
             if (gt1Parent == gt1Offspring || gt1Parent == gt2Offspring ||
                 gt2Parent == gt1Offspring || gt2Parent == gt2Offspring)
                 return 0.5;
-            return CallerParameters.DeNovoRate;
+            return _callerParameters.DeNovoRate;
         }
 
         public enum Kinship
