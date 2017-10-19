@@ -55,7 +55,7 @@ namespace CanvasPedigreeCaller
         #endregion
 
         internal int CallVariants(List<string> inputVariantFrequencyFiles, List<string> segmentFiles,
-            string outVcfFile, string ploidyBedPath, string referenceFolder, List<string> inputSampleNames, string commonCNVsbedPath, List<SampleType> sampleTypes)
+            string outVcfFile, string ploidyBedPath, string referenceFolder, List<string> sampleNames, string commonCNVsbedPath, List<SampleType> sampleTypes)
         {
             // load files
             // initialize data structures and classes
@@ -65,16 +65,8 @@ namespace CanvasPedigreeCaller
             var copyNumberModels = new SampleMap<CopyNumberModel>();
             var variantFrequencyFilesSampleList = new SampleMap<string>();
             var kinships = new SampleMap<SampleType>();
-            // move proband to the front of collection 
-            inputSampleNames.Zip(sampleTypes).ForEach(kvp => kinships.Add(new SampleId(kvp.Item1), kvp.Item2));
-            // In Kinship enum Proband gets the lowest int value 
-            var sampleNames = kinships.OrderBy(x => x.Value).Select(x => x.Key.ToString()).ToList();
-            var remapIndices = sampleNames.Select(newname => inputSampleNames.FindIndex(name => name == newname)).ToList();
-            segmentFiles = remapIndices.Select(index => segmentFiles[index]).ToList();
-            inputVariantFrequencyFiles = remapIndices.Select(index => inputVariantFrequencyFiles[index]).ToList();
 
-
-            foreach (string sampleName in inputSampleNames)
+            foreach (string sampleName in sampleNames)
             {
                 var sampleId = new SampleId(sampleName);
                 var segment = Segments.ReadSegments(_logger, new FileLocation(segmentFiles[fileCounter]));

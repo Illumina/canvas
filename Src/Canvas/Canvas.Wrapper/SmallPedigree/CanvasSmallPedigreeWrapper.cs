@@ -45,7 +45,9 @@ namespace Canvas.Wrapper.SmallPedigree
         public StringBuilder GetMultiSampleCommandLine(SampleSet<CanvasPedigreeSample> samples, GenomeMetadata genomeMetadata, Vcf vcf, IDirectoryLocation sampleSandbox)
         {
             StringBuilder commandLine = new StringBuilder();
-            foreach (var sampleKvp in samples)
+            // move proband to the front of collection (enum Proband gets the lowest int value )
+            var sortedBySampleTypeSamples = samples.OrderBy(sample => sample.Value.SampleType);
+            foreach (var sampleKvp in sortedBySampleTypeSamples)
             {
                 var sampleId = sampleKvp.Key.Id;
                 var sample = sampleKvp.Value;
