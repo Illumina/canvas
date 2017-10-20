@@ -225,7 +225,7 @@ namespace CanvasCommon
         public int Length => End - Begin;
         #endregion
 
-        public List<SampleGenomicBin> GetSampleGenomicBinSubrange(int start, int end)
+        private List<SampleGenomicBin> GetSampleGenomicBinSubrange(int start, int end)
         {
             return GenomicBins.Where(x => x.Start >= start && x.Stop <= end).ToList();
         }
