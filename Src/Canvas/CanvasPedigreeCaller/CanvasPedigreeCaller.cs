@@ -77,6 +77,7 @@ namespace CanvasPedigreeCaller
                 samplesInfo.Add(sampleId, sampleInfo);
                 copyNumberModels.Add(sampleId, copyNumberModel);
                 variantFrequencyFilesSampleList.Add(sampleId, inputVariantFrequencyFiles[fileCounter]);
+                kinships.Add(sampleId, sampleTypes[fileCounter]);
                 fileCounter++;
             }
             var segmentSetsFromCommonCnvs = CreateSegmentSetsFromCommonCnvs(variantFrequencyFilesSampleList,
