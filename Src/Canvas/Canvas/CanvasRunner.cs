@@ -1094,7 +1094,7 @@ namespace Canvas
             foreach (IFileLocation partitionedPath in partitionedPaths)
                 commandLine.AppendFormat("-i \"{0}\" ", partitionedPath);
 
-            foreach (var callset in callsets.PedigreeSample.OrderBy(callSet=> callSet.SampleType))
+            foreach (var callset in callsets.PedigreeSample)
             {
                 commandLine.AppendFormat("-v \"{0}\" ", callset.Sample.VfSummaryPath);
                 commandLine.AppendFormat("-n \"{0}\" ", callset.Sample.SampleName);
