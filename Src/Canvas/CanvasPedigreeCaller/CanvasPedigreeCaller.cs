@@ -41,7 +41,7 @@ namespace CanvasPedigreeCaller
         }
 
         internal int CallVariants(List<string> variantFrequencyFiles, List<string> segmentFiles,
-            string outVcfFile, string ploidyBedPath, string referenceFolder, List<string> sampleNames, string commonCNVsbedPath, string pedigreeFile)
+            string outVcfFile, string ploidyBedPath, string referenceFolder, List<string> sampleNames, string commonCNVsbedPath, List<SampleType> sampleTypes)
         {
             // load files
             // initialize data structures and classes
@@ -50,21 +50,7 @@ namespace CanvasPedigreeCaller
             var sampleSegments = new SampleMap<Segments>();
             var copyNumberModels = new SampleMap<CopyNumberModel>();
             var variantFrequencyFilesSampleList = new SampleMap<string>();
-            ISampleMap<Kinship> kinships;
-            if (pedigreeFile != null)
-            {
-                kinships = ReadPedigreeFile(pedigreeFile);
-                // In Kinship enum Proband gets the highest int value 
-                var newSampleNames = kinships.OrderByDescending(x => x.Value).Select(x => x.Key.ToString()).ToList();
-                var remapIndices = newSampleNames.Select(newname => sampleNames.FindIndex(name => name == newname)).ToList();
-                segmentFiles = remapIndices.Select(index => segmentFiles[index]).ToList();
-                variantFrequencyFiles = remapIndices.Select(index => variantFrequencyFiles[index]).ToList();
-                sampleNames = newSampleNames;
-            }
-            else
-            {
-                kinships = sampleNames.Select(name => (new SampleId(name), Kinship.Other)).ToSampleMap();
-            }
+            var kinships = new SampleMap<SampleType>();
 
             foreach (string sampleName in sampleNames)
             {
@@ -77,6 +63,7 @@ namespace CanvasPedigreeCaller
                 samplesInfo.Add(sampleId, sampleInfo);
                 copyNumberModels.Add(sampleId, copyNumberModel);
                 variantFrequencyFilesSampleList.Add(sampleId, variantFrequencyFiles[fileCounter]);
+                kinships.Add(sampleId, sampleTypes[fileCounter]);
                 fileCounter++;
             }
             var segmentSetsFromCommonCnvs = CreateSegmentSetsFromCommonCnvs(variantFrequencyFilesSampleList,
@@ -84,7 +71,7 @@ namespace CanvasPedigreeCaller
 
             var segmentsForVariantCalling = GetHighestLikelihoodSegments(segmentSetsFromCommonCnvs, samplesInfo, copyNumberModels).ToList();
             PedigreeInfo pedigreeInfo = null;
-            if (kinships.Values.Any(kin => kin == Kinship.Proband))
+            if (kinships.Values.Any(kin => kin == SampleType.Proband))
                 pedigreeInfo = PedigreeInfo.GetPedigreeInfo(kinships, _callerParameters);
             Parallel.ForEach(
                 segmentsForVariantCalling,
@@ -383,36 +370,7 @@ namespace CanvasPedigreeCaller
 
             return alleles;
         }
-
-        public enum Kinship
-        {
-            Other = 0,
-            Parent = 1,
-            Proband = 2
-        }
-
-        public static ISampleMap<Kinship> ReadPedigreeFile(string pedigreeFile)
-        {
-            var kinships = new SampleMap<Kinship>();
-            using (FileStream stream = new FileStream(pedigreeFile, FileMode.Open, FileAccess.Read))
-            using (StreamReader reader = new StreamReader(stream))
-            {
-                string row;
-                while ((row = reader.ReadLine()) != null)
-                {
-                    string[] fields = row.Split('\t');
-                    string maternalId = fields[2];
-                    string paternallId = fields[3];
-                    string proband = fields[5];
-                    if (maternalId == "0" && paternallId == "0")
-                        kinships.Add(new SampleId(fields[1]), Kinship.Parent);
-                    else if (proband == "affected")
-                        kinships.Add(new SampleId(fields[1]), Kinship.Proband);
-                    else
-                        Console.WriteLine($"Unused pedigree member: {row}");
-                }
-            }
-            return kinships;
-        }
     }
 }
+
+

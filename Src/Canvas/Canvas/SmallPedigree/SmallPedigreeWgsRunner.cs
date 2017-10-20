@@ -1,4 +1,6 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 using Canvas.CommandLineParsing;
 using CanvasCommon;
 using Illumina.Common.FileSystem;
@@ -52,6 +54,7 @@ namespace Canvas.SmallPedigree
                 CommonOptions.FilterBed,
                 SmallPedigreeOptions.MultiSamplePloidyVcf,
                 SmallPedigreeOptions.CommonCnvsBed);
+
             return new SmallPedigreeCallset(callSets, analysisDetails);
         }
     }

@@ -6,6 +6,7 @@ using CanvasCommon.CommandLineParsing.OptionProcessing;
 using Illumina.Common.FileSystem;
 using Xunit;
 using System.Linq;
+using CanvasCommon;
 using Isas.Framework.Checkpointing;
 using Isas.Framework.FrameworkFactory;
 using Isas.Framework.Logging;
