@@ -98,21 +98,23 @@ namespace CanvasCommon
         /// <summary>
         /// Outputs the copy number calls to a text file.
         /// </summary>
-        private static void WriteVariants(IReadOnlyCollection<List<CanvasSegment>> segments, List<PloidyInfo> ploidies, GenomeMetadata genome,
+        private static void WriteVariants(IReadOnlyCollection<List<CanvasSegment>> segmentsOfAllSamples, List<PloidyInfo> ploidies, GenomeMetadata genome,
             BgzipOrStreamWriter writer, bool isPedigreeInfoSupplied = true, int? denovoQualityThreshold = null)
         {
-            var nSamples = segments.Count;
+            var nSamples = segmentsOfAllSamples.Count;
             foreach (GenomeMetadata.SequenceMetadata chromosome in genome.Sequences)
             {
-                for (int segmentIndex = 0; segmentIndex < segments.First().Count; segmentIndex++)
+                for (int segmentIndex = 0; segmentIndex < segmentsOfAllSamples.First().Count; segmentIndex++)
                 {
-                    var firstSampleSegment = segments.First()[segmentIndex];
-                    if (!isPedigreeInfoSupplied && segments.Select(sample => sample[segmentIndex].Filter == "PASS").Any() && segments.Count > 1)
-                        firstSampleSegment.Filter = "PASS";
+                    var firstSampleSegment = segmentsOfAllSamples.First()[segmentIndex];
+                    //if (!isPedigreeInfoSupplied && segmentsOfAllSamples.Select(sample => sample[segmentIndex].Filter == "PASS").Any() && segmentsOfAllSamples.Count > 1)
+                    //TODO
+                    var index = segmentIndex;
+                    var recordLevelFilter = getRecordLevelFilter(segmentsOfAllSamples.Select(sample => sample[index].Filter));
                     if (!firstSampleSegment.Chr.Equals(chromosome.Name, StringComparison.OrdinalIgnoreCase))
                         continue;
-                    var referenceCopyNumbers = segments.Zip(ploidies, (segment, ploidy) => ploidy?.GetReferenceCopyNumber(segment[segmentIndex]) ?? 2).ToList();
-                    var currentSegments = segments.Select(x => x[segmentIndex]).ToList();
+                    var referenceCopyNumbers = segmentsOfAllSamples.Zip(ploidies, (segment, ploidy) => ploidy?.GetReferenceCopyNumber(segment[segmentIndex]) ?? 2).ToList();
+                    var currentSegments = segmentsOfAllSamples.Select(x => x[segmentIndex]).ToList();
                     var cnvTypes = new List<CnvType>();
                     for (int sampleIndex = 0; sampleIndex < nSamples; sampleIndex++)
                     {
@@ -120,14 +122,21 @@ namespace CanvasCommon
                     }
                     var cnvType = AssignCnvType(cnvTypes);
 
-                    WriteInfoField(writer, firstSampleSegment, cnvType, isMultisample: segments.Count > 1);
+                    WriteInfoField(writer, firstSampleSegment, cnvType, recordLevelFilter, segmentsOfAllSamples.Count > 1);
                     //  FORMAT field
-                    if (segments.Count == 1)
+                    if (segmentsOfAllSamples.Count == 1)
                         WriteSingleSampleFormat(writer, firstSampleSegment, denovoQualityThreshold.HasValue);
                     else
                         WriteFormatField(writer, currentSegments, denovoQualityThreshold.HasValue);
                 }
             }
+        }
+
+        private string getRecordLevelFilter(IEnumerable<string> sampleLevelFiters)
+        {
+            var nPassedSamples = sampleLevelFiters.Count(x => x == CanvasFilterKeywords.PASS);
+            if (nPassedSamples != 0)
+                return "PASS";
         }
 
         private static CnvType AssignCnvType(List<CnvType> cnvTypes)
@@ -189,10 +198,11 @@ namespace CanvasCommon
         /// </summary>
         /// <param name="writer"></param>
         /// <param name="segment"></param>
+        /// <param name="recordLevelFilterCnvType"></param>
         /// <param name="cnvType"></param>
-        /// <param name="denovoQualityThreshold"></param>
+        /// <param name="isMultisample"></param>
         /// <returns></returns>
-        private static void WriteInfoField(BgzipOrStreamWriter writer, CanvasSegment segment, CnvType cnvType, bool isMultisample)
+        private static void WriteInfoField(BgzipOrStreamWriter writer, CanvasSegment segment, CnvType cnvType, string recordLevelFilterCnvType, bool isMultisample)
         {
             // From vcf 4.1 spec:
             //     If any of the ALT alleles is a symbolic allele (an angle-bracketed ID String “<ID>”) then the padding base is required and POS denotes the 
