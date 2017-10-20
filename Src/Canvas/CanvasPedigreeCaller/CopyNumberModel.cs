@@ -7,8 +7,8 @@ namespace CanvasPedigreeCaller
 {
     public class CopyNumberModel
     {
-        public readonly List<List<double>> CnDistribution = new List<List<double>>();
-        readonly Tuple<List<double>, List<double>> [][] _alleleDistribution;
+        private readonly List<List<double>> _cnDistribution = new List<List<double>>();
+        private readonly Tuple<List<double>, List<double>> [][] _alleleDistribution;
         private readonly int _maxCoverage;
 
         public CopyNumberModel(int numCnStates, double meanMafCoverage, double meanCoverage, int maxCoverage)
@@ -31,7 +31,7 @@ namespace CanvasPedigreeCaller
                 // increase triploid mean by 10% to offset FP CN=3 calls 
                 if (copyNumber == 3)
                     multiplier *= 1.1;
-                CnDistribution.Add(DistributionUtilities.NegativeBinomialWrapper(haploidMean * multiplier, variance, maxCoverage, 
+                _cnDistribution.Add(DistributionUtilities.NegativeBinomialWrapper(haploidMean * multiplier, variance, maxCoverage, 
                     adjustClumpingParameter: true));
             }
 
@@ -54,7 +54,7 @@ namespace CanvasPedigreeCaller
 
         public List<double> GetCnLikelihood(double dimension)
         {
-            return CnDistribution.Select(x => x[Convert.ToInt32(dimension)]).ToList();
+            return _cnDistribution.Select(x => x[Convert.ToInt32(dimension)]).ToList();
         }
 
         public double GetGtLikelihoodScore(List<Tuple<int, int>> gtObservedCounts, List<Genotype> gtModelCounts, ref int? selectedGtState)

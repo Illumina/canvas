@@ -96,7 +96,7 @@ namespace CanvasCommon
                 if (interval.Start > segment.End) continue;
                 int start = Math.Max(segment.Begin, interval.Start);
                 int end = Math.Min(segment.End, interval.End);
-                if ((end - start) * 2 >= (segment.End - segment.Begin))
+                if ((end - start) * 2 >= (segment.Length))
                 {
                     CN = interval.CN;
                     break;
@@ -125,7 +125,7 @@ namespace CanvasCommon
                 if (interval.Start > segment.End) continue;
                 int start = Math.Max(segment.Begin, interval.Start);
                 int end = Math.Min(segment.End, interval.End);
-                if ((end - start) * 2 >= (segment.End - segment.Begin))
+                if ((end - start) * 2 >= (segment.Length))
                 {
                     Clonality = interval.Heterogeneity;
                     break;

@@ -59,7 +59,7 @@ namespace CanvasCommon
         {
             if (!PloidyByChromosome.ContainsKey(segment.Chr)) return 2;
             int[] baseCounts = new int[5];
-            baseCounts[2] = segment.End - segment.Begin;
+            baseCounts[2] = segment.Length;
 
             foreach (PloidyInterval interval in this.PloidyByChromosome[segment.Chr])
             {

@@ -335,30 +335,12 @@ namespace CanvasPedigreeCaller
             double maximalLikelihood = 1;
             foreach (var sampleId in segments.SampleIds)
             {
-                var (copyNumber, maxSampleLikelihood) = MaxBy(copyNumbersLikelihoods.SingleSampleLikelihoods[sampleId], x => x.Value);
+                var (copyNumber, maxSampleLikelihood) = copyNumbersLikelihoods.SingleSampleLikelihoods[sampleId].MaxBy(x => x.Value);
                 maximalLikelihood *= maxSampleLikelihood;
                 sampleCopyNumbers.Add(sampleId, copyNumber);
             }
             copyNumbersLikelihoods.MaximalLikelihood = maximalLikelihood;
             return sampleCopyNumbers;
-        }
-
-        public static T MaxBy<T>(IEnumerable<T> items, Func<T, double> transform)
-        {
-            bool any = false;
-            var maxValue = double.MinValue;
-            var itemWithMaxValue = default(T);
-            foreach (var item in items)
-            {
-                any = true;
-                var value = transform(item);
-                if (value <= maxValue) continue;
-                itemWithMaxValue = item;
-                maxValue = value;
-            }
-            if (!any)
-                throw new IlluminaException("Cannot get max value from an empty enumerable");
-            return itemWithMaxValue;
         }
 
         /// <summary>
@@ -400,14 +382,6 @@ namespace CanvasPedigreeCaller
                 alleles.Add(allele);
 
             return alleles;
-        }
-
-        public double GetTransitionProbability(int gt1Parent, int gt2Parent, int gt1Offspring, int gt2Offspring)
-        {
-            if (gt1Parent == gt1Offspring || gt1Parent == gt2Offspring ||
-                gt2Parent == gt1Offspring || gt2Parent == gt2Offspring)
-                return 0.5;
-            return _callerParameters.DeNovoRate;
         }
 
         public enum Kinship

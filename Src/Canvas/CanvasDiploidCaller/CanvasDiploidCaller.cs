@@ -181,7 +181,7 @@ namespace CanvasDiploidCaller
                 // Compute (MAF, Coverage) for this segment:
                 List<double> MAF = new List<double>();
                 foreach (float VF in segment.Balleles.Frequencies) MAF.Add(VF > 0.5 ? 1 - VF : VF);
-                int expectedSnpDensityCutoff = (segment.End - segment.Begin) / MedianHetSnpsDistance / 2;
+                int expectedSnpDensityCutoff = (segment.Length) / MedianHetSnpsDistance / 2;
 
                 double medianCoverage = CanvasCommon.Utilities.Median(segment.Counts);
 
@@ -330,7 +330,7 @@ namespace CanvasDiploidCaller
                 {
                     int CN = this.GetKnownCNForSegment(segment);
                     if (CN < 0) continue;
-                    if (segment.End - segment.Begin < 5000) continue;
+                    if (segment.Length < 5000) continue;
                     string accurateFlag = "N";
                     if (CN == segment.CopyNumber) accurateFlag = "Y";
                     string directionAccurateFlag = "N";
@@ -340,7 +340,7 @@ namespace CanvasDiploidCaller
                         directionAccurateFlag = "Y";
                     writer.Write("{0}\t{1}\t", accurateFlag, directionAccurateFlag);
                     writer.Write("{0}\t{1}\t{2}\t{3}\t", segment.Chr, segment.Begin, segment.End, CN);
-                    writer.Write("{0}\t", Math.Log(segment.End - segment.Begin));
+                    writer.Write("{0}\t", Math.Log(segment.Length));
                     writer.Write("{0}\t", segment.GetQScorePredictor(CanvasSegment.QScorePredictor.LogBinCount));
                     writer.Write("{0}\t", segment.GetQScorePredictor(CanvasSegment.QScorePredictor.BinCount));
                     writer.Write("{0}\t", segment.GetQScorePredictor(CanvasSegment.QScorePredictor.BinCv));
@@ -431,7 +431,7 @@ namespace CanvasDiploidCaller
 
                 if (this.Segments.Count > 100)
                 {
-                    info.Weight = segment.End - segment.Begin;
+                    info.Weight = segment.Length;
                 }
                 else
                 {

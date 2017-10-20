@@ -127,7 +127,7 @@ namespace CanvasSomaticCaller
                 writer.WriteLine("#Chr\tStart\tEnd\tCN\tPloidy\tMAF\tCoverage");
                 foreach (CanvasSegment segment in Segments)
                 {
-                    if (segment.End - segment.Begin < 5000) continue; // skip over itty bitty segments.
+                    if (segment.Length < 5000) continue; // skip over itty bitty segments.
                     int CN = this.GetKnownCNForSegment(segment);
                     if (CN < 0) continue;
                     List<float> MAF = new List<float>();
@@ -185,7 +185,7 @@ namespace CanvasSomaticCaller
             // Accumulate histograms:
             foreach (CanvasSegment segment in Segments)
             {
-                if (segment.End - segment.Begin < 5000) continue; // skip over itty bitty segments.
+                if (segment.Length < 5000) continue; // skip over itty bitty segments.
                 int count = (int)Math.Round(CanvasCommon.Utilities.Median(segment.Counts));
                 if (count >= histogramBinCount)
                 {
@@ -1411,7 +1411,7 @@ namespace CanvasSomaticCaller
             List<SegmentInfo> usableSegments = new List<SegmentInfo>();
             foreach (CanvasSegment segment in segments)
             {
-                if (segment.End - segment.Begin < 5000) continue;
+                if (segment.Length < 5000) continue;
                 SegmentInfo info = new SegmentInfo();
                 info.Segment = segment;
                 // If the segment has few or no variants, then don't use the MAF for this segment - set to -1 (no frequency)
@@ -1432,7 +1432,7 @@ namespace CanvasSomaticCaller
                 if (info.Coverage > overallMedian * 2) continue;
                 if (segments.Count > 100)
                 {
-                    info.Weight = segment.End - segment.Begin;
+                    info.Weight = segment.Length;
                 }
                 else
                 {
@@ -1706,7 +1706,7 @@ namespace CanvasSomaticCaller
                         // Step3: Use best parameters for density clustering, parameter sweep
                         Console.WriteLine(">>> Running density clustering selected cutoff {0:F5}", centroidCutoff);
                         DensityClusteringModel optimizedDensityClustering = RunDensityClustering(usableSegments, CoverageWeightingFactor, knearestNeighbourCutoff, centroidCutoff, out bestNumClusters);
-                        centroidsMAF = optimizedDensityClustering.GetCentroidsMAF();
+                        centroidsMAF = optimizedDensityClustering.GetCentroidsMaf();
                         centroidsCoverage = optimizedDensityClustering.GetCentroidsCoverage();
                         List<double> clusterVariance = optimizedDensityClustering.GetCentroidsVariance(centroidsMAF, centroidsCoverage, bestNumClusters);
                         List<int> clustersSize = optimizedDensityClustering.GetClustersSize(bestNumClusters);
@@ -1730,7 +1730,7 @@ namespace CanvasSomaticCaller
                             int remainingBestNumClusters = 0;
                             DensityClusteringModel remainingDensityClustering = RunDensityClustering(usableSegments, CoverageWeightingFactor, knearestNeighbourCutoff, centroidCutoff, out remainingBestNumClusters, 1.0);
                             remainingDensityClustering.FindCentroids();
-                            List<double> remainingCentroidsMAF = remainingDensityClustering.GetCentroidsMAF();
+                            List<double> remainingCentroidsMAF = remainingDensityClustering.GetCentroidsMaf();
                             List<double> remainingCentroidsCoverage = remainingDensityClustering.GetCentroidsCoverage();
                             MergeClusters(remainingSegments, usableSegments, centroidsMAF, remainingCentroidsMAF,
                                 centroidsCoverage, remainingCentroidsCoverage, bestNumClusters - largeClusters.Count);
@@ -2258,7 +2258,7 @@ namespace CanvasSomaticCaller
                 }
                 if (segment.Filter != "PASS") continue;
                 if (segment.CopyNumber == -1) continue;
-                baseCountByCopyNumber[Math.Min(segment.CopyNumber, somaticCallerParameters.MaximumCopyNumber)] += (segment.End - segment.Begin);
+                baseCountByCopyNumber[Math.Min(segment.CopyNumber, somaticCallerParameters.MaximumCopyNumber)] += (segment.Length);
             }
             overallCount += GetWeightedChromosomeCount(baseCountByCopyNumber);
             return overallCount;
@@ -2289,10 +2289,10 @@ namespace CanvasSomaticCaller
             double totalWeight = 0;
             foreach (CanvasSegment segment in this.Segments)
             {
-                totalWeight += segment.End - segment.Begin;
+                totalWeight += segment.Length;
                 if (segment.CopyNumber != 2 || segment.MajorChromosomeCount != 1)
                 {
-                    fractionAbnormal += segment.End - segment.Begin;
+                    fractionAbnormal += segment.Length;
                 }
             }
             fractionAbnormal /= totalWeight;
@@ -2406,13 +2406,13 @@ namespace CanvasSomaticCaller
             long heterogeneousSegments = 0;
             foreach (CanvasSegment segment in this.Segments)
             {
-                allSegments += segment.End - segment.Begin;
+                allSegments += segment.Length;
                 if (this.HeterogeneousSegmentsSignature.ContainsKey(segment))
                 {
                     if (this.HeterogeneousSegmentsSignature[segment] < 0.5)
                     {
                         segment.IsHeterogeneous = true;
-                        heterogeneousSegments += segment.End - segment.Begin;
+                        heterogeneousSegments += segment.Length;
                     }
                 }
             }
@@ -2489,7 +2489,7 @@ namespace CanvasSomaticCaller
                     int CN = this.GetKnownCNForSegment(segment);
                     double Heterogeneity = this.GetKnownClonalityForSegment(segment);
                     if (CN < 0) continue;
-                    if (segment.End - segment.Begin < 5000) continue;
+                    if (segment.Length < 5000) continue;
                     double medianCoverage = CanvasCommon.Utilities.Median(segment.Counts);
                     string accurateFlag = "N";
                     if (CN == segment.CopyNumber) accurateFlag = "Y";
@@ -2500,7 +2500,7 @@ namespace CanvasSomaticCaller
                         directionAccurateFlag = "Y";
                     writer.Write("{0}\t{1}\t{2}\t{3}\t{4}\t{5}\t{6}\t{7}\t", segment.Chr, segment.Begin, segment.End, CN, Heterogeneity, segment.CopyNumber, segment.SecondBestCopyNumber, segment.CopyNumberSwapped ? "Y" : "N");
                     writer.Write("{0}\t{1}\t", accurateFlag, directionAccurateFlag);
-                    writer.Write("{0}\t", Math.Log(segment.End - segment.Begin));
+                    writer.Write("{0}\t", Math.Log(segment.Length));
                     writer.Write("{0}\t", segment.GetQScorePredictor(CanvasSegment.QScorePredictor.LogBinCount));
                     writer.Write("{0}\t", segment.GetQScorePredictor(CanvasSegment.QScorePredictor.BinCount));
                     writer.Write("{0}\t", segment.GetQScorePredictor(CanvasSegment.QScorePredictor.BinCv));
@@ -2792,7 +2792,7 @@ namespace CanvasSomaticCaller
             long[,] ConfusionMatrix = new long[8, 8];
             foreach (CanvasSegment segment in this.Segments)
             {
-                allSegmentBases += segment.End - segment.Begin;
+                allSegmentBases += segment.Length;
                 if (!this.CNOracle.KnownCN.ContainsKey(segment.Chr)) continue;
                 foreach (CNInterval interval in this.CNOracle.KnownCN[segment.Chr])
                 {
