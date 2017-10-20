@@ -1,7 +1,6 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using Canvas.CommandLineParsing;
 using CanvasCommon;
 
 namespace Canvas.SmallPedigree

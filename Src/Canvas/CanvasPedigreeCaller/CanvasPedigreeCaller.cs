@@ -9,7 +9,6 @@ using Isas.SequencingFiles.Vcf;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Isas.Framework.DataTypes.Maps;
@@ -41,7 +40,7 @@ namespace CanvasPedigreeCaller
         }
 
         internal int CallVariants(List<string> variantFrequencyFiles, List<string> segmentFiles,
-            string outVcfFile, string ploidyBedPath, string referenceFolder, List<string> sampleNames, string commonCNVsbedPath, List<SampleType> sampleTypes)
+            string outVcfFile, string ploidyBedPath, string referenceFolder, List<string> sampleNames, string commonCnvsBedPath, List<SampleType> sampleTypes)
         {
             // load files
             // initialize data structures and classes
@@ -67,7 +66,7 @@ namespace CanvasPedigreeCaller
                 fileCounter++;
             }
             var segmentSetsFromCommonCnvs = CreateSegmentSetsFromCommonCnvs(variantFrequencyFilesSampleList,
-                _callerParameters.DefaultReadCountsThreshold, commonCNVsbedPath, sampleSegments);
+                _callerParameters.DefaultReadCountsThreshold, commonCnvsBedPath, sampleSegments);
 
             var segmentsForVariantCalling = GetHighestLikelihoodSegments(segmentSetsFromCommonCnvs, samplesInfo, copyNumberModels).ToList();
             PedigreeInfo pedigreeInfo = null;

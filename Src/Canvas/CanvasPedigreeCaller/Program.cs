@@ -35,7 +35,6 @@ namespace CanvasPedigreeCaller
             var variantFrequencyFiles = new List<string>();
             var sampleTypesString = new List<string>();
             string ploidyBedPath = null;
-            string pedigreeFile = null;
             string referenceFolder = null;
             var sampleNames = new List<string>();
             bool needHelp = false;
