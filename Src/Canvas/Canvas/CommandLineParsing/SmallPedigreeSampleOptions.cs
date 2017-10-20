@@ -1,3 +1,4 @@
+using CanvasCommon;
 using Illumina.Common.FileSystem;
 
 namespace Canvas.CommandLineParsing

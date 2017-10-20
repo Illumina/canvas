@@ -31,11 +31,11 @@ namespace CanvasPedigreeCaller
             TransitionMatrix = transitionMatrix;
         }
 
-        public static PedigreeInfo GetPedigreeInfo(ISampleMap<CanvasPedigreeCaller.Kinship> kinships, PedigreeCallerParameters callerParameters)
+        public static PedigreeInfo GetPedigreeInfo(ISampleMap<SampleType> kinships, PedigreeCallerParameters callerParameters)
         {
-            var parentsIds = kinships.Where(kin => kin.Value.Equals(CanvasPedigreeCaller.Kinship.Parent)).Select(kin => kin.Key)
+            var parentsIds = kinships.Where(kin => kin.Value.Equals(SampleType.Father) || kin.Value.Equals(SampleType.Mother)).Select(kin => kin.Key)
                 .ToList();
-            var offspringIds = kinships.Where(kin => kin.Value.Equals(CanvasPedigreeCaller.Kinship.Proband)).Select(kin => kin.Key)
+            var offspringIds = kinships.Where(kin => kin.Value.Equals(SampleType.Proband) || kin.Value.Equals(SampleType.Sibling)).Select(kin => kin.Key)
                 .ToList();
             var parentalGenotypes = GenerateParentalGenotypes(callerParameters.MaximumCopyNumber);
             var offspringsGenotypes =
