@@ -33,7 +33,7 @@ namespace CanvasCommon
         {
             double totalPloidy = 0;
             double totalWeight = 0;
-            foreach (CanvasSegment segment in segments.Where(segment => segment.Filter == "PASS"))
+            foreach (CanvasSegment segment in segments.Where(segment => segment.Filter.Equals(CanvasFilter.PassedFilter)))
             {
                 totalWeight += segment.End - segment.Begin;
                 totalPloidy += segment.CopyNumber * (segment.End - segment.Begin);
@@ -110,7 +110,8 @@ namespace CanvasCommon
                     //if (!isPedigreeInfoSupplied && segmentsOfAllSamples.Select(sample => sample[segmentIndex].Filter == "PASS").Any() && segmentsOfAllSamples.Count > 1)
                     //TODO
                     var index = segmentIndex;
-                    var recordLevelFilter = getRecordLevelFilter(segmentsOfAllSamples.Select(sample => sample[index].Filter));
+                    var recordLevelFilter = string.Join(";", GetRecordLevelFilter(
+                                                segmentsOfAllSamples.Select(sample => sample[index].Filter).ToList()));
                     if (!firstSampleSegment.Chr.Equals(chromosome.Name, StringComparison.OrdinalIgnoreCase))
                         continue;
                     var referenceCopyNumbers = segmentsOfAllSamples.Zip(ploidies, (segment, ploidy) => ploidy?.GetReferenceCopyNumber(segment[segmentIndex]) ?? 2).ToList();
@@ -132,11 +133,18 @@ namespace CanvasCommon
             }
         }
 
-        private string getRecordLevelFilter(IEnumerable<string> sampleLevelFiters)
+        private static IEnumerable<string> GetRecordLevelFilter(List<List<string>> sampleLevelFiters)
         {
-            var nPassedSamples = sampleLevelFiters.Count(x => x == CanvasFilterKeywords.PASS);
-            if (nPassedSamples != 0)
-                return "PASS";
+            var keywords = sampleLevelFiters.SelectMany(x => x).GroupBy(x => x);
+            var FailedRecordLevelFilter = new List<string>() { CanvasFilter.AllSampleFiltersFailed };
+            //var keywordCounts = new Dictionary<string, int>();
+            var nSamples = sampleLevelFiters.Count;
+            foreach (var keyword in keywords)
+            {
+                if (keyword.Key == CanvasFilter.Pass) return CanvasFilter.PassedFilter; // At least one sample filter passed
+                if (keyword.Count() == nSamples) FailedRecordLevelFilter.Add(keyword.Key); // Failed for all samples
+            }
+            return FailedRecordLevelFilter;
         }
 
         private static CnvType AssignCnvType(List<CnvType> cnvTypes)

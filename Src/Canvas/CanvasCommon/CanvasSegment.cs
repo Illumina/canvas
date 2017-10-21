@@ -200,7 +200,7 @@ namespace CanvasCommon
         public bool IsHeterogeneous;
         private const int NumberVariantFrequencyBins = 100;
         private const int OverlapWindowThreshold = 500;
-        public List<string> Filter = new List<string> {CanvasFilterKeywords.Pass};
+        public List<string> Filter = new List<string> {CanvasFilter.Pass};
         public Tuple<int, int> StartConfidenceInterval; // if not null, this is a confidence interval around Start, reported in the CIPOS tag
         public Tuple<int, int> EndConfidenceInterval; // if not null, this is a confidence interval around End, reported in the CIEND tag
         public Balleles Balleles;
@@ -1041,15 +1041,16 @@ namespace CanvasCommon
         /// <summary>
         /// Set segment.Filter for each of our segments.
         /// </summary>
-        public static void FilterSegments(int qualityFilterThreshold, List<CanvasSegment> segments, int segmantSizeCutoff)
+        public static void SetFilterForSegments(int qualityFilterThreshold, List<CanvasSegment> segments, int segmantSizeCutoff)
         {
             string qualityFilter = $"q{qualityFilterThreshold}";
+            string sizeFilter = "L" + CanvasFilter.FormatCnvSizeWithSuffix(segmantSizeCutoff);
             foreach (var segment in segments)
             {
-                if (segment.Filter.Count > 0) throw new Exception("F");
+                if (segment.Filter.Count > 0) throw new Exception($"Filter has already been set: {string.Join(";", segment.Filter)}");
                 if (segment.QScore < qualityFilterThreshold) segment.Filter.Add(qualityFilter);
-                if (segment.End - segment.Begin < segmantSizeCutoff) segment.Filter.Add("L"+CanvasFilterKeywords.FormatCnvSizeWithSuffix(segmantSizeCutoff));
-                if (segment.Filter.Count == 0) segment.Filter.Add(CanvasFilterKeywords.Pass); // "PASS" is exclusive with any other keyword
+                if (segment.End - segment.Begin < segmantSizeCutoff) segment.Filter.Add(sizeFilter);
+                if (segment.Filter.Count == 0) segment.Filter.Add(CanvasFilter.Pass); // "PASS" is exclusive with any other keyword
             }
         }
 

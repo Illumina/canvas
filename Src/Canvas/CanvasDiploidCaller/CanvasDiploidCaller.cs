@@ -460,7 +460,7 @@ namespace CanvasDiploidCaller
             var mergedSegments = CanvasSegment.MergeSegments(Segments);
             // recalculating qscores after merging segments improves performance!
             CanvasSegment.AssignQualityScores(mergedSegments, CanvasSegment.QScoreMethod.LogisticGermline, germlineScoreParameters);
-            CanvasSegment.FilterSegments(QualityFilterThreshold, mergedSegments); 
+            CanvasSegment.SetFilterForSegments(QualityFilterThreshold, mergedSegments, CanvasFilter.SegmantSizeCutoff); 
 
             List<string> extraHeaders = new List<string>();
             var coverageOutputPath = SingleSampleCallset.GetCoverageAndVariantFrequencyOutputPath(outFile);

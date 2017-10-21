@@ -317,7 +317,7 @@ namespace CanvasPedigreeCaller
                 canvasSegments[sampleId].QScore = GetSingleSampleQualityScore(copyNumberLikelihoods.SingleSampleLikelihoods[sampleId], copyNumbers[sampleId], sampleId.ToString());
                 canvasSegments[sampleId].CopyNumber = copyNumbers[sampleId];
                 if (canvasSegments[sampleId].QScore < QualityFilterThreshold)
-                    canvasSegments[sampleId].Filter = $"q{QualityFilterThreshold}";
+                    canvasSegments[sampleId].Filter = new List<string>{$"q{QualityFilterThreshold}"};
             }
             if (pedigreeInfo != null)
                 SetDenovoQualityScores(canvasSegments, pedigreeMembersInfo, pedigreeInfo.ParentsIds, pedigreeInfo.OffspringIds, copyNumberLikelihoods);

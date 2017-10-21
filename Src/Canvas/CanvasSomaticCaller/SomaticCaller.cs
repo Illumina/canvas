@@ -454,7 +454,7 @@ namespace CanvasSomaticCaller
 
             // recalculating quality scores doesn't seem to have any effect, but we do it for consistency with the diploid caller where it seems to matter
             CanvasSegment.AssignQualityScores(mergedSegments, CanvasSegment.QScoreMethod.Logistic, this.somaticCallerQscoreParameters);
-            CanvasSegment.FilterSegments(QualityFilterThreshold, mergedSegments);
+            CanvasSegment.SetFilterForSegments(QualityFilterThreshold, mergedSegments, CanvasFilter.SegmantSizeCutoff);
 
             if (this.CNOracle != null)
             {
@@ -2256,7 +2256,7 @@ namespace CanvasSomaticCaller
                     Array.Clear(baseCountByCopyNumber, 0, baseCountByCopyNumber.Length);
                     currentChromosome = segment.Chr;
                 }
-                if (segment.Filter != "PASS") continue;
+                if (!segment.Filter.Equals(CanvasFilter.PassedFilter)) continue;
                 if (segment.CopyNumber == -1) continue;
                 baseCountByCopyNumber[Math.Min(segment.CopyNumber, somaticCallerParameters.MaximumCopyNumber)] += (segment.End - segment.Begin);
             }
@@ -2318,7 +2318,7 @@ namespace CanvasSomaticCaller
                 {
                     recordCount++;
                     // Skip non-PF variants:
-                    if (variant.Filters != "PASS") continue;
+                    if (variant.Filters != "PASS") continue; // not Canvas output
                     // Skip everything but SNVs:
                     if (variant.ReferenceAllele.Length > 1 || variant.VariantAlleles.Length != 1 || variant.VariantAlleles[0].Length != 1
                         || variant.VariantAlleles[0] == ".")
