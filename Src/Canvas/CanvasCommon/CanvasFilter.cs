@@ -11,14 +11,10 @@ namespace CanvasCommon
         public const string SampleFilterFailed = "FT";
         public static string FormatCnvSizeWithSuffix(int size)
         {
-            if (size >= 100000000)
+            if (size >= 1000000)
                 return FormatCnvSizeWithSuffix(size / 1000000) + "MB";
-            if (size >= 100000)
+            if (size >= 1000)
                 return FormatCnvSizeWithSuffix(size / 1000) + "KB";
-            if (size >= 10000)
-            {
-                return (size / 1000D).ToString("0.#") + "KB";
-            }
             return size.ToString();
         }
     }
