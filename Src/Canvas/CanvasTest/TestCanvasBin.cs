@@ -93,7 +93,7 @@ namespace CanvasTest
             string dataFolder = Path.Combine(assemblyFolder, "Data");
             string bedPath = Path.Combine(dataFolder, "bins_chrM.bed");
             string bamPath = Path.Combine(dataFolder, "single-end.bam");
-            Dictionary<string, List<SampleGenomicBin>> bins = CanvasCommon.Utilities.LoadBedFile(bedPath, gcIndex: 3);
+            Dictionary<string, List<SampleGenomicBin>> bins = Utilities.LoadBedFile(bedPath, gcIndex: 3);
             string chrom = "chrM";
             FragmentBinner.BinTask binTask = new FragmentBinner.BinTask(null, chrom, bamPath, bins[chrom]);
             bool exceptionCaught = false;

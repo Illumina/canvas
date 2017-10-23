@@ -107,10 +107,8 @@ namespace CanvasCommon
                 for (int segmentIndex = 0; segmentIndex < segmentsOfAllSamples.First().Count; segmentIndex++)
                 {
                     var firstSampleSegment = segmentsOfAllSamples.First()[segmentIndex];
-                    //if (!isPedigreeInfoSupplied && segmentsOfAllSamples.Select(sample => sample[segmentIndex].Filter == "PASS").Any() && segmentsOfAllSamples.Count > 1)
-                    //TODO
                     var index = segmentIndex;
-                    var recordLevelFilter = string.Join(";", GetRecordLevelFilter(
+                    var recordLevelFilter = CanvasFilter.ToString(CanvasFilter.GetRecordLevelFilter(
                                                 segmentsOfAllSamples.Select(sample => sample[index].Filter).ToList()));
                     if (!firstSampleSegment.Chr.Equals(chromosome.Name, StringComparison.OrdinalIgnoreCase))
                         continue;
@@ -133,19 +131,7 @@ namespace CanvasCommon
             }
         }
 
-        private static IEnumerable<string> GetRecordLevelFilter(List<List<string>> sampleLevelFiters)
-        {
-            var keywords = sampleLevelFiters.SelectMany(x => x).GroupBy(x => x);
-            var FailedRecordLevelFilter = new List<string>() { CanvasFilter.AllSampleFiltersFailed };
-            //var keywordCounts = new Dictionary<string, int>();
-            var nSamples = sampleLevelFiters.Count;
-            foreach (var keyword in keywords)
-            {
-                if (keyword.Key == CanvasFilter.Pass) return CanvasFilter.PassedFilter; // At least one sample filter passed
-                if (keyword.Count() == nSamples) FailedRecordLevelFilter.Add(keyword.Key); // Failed for all samples
-            }
-            return FailedRecordLevelFilter;
-        }
+
 
         private static CnvType AssignCnvType(List<CnvType> cnvTypes)
         {
