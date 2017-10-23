@@ -7,9 +7,8 @@ namespace CanvasPedigreeCaller
 {
     public class CopyNumberModel
     {
-        public List<Tuple<int,int>> Genotypes = new List<Tuple<int, int>>();
-        public List<List<double>> CnDistribution = new List<List<double>>();
-        readonly Tuple<List<double>, List<double>> [][] _alleleDistribution;
+        private readonly List<List<double>> _cnDistribution = new List<List<double>>();
+        private readonly Tuple<List<double>, List<double>> [][] _alleleDistribution;
         private readonly int _maxCoverage;
 
         public CopyNumberModel(int numCnStates, double meanMafCoverage, double meanCoverage, int maxCoverage)
@@ -32,7 +31,7 @@ namespace CanvasPedigreeCaller
                 // increase triploid mean by 10% to offset FP CN=3 calls 
                 if (copyNumber == 3)
                     multiplier *= 1.1;
-                CnDistribution.Add(DistributionUtilities.NegativeBinomialWrapper(haploidMean * multiplier, variance, maxCoverage, 
+                _cnDistribution.Add(DistributionUtilities.NegativeBinomialWrapper(haploidMean * multiplier, variance, maxCoverage, 
                     adjustClumpingParameter: true));
             }
 
@@ -55,29 +54,7 @@ namespace CanvasPedigreeCaller
 
         public List<double> GetCnLikelihood(double dimension)
         {
-            return CnDistribution.Select(x => x[Convert.ToInt32(dimension)]).ToList();
-        }
-
-        public double[][] GetMedianGtLikelihood(List<Tuple<int, int>> gtCounts)
-        {
-            int nrows = _alleleDistribution.Length;
-            int ncols = _alleleDistribution.First().Length;
-            double[][] likelihood = Utilities.MatrixCreate(nrows, ncols);
-            foreach (var gtCount in gtCounts)
-            {
-                for (int i = 0; i < nrows; i++)
-                {
-                    for (int j = 0; j < ncols; j++)
-                    {
-                        if (_alleleDistribution[i][j] != null)
-                            likelihood[i][j] += _alleleDistribution[i][j].Item1[gtCount.Item1] *
-                                               _alleleDistribution[i][j].Item2[gtCount.Item2];
-                        else
-                            likelihood[i][j] += 0;
-                    }
-                }
-            }
-            return likelihood;
+            return _cnDistribution.Select(x => x[Convert.ToInt32(dimension)]).ToList();
         }
 
         public double GetGtLikelihoodScore(List<Tuple<int, int>> gtObservedCounts, List<Genotype> gtModelCounts, ref int? selectedGtState)

@@ -1,8 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using Illumina.Common;
-using Isas.SequencingFiles;
 using Isas.SequencingFiles.Vcf;
 
 namespace CanvasCommon
@@ -59,9 +56,9 @@ namespace CanvasCommon
         {
             if (!PloidyByChromosome.ContainsKey(segment.Chr)) return 2;
             int[] baseCounts = new int[5];
-            baseCounts[2] = segment.End - segment.Begin;
+            baseCounts[2] = segment.Length;
 
-            foreach (PloidyInterval interval in this.PloidyByChromosome[segment.Chr])
+            foreach (PloidyInterval interval in PloidyByChromosome[segment.Chr])
             {
                 if (interval.Ploidy == 2) continue;
                 int overlapStart = Math.Max(segment.Begin, interval.Start);
@@ -73,16 +70,16 @@ namespace CanvasCommon
                 baseCounts[interval.Ploidy] += overlapBases; // ASSUMPTION: Vcf file ploidy shouldn't be >4 (i.e. we wouldn't handle an XXXXXY genome):
             }
             int bestCount = 0;
-            int referenceCN = 2;
-            for (int CN = 0; CN < baseCounts.Length; CN++)
+            int referenceCopyNumber = 2;
+            for (int copyNumber = 0; copyNumber < baseCounts.Length; copyNumber++)
             {
-                if (baseCounts[CN] > bestCount)
+                if (baseCounts[copyNumber] > bestCount)
                 {
-                    bestCount = baseCounts[CN];
-                    referenceCN = CN;
+                    bestCount = baseCounts[copyNumber];
+                    referenceCopyNumber = copyNumber;
                 }
             }
-            return referenceCN;
+            return referenceCopyNumber;
         }
 
         // Only one sample column allowed, if no sampleId provided, 
@@ -92,7 +89,7 @@ namespace CanvasCommon
             using (VcfReader reader = new VcfReader(vcfPath))
             {
                 var sampleCount = reader.Samples.Count;
-                if (sampleCount == 0) 
+                if (sampleCount == 0)
                     throw new ArgumentException(
                         $"File '{vcfPath}' does not contain any genotype column");
                 else if (sampleCount > 1)
@@ -102,7 +99,7 @@ namespace CanvasCommon
             return LoadPloidyFromVcfFile(vcfPath, 0);
         }
 
-        private static PloidyInfo LoadPloidyFromVcfFile(string vcfPath, int sampleIndex) 
+        private static PloidyInfo LoadPloidyFromVcfFile(string vcfPath, int sampleIndex)
         {
             PloidyInfo ploidy = new PloidyInfo();
 
@@ -113,17 +110,18 @@ namespace CanvasCommon
 
                 while (true)
                 {
-                    VcfVariant record;
-                    bool result = reader.GetNextVariant(out record);
+                    bool result = reader.GetNextVariant(out var record);
                     if (!result) break;
                     string chromosome = record.ReferenceName;
                     if (!ploidy.PloidyByChromosome.ContainsKey(chromosome))
                     {
                         ploidy.PloidyByChromosome[chromosome] = new List<PloidyInterval>();
                     }
-                    PloidyInterval interval = new PloidyInterval(chromosome);
-                    interval.Start = record.ReferencePosition;
-                    interval.End = int.Parse(record.InfoFields["END"]);
+                    PloidyInterval interval = new PloidyInterval(chromosome)
+                    {
+                        Start = record.ReferencePosition,
+                        End = int.Parse(record.InfoFields["END"])
+                    };
                     var genotypeColumn = record.GenotypeColumns[sampleIndex];
                     if (genotypeColumn.ContainsKey("CN"))
                     {
@@ -177,7 +175,7 @@ namespace CanvasCommon
     /// </summary>
     public class SegmentPloidy
     {
-        public int ID; // A 0-based index for this ploidy, for array indexing.
+        public int Index; // A 0-based index for this ploidy, for array indexing.
         public int CopyNumber;
         public int MajorChromosomeCount;
         public double MinorAlleleFrequency; // for PURE tumor
@@ -197,16 +195,16 @@ namespace CanvasCommon
     /// </summary>
     public class ModelPoint
     {
-        public double MAF;
+        public double Maf;
         public double Coverage;
         public double Weight;
-        public double MAFWeight;
-        public int CN;
+        public double MafWeight;
+        public int CopyNumber;
         public int? ClusterId;
         public int? FinalClusterId;
         public double? KnearestNeighbour;
         public SegmentPloidy Ploidy;
-        public double EmpiricalMAF;
+        public double EmpiricalMaf;
         public double EmpiricalCoverage;
         public double Distance;
     }

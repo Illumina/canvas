@@ -12,11 +12,11 @@ namespace CanvasTest
         {
             var segmentOne = new SegmentInfo();
             segmentOne.Coverage = 2;
-            segmentOne.MAF = 0.5;
+            segmentOne.Maf = 0.5;
 
             var segmentTwo = new SegmentInfo();
             segmentTwo.Coverage = 1;
-            segmentTwo.MAF = 0;
+            segmentTwo.Maf = 0;
 
             var segments = new List<SegmentInfo>
             {

@@ -172,7 +172,6 @@ namespace CanvasCommon
     /// </summary>
     public partial class CanvasSegment
     {
-
         public CanvasSegment(string chr, int begin, int end, List<SampleGenomicBin> counts, Balleles balleles = null)
         {
             Chr = chr;
@@ -204,7 +203,7 @@ namespace CanvasCommon
         public Tuple<int, int> StartConfidenceInterval; // if not null, this is a confidence interval around Start, reported in the CIPOS tag
         public Tuple<int, int> EndConfidenceInterval; // if not null, this is a confidence interval around End, reported in the CIEND tag
         public Balleles Balleles;
-        public string Chr { get; private set; }
+        public string Chr { get; }
         /// <summary>
         /// bed format start position
         /// zero-based inclusive start position
@@ -219,14 +218,16 @@ namespace CanvasCommon
         {
             get
             {
-                return this.GenomicBins.Select(x => x.Count).ToList();
+                return GenomicBins.Select(x => x.Count).ToList();
             }
         }
-        #endregion
+
         public int Length => End - Begin;
-        public List<SampleGenomicBin> GetSampleGenomicBinSubrange(int start, int end)
+        #endregion
+
+        private List<SampleGenomicBin> GetSampleGenomicBinSubrange(int start, int end)
         {
-            return this.GenomicBins.Where(x => x.Start >= start && x.Stop <= end).ToList();
+            return GenomicBins.Where(x => x.Start >= start && x.Stop <= end).ToList();
         }
 
         /// <summary>
@@ -237,7 +238,7 @@ namespace CanvasCommon
             get
             {
                 double sum = Counts.Sum();
-                return sum / this.BinCount;
+                return sum / BinCount;
             }
         }
 
@@ -284,28 +285,28 @@ namespace CanvasCommon
         /// <param name="s">Segment to merge in.</param>
         public void MergeIn(CanvasSegment s)
         {
-            if (s.Begin < this.Begin)
+            if (s.Begin < Begin)
             {
-                this.StartConfidenceInterval = s.StartConfidenceInterval;
-                this.Begin = s.Begin;
+                StartConfidenceInterval = s.StartConfidenceInterval;
+                Begin = s.Begin;
             }
-            if (s.End > this.End)
+            if (s.End > End)
             {
-                this.EndConfidenceInterval = s.EndConfidenceInterval;
-                this.End = s.End;
+                EndConfidenceInterval = s.EndConfidenceInterval;
+                End = s.End;
             }
-            this.GenomicBins.AddRange(s.GenomicBins);
-            if (this.Balleles != null && s.Balleles != null) Balleles.Add(s.Balleles);
+            GenomicBins.AddRange(s.GenomicBins);
+            if (Balleles != null && s.Balleles != null) Balleles.Add(s.Balleles);
         }
 
         public int SizeOveralp(CanvasSegment segment)
         {
-            if (segment.Begin > this.Begin && segment.End < this.End)
-                return this.Length - segment.Length;
-            if (segment.Begin > this.Begin && segment.Begin < this.End && this.End <= segment.End)
-                return this.End - segment.Begin;
-            if (segment.Begin < this.Begin && segment.End > this.Begin && this.End > segment.End)
-                return segment.End - this.Begin;
+            if (segment.Begin > Begin && segment.End < End)
+                return Length - segment.Length;
+            if (segment.Begin > Begin && segment.Begin < End && End <= segment.End)
+                return End - segment.Begin;
+            if (segment.Begin < Begin && segment.End > Begin && End > segment.End)
+                return segment.End - Begin;
             return 0;
         }
 
@@ -526,7 +527,7 @@ namespace CanvasCommon
             foreach (var segment in segments)
             {
                 totalBins += segment.Counts.Count;
-                totalLength += segment.End - segment.Begin;
+                totalLength += segment.Length;
             }
 
             // Plot points that have at least 25% as much coverage info as we expect to see on average

@@ -52,6 +52,7 @@ namespace Canvas.SmallPedigree
                 CommonOptions.FilterBed,
                 SmallPedigreeOptions.MultiSamplePloidyVcf,
                 SmallPedigreeOptions.CommonCnvsBed);
+
             return new SmallPedigreeCallset(callSets, analysisDetails);
         }
     }

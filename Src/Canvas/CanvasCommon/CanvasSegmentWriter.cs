@@ -35,8 +35,8 @@ namespace CanvasCommon
             double totalWeight = 0;
             foreach (CanvasSegment segment in segments.Where(segment => segment.Filter.Equals(CanvasFilter.PassedFilter)))
             {
-                totalWeight += segment.End - segment.Begin;
-                totalPloidy += segment.CopyNumber * (segment.End - segment.Begin);
+                totalWeight += segment.Length;
+                totalPloidy += segment.CopyNumber * (segment.Length);
             }
             if (totalWeight > 0)
             {
@@ -221,7 +221,7 @@ namespace CanvasCommon
             writer.Write($"END={segment.End}");
 
             if (cnvType != CnvType.Reference)
-                writer.Write($";CNVLEN={segment.End - segment.Begin}");
+                writer.Write($";CNVLEN={segment.Length}");
 
             if (segment.StartConfidenceInterval != null)
                 writer.Write($";CIPOS={segment.StartConfidenceInterval.Item1},{segment.StartConfidenceInterval.Item2}");
