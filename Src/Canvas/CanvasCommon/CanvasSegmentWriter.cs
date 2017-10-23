@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using Illumina.Common.FileSystem;
-using Isas.Framework.DataTypes;
 using Isas.Framework.DataTypes.Maps;
 using Isas.SequencingFiles;
 
@@ -14,7 +13,7 @@ namespace CanvasCommon
         /// <summary>
         /// Integrity check, to ensure that our reference FASTA file is in sync with our inputs.  
         /// </summary>
-        private static void SanityCheckChromosomeNames(GenomeMetadata genome, List<CanvasSegment> segments)
+        private static void SanityCheckChromosomeNames(GenomeMetadata genome, IEnumerable<CanvasSegment> segments)
         {
             var chromosomeNames = new HashSet<string>();
             foreach (GenomeMetadata.SequenceMetadata chromosome in genome.Sequences)
@@ -192,11 +191,11 @@ namespace CanvasCommon
         /// </summary>
         /// <param name="writer"></param>
         /// <param name="segment"></param>
-        /// <param name="recordLevelFilterCnvType"></param>
+        /// <param name="recordLevelFilter"></param>
         /// <param name="cnvType"></param>
         /// <param name="isMultisample"></param>
         /// <returns></returns>
-        private static void WriteInfoField(BgzipOrStreamWriter writer, CanvasSegment segment, CnvType cnvType, string recordLevelFilterCnvType, bool isMultisample)
+        private static void WriteInfoField(BgzipOrStreamWriter writer, CanvasSegment segment, CnvType cnvType, string recordLevelFilter, bool isMultisample)
         {
             // From vcf 4.1 spec:
             //     If any of the ALT alleles is a symbolic allele (an angle-bracketed ID String “<ID>”) then the padding base is required and POS denotes the 
@@ -207,7 +206,7 @@ namespace CanvasCommon
                 : segment.Begin + 1;
             writer.Write($"{segment.Chr}\t{position}\tCanvas:{cnvType.ToVcfId()}:{segment.Chr}:{segment.Begin + 1}-{segment.End}\t");
             string qScore = isMultisample ? "." : $"{segment.QScore:F2}";
-            writer.Write($"N\t{alternateAllele}\t{qScore}\t{segment.Filter}\t");
+            writer.Write($"N\t{alternateAllele}\t{qScore}\t{recordLevelFilter}\t");
 
             if (cnvType != CnvType.Reference)
                 writer.Write($"SVTYPE={cnvType.ToSvType()};");
