@@ -33,7 +33,6 @@ namespace CanvasDiploidCaller
             string ploidyBedPath = null;
             string referenceFolder = null;
             string sampleName = "SAMPLE";
-            bool isDbsnpVcf = false;
             bool needHelp = false;
             string truthDataPath = null;
 
@@ -47,7 +46,7 @@ namespace CanvasDiploidCaller
                 { "r|reference=",     "reference genome folder that contains GenomeSize.xml",                                           v => referenceFolder = v },
                 { "n|sampleName=",    "sample name for output VCF header (optional)",                                                   v => sampleName = v },
                 { "p|ploidyBed=",     "bed file specifying reference ploidy (e.g. for sex chromosomes) (optional)",                     v => ploidyBedPath = v },
-                { "d|dbsnpvcf", "flag indicating a dbSNP VCF file is used to generate the variant frequency file",                      v => isDbsnpVcf = v != null },
+                { "d|dbsnpvcf", "flag indicating a dbSNP VCF file is used to generate the variant frequency file (Obsolete)",           v => { } },
                 { "h|help",           "show this message and exit",                                                                     v => needHelp = v != null },
                 { "s|qscoreconfig=", $"parameter configuration path (default {qualityScoreConfigPath})", v => qualityScoreConfigPath = v },
                 { "t|truth=", "path to vcf/bed with CNV truth data (optional)", v => truthDataPath = v },
@@ -91,13 +90,11 @@ namespace CanvasDiploidCaller
             }
 
             FileLocation qscoreConfigFile = new FileLocation(qualityScoreConfigPath);
-            CanvasCommon.QualityScoreParameters qscoreParametersJSON = Deserialize<CanvasCommon.QualityScoreParameters>(qscoreConfigFile);
+            CanvasCommon.QualityScoreParameters qscoreParametersJson = Deserialize<CanvasCommon.QualityScoreParameters>(qscoreConfigFile);
 
             // Set parameters:
             var logger = new Logger(new[] { Console.Out }, new[] { Console.Error });
-            CanvasDiploidCaller caller = new CanvasDiploidCaller(logger);
-            caller.IsDbsnpVcf = isDbsnpVcf;
-            caller.germlineScoreParameters = qscoreParametersJSON;
+            CanvasDiploidCaller caller = new CanvasDiploidCaller(logger, qscoreParametersJson);
             return caller.CallVariants(variantFrequencyFile, inFile, outFile, ploidyBedPath, referenceFolder, sampleName, truthDataPath);
         }
         private static T Deserialize<T>(IFileLocation path)

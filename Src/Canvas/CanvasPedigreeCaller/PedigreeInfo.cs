@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using CanvasCommon;
 using Isas.Framework.DataTypes;
 using Isas.Framework.DataTypes.Maps;
@@ -13,29 +12,22 @@ namespace CanvasPedigreeCaller
     {
         public List<SampleId> ParentsIds { get; }
         public List<SampleId> OffspringIds { get; }
-        public List<Genotype> ParentalGenotypes { get; }
         public List<List<Genotype>> OffspringGenotypes { get; }
         public double[][] TransitionMatrix { get; }
 
-        public PedigreeInfo()
-        {
-
-        }
-
-        private PedigreeInfo(List<SampleId> offspringIds, List<SampleId> parentsIds, List<Genotype> parentalGenotypes, List<List<Genotype>> offspringGenotypes, double[][] transitionMatrix)
+        private PedigreeInfo(List<SampleId> offspringIds, List<SampleId> parentsIds, List<List<Genotype>> offspringGenotypes, double[][] transitionMatrix)
         {
             OffspringIds = offspringIds;
             ParentsIds = parentsIds;
-            ParentalGenotypes = parentalGenotypes;
             OffspringGenotypes = offspringGenotypes;
             TransitionMatrix = transitionMatrix;
         }
 
-        public static PedigreeInfo GetPedigreeInfo(ISampleMap<CanvasPedigreeCaller.Kinship> kinships, PedigreeCallerParameters callerParameters)
+        public static PedigreeInfo GetPedigreeInfo(ISampleMap<SampleType> kinships, PedigreeCallerParameters callerParameters)
         {
-            var parentsIds = kinships.Where(kin => kin.Value.Equals(CanvasPedigreeCaller.Kinship.Parent)).Select(kin => kin.Key)
+            var parentsIds = kinships.Where(kin => kin.Value.Equals(SampleType.Father) || kin.Value.Equals(SampleType.Mother)).Select(kin => kin.Key)
                 .ToList();
-            var offspringIds = kinships.Where(kin => kin.Value.Equals(CanvasPedigreeCaller.Kinship.Proband)).Select(kin => kin.Key)
+            var offspringIds = kinships.Where(kin => kin.Value.Equals(SampleType.Proband) || kin.Value.Equals(SampleType.Sibling)).Select(kin => kin.Key)
                 .ToList();
             var parentalGenotypes = GenerateParentalGenotypes(callerParameters.MaximumCopyNumber);
             var offspringsGenotypes =
@@ -47,7 +39,7 @@ namespace CanvasPedigreeCaller
                 offspringsGenotypes = offspringsGenotypes.Take(callerParameters.MaxNumOffspringGenotypes).ToList();
             }
             var transitionMatrix = GetTransitionMatrix(callerParameters.MaximumCopyNumber);
-            return new PedigreeInfo(offspringIds, parentsIds, parentalGenotypes, offspringsGenotypes, transitionMatrix);
+            return new PedigreeInfo(offspringIds, parentsIds, offspringsGenotypes, transitionMatrix);
         }
 
 

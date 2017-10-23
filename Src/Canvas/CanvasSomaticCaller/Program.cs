@@ -157,7 +157,7 @@ namespace CanvasSomaticCaller
             caller.somaticCallerParameters = somaticCallerParametersJSON;
             caller.somaticCallerQscoreParameters = qscoreParametersJSON;
             caller.TruthDataPath = truthDataPath;
-            caller.SomaticVCFPath = somaticVCFPath;
+            caller.SomaticVcfPath = somaticVCFPath;
             caller.IsEnrichment = isEnrichment;
             caller.IsDbsnpVcf = isDbsnpVcf;
             caller.userPurity = userPurity;

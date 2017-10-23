@@ -179,17 +179,22 @@ namespace EvaluateCNV
 
             CalculateMedianAndMeanAccuracies(baseCounter);
 
-            var allIntervals = _cnvChecker.KnownCN.SelectMany(kvp => kvp.Value);
+            var allIntervals = _cnvChecker.KnownCN.SelectMany(kvp => kvp.Value).ToList();
 
             // find truth interval with highest number of false negatives (hurts recall)
-            var variantIntervals = allIntervals.Where(interval => interval.CN != interval.ReferenceCopyNumber);
-            var intervalMaxFalseNegatives = variantIntervals.MaxBy(interval => interval.BasesNotCalled + interval.BasesCalledIncorrectly);
-            Console.WriteLine($"Truth interval with most false negatives (hurts recall): {intervalMaxFalseNegatives}");
-
+            var variantIntervals = allIntervals.Where(interval => interval.CN != interval.ReferenceCopyNumber).ToList();
+            if (variantIntervals.Any())
+            {
+                var intervalMaxFalseNegatives = variantIntervals.MaxBy(interval => interval.BasesNotCalled + interval.BasesCalledIncorrectly);
+                Console.WriteLine($"Truth interval with most false negatives (hurts recall): {intervalMaxFalseNegatives}");
+            }
             // find truth interval with highest number of false positive (hurts precision)
-            var refIntervals = allIntervals.Where(interval => interval.CN == interval.ReferenceCopyNumber);
-            var intervalMaxFalsePositives = refIntervals.MaxBy(interval => interval.BasesCalledIncorrectly);
-            Console.WriteLine($"Truth interval with most false positives (hurts precision): {intervalMaxFalsePositives}");
+            var refIntervals = allIntervals.Where(interval => interval.CN == interval.ReferenceCopyNumber).ToList();
+            if (refIntervals.Any())
+            {
+                var intervalMaxFalsePositives = refIntervals.MaxBy(interval => interval.BasesCalledIncorrectly);
+                Console.WriteLine($"Truth interval with most false positives (hurts precision): {intervalMaxFalsePositives}");
+            }
         }
 
         /// <summary>

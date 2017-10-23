@@ -3,27 +3,26 @@ using System.Collections.Generic;
 using System.IO;
 using Newtonsoft.Json;
 using System.Linq;
+using CanvasCommon;
 using CanvasPedigreeCaller.Visualization;
 using Illumina.Common;
 using Illumina.Common.FileSystem;
 using Isas.ClassicBioinfoTools.KentUtils;
 using Isas.Framework.Logging;
 using Isas.Framework.Settings;
-using Isas.Framework.Utilities;
 using Isas.Framework.WorkManagement;
 using Isas.Framework.WorkManagement.CommandBuilding;
 using Isas.SequencingFiles;
 
 namespace CanvasPedigreeCaller
 {
-    class Program
+    internal class Program
     {
-
         /// <summary>
         /// Command line help message.
         /// </summary>
         /// <param name="p">NDesk OptionSet</param>
-        static void ShowHelp(OptionSet p)
+        private static void ShowHelp(OptionSet p)
         {
             Console.WriteLine("Usage: CanvasPedigreeCaller.exe [OPTIONS]+");
             Console.WriteLine("Make discrete-valued copy number calls in a pedigree.");
@@ -32,34 +31,34 @@ namespace CanvasPedigreeCaller
             p.WriteOptionDescriptions(Console.Out);
         }
 
-        static int Main(string[] args)
+        private static int Main(string[] args)
         {
-            CanvasCommon.Utilities.LogCommandLine(args);
+            Utilities.LogCommandLine(args);
             string outDir = null;
             var segmentFiles = new List<string>();
             var variantFrequencyFiles = new List<string>();
+            var sampleTypesString = new List<string>();
             string ploidyBedPath = null;
-            string pedigreeFile = null;
             string referenceFolder = null;
             var sampleNames = new List<string>();
             bool needHelp = false;
             int? qScoreThresholdOption = null;
             int? dqScoreThresholdOption = null;
-            string commonCNVsbedPath = null;
-            string parameterconfigPath = Path.Combine(Utilities.GetAssemblyFolder(typeof(Program)), "PedigreeCallerParameters.json");
+            string commonCnvsBedPath = null;
+            string parameterconfigPath = Path.Combine(Isas.Framework.Utilities.Utilities.GetAssemblyFolder(typeof(Program)), "PedigreeCallerParameters.json");
 
             var p = new OptionSet()
             {
                 { "i|infile=",        "file containing bins, their counts, and assigned segments (obtained from CanvasPartition.exe)",  v => segmentFiles.Add(v) },
                 { "v|varfile=",       "file containing variant frequencies (obtained from CanvasSNV.exe)",                              v => variantFrequencyFiles.Add(v) },
+                { "t|sampleType=",    "sample types",                                                                                   v => sampleTypesString.Add(v) },
                 { "o|outdir=",        "name of output directory",                                                                       v => outDir = v },
                 { "r|reference=",     "reference genome folder that contains GenomeSize.xml",                                           v => referenceFolder = v },
                 { "n|sampleName=",    "sample name for output VCF header (optional)",                                                   v => sampleNames.Add(v)},
-                { "f|pedigree=",      "relationship within pedigree (parents/proband)",                                                 v => pedigreeFile = v },
                 { "p|ploidyBed=",     "bed file specifying reference ploidy (e.g. for sex chromosomes) (optional)",                     v => ploidyBedPath = v },
                 { "h|help",           "show this message and exit",                                                                     v => needHelp = v != null },
                 { "q|qscore=",        $"quality filter threshold (default {CanvasPedigreeCaller.DefaultQualityFilterThreshold})",                            v => qScoreThresholdOption = int.Parse(v) },
-                { "commoncnvs=",      "bed file with common CNVs (always include these intervals into segmentation results)",           v => commonCNVsbedPath = v },
+                { "commoncnvs=",      "bed file with common CNVs (always include these intervals into segmentation results)",           v => commonCnvsBedPath = v },
                 { "d|dqscore=",       $"de novo quality filter threshold (default {CanvasPedigreeCaller.DefaultDeNovoQualityFilterThreshold})",              v => dqScoreThresholdOption = int.Parse(v) },
                 { "c|config=",        $"parameter configuration path (default {parameterconfigPath})",                                  v => parameterconfigPath = v}
             };
@@ -98,6 +97,8 @@ namespace CanvasPedigreeCaller
                 return 1;
             }
 
+            var sampleTypesEnum = sampleTypesString.Select(GetSampleType).ToList();
+
             if (!File.Exists(Path.Combine(referenceFolder, "GenomeSize.xml")))
             {
                 Console.WriteLine($"CanvasPedigreeCaller.exe: File {Path.Combine(referenceFolder, "GenomeSize.xml")} does not exist! Exiting.");
@@ -110,20 +111,11 @@ namespace CanvasPedigreeCaller
                 return 1;
             }
 
-            if (commonCNVsbedPath != null)
+            if (commonCnvsBedPath != null)
             {
-                if (!File.Exists(commonCNVsbedPath))
+                if (!File.Exists(commonCnvsBedPath))
                 {
-                    Console.WriteLine($"CanvasPedigreeCaller.exe: File {commonCNVsbedPath} does not exist! Exiting.");
-                    return 1;
-                }
-            }
-
-            if (pedigreeFile != null)
-            {
-                if (!File.Exists(pedigreeFile))
-                {
-                    Console.WriteLine($"CanvasPedigreeCaller.exe: File {pedigreeFile} does not exist! Exiting.");
+                    Console.WriteLine($"CanvasPedigreeCaller.exe: File {commonCnvsBedPath} does not exist! Exiting.");
                     return 1;
                 }
             }
@@ -132,7 +124,7 @@ namespace CanvasPedigreeCaller
             var callerParameters = Deserialize<PedigreeCallerParameters>(parameterconfigFile);
 
             int qScoreThreshold = CanvasPedigreeCaller.DefaultQualityFilterThreshold;
-            if (qScoreThresholdOption.HasValue)
+            if (qScoreThresholdOption != null)
             {
                 qScoreThreshold = qScoreThresholdOption.Value;
                 Console.WriteLine($"CanvasPedigreeCaller.exe: Using user-supplied quality score threshold {qScoreThresholdOption}.");
@@ -141,7 +133,7 @@ namespace CanvasPedigreeCaller
                 throw new IlluminaException($"Quality score threshold must be >= 0 and < {callerParameters.MaxQscore}");
 
             int dqScoreThreshold = CanvasPedigreeCaller.DefaultDeNovoQualityFilterThreshold;
-            if (dqScoreThresholdOption.HasValue)
+            if (dqScoreThresholdOption != null)
             {
 
                 dqScoreThreshold = dqScoreThresholdOption.Value;
@@ -153,17 +145,26 @@ namespace CanvasPedigreeCaller
             var logger = new Logger(new[] { Console.Out }, new[] { Console.Error });
             var settings = new SettingsProcessor();
             var outputDirectory = new DirectoryLocation(outDir);
-            var workerDirectory = new DirectoryLocation(Utilities.GetAssemblyFolder(typeof(CanvasPedigreeCaller)));
+            var workerDirectory = new DirectoryLocation(Isas.Framework.Utilities.Utilities.GetAssemblyFolder(typeof(CanvasPedigreeCaller)));
             var commandManager = new CommandManager(new ExecutableProcessor(settings, logger, workerDirectory));
             var workManager = WorkManagerFactory.GetWorkManager(logger, outputDirectory, settings);
             var bigWigConverter = new FormatConverterFactory(logger, workManager, commandManager).GetBedGraphToBigWigConverter();
             var referenceGenome = new ReferenceGenomeFactory().GetReferenceGenome(new DirectoryLocation(referenceFolder));
             var genomeMetadata = referenceGenome.GenomeMetadata;
             var coverageBigWigWriter = new CoverageBigWigWriterFactory(logger, bigWigConverter, genomeMetadata).Create();
-            var caller = new CanvasPedigreeCaller(logger, qScoreThreshold, dqScoreThreshold, callerParameters, coverageBigWigWriter);
+            var copyNumberLikelihoodCalculator = new CopyNumberLikelihoodCalculator(callerParameters.MaximumCopyNumber);
+            IVariantCaller variantCaller = new VariantCaller(copyNumberLikelihoodCalculator, callerParameters, qScoreThreshold);
+            var caller = new CanvasPedigreeCaller(logger, qScoreThreshold, dqScoreThreshold, callerParameters, copyNumberLikelihoodCalculator, variantCaller, coverageBigWigWriter);
 
             var outVcf = outputDirectory.GetFileLocation("CNV.vcf.gz");
-            return caller.CallVariants(variantFrequencyFiles, segmentFiles, outVcf, ploidyBedPath, referenceFolder, sampleNames, commonCNVsbedPath, pedigreeFile);
+            return caller.CallVariants(variantFrequencyFiles, segmentFiles, outVcf, ploidyBedPath, referenceFolder, sampleNames, commonCnvsBedPath, sampleTypesEnum);
+        }
+
+        private static SampleType GetSampleType(string sampleType)
+        {
+            if (Enum.TryParse(sampleType, out SampleType sampleTypeEnum))
+                return sampleTypeEnum;
+            throw new ArgumentException($"CanvasPedigreeCaller.exe: SampleType {sampleType} does not exist!");
         }
 
         private static T Deserialize<T>(IFileLocation path)
