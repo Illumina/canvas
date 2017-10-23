@@ -33,9 +33,6 @@ namespace CanvasCommon
             return failedRecordLevelFilter;
         }
 
-        public static string ToString(IEnumerable<string> filter)
-        {
-            return string.Join(";", filter);
-        }
+        public static string ToString(IEnumerable<string> filter) => string.Join(";", filter);
     }
 }
