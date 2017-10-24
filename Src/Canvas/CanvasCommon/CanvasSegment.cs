@@ -292,9 +292,7 @@ namespace CanvasCommon
                 GenomicBins = s.GenomicBins.Concat(GenomicBins).ToList();
                 if (Balleles != null && s.Balleles != null)
                 {
-                    Balleles = new Balleles();
-                    Balleles.Add(s.Balleles);
-                    Balleles.Add(Balleles);
+                    Balleles = new Balleles(s.Balleles.Range.Concat(Balleles.Range).ToList());
                 }
             }
             if (s.End > End)
@@ -304,9 +302,7 @@ namespace CanvasCommon
                 GenomicBins = GenomicBins.Concat(s.GenomicBins).ToList();
                 if (Balleles != null && s.Balleles != null)
                 {
-                    Balleles = new Balleles();
-                    Balleles.Add(Balleles);
-                    Balleles.Add(s.Balleles);
+                    Balleles = new Balleles(Balleles.Range.Concat(s.Balleles).ToList());Balleles.Add(s.Balleles);
                 }
             }
         }

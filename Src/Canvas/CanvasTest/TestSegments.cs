@@ -20,7 +20,7 @@ namespace CanvasTest
             List<SampleGenomicBin> bins = new List<SampleGenomicBin> { new SampleGenomicBin("chr1", 2, 3, 100) };
             CanvasSegment segment = new CanvasSegment("chr1", 2, 3, bins);
             segment.MergeIn(segmentBefore);
-            Assert.Equal(1, segment.GenomicBins.First().Start);
+            Assert.Equal(binsBefore.Concat(bins), segment.GenomicBins);
         }
 
         [Fact]
@@ -33,7 +33,7 @@ namespace CanvasTest
             CanvasSegment segment = new CanvasSegment("chr1", 2, 3, emptyBins, bAlleles);
             segment.MergeIn(segmentBefore);
 
-            Assert.Equal(1, segment.Balleles.Range.First().Position);
+            Assert.Equal(bAllelesBefore.Range.Concat(bAlleles.Range), segment.Balleles.Range);
         }
 
         [Fact]
