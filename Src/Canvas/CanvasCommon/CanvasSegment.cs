@@ -287,22 +287,22 @@ namespace CanvasCommon
         {
             if (s.Begin < Begin)
             {
-                this.StartConfidenceInterval = s.StartConfidenceInterval;
-                this.Begin = s.Begin;
+                StartConfidenceInterval = s.StartConfidenceInterval;
+                Begin = s.Begin;
                 GenomicBins = s.GenomicBins.Concat(GenomicBins).ToList();
-                if (this.Balleles != null && s.Balleles != null)
+                if (Balleles != null && s.Balleles != null)
                 {
                     Balleles = new Balleles();
                     Balleles.Add(s.Balleles);
                     Balleles.Add(Balleles);
                 }
             }
-            if (s.End > this.End)
+            if (s.End > End)
             {
-                this.EndConfidenceInterval = s.EndConfidenceInterval;
-                this.End = s.End;
+                EndConfidenceInterval = s.EndConfidenceInterval;
+                End = s.End;
                 GenomicBins = GenomicBins.Concat(s.GenomicBins).ToList();
-                if (this.Balleles != null && s.Balleles != null)
+                if (Balleles != null && s.Balleles != null)
                 {
                     Balleles = new Balleles();
                     Balleles.Add(Balleles);
