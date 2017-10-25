@@ -45,7 +45,9 @@ namespace CanvasCommon
             }
         }
 
-        public static string ToAltId(this CnvType cnvType)
+        public static bool isReference(CnvType cnvType) => cnvType.Equals(CnvType.Reference);
+
+        public static string ToAltId(this CnvType cnvType, CanvasSegment segment)
         {
             switch (cnvType)
             {
@@ -53,7 +55,7 @@ namespace CanvasCommon
                 case CnvType.Loss:
                 case CnvType.LossOfHeterozygosity:
                 case CnvType.ComplexCnv:
-                    return "<CNV>";
+                    return segment.GetAltCopyNumbers();
                 case CnvType.Reference:
                     return ".";
                 default:

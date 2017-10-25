@@ -573,7 +573,7 @@ namespace CanvasCommon
                         counts.Clear();
                         MAF.Clear();
                         VF.Clear();
-                        Dictionary<string, long> CopyNumberAndChromCount = new Dictionary<string, long>();
+                        Dictionary<(int, int?), long> CopyNumberAndChromCount = new Dictionary<(int, int?), long>();
                         Dictionary<int, long> basesByCopyNumber = new Dictionary<int, long>();
                         // Accumulate counts and MAF from the segments:
                         List<CanvasSegment> chrSegments = new List<CanvasSegment>();
@@ -585,7 +585,7 @@ namespace CanvasCommon
                             if (segment.End < pointStartPos) continue;
 
                             int weight = Math.Min(segment.End, pointEndPos) - Math.Max(segment.Begin, pointStartPos);
-                            string key = String.Format("{0} {1}", segment.CopyNumber, segment.MajorChromosomeCount);
+                            var key = (segment.CopyNumber, segment.MajorChromosomeCount);
                             if (!CopyNumberAndChromCount.ContainsKey(key)) CopyNumberAndChromCount[key] = 0;
                             CopyNumberAndChromCount[key] += weight;
                             if (!basesByCopyNumber.ContainsKey(segment.CopyNumber)) basesByCopyNumber[segment.CopyNumber] = 0;
@@ -606,19 +606,11 @@ namespace CanvasCommon
                         }
 
                         // Find the most common major chromosome count, for the most common copy number:
-                        int? majorChromosomeCount = null;
-                        bestCount = 0;
-                        foreach (string key in CopyNumberAndChromCount.Keys)
-                        {
-                            string[] bits = key.Split();
-                            if (bits[1].Length == 0) continue;
-                            if (Int32.Parse(bits[0]) != majorCopyNumber) continue;
-                            long count = CopyNumberAndChromCount[key];
-                            if (count < bestCount) continue;
-                            bestCount = count;
-                            majorChromosomeCount = Int32.Parse(bits[1]);
-                        }
-
+                        var majorChromosomeCount = CopyNumberAndChromCount
+                                                    .Where(x => x.Key.Item1 == majorCopyNumber)
+                                                    .OrderByDescending(x => x.Value)
+                                                    .First().Key.Item2;                       
+                       
                         // Note allele frequency and coverage info, for all overlap segments that match (more or less)
                         // the most common copy number:
                         foreach (CanvasSegment segment in overlapSegments)
@@ -1160,5 +1152,9 @@ namespace CanvasCommon
             return segments;
         }
 
+        public string GetAltCopyNumbers()
+        {
+            throw new NotImplementedException();
+        }
     }
 }
