@@ -1,10 +1,8 @@
 ﻿using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using CanvasCommon;
-using Isas.Framework.Logging;
 using Isas.SequencingFiles;
 using Isas.SequencingFiles.Vcf;
 using JetBrains.Annotations;
@@ -14,7 +12,29 @@ namespace CanvasTest
 {
     public class TestSegments
     {
+        [Fact]
+        public void MergeIn_PreviousSegment_KeepsBinsOrdered()
+        {
+            List<SampleGenomicBin> binsBefore = new List<SampleGenomicBin> { new SampleGenomicBin("chr1", 1, 2, 100) };
+            CanvasSegment segmentBefore = new CanvasSegment("chr1", 1, 2, binsBefore);
+            List<SampleGenomicBin> bins = new List<SampleGenomicBin> { new SampleGenomicBin("chr1", 2, 3, 100) };
+            CanvasSegment segment = new CanvasSegment("chr1", 2, 3, bins);
+            segment.MergeIn(segmentBefore);
+            Assert.Equal(binsBefore.Concat(bins), segment.GenomicBins);
+        }
 
+        [Fact]
+        public void MergeIn_PreviousSegment_KeepsBAllelesOrdered()
+        {
+            List<SampleGenomicBin> emptyBins = new List<SampleGenomicBin>();
+            var bAllelesBefore = new Balleles(new List<Ballele>{ new Ballele(1, 1, 1)});
+            CanvasSegment segmentBefore = new CanvasSegment("chr1", 1, 2, emptyBins, bAllelesBefore);
+            var bAlleles = new Balleles(new List<Ballele> { new Ballele(2, 1, 1) });
+            CanvasSegment segment = new CanvasSegment("chr1", 2, 3, emptyBins, bAlleles);
+            segment.MergeIn(segmentBefore);
+
+            Assert.Equal(bAllelesBefore.Range.Concat(bAlleles.Range), segment.Balleles.Range);
+        }
 
         [Fact]
         public void TestCIPOS()

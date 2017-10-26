@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
@@ -24,11 +23,6 @@ namespace CanvasCommon
             AllSegments = new ReadOnlyCollection<CanvasSegment>(allSegments);
         }
 
-        public static Segments CreateSegments(List<CanvasSegment> allSegments)
-        {
-            return new Segments(allSegments.GroupBy(x => x.Chr).ToOrderedDictionary(kvp=>kvp.Key,kvp=>kvp.ToList()), allSegments);
-        }
-
         public ICollection<string> GetChromosomes()
         {
             return _segments.Keys;
@@ -41,10 +35,10 @@ namespace CanvasCommon
 
         public IReadOnlyList<SampleGenomicBin> GetGenomicBinsForChromosome(string chromosome)
         {
-            return _segments[chromosome].SelectMany(segment=>segment.GenomicBins).ToList();
+            return _segments[chromosome].SelectMany(segment => segment.GenomicBins).ToList();
         }
 
-            public static Segments ReadSegments(ILogger logger, IFileLocation partitionedFile)
+        public static Segments ReadSegments(ILogger logger, IFileLocation partitionedFile)
         {
             using (var reader = new GzipOrTextReader(partitionedFile.FullName))
             {

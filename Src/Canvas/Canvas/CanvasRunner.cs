@@ -1100,8 +1100,8 @@ namespace Canvas
                 commandLine.AppendFormat("-n \"{0}\" ", callset.Sample.SampleName);
                 commandLine.AppendFormat("-t \"{0}\" ", callset.SampleType.ToString());
             }
-            var vcf = callsets.AnalysisDetails.OutputFolder.GetFileLocation("CNV.vcf.gz");
-            commandLine.Append($"-o \"{vcf}\" ");
+            var outDir = callsets.AnalysisDetails.OutputFolder;
+            commandLine.Append($"-o \"{outDir}\" ");
             commandLine.AppendFormat("-r \"{0}\" ", callsets.AnalysisDetails.WholeGenomeFastaFolder);
 
             if (callsets.AnalysisDetails.PloidyVcf != null)
