@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using Illumina.Common.FileSystem;
-using Isas.Framework.DataTypes;
 using Isas.Framework.DataTypes.Maps;
 using Isas.SequencingFiles;
 
@@ -68,6 +67,8 @@ namespace CanvasCommon
             }
             string qualityFilter = $"q{qualityThreshold}";
             writer.WriteLine("##ALT=<ID=CNV,Description=\"Copy number variable region\">");
+            WriteHeaderAllAltCnTags(writer);
+            //TODO: we don't actually use the filters 
             writer.WriteLine($"##FILTER=<ID={qualityFilter},Description=\"Quality below {qualityThreshold}\">");
             writer.WriteLine("##FILTER=<ID=L10kb,Description=\"Length shorter than 10kb\">");
             writer.WriteLine("##INFO=<ID=CIEND,Number=2,Type=Integer,Description=\"Confidence interval around END for imprecise variants\">");
@@ -83,7 +84,6 @@ namespace CanvasCommon
             writer.WriteLine("##FORMAT=<ID=MCC,Number=1,Type=Integer,Description=\"Major chromosome count (equal to copy number for LOH regions)\">");
             writer.WriteLine("##FORMAT=<ID=MCCQ,Number=1,Type=Float,Description=\"Major chromosome count quality score\">");
             writer.WriteLine("##FORMAT=<ID=QS,Number=1,Type=Float,Description=\"Phred-scaled quality score. If CN is reference then this is -10log10(prob(variant)) otherwise this is -10log10(prob(no variant).\">");
-
             if (denovoQualityThreshold.HasValue)
             {
                 writer.WriteLine($"##FORMAT=<ID=DQ,Number=1,Type=Float,Description=\"De novo quality. Threshold for passing de novo call: {denovoQualityThreshold}\">");
@@ -94,6 +94,14 @@ namespace CanvasCommon
             return genome;
         }
 
+        private static void WriteHeaderAllAltCnTags(BgzipOrStreamWriter writer, int maxCopyNum = 5)
+        {
+            foreach (var copyNum in Enumerable.Range(0, maxCopyNum))
+            {
+                if (copyNum == 1) continue;
+                writer.WriteLine($"##ALT=<ID=CN{copyNum},Description=\"Copy number of alternative allele: {copyNum} copies\">");
+            }
+        }
 
         /// <summary>
         /// Outputs the copy number calls to a text file.
@@ -197,7 +205,7 @@ namespace CanvasCommon
             // From vcf 4.1 spec:
             //     If any of the ALT alleles is a symbolic allele (an angle-bracketed ID String “<ID>”) then the padding base is required and POS denotes the 
             //     coordinate of the base preceding the polymorphism.
-            string alternateAllele = cnvType.ToAltId();
+            string alternateAllele = segment.GetAltCopyNumbers(cnvType);
             int position = (alternateAllele.StartsWith("<") && alternateAllele.EndsWith(">"))
                 ? segment.Begin
                 : segment.Begin + 1;

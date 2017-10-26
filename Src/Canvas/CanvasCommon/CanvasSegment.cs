@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.IO;
+using System.Reflection.Metadata.Ecma335;
 using Illumina.Common;
 using Illumina.Common.FileSystem;
 using Isas.SequencingFiles;
@@ -277,6 +278,14 @@ namespace CanvasCommon
                 MajorChromosomeCount.HasValue && MajorChromosomeCount == CopyNumber)
                 return CnvType.LossOfHeterozygosity;
             return CnvType.Reference;
+        }
+
+        public string GetAltCopyNumbers(CnvType cnvType)
+        {
+            if (CnvTypeExtensions.IsReference(cnvType)) return ".";
+            if (!MajorChromosomeCount.HasValue) return $"<{CnvTypeExtensions.CnvTag}>";
+            var tagList = new[] { CopyNumber - MajorChromosomeCount, MajorChromosomeCount }.Where(x => x != 1).Select(x => $"<CN{x}>");
+            return string.Join(",", tagList);
         }
 
         /// <summary>
@@ -1150,11 +1159,6 @@ namespace CanvasCommon
                 segments.Add(segment);
             }
             return segments;
-        }
-
-        public string GetAltCopyNumbers()
-        {
-            throw new NotImplementedException();
         }
     }
 }
