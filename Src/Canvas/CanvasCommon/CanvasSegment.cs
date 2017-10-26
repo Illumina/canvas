@@ -1156,10 +1156,5 @@ namespace CanvasCommon
             }
             return segments;
         }
-
-        var majorChromosomeCount = CopyNumberAndChromCount
-            .Where(x => x.Key.Item1 == majorCopyNumber)
-            .OrderByDescending(x => x.Value)?
-            .First().Key.Item2;
     }
 }
