@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
@@ -22,11 +21,6 @@ namespace CanvasCommon
         {
             _segments = segments;
             AllSegments = new ReadOnlyCollection<CanvasSegment>(allSegments);
-        }
-
-        public static Segments CreateSegments(List<CanvasSegment> allSegments)
-        {
-            return new Segments(allSegments.GroupBy(x => x.Chr).ToOrderedDictionary(kvp=>kvp.Key,kvp=>kvp.ToList()), allSegments);
         }
 
         public ICollection<string> GetChromosomes()

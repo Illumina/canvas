@@ -1,5 +1,4 @@
 ﻿using System.Collections.Generic;
-using System.Runtime.InteropServices.ComTypes;
 using CanvasCommon;
 using Xunit;
 
@@ -7,7 +6,7 @@ namespace CanvasTest
 {
     public class CanvasSegmentTests
     {
-        CanvasSegment _segment = new CanvasSegment("ada", 1000, 2000, new List<SampleGenomicBin>());
+        private readonly CanvasSegment _segment = new CanvasSegment("ada", 1000, 2000, new List<SampleGenomicBin>());
 
         [Fact]
         public void GetAltCopyNumbers_cnvType_is_reference()

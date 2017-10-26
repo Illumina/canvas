@@ -198,7 +198,7 @@ namespace CanvasCommon
         /// <param name="writer"></param>
         /// <param name="segment"></param>
         /// <param name="cnvType"></param>
-        /// <param name="denovoQualityThreshold"></param>
+        /// <param name="isMultisample"></param>
         /// <returns></returns>
         private static void WriteInfoField(BgzipOrStreamWriter writer, CanvasSegment segment, CnvType cnvType, bool isMultisample)
         {

@@ -1,10 +1,8 @@
 ﻿using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using CanvasCommon;
-using Isas.Framework.Logging;
 using Isas.SequencingFiles;
 using Isas.SequencingFiles.Vcf;
 using JetBrains.Annotations;
@@ -17,7 +15,7 @@ namespace CanvasTest
 
 
         [Fact]
-        public void TestCIPOS()
+        public void TestCipos()
         {
             // Merge two segments, and confirm we keep the correct confidence intervals post-merge:
             List<SampleGenomicBin> counts = new List<SampleGenomicBin>()
@@ -145,9 +143,9 @@ namespace CanvasTest
 
             var mergedSegments = CanvasSegment.MergeSegments(allSegments, 50000, 10000);
             var segmentsByChromosome = CanvasSegment.GetSegmentsByChromosome(mergedSegments);
-            Assert.Equal(segmentsByChromosome["chr1"].Count, 3);
-            Assert.Equal(segmentsByChromosome["chr2"].Count, 3);
-            Assert.Equal(segmentsByChromosome["chr3"].Count, 1);
+            Assert.Equal(3, segmentsByChromosome["chr1"].Count);
+            Assert.Equal(3, segmentsByChromosome["chr2"].Count);
+            Assert.Equal(1, segmentsByChromosome["chr3"].Count);
         }
 
         [Fact]
