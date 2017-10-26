@@ -33,7 +33,7 @@
     <ProjectReference Include="..\CanvasCommon\CanvasCommon.csproj" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="Illumina.Common" Version="4.12.0.348" />
+    <PackageReference Include="Illumina.Common" Version="4.13.0-O00349CANV-404" />
     <PackageReference Include="Isas.Framework" Version="7.11.1.596" />
     <PackageReference Include="Isas.Manifests" Version="4.9.1.154" />
     <PackageReference Include="Isas.SequencingFiles" Version="5.4.0.383" />
