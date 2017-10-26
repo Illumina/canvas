@@ -29,10 +29,7 @@ namespace CanvasTest
                 if (index % 4 > 1) variantCount = 25;
                 List<SampleGenomicBin> counts = new List<SampleGenomicBin>();
                 for (int countIndex = 0; countIndex < length / 100; countIndex++) counts.Add(new SampleGenomicBin("1", 2, 3, RNG.Next(1000)));
-                CanvasSegment segment = new CanvasSegment("chr1", currentPosition, currentPosition + length, counts)
-                {
-                    Balleles = new Balleles()
-                };
+                CanvasSegment segment = new CanvasSegment("chr1", currentPosition, currentPosition + length, counts);
                 for (int varIndex = 0; varIndex < variantCount; varIndex++)
                 {
                     segment.Balleles.Add(new Ballele(0, RNG.Next(), 100, 50, 50));

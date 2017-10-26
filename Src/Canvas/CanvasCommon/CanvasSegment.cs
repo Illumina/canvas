@@ -54,16 +54,15 @@ namespace CanvasCommon
 
     public class Balleles
     {
+        internal List<Ballele> Range { get; private set; }
 
-        internal List<Ballele> Range;
-
-        public Balleles()
+        public Balleles(IEnumerable<Ballele> alleles)
         {
-            Range = new List<Ballele>();
+            Range = alleles?.ToList() ?? throw new ArgumentNullException(nameof(alleles));
         }
-        public Balleles(List<Ballele> alleles)
+
+        public Balleles() : this(Enumerable.Empty<Ballele>())
         {
-            Range = alleles;
         }
 
         public void Add(Balleles alleles)
@@ -81,16 +80,16 @@ namespace CanvasCommon
             return Range.Count;
         }
 
-        public double? MeanMAF => Frequencies?.Average();
-        public List<int> TotalCoverage => Range?.Select(allele => allele.TotalCoverage).ToList();
+        public double? MeanMAF => Frequencies.Average();
+        public List<int> TotalCoverage => Range.Select(allele => allele.TotalCoverage).ToList();
 
         public void PruneBalleles(double frequencyThreshold)
         {
-            Range = Range?.Where(v => v.Frequency > frequencyThreshold).ToList();
+            Range = Range.Where(v => v.Frequency > frequencyThreshold).ToList();
         }
 
-        public List<float> Frequencies => Range?.Select(allele => allele.Frequency).ToList();
-        public List<double> MaxFrequencies => Range?.Select(allele => allele.GetMaxFrequency()).ToList();
+        public List<float> Frequencies => Range.Select(allele => allele.Frequency).ToList();
+        public List<double> MaxFrequencies => Range.Select(allele => allele.GetMaxFrequency()).ToList();
 
 
         public List<Tuple<int, int>> GetAlleleCounts()
@@ -110,7 +109,6 @@ namespace CanvasCommon
             var array = Range.Where(x => x.Position >= start && x.Position <= end).ToList();
             return new Balleles(array);
         }
-
     }
 
     public class CoverageInfo
@@ -202,7 +200,8 @@ namespace CanvasCommon
         public string Filter = "PASS";
         public Tuple<int, int> StartConfidenceInterval; // if not null, this is a confidence interval around Start, reported in the CIPOS tag
         public Tuple<int, int> EndConfidenceInterval; // if not null, this is a confidence interval around End, reported in the CIEND tag
-        public Balleles Balleles;
+        public Balleles Balleles { get; private set; }
+
         public string Chr { get; }
         /// <summary>
         /// bed format start position
@@ -290,20 +289,14 @@ namespace CanvasCommon
                 StartConfidenceInterval = s.StartConfidenceInterval;
                 Begin = s.Begin;
                 GenomicBins = s.GenomicBins.Concat(GenomicBins).ToList();
-                if (Balleles != null && s.Balleles != null)
-                {
-                    Balleles = new Balleles(s.Balleles.Range.Concat(Balleles.Range).ToList());
-                }
+                Balleles = new Balleles(s.Balleles.Range.Concat(Balleles.Range));
             }
             if (s.End > End)
             {
                 EndConfidenceInterval = s.EndConfidenceInterval;
                 End = s.End;
                 GenomicBins = GenomicBins.Concat(s.GenomicBins).ToList();
-                if (Balleles != null && s.Balleles != null)
-                {
-                    Balleles = new Balleles(Balleles.Range.Concat(s.Balleles).ToList());Balleles.Add(s.Balleles);
-                }
+                Balleles = new Balleles(Balleles.Range.Concat(s.Balleles.Range));
             }
         }
 
