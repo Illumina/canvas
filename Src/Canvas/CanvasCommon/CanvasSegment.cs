@@ -613,10 +613,9 @@ namespace CanvasCommon
                         }
 
                         // Find the most common major chromosome count, for the most common copy number:
-                        var majorChromosomeCount = CopyNumberAndChromCount
-                                                    .Where(x => x.Key.Item1 == majorCopyNumber)
-                                                    .OrderByDescending(x => x.Value)
-                                                    .First().Key.Item2;                       
+                        var copyNumsSortedbyMajorChromCounts = CopyNumberAndChromCount.Where(x => x.Key.Item1 == majorCopyNumber)
+                            .OrderByDescending(x => x.Value).ToList();
+                        var majorChromosomeCount = copyNumsSortedbyMajorChromCounts.IsNullOrEmpty() ? null : copyNumsSortedbyMajorChromCounts.First().Key.Item2;                       
                        
                         // Note allele frequency and coverage info, for all overlap segments that match (more or less)
                         // the most common copy number:
@@ -1157,5 +1156,10 @@ namespace CanvasCommon
             }
             return segments;
         }
+
+        var majorChromosomeCount = CopyNumberAndChromCount
+            .Where(x => x.Key.Item1 == majorCopyNumber)
+            .OrderByDescending(x => x.Value)?
+            .First().Key.Item2;
     }
 }
