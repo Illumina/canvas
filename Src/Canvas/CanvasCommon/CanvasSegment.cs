@@ -580,7 +580,7 @@ namespace CanvasCommon
                         counts.Clear();
                         MAF.Clear();
                         VF.Clear();
-                        Dictionary<(int, int?), long> CopyNumberAndChromCount = new Dictionary<(int, int?), long>();
+                        Dictionary<(int CopyNum, int? MajorChromCounts), long> copyNumberAndChromCount = new Dictionary<(int, int?), long>();
                         Dictionary<int, long> basesByCopyNumber = new Dictionary<int, long>();
                         // Accumulate counts and MAF from the segments:
                         List<CanvasSegment> chrSegments = new List<CanvasSegment>();
@@ -593,8 +593,8 @@ namespace CanvasCommon
 
                             int weight = Math.Min(segment.End, pointEndPos) - Math.Max(segment.Begin, pointStartPos);
                             var key = (segment.CopyNumber, segment.MajorChromosomeCount);
-                            if (!CopyNumberAndChromCount.ContainsKey(key)) CopyNumberAndChromCount[key] = 0;
-                            CopyNumberAndChromCount[key] += weight;
+                            if (!copyNumberAndChromCount.ContainsKey(key)) copyNumberAndChromCount[key] = 0;
+                            copyNumberAndChromCount[key] += weight;
                             if (!basesByCopyNumber.ContainsKey(segment.CopyNumber)) basesByCopyNumber[segment.CopyNumber] = 0;
                             basesByCopyNumber[segment.CopyNumber] += weight;
                             overlapSegments.Add(segment);
@@ -613,9 +613,9 @@ namespace CanvasCommon
                         }
 
                         // Find the most common major chromosome count, for the most common copy number:
-                        var copyNumsSortedbyMajorChromCounts = CopyNumberAndChromCount.Where(x => x.Key.Item1 == majorCopyNumber)
+                        var copyNumsSortedbyMajorChromCounts = copyNumberAndChromCount.Where(x => x.Key.CopyNum == majorCopyNumber)
                             .OrderByDescending(x => x.Value).ToList();
-                        var majorChromosomeCount = copyNumsSortedbyMajorChromCounts.IsNullOrEmpty() ? null : copyNumsSortedbyMajorChromCounts.First().Key.Item2;                       
+                        var majorChromosomeCount = copyNumsSortedbyMajorChromCounts.IsNullOrEmpty() ? null : copyNumsSortedbyMajorChromCounts.First().Key.MajorChromCounts;                       
                        
                         // Note allele frequency and coverage info, for all overlap segments that match (more or less)
                         // the most common copy number:

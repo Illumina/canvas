@@ -94,12 +94,12 @@ namespace CanvasCommon
             return genome;
         }
 
-        private static void WriteHeaderAllAltCnTags(BgzipOrStreamWriter writer, int maxCopyNum = 5)
+        public static void WriteHeaderAllAltCnTags(BgzipOrStreamWriter writer, int maxCopyNum = 5)
         {
-            foreach (var copyNum in Enumerable.Range(0, maxCopyNum))
+            foreach (var copyNum in Enumerable.Range(0, maxCopyNum + 1))
             {
                 if (copyNum == 1) continue;
-                writer.WriteLine($"##ALT=<ID=CN{copyNum},Description=\"Copy number of alternative allele: {copyNum} copies\">");
+                writer.WriteLine($"##ALT=<ID=CN{copyNum},Description=\"Copy number allele: {copyNum} copies\">");
             }
         }
 
