@@ -31,65 +31,87 @@ namespace CanvasTest
         }
 
         [Fact]
-        public void ToString_test()
+        public void ToVcfString_test()
         {
-            var recordLevelFilter = new List<string> { "First", "Second", "Third" };
-            Assert.Equal("First;Second;Third", CanvasFilter.ToString(recordLevelFilter));
+            var canvasFilter = new CanvasFilter(new[] { "First", "Second", "Third" });
+            Assert.Equal("First;Second;Third", canvasFilter.ToVcfString());
         }
 
         [Fact]
-        public void GetRecordLevelFilter_single_sample_pass()
+        public void Create_Filter_w_pass_tag_ignored()
         {
-            var sampleLevelFilters = new List<List<string>> { CanvasFilter.PassedFilter };
-            var recordLevelFilter = CanvasFilter.GetRecordLevelFilter(sampleLevelFilters);
-            Assert.Equal(new List<string> { "PASS" }, recordLevelFilter);
+            var filterTags = new[] { "First", "Second", CanvasFilter.Pass };
+            var canvasFilter = CanvasFilter.Create(filterTags);
+            Assert.Equal("First;Second" , canvasFilter.ToVcfString());
         }
 
         [Fact]
-        public void GetRecordLevelFilter_multi_sample_all_pass()
+        public void GetRecordLevelFilterFromSampleFiltersOnly_single_sample_pass()
         {
-            var sampleLevelFilters = new List<List<string>> { CanvasFilter.PassedFilter, CanvasFilter.PassedFilter, CanvasFilter.PassedFilter };
-            var recordLevelFilter = CanvasFilter.GetRecordLevelFilter(sampleLevelFilters);
-            Assert.Equal(new List<string> { "PASS" }, recordLevelFilter);
+            var sampleLevelFilters = new[] { CanvasFilter.PassFilter };
+            var recordLevelFilter = CanvasFilter.GetRecordLevelFilterFromSampleFiltersOnly(sampleLevelFilters);
+            Assert.Equal("PASS", recordLevelFilter.ToVcfString());
         }
 
         [Fact]
-        public void GetRecordLevelFilter_multi_sample_one_pass()
+        public void GetRecordLevelFilterFromSampleFiltersOnly_multi_sample_all_pass()
         {
-            var sampleLevelFilters = new List<List<string>>
+            var sampleLevelFilters = new[] { CanvasFilter.PassFilter, CanvasFilter.PassFilter, CanvasFilter.PassFilter };
+            var recordLevelFilter = CanvasFilter.GetRecordLevelFilterFromSampleFiltersOnly(sampleLevelFilters);
+            Assert.Equal("PASS", recordLevelFilter.ToVcfString());
+        }
+
+        [Fact]
+        public void GetRecordLevelFilterFromSampleFiltersOnly_multi_sample_one_pass()
+        {
+            var sampleLevelFilters = new[]
             {
-                CanvasFilter.PassedFilter,
-                new List<string> { "Failed1" },
-                new List<string> { "Failed2" }
+                CanvasFilter.PassFilter,
+                new CanvasFilter(new [] { "Failed1" }),
+                new CanvasFilter(new [] { "Failed2" }),
             };
-            var recordLevelFilter = CanvasFilter.GetRecordLevelFilter(sampleLevelFilters);
-            Assert.Equal(new List<string> { "PASS" }, recordLevelFilter);
+            var recordLevelFilter = CanvasFilter.GetRecordLevelFilterFromSampleFiltersOnly(sampleLevelFilters);
+            Assert.Equal("PASS", recordLevelFilter.ToVcfString());
         }
 
         [Fact]
         public void GetRecordLevelFilter_multi_sample_failed_different_filters()
         {
-            var sampleLevelFilters = new List<List<string>>
+            var sampleLevelFilters = new[]
             {
-                new List<string> { "Failed1" },
-                new List<string> { "Failed2" },
-                new List<string> { "Failed3" }
+                new CanvasFilter(new [] { "Failed1" }),
+                new CanvasFilter(new [] { "Failed2" }),
+                new CanvasFilter(new [] { "Failed3" })
             };
-            var recordLevelFilter = CanvasFilter.GetRecordLevelFilter(sampleLevelFilters);
-            Assert.Equal(new List<string> { "FailedFT" }, recordLevelFilter);
+            var recordLevelFilter = CanvasFilter.GetRecordLevelFilterFromSampleFiltersOnly(sampleLevelFilters);
+            Assert.Equal("FailedFT", recordLevelFilter.ToVcfString());
         }
 
         [Fact]
         public void GetRecordLevelFilter_multi_sample_failed_common_filter()
         {
-            var sampleLevelFilters = new List<List<string>>
+            var sampleLevelFilters = new[]
             {
-                new List<string> { "Failed1" },
-                new List<string> { "Failed1", "Failed2" },
-                new List<string> { "Failed1", "Failed3" }
+                new CanvasFilter(new [] { "Failed1" }),
+                new CanvasFilter(new [] { "Failed1", "Failed2" }),
+                new CanvasFilter(new [] { "Failed1", "Failed3" })
             };
-            var recordLevelFilter = CanvasFilter.GetRecordLevelFilter(sampleLevelFilters);
-            Assert.Equal(new List<string> { "FailedFT", "Failed1" }, recordLevelFilter);
+            var recordLevelFilter = CanvasFilter.GetRecordLevelFilterFromSampleFiltersOnly(sampleLevelFilters);
+            Assert.Equal("Failed1;FailedFT", recordLevelFilter.ToVcfString());
+        }
+
+        [Fact]
+        public void UpdateRecordLevelFilter_w_MinQual()
+        {
+            var sampleLevelFilters = new[]
+            {
+                new CanvasFilter(new [] { "Failed1" }),
+                new CanvasFilter(new [] { "Failed1", "Failed2" }),
+                new CanvasFilter(new [] { "Failed1", "Failed3" })
+            };
+            var recordLevelFitler = new CanvasFilter(new[] { "MinQual" });
+            var updatedrecordLevelFilter = CanvasFilter.UpdateRecordLevelFilter(recordLevelFitler, sampleLevelFilters);
+            Assert.Equal("MinQual;Failed1;FailedFT", updatedrecordLevelFilter.ToVcfString());
         }
     }
 }

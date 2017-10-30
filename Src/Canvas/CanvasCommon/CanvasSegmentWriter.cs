@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using Illumina.Common;
 using Illumina.Common.FileSystem;
 using Isas.Framework.DataTypes.Maps;
 using Isas.SequencingFiles;
@@ -32,7 +33,7 @@ namespace CanvasCommon
         {
             double totalPloidy = 0;
             double totalWeight = 0;
-            foreach (CanvasSegment segment in segments.Where(segment => segment.Filter.Equals(CanvasFilter.PassedFilter)))
+            foreach (CanvasSegment segment in segments.Where(segment => new CanvasFilter(segment.Filter).Equals(CanvasFilter.PassFilter)))
             {
                 totalWeight += segment.Length;
                 totalPloidy += segment.CopyNumber * (segment.Length);
@@ -107,8 +108,12 @@ namespace CanvasCommon
                 {
                     var firstSampleSegment = segmentsOfAllSamples.First()[segmentIndex];
                     var index = segmentIndex;
-                    var recordLevelFilter = CanvasFilter.ToString(CanvasFilter.GetRecordLevelFilter(
-                                                segmentsOfAllSamples.Select(sample => sample[index].Filter).ToList()));
+                    var recordLevelFilter = CanvasFilter.GetRecordLevelFilterFromSampleFiltersOnly(
+                                                segmentsOfAllSamples
+                                                .Select(sample => 
+                                                new CanvasFilter(sample[index].Filter))
+                                                .ToReadOnlyList())
+                                                .ToVcfString();
                     if (!firstSampleSegment.Chr.Equals(chromosome.Name, StringComparison.OrdinalIgnoreCase))
                         continue;
                     var referenceCopyNumbers = segmentsOfAllSamples.Zip(ploidies, (segment, ploidy) => ploidy?.GetReferenceCopyNumber(segment[segmentIndex]) ?? 2).ToList();

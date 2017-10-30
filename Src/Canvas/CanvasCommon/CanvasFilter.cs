@@ -1,4 +1,4 @@
-﻿using System;
+﻿
 using System.Collections.Generic;
 using System.Linq;
 using Illumina.Common;
@@ -10,45 +10,43 @@ namespace CanvasCommon
 
         public const int SegmantSizeCutoff = 10000;
         public const string Pass = "PASS";
-        public static List<string> PassedFilter = new List<string> { Pass };
-        public const string AllSampleFiltersFailed = "FailedFT";
+        public const string AllSampleFailedTag = "FailedFT";
         public const string SampleFilterFailed = "FT";
-        public IReadOnlyList<string> SetOfFailedFilters { get; }
-
-        private CanvasFilter(IReadOnlyList<string> setOfFailedFilters)
-        {
-            SetOfFailedFilters = setOfFailedFilters;
-        }
-
         public static CanvasFilter PassFilter = Create(Enumerable.Empty<string>());
+        public IReadOnlyList<string> FailedFilterTags { get; }
 
-        public static CanvasFilter Create(IEnumerable<string> setOfFailedFilters)
+        public CanvasFilter(IReadOnlyList<string> failedFilterTags)
         {
-            var allFailedFilters = new List<string>();
-            foreach (var failedFilters in setOfFailedFilters)
-            {
-                if (failedFilters == Pass)
-                    throw new IlluminaException($"{nameof(failedFilters)} cannot contain a filter named '{Pass}'");
-
-                allFailedFilters.Add(failedFilters);
-            }
-            return new CanvasFilter(allFailedFilters.ToReadOnlyList());
+            FailedFilterTags = failedFilterTags;
         }
 
-        public string ToVcfString() => IsPass ? Pass : string.Join(";", SetOfFailedFilters);
-
-        public bool IsPass => SetOfFailedFilters.Count == 0;
-
-        public static CanvasFilter GetSharedFilters(IReadOnlyList<CanvasFilter> sampleFilters)
+        public static CanvasFilter Create(IEnumerable<string> filterTags)
         {
-            var sharedFilters = sampleFilters.First().SetOfFailedFilters;
+            var allFailedFilterTags = filterTags.Where(failedFilterTag => failedFilterTag != Pass).ToList();
+            return new CanvasFilter(allFailedFilterTags.ToReadOnlyList());
+        }
+
+        public string ToVcfString() => IsPass ? Pass : string.Join(";", FailedFilterTags);
+
+        public bool IsPass => FailedFilterTags.Count == 0;
+
+        public static CanvasFilter GetSharedFilter(IReadOnlyList<CanvasFilter> sampleFilters)
+        {
+            if (sampleFilters.First().IsPass) return PassFilter;
+            var sharedFilterTags = sampleFilters.First().FailedFilterTags.ToList();
             foreach (var sampleFilter in sampleFilters.Skip(1))
             {
-                if (sharedFilters.Empty()) return PassFilter;
-                sharedFilters = sharedFilters.Intersect(sampleFilter.SetOfFailedFilters).ToList();
+                if (sampleFilter.IsPass) return PassFilter;
+                sharedFilterTags = sharedFilterTags.Intersect(sampleFilter.FailedFilterTags).ToList();
             }
-            return Create(sharedFilters);
+            sharedFilterTags.Add(AllSampleFailedTag);
+            return Create(sharedFilterTags);
         }
+
+        public static CanvasFilter UpdateRecordLevelFilter(CanvasFilter recordLevelFilter, IReadOnlyList<CanvasFilter> sampleFilters) => Create(recordLevelFilter.FailedFilterTags.Concat(GetSharedFilter(sampleFilters).FailedFilterTags));
+
+        public static CanvasFilter GetRecordLevelFilterFromSampleFiltersOnly(
+            IReadOnlyList<CanvasFilter> sampleFilters) => UpdateRecordLevelFilter(PassFilter, sampleFilters);
 
         public static string FormatCnvSizeWithSuffix(int size)
         {
@@ -58,21 +56,5 @@ namespace CanvasCommon
                 return FormatCnvSizeWithSuffix(size / 1000) + "KB";
             return size.ToString();
         }
-
-        // The record level fiter keywords in Canvas are always derived from sample level filters
-        public static IEnumerable<string> GetRecordLevelFilter(IReadOnlyCollection<List<string>> sampleLevelFiters)
-        {
-            var keywords = sampleLevelFiters.SelectMany(x => x).GroupBy(x => x);
-            var failedRecordLevelFilter = new List<string> { AllSampleFiltersFailed };
-            var nSamples = sampleLevelFiters.Count;
-            foreach (var keyword in keywords)
-            {
-                if (keyword.Key == Pass) return PassedFilter; // At least one sample filter passed
-                if (keyword.Count() == nSamples) failedRecordLevelFilter.Add(keyword.Key); // Failed for all samples
-            }
-            return failedRecordLevelFilter;
-        }
-
-        public static string ToString(IEnumerable<string> filter) => string.Join(";", filter);
     }
 }
