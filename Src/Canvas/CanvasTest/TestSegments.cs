@@ -56,16 +56,16 @@ namespace CanvasTest
             segment2.StartConfidenceInterval = new Tuple<int, int>(-50, 50);
             segment2.EndConfidenceInterval = new Tuple<int, int>(-30, 30);
             segment.MergeIn(segment2);
-            Assert.Equal(segment.End, 8787888);
-            Assert.Equal(segment.EndConfidenceInterval.Item1, -30);
-            Assert.Equal(segment.StartConfidenceInterval.Item2, 100);
+            Assert.Equal(8787888, segment.End);
+            Assert.Equal(-30, segment.EndConfidenceInterval.Item1);
+            Assert.Equal(100, segment.StartConfidenceInterval.Item2);
         }
 
         [Fact]
         public void TestBins()
         {
             SampleGenomicBin bin = new SampleGenomicBin("chr1", 12345, 678910, 20, 100);
-            Assert.Equal(bin.Size, 666565);
+            Assert.Equal(666565, bin.Size);
         }
 
         [Fact]
@@ -82,17 +82,17 @@ namespace CanvasTest
             };
             var seg1 = new CanvasSegment("chr17", 100000000, 110000000, counts);
             // Silly constructor tests:
-            Assert.Equal(seg1.Begin, 100000000);
-            Assert.Equal(seg1.End, 110000000);
+            Assert.Equal(100000000, seg1.Begin);
+            Assert.Equal(110000000, seg1.End);
             Assert.Equal(seg1.BinCount, counts.Count);
-            Assert.Equal(seg1.Chr, "chr17");
+            Assert.Equal("chr17", seg1.Chr);
             // Property test:
-            Assert.Equal(seg1.MeanCount, 100, 2);
+            Assert.Equal(100, seg1.MeanCount, 2);
 
             // Build a second segment, and merge them, and test results:
             var seg2 = new CanvasSegment("chr17", 110000000, 120000000, counts);
             seg1.MergeIn(seg2);
-            Assert.Equal(seg1.Counts.Count, 12);
+            Assert.Equal(12, seg1.Counts.Count);
             Assert.Equal(seg1.End, seg2.End);
         }
 
@@ -114,7 +114,7 @@ namespace CanvasTest
                 segments.Add(seg);
             }
             double expectedCount = CanvasSegment.ExpectedCount(segments);
-            Assert.Equal(expectedCount, 78, 2);
+            Assert.Equal(78, expectedCount, 2);
         }
 
         [Fact]
@@ -165,9 +165,9 @@ namespace CanvasTest
 
             var mergedSegments = CanvasSegment.MergeSegments(allSegments, 50000, 10000);
             var segmentsByChromosome = CanvasSegment.GetSegmentsByChromosome(mergedSegments);
-            Assert.Equal(segmentsByChromosome["chr1"].Count, 3);
-            Assert.Equal(segmentsByChromosome["chr2"].Count, 3);
-            Assert.Equal(segmentsByChromosome["chr3"].Count, 1);
+            Assert.Equal(3, segmentsByChromosome["chr1"].Count);
+            Assert.Equal(3, segmentsByChromosome["chr2"].Count);
+            Assert.Single(segmentsByChromosome["chr3"]);
         }
 
         [Fact]
@@ -257,10 +257,10 @@ namespace CanvasTest
             };
 
             var remappedIntervals = CanvasSegment.RemapGenomicToBinCoordinates(intervals, sampleGenomicBins);
-            Assert.Equal(remappedIntervals.First().Start, 0);
-            Assert.Equal(remappedIntervals.First().End, 2);
-            Assert.Equal(remappedIntervals.Last().Start, 3);
-            Assert.Equal(remappedIntervals.Last().End, 5);
+            Assert.Equal(0, remappedIntervals.First().Start);
+            Assert.Equal(2, remappedIntervals.First().End);
+            Assert.Equal(3, remappedIntervals.Last().Start);
+            Assert.Equal(5, remappedIntervals.Last().End);
 
         }
 
@@ -293,10 +293,10 @@ namespace CanvasTest
             var canvasSegments = CanvasSegment.CreateSegmentsFromCommonCnvs(sampleGenomicBins, intervals, balleles);
 
             Assert.Equal(canvasSegments.Count, intervals.Count);
-            Assert.Equal(canvasSegments.First().Balleles.Size(), 0);
-            Assert.Equal(canvasSegments.Last().Balleles.Size(), 1);
-            Assert.Equal(canvasSegments.First().Counts.Count, 3);
-            Assert.Equal(canvasSegments.Last().Counts.Count, 2);
+            Assert.Equal(0, canvasSegments.First().Balleles.Size());
+            Assert.Equal(1, canvasSegments.Last().Balleles.Size());
+            Assert.Equal(3, canvasSegments.First().Counts.Count);
+            Assert.Equal(2, canvasSegments.Last().Counts.Count);
         }
 
     }

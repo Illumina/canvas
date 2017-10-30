@@ -561,7 +561,7 @@ namespace CanvasCommon
                 writer.Write("#Chromosome\tStart\tEnd\tCopyNumber\tMajorChromosomeCount\tMedianHits\tNormalizedCoverage\tMedianMinorAlleleFrequency\tReferencePloidy\t");
                 for (int i = 0; i < NumberVariantFrequencyBins; i++) { writer.Write("VariantFrequencyBin{0}\t", i); }
                 writer.WriteLine();
-                foreach (GenomeMetadata.SequenceMetadata chromosome in genome.Sequences)
+                foreach (GenomeMetadata.SequenceMetadata chromosome in genome.Contigs())
                 {
                     if (!segmentsByChromosome.ContainsKey(chromosome.Name))
                     {
