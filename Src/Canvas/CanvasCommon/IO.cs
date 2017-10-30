@@ -145,7 +145,7 @@ namespace CanvasCommon
             GenomeMetadata genomeMetaData = new GenomeMetadata();
             genomeMetaData.Deserialize(new FileLocation(Path.Combine(referenceFolder, "GenomeSize.xml")));
             var chromosomeNames = new HashSet<string>();
-            foreach (var chromosome in genomeMetaData.Sequences)
+            foreach (var chromosome in genomeMetaData.Contigs())
                 chromosomeNames.Add(chromosome.Name.ToLowerInvariant());
             return chromosomeNames;
         }
