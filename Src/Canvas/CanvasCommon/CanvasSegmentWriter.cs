@@ -17,7 +17,7 @@ namespace CanvasCommon
         private static void SanityCheckChromosomeNames(GenomeMetadata genome, IEnumerable<CanvasSegment> segments)
         {
             var chromosomeNames = new HashSet<string>();
-            foreach (GenomeMetadata.SequenceMetadata chromosome in genome.Sequences)
+            foreach (GenomeMetadata.SequenceMetadata chromosome in genome.Contigs())
             {
                 chromosomeNames.Add(chromosome.Name.ToLowerInvariant());
             }
@@ -62,7 +62,7 @@ namespace CanvasCommon
             GenomeMetadata genome = new GenomeMetadata();
             genome.Deserialize(new FileLocation(Path.Combine(wholeGenomeFastaDirectory, "GenomeSize.xml")));
 
-            foreach (GenomeMetadata.SequenceMetadata chromosome in genome.Sequences)
+            foreach (GenomeMetadata.SequenceMetadata chromosome in genome.Contigs()) 
             {
                 writer.WriteLine($"##contig=<ID={chromosome.Name},length={chromosome.Length}>");
             }
@@ -102,7 +102,7 @@ namespace CanvasCommon
             BgzipOrStreamWriter writer, bool isPedigreeInfoSupplied = true, int? denovoQualityThreshold = null)
         {
             var nSamples = segmentsOfAllSamples.Count;
-            foreach (GenomeMetadata.SequenceMetadata chromosome in genome.Sequences)
+            foreach (GenomeMetadata.SequenceMetadata chromosome in genome.Contigs())
             {
                 for (int segmentIndex = 0; segmentIndex < segmentsOfAllSamples.First().Count; segmentIndex++)
                 {

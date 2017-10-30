@@ -285,7 +285,7 @@ namespace CanvasTest.Canvas.CommandLineParsing
             Assert.True(result.Success);
             Assert.Equal(inputArgument1, result.Result[0].Item1);
             Assert.Equal(inputArgument2, result.Result[0].Item2);
-            Assert.Equal(null, result.Result[0].Item3);
+            Assert.Null(result.Result[0].Item3);
         }
 
         [Fact]

@@ -4,21 +4,25 @@ using System.IO;
 using Newtonsoft.Json;
 using System.Linq;
 using CanvasCommon;
+using CanvasPedigreeCaller.Visualization;
 using Illumina.Common;
 using Illumina.Common.FileSystem;
+using Isas.ClassicBioinfoTools.KentUtils;
 using Isas.Framework.Logging;
-using Utilities = Isas.Framework.Utilities.Utilities;
+using Isas.Framework.Settings;
+using Isas.Framework.WorkManagement;
+using Isas.Framework.WorkManagement.CommandBuilding;
+using Isas.SequencingFiles;
 
 namespace CanvasPedigreeCaller
 {
-    class Program
+    internal class Program
     {
-
         /// <summary>
         /// Command line help message.
         /// </summary>
         /// <param name="p">NDesk OptionSet</param>
-        static void ShowHelp(OptionSet p)
+        private static void ShowHelp(OptionSet p)
         {
             Console.WriteLine("Usage: CanvasPedigreeCaller.exe [OPTIONS]+");
             Console.WriteLine("Make discrete-valued copy number calls in a pedigree.");
@@ -27,9 +31,9 @@ namespace CanvasPedigreeCaller
             p.WriteOptionDescriptions(Console.Out);
         }
 
-        static int Main(string[] args)
+        private static int Main(string[] args)
         {
-            CanvasCommon.Utilities.LogCommandLine(args);
+            Utilities.LogCommandLine(args);
             string outDir = null;
             var segmentFiles = new List<string>();
             var variantFrequencyFiles = new List<string>();
@@ -41,7 +45,7 @@ namespace CanvasPedigreeCaller
             int? qScoreThresholdOption = null;
             int? dqScoreThresholdOption = null;
             string commonCnvsBedPath = null;
-            string parameterconfigPath = Path.Combine(Utilities.GetAssemblyFolder(typeof(Program)), "PedigreeCallerParameters.json");
+            string parameterconfigPath = Path.Combine(Isas.Framework.Utilities.Utilities.GetAssemblyFolder(typeof(Program)), "PedigreeCallerParameters.json");
 
             var p = new OptionSet()
             {
@@ -139,11 +143,21 @@ namespace CanvasPedigreeCaller
                 throw new IlluminaException($"De novo quality score threshold must be >= 0 and < {callerParameters.MaxQscore}");
 
             var logger = new Logger(new[] { Console.Out }, new[] { Console.Error });
+            var settings = new SettingsProcessor();
+            var outputDirectory = new DirectoryLocation(outDir);
+            var workerDirectory = new DirectoryLocation(Isas.Framework.Utilities.Utilities.GetAssemblyFolder(typeof(CanvasPedigreeCaller)));
+            var commandManager = new CommandManager(new ExecutableProcessor(settings, logger, workerDirectory));
+            var workManager = WorkManagerFactory.GetWorkManager(logger, outputDirectory, settings);
+            var bigWigConverter = new FormatConverterFactory(logger, workManager, commandManager).GetBedGraphToBigWigConverter();
+            var referenceGenome = new ReferenceGenomeFactory().GetReferenceGenome(new DirectoryLocation(referenceFolder));
+            var genomeMetadata = referenceGenome.GenomeMetadata;
+            var coverageBigWigWriter = new CoverageBigWigWriterFactory(logger, bigWigConverter, genomeMetadata).Create();
             var copyNumberLikelihoodCalculator = new CopyNumberLikelihoodCalculator(callerParameters.MaximumCopyNumber);
             IVariantCaller variantCaller = new VariantCaller(copyNumberLikelihoodCalculator, callerParameters, qScoreThreshold);
-            var caller = new CanvasPedigreeCaller(logger, qScoreThreshold, dqScoreThreshold, callerParameters, copyNumberLikelihoodCalculator, variantCaller);
+            var caller = new CanvasPedigreeCaller(logger, qScoreThreshold, dqScoreThreshold, callerParameters, copyNumberLikelihoodCalculator, variantCaller, coverageBigWigWriter);
 
-            return caller.CallVariants(variantFrequencyFiles, segmentFiles, outDir, ploidyBedPath, referenceFolder, sampleNames, commonCnvsBedPath, sampleTypesEnum);
+            var outVcf = outputDirectory.GetFileLocation("CNV.vcf.gz");
+            return caller.CallVariants(variantFrequencyFiles, segmentFiles, outVcf, ploidyBedPath, referenceFolder, sampleNames, commonCnvsBedPath, sampleTypesEnum);
         }
 
         private static SampleType GetSampleType(string sampleType)

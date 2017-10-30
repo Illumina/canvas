@@ -5,12 +5,17 @@ namespace Canvas.Wrapper
 {
     public class DbSnpVcfProcessor
     {
-        private readonly ISampleSettings _sampleSettings;
+        private readonly ISettings _sampleSettings;
 
-        public DbSnpVcfProcessor(ISampleSettings sampleSettings)
+        [System.Obsolete("Pass in ISettings")]
+        public DbSnpVcfProcessor(ISampleSettings sampleSettings) : this((ISettings)sampleSettings)
+        {
+        }
+        public DbSnpVcfProcessor(ISettings sampleSettings)
         {
             _sampleSettings = sampleSettings;
         }
+
 
         public IFileLocation GetDbSnpVcfPath()
         {

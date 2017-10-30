@@ -36,10 +36,10 @@
     </None>
   </ItemGroup>
   <ItemGroup>
-  
-    <PackageReference Include="Illumina.Common" Version="4.13.0-O00349CANV-404" />
-    <PackageReference Include="Isas.Framework" Version="7.11.1.596" />
-    <PackageReference Include="Isas.SequencingFiles" Version="5.4.0.383" />
+    <PackageReference Include="Illumina.Common" Version="4.12.0.348" />
+    <PackageReference Include="ClassicBioinfoTools" Version="2.3.1.183" />
+	<PackageReference Include="Isas.Framework" Version="7.11.1.596" />
+    <PackageReference Include="Isas.SequencingFiles" Version="5.5.0.393" />
     <PackageReference Include="MathNet.Numerics.Core" Version="3.17.0" />
     <PackageReference Include="Newtonsoft.Json" Version="9.0.1" />
     <PackageReference Include="protobuf-net" Version="2.3.2" />

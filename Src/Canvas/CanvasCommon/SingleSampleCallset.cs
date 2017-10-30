@@ -101,5 +101,10 @@ namespace CanvasCommon
                 coveragePath.ReplaceFileNameExtension(".vcf", "");
             return GetCoverageAndVariantFrequencyOutput(new FileLocation(coveragePath));
         }
+
+        public static IFileLocation GetSingleSamplePedigreeCoverageBigWig(IDirectoryLocation analysisOutputFolder, string sampleName)
+        {
+            return GetSampleOutputFolder(analysisOutputFolder, sampleName).GetFileLocation("coverage.bw");
+        }
     }
 }

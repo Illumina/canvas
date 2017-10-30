@@ -51,7 +51,7 @@ namespace CanvasTest
                     tmpHigh = (double)element;
             }
 
-            Assert.Equal(tmpLow, 1D);
+            Assert.Equal(1D, tmpLow);
             Assert.Equal(tmpHigh, Double.MinValue);
         }
     }

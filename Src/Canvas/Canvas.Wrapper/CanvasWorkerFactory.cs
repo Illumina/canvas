@@ -14,7 +14,7 @@ namespace Canvas.Wrapper
     public class CanvasWorkerFactory
     {
         private readonly IWorkManager _workManager;
-        private readonly ISampleSettings _sampleSettings;
+        private readonly ISettings _sampleSettings;
         private readonly ILogger _logger;
         private readonly ExecutableProcessor _executableProcessor;
         private readonly DbSnpVcfProcessor _dbSnpVcfProcessor;
@@ -23,8 +23,22 @@ namespace Canvas.Wrapper
         public static string CanvasCoverageModeSetting = "CanvasCoverageMode";
         private readonly ICommandManager _commandManager;
 
+        [Obsolete("Pass ISettings rather than ISampleSettings")]
         public CanvasWorkerFactory(
             ISampleSettings sampleSettings,
+            IWorkManager workManager,
+            ILogger logger,
+            ExecutableProcessor executableProcessor,
+            DbSnpVcfProcessor dbSnpVcfProcessor,
+            bool detectCnvDefault,
+            TabixWrapper tabixWrapper, ICommandManager commandManager) : this((ISettings)sampleSettings, workManager,
+            logger, executableProcessor, dbSnpVcfProcessor, detectCnvDefault, tabixWrapper, commandManager)
+        {
+
+        }
+
+        public CanvasWorkerFactory(
+            ISettings sampleSettings,
             IWorkManager workManager,
             ILogger logger,
             ExecutableProcessor executableProcessor,
@@ -275,7 +289,7 @@ namespace Canvas.Wrapper
 
         private void UpdateWithCoverageMode(Dictionary<string, string> allCustomParams)
         {
-            string canvasCoverageMode = _sampleSettings.GetSetting(CanvasCoverageModeSetting);
+            string canvasCoverageMode = _sampleSettings.GetSetting(SampleSettings.CreateSetting<string>(CanvasCoverageModeSetting, "coverage mode"));
             if (canvasCoverageMode != null)
             {
                 UpdateCustomParametersWithSetting(allCustomParams, "CanvasBin", $" -m {canvasCoverageMode}");
