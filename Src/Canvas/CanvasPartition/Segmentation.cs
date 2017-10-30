@@ -76,7 +76,7 @@ namespace CanvasPartition
 
         private void ReadInputFiles(string referenceFolder)
         {
-            CoverageInfo = CanvasSegment.ReadBedInput(InputBinPath, ForbiddenIntervalBedPath);
+            CoverageInfo = CanvasSegment.ReadBEDInput(InputBinPath, ForbiddenIntervalBedPath);
             if (InputVafPath != null)
                 LoadVAFInput(referenceFolder);
         }

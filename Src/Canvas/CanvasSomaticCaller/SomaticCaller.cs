@@ -2257,7 +2257,7 @@ namespace CanvasSomaticCaller
                     Array.Clear(baseCountByCopyNumber, 0, baseCountByCopyNumber.Length);
                     currentChromosome = segment.Chr;
                 }
-                if (!new CanvasFilter(segment.Filter).Equals(CanvasFilter.PassFilter)) continue;
+                if (!segment.Filter.Equals(CanvasFilter.PassFilter)) continue;
                 if (segment.CopyNumber == -1) continue;
                 baseCountByCopyNumber[Math.Min(segment.CopyNumber, somaticCallerParameters.MaximumCopyNumber)] += (segment.Length);
             }

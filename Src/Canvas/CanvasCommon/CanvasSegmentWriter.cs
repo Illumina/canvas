@@ -17,7 +17,7 @@ namespace CanvasCommon
         private static void SanityCheckChromosomeNames(GenomeMetadata genome, IEnumerable<CanvasSegment> segments)
         {
             var chromosomeNames = new HashSet<string>();
-            foreach (GenomeMetadata.SequenceMetadata chromosome in genome.Sequences)
+            foreach (GenomeMetadata.SequenceMetadata chromosome in genome.Contigs())
             {
                 chromosomeNames.Add(chromosome.Name.ToLowerInvariant());
             }
@@ -33,7 +33,7 @@ namespace CanvasCommon
         {
             double totalPloidy = 0;
             double totalWeight = 0;
-            foreach (CanvasSegment segment in segments.Where(segment => new CanvasFilter(segment.Filter).Equals(CanvasFilter.PassFilter)))
+            foreach (CanvasSegment segment in segments.Where(segment => segment.Filter.Equals(CanvasFilter.PassFilter)))
             {
                 totalWeight += segment.Length;
                 totalPloidy += segment.CopyNumber * (segment.Length);
@@ -62,7 +62,7 @@ namespace CanvasCommon
             GenomeMetadata genome = new GenomeMetadata();
             genome.Deserialize(new FileLocation(Path.Combine(wholeGenomeFastaDirectory, "GenomeSize.xml")));
 
-            foreach (GenomeMetadata.SequenceMetadata chromosome in genome.Sequences)
+            foreach (GenomeMetadata.SequenceMetadata chromosome in genome.Contigs()) 
             {
                 writer.WriteLine($"##contig=<ID={chromosome.Name},length={chromosome.Length}>");
             }
@@ -102,7 +102,7 @@ namespace CanvasCommon
             BgzipOrStreamWriter writer, bool isPedigreeInfoSupplied = true, int? denovoQualityThreshold = null)
         {
             var nSamples = segmentsOfAllSamples.Count;
-            foreach (GenomeMetadata.SequenceMetadata chromosome in genome.Sequences)
+            foreach (GenomeMetadata.SequenceMetadata chromosome in genome.Contigs())
             {
                 for (int segmentIndex = 0; segmentIndex < segmentsOfAllSamples.First().Count; segmentIndex++)
                 {
@@ -110,8 +110,7 @@ namespace CanvasCommon
                     var index = segmentIndex;
                     var recordLevelFilter = CanvasFilter.GetRecordLevelFilterFromSampleFiltersOnly(
                                                 segmentsOfAllSamples
-                                                .Select(sample => 
-                                                new CanvasFilter(sample[index].Filter))
+                                                .Select(sample => sample[index].Filter)
                                                 .ToReadOnlyList())
                                                 .ToVcfString();
                     if (!firstSampleSegment.Chr.Equals(chromosome.Name, StringComparison.OrdinalIgnoreCase))

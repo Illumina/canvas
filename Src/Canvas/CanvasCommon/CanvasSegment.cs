@@ -54,63 +54,61 @@ namespace CanvasCommon
 
     public class Balleles
     {
+        internal List<Ballele> Range { get; private set; }
 
-        private List<Ballele> _range;
-
-        public Balleles()
+        public Balleles(IEnumerable<Ballele> alleles)
         {
-            _range = new List<Ballele>();
+            Range = alleles?.ToList() ?? throw new ArgumentNullException(nameof(alleles));
         }
-        public Balleles(List<Ballele> alleles)
+
+        public Balleles() : this(Enumerable.Empty<Ballele>())
         {
-            _range = alleles;
         }
 
         public void Add(Balleles alleles)
         {
-            _range.AddRange(alleles._range);
+            Range.AddRange(alleles.Range);
         }
 
         public void Add(Ballele allele)
         {
-            _range.Add(allele);
+            Range.Add(allele);
         }
 
         public int Size()
         {
-            return _range.Count;
+            return Range.Count;
         }
 
-        public double? MeanMaf => Frequencies?.Average();
-        public List<int> TotalCoverage => _range?.Select(allele => allele.TotalCoverage).ToList();
+        public double? MeanMAF => Frequencies.Average();
+        public List<int> TotalCoverage => Range.Select(allele => allele.TotalCoverage).ToList();
 
         public void PruneBalleles(double frequencyThreshold)
         {
-            _range = _range?.Where(v => v.Frequency > frequencyThreshold).ToList();
+            Range = Range.Where(v => v.Frequency > frequencyThreshold).ToList();
         }
 
-        public List<float> Frequencies => _range?.Select(allele => allele.Frequency).ToList();
-        public List<double> MaxFrequencies => _range?.Select(allele => allele.GetMaxFrequency()).ToList();
+        public List<float> Frequencies => Range.Select(allele => allele.Frequency).ToList();
+        public List<double> MaxFrequencies => Range.Select(allele => allele.GetMaxFrequency()).ToList();
 
 
         public List<Tuple<int, int>> GetAlleleCounts()
         {
-            return _range.Select(allele => new Tuple<int, int>(allele.CountsA, allele.CountsB)).ToList();
+            return Range.Select(allele => new Tuple<int, int>(allele.CountsA, allele.CountsB)).ToList();
         }
 
         public Tuple<int, int> MedianCounts(Balleles balleles)
         {
-            var item1 = Utilities.Median(balleles._range.Select(allele => Math.Max(allele.CountsA, allele.CountsB)).ToList());
-            var item2 = Utilities.Median(balleles._range.Select(allele => Math.Min(allele.CountsA, allele.CountsB)).ToList());
+            var item1 = Utilities.Median(balleles.Range.Select(allele => Math.Max(allele.CountsA, allele.CountsB)).ToList());
+            var item2 = Utilities.Median(balleles.Range.Select(allele => Math.Min(allele.CountsA, allele.CountsB)).ToList());
             return new Tuple<int, int>(item1, item2);
         }
 
         public Balleles GetBallelesSubrange(int start, int end, int defaultAlleleCountThreshold)
         {
-            var array = _range.Where(x => x.Position >= start && x.Position <= end).ToList();
+            var array = Range.Where(x => x.Position >= start && x.Position <= end).ToList();
             return new Balleles(array);
         }
-
     }
 
     public class CoverageInfo
@@ -199,10 +197,11 @@ namespace CanvasCommon
         public bool IsHeterogeneous;
         private const int NumberVariantFrequencyBins = 100;
         private const int OverlapWindowThreshold = 500;
-        public List<string> Filter = new List<string> {CanvasFilter.Pass};
+        public CanvasFilter Filter;
         public Tuple<int, int> StartConfidenceInterval; // if not null, this is a confidence interval around Start, reported in the CIPOS tag
         public Tuple<int, int> EndConfidenceInterval; // if not null, this is a confidence interval around End, reported in the CIEND tag
-        public Balleles Balleles;
+        public Balleles Balleles { get; private set; }
+
         public string Chr { get; }
         /// <summary>
         /// bed format start position
@@ -289,14 +288,16 @@ namespace CanvasCommon
             {
                 StartConfidenceInterval = s.StartConfidenceInterval;
                 Begin = s.Begin;
+                GenomicBins = s.GenomicBins.Concat(GenomicBins).ToList();
+                Balleles = new Balleles(s.Balleles.Range.Concat(Balleles.Range));
             }
             if (s.End > End)
             {
                 EndConfidenceInterval = s.EndConfidenceInterval;
                 End = s.End;
+                GenomicBins = GenomicBins.Concat(s.GenomicBins).ToList();
+                Balleles = new Balleles(Balleles.Range.Concat(s.Balleles.Range));
             }
-            GenomicBins.AddRange(s.GenomicBins);
-            if (Balleles != null && s.Balleles != null) Balleles.Add(s.Balleles);
         }
 
         public int SizeOveralp(CanvasSegment segment)
@@ -560,7 +561,7 @@ namespace CanvasCommon
                 writer.Write("#Chromosome\tStart\tEnd\tCopyNumber\tMajorChromosomeCount\tMedianHits\tNormalizedCoverage\tMedianMinorAlleleFrequency\tReferencePloidy\t");
                 for (int i = 0; i < NumberVariantFrequencyBins; i++) { writer.Write("VariantFrequencyBin{0}\t", i); }
                 writer.WriteLine();
-                foreach (GenomeMetadata.SequenceMetadata chromosome in genome.Sequences)
+                foreach (GenomeMetadata.SequenceMetadata chromosome in genome.Contigs())
                 {
                     if (!segmentsByChromosome.ContainsKey(chromosome.Name))
                     {
@@ -573,7 +574,7 @@ namespace CanvasCommon
                         counts.Clear();
                         MAF.Clear();
                         VF.Clear();
-                        Dictionary<string, long> copyNumberAndChromCount = new Dictionary<string, long>();
+                        Dictionary<string, long> CopyNumberAndChromCount = new Dictionary<string, long>();
                         Dictionary<int, long> basesByCopyNumber = new Dictionary<int, long>();
                         // Accumulate counts and MAF from the segments:
                         List<CanvasSegment> chrSegments = new List<CanvasSegment>();
@@ -586,8 +587,8 @@ namespace CanvasCommon
 
                             int weight = Math.Min(segment.End, pointEndPos) - Math.Max(segment.Begin, pointStartPos);
                             string key = String.Format("{0} {1}", segment.CopyNumber, segment.MajorChromosomeCount);
-                            if (!copyNumberAndChromCount.ContainsKey(key)) copyNumberAndChromCount[key] = 0;
-                            copyNumberAndChromCount[key] += weight;
+                            if (!CopyNumberAndChromCount.ContainsKey(key)) CopyNumberAndChromCount[key] = 0;
+                            CopyNumberAndChromCount[key] += weight;
                             if (!basesByCopyNumber.ContainsKey(segment.CopyNumber)) basesByCopyNumber[segment.CopyNumber] = 0;
                             basesByCopyNumber[segment.CopyNumber] += weight;
                             overlapSegments.Add(segment);
@@ -608,12 +609,12 @@ namespace CanvasCommon
                         // Find the most common major chromosome count, for the most common copy number:
                         int? majorChromosomeCount = null;
                         bestCount = 0;
-                        foreach (string key in copyNumberAndChromCount.Keys)
+                        foreach (string key in CopyNumberAndChromCount.Keys)
                         {
                             string[] bits = key.Split();
                             if (bits[1].Length == 0) continue;
                             if (Int32.Parse(bits[0]) != majorCopyNumber) continue;
-                            long count = copyNumberAndChromCount[key];
+                            long count = CopyNumberAndChromCount[key];
                             if (count < bestCount) continue;
                             bestCount = count;
                             majorChromosomeCount = Int32.Parse(bits[1]);
@@ -746,6 +747,7 @@ namespace CanvasCommon
         /// </summary>
         /// <param name="canvasSegments"></param>
         /// <param name="commonCnvSegments"></param>
+        /// <param name="chr"></param>
         /// <param name="defaultAlleleCountThreshold"></param>
         /// <returns></returns>
         public static List<OverlappingSegmentsRegion> MergeCommonCnvSegments(List<CanvasSegment> canvasSegments,
@@ -836,7 +838,7 @@ namespace CanvasCommon
         /// quality score.  Two consecutive segments are considered neighbors if they're on the same chromosome
         /// and the space between them doesn't overlap with any excluded intervals.
         /// </summary>
-        public static List<CanvasSegment> MergeSegmentsUsingExcludedIntervals(List<CanvasSegment> segments, int minimumCallSize,
+        public static List<CanvasSegment> MergeSegmentsUsingExcludedIntervals(List<CanvasSegment> segments, int MinimumCallSize,
             Dictionary<string, List<SampleGenomicBin>> excludedIntervals)
         {
             // Assimilate short segments into the *best* available neighbor:
@@ -846,7 +848,7 @@ namespace CanvasCommon
             int segmentIndex = 0;
             while (segmentIndex < segments.Count)
             {
-                if (segments[segmentIndex].End - segments[segmentIndex].Begin >= minimumCallSize)
+                if (segments[segmentIndex].End - segments[segmentIndex].Begin >= MinimumCallSize)
                 {
                     mergedSegments.Add(segments[segmentIndex]);
                     segmentIndex++;
@@ -859,7 +861,7 @@ namespace CanvasCommon
                 {
                     // Stop, if you jump to another chromosome, or cross a forbidden interval:
                     if (segments[checkIndex].Chr != segments[segmentIndex].Chr) break;
-                    if (segments[checkIndex].End - segments[checkIndex].Begin < minimumCallSize) continue;
+                    if (segments[checkIndex].End - segments[checkIndex].Begin < MinimumCallSize) continue;
                     if (IsForbiddenInterval(segments[checkIndex].Chr, segments[checkIndex].End, segments[segmentIndex].Begin, excludedIntervals)) break;
                     prevIndex = checkIndex;
                     prevQ = segments[checkIndex].QScore;
@@ -871,7 +873,7 @@ namespace CanvasCommon
                 for (int checkIndex = segmentIndex + 1; checkIndex < segments.Count; checkIndex++)
                 {
                     if (segments[checkIndex].Chr != segments[segmentIndex].Chr) break;
-                    if (segments[checkIndex].End - segments[checkIndex].Begin < minimumCallSize) continue;
+                    if (segments[checkIndex].End - segments[checkIndex].Begin < MinimumCallSize) continue;
                     if (IsForbiddenInterval(segments[checkIndex].Chr, segments[segmentIndex].End, segments[checkIndex].Begin, excludedIntervals)) break;
                     nextIndex = checkIndex;
                     nextQ = segments[checkIndex].QScore;
@@ -1047,10 +1049,11 @@ namespace CanvasCommon
             string sizeFilter = "L" + CanvasFilter.FormatCnvSizeWithSuffix(segmantSizeCutoff);
             foreach (var segment in segments)
             {
-                if (segment.Filter.Count > 0) throw new Exception($"Filter has already been set: {string.Join(";", segment.Filter)}");
-                if (segment.QScore < qualityFilterThreshold) segment.Filter.Add(qualityFilter);
-                if (segment.End - segment.Begin < segmantSizeCutoff) segment.Filter.Add(sizeFilter);
-                if (segment.Filter.Count == 0) segment.Filter.Add(CanvasFilter.Pass); // "PASS" is exclusive with any other keyword
+                if (segment.Filter != null) throw new Exception($"Filter has already been set: {segment.Filter.ToVcfString()}");
+                var filterTags = new List<string>();
+                if (segment.QScore < qualityFilterThreshold) filterTags.Add(qualityFilter);
+                if (segment.End - segment.Begin < segmantSizeCutoff) filterTags.Add(sizeFilter);
+                segment.Filter = new CanvasFilter(filterTags);
             }
         }
 
@@ -1078,7 +1081,7 @@ namespace CanvasCommon
         /// <summary>
         /// Assume that the rows are sorted by the start position and ascending order
         /// </summary>
-        public static CoverageInfo ReadBedInput(string inputbed, string forbiddenIntervalBedPath = null)
+        public static CoverageInfo ReadBEDInput(string inputbed, string forbiddenIntervalBedPath = null)
         {
             const int idxChr = 0, idxStart = 1, idxEnd = 2, idxScore = 3;
             var binFilter = new GenomicBinFilter(forbiddenIntervalBedPath);
