@@ -12,8 +12,8 @@ namespace CanvasCommon
         public const string Pass = "PASS";
         public const string AllSampleFailedTag = "FailedFT";
         public const string SampleFilterFailed = "FT";
-        public static CanvasFilter PassFilter = Create(Enumerable.Empty<string>());
-        public IReadOnlyList<string> FailedFilterTags { get; }
+        public static readonly CanvasFilter PassFilter = Create(Enumerable.Empty<string>());
+        private IReadOnlyList<string> FailedFilterTags { get; }
 
         public CanvasFilter(IReadOnlyList<string> failedFilterTags)
         {
@@ -30,7 +30,7 @@ namespace CanvasCommon
 
         public bool IsPass => FailedFilterTags.Count == 0;
 
-        public static CanvasFilter GetSharedFilter(IReadOnlyList<CanvasFilter> sampleFilters)
+        private static CanvasFilter GetSharedFilter(IReadOnlyList<CanvasFilter> sampleFilters)
         {
             if (sampleFilters.First().IsPass) return PassFilter;
             var sharedFilterTags = sampleFilters.First().FailedFilterTags.ToList();
