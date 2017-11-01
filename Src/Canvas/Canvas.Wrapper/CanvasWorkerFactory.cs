@@ -289,7 +289,7 @@ namespace Canvas.Wrapper
 
         private void UpdateWithCoverageMode(Dictionary<string, string> allCustomParams)
         {
-            string canvasCoverageMode = _sampleSettings.GetSetting(SampleSettings.CreateSetting<string>(CanvasCoverageModeSetting, "coverage mode"));
+            string canvasCoverageMode = _sampleSettings.GetSetting(SampleSettings.CreateSetting<string>(CanvasCoverageModeSetting, "coverage mode", (string)null));
             if (canvasCoverageMode != null)
             {
                 UpdateCustomParametersWithSetting(allCustomParams, "CanvasBin", $" -m {canvasCoverageMode}");
