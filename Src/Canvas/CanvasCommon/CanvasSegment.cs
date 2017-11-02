@@ -1053,7 +1053,7 @@ namespace CanvasCommon
                 var filterTags = new List<string>();
                 if (segment.QScore < qualityFilterThreshold) filterTags.Add(qualityFilter);
                 if (segment.End - segment.Begin < segmantSizeCutoff) filterTags.Add(sizeFilter);
-                segment.Filter = new CanvasFilter(filterTags);
+                segment.Filter = CanvasFilter.Create(filterTags);
             }
         }
 

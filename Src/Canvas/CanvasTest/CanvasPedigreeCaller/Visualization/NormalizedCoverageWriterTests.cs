@@ -84,7 +84,7 @@ namespace CanvasTest
                 })
                 {
                     CopyNumber = 10,
-                    Filter = new CanvasFilter(new[] {"Filtered"})
+                    Filter = CanvasFilter.Create(new[] {"Filtered"})
                 }
             };
 

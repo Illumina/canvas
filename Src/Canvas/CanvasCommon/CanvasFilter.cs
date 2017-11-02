@@ -8,14 +8,14 @@ namespace CanvasCommon
     public class CanvasFilter
     {
 
-        public const int SegmantSizeCutoff = 10000;
+        public const int SegmentSizeCutoff = 10000;
         public const string Pass = "PASS";
         public const string AllSampleFailedTag = "FailedFT";
         public const string SampleFilterFailed = "FT";
         public static readonly CanvasFilter PassFilter = Create(Enumerable.Empty<string>());
         private IReadOnlyList<string> FailedFilterTags { get; }
 
-        public CanvasFilter(IReadOnlyList<string> failedFilterTags)
+        private CanvasFilter(IReadOnlyList<string> failedFilterTags)
         {
             FailedFilterTags = failedFilterTags;
         }

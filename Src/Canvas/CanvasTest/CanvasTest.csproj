@@ -24,7 +24,7 @@
 
   <ItemGroup>
     <PackageReference Include="Castle.Core" Version="4.1.1" />
-    <PackageReference Include="Illumina.Common" Version="4.13.0-O00349CANV-404" />
+    <PackageReference Include="Illumina.Common" Version="4.13.0.353" />
     <PackageReference Include="Isas.Framework.UnitTestUtilities" Version="7.11.1.596" />
     <PackageReference Include="Isas.SequencingFiles" Version="5.5.0.393" />
     <PackageReference Include="JetBrains.Annotations" Version="11.0.0" />
