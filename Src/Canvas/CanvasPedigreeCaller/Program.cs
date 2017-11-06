@@ -147,17 +147,30 @@ namespace CanvasPedigreeCaller
             var outputDirectory = new DirectoryLocation(outDir);
             var workerDirectory = new DirectoryLocation(Isas.Framework.Utilities.Utilities.GetAssemblyFolder(typeof(CanvasPedigreeCaller)));
             var commandManager = new CommandManager(new ExecutableProcessor(settings, logger, workerDirectory));
-            var workManager = WorkManagerFactory.GetWorkManager(logger, outputDirectory, settings);
-            var bigWigConverter = new FormatConverterFactory(logger, workManager, commandManager).GetBedGraphToBigWigConverter();
-            var referenceGenome = new ReferenceGenomeFactory().GetReferenceGenome(new DirectoryLocation(referenceFolder));
-            var genomeMetadata = referenceGenome.GenomeMetadata;
-            var coverageBigWigWriter = new CoverageBigWigWriterFactory(logger, bigWigConverter, genomeMetadata).Create();
-            var copyNumberLikelihoodCalculator = new CopyNumberLikelihoodCalculator(callerParameters.MaximumCopyNumber);
-            IVariantCaller variantCaller = new VariantCaller(copyNumberLikelihoodCalculator, callerParameters, qScoreThreshold);
-            var caller = new CanvasPedigreeCaller(logger, qScoreThreshold, dqScoreThreshold, callerParameters, copyNumberLikelihoodCalculator, variantCaller, coverageBigWigWriter);
+            var result = -1;
+            WorkDoerFactory.RunWithWorkDoer(logger, settings, outputDirectory, workDoer =>
+            {
+                var workManager = WorkManagerFactory.GetWorkManager(workDoer, logger, outputDirectory, settings);
+                IBedGraphToBigWigConverter bigWigConverter;
+                if (CrossPlatform.IsThisLinux())
+                {
+                    bigWigConverter = new FormatConverterFactory(logger, workManager, commandManager).GetBedGraphToBigWigConverter();
+                }
+                else
+                {
+                    bigWigConverter = new NullBedGraphToBigWigConverter(logger, "BedGraph to BigWig conversion unavailable on Windows.");
+                }
+                var referenceGenome = new ReferenceGenomeFactory().GetReferenceGenome(new DirectoryLocation(referenceFolder));
+                var genomeMetadata = referenceGenome.GenomeMetadata;
+                var coverageBigWigWriter = new CoverageBigWigWriterFactory(logger, bigWigConverter, genomeMetadata).Create();
+                var copyNumberLikelihoodCalculator = new CopyNumberLikelihoodCalculator(callerParameters.MaximumCopyNumber);
+                IVariantCaller variantCaller = new VariantCaller(copyNumberLikelihoodCalculator, callerParameters, qScoreThreshold);
+                var caller = new CanvasPedigreeCaller(logger, qScoreThreshold, dqScoreThreshold, callerParameters, copyNumberLikelihoodCalculator, variantCaller, coverageBigWigWriter);
 
-            var outVcf = outputDirectory.GetFileLocation("CNV.vcf.gz");
-            return caller.CallVariants(variantFrequencyFiles, segmentFiles, outVcf, ploidyBedPath, referenceFolder, sampleNames, commonCnvsBedPath, sampleTypesEnum);
+                var outVcf = outputDirectory.GetFileLocation("CNV.vcf.gz");
+                result = caller.CallVariants(variantFrequencyFiles, segmentFiles, outVcf, ploidyBedPath, referenceFolder, sampleNames, commonCnvsBedPath, sampleTypesEnum);
+            });
+            return result;
         }
 
         private static SampleType GetSampleType(string sampleType)

@@ -104,7 +104,7 @@ namespace CanvasCommon
 
         public static IFileLocation GetSingleSamplePedigreeCoverageBigWig(IDirectoryLocation analysisOutputFolder, string sampleName)
         {
-            return GetSampleOutputFolder(analysisOutputFolder, sampleName).GetFileLocation("coverage.bw");
+            return GetSampleOutputFolder(analysisOutputFolder, sampleName).GetFileLocation("coverage.bigWig");
         }
     }
 }
