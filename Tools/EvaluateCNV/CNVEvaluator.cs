@@ -33,9 +33,10 @@ namespace EvaluateCNV
 
     class CnvEvaluator
     {
-        private CNVChecker _cnvChecker;
+        private readonly CNVChecker _cnvChecker;
         #region Members
-        static int maxCN = 10;
+        private const int MaxCn = 10; // Currently the max copynum is 5 
+
         #endregion
 
         public CnvEvaluator(CNVChecker cnvChecker)
@@ -50,14 +51,14 @@ namespace EvaluateCNV
             // the "cnaqc" exclusion set:
             _cnvChecker.InitializeIntervalMetrics();
             bool regionsOfInterest = _cnvChecker.RegionsOfInterest != null;
-            var baseCounters = new List<BaseCounter> { new BaseCounter(maxCN, 0, Int32.MaxValue, regionsOfInterest) };
+            var baseCounters = new List<BaseCounter> { new BaseCounter(MaxCn, 0, Int32.MaxValue, regionsOfInterest) };
             if (options.SplitBySize)
             {
-                baseCounters.Add(new BaseCounter(maxCN, 0, 4999, regionsOfInterest));
-                baseCounters.Add(new BaseCounter(maxCN, 5000, 9999, regionsOfInterest));
-                baseCounters.Add(new BaseCounter(maxCN, 10000, 99999, regionsOfInterest));
-                baseCounters.Add(new BaseCounter(maxCN, 100000, 499999, regionsOfInterest));
-                baseCounters.Add(new BaseCounter(maxCN, 500000, int.MaxValue, regionsOfInterest));
+                baseCounters.Add(new BaseCounter(MaxCn, 0, 4999, regionsOfInterest));
+                baseCounters.Add(new BaseCounter(MaxCn, 5000, 9999, regionsOfInterest));
+                baseCounters.Add(new BaseCounter(MaxCn, 10000, 99999, regionsOfInterest));
+                baseCounters.Add(new BaseCounter(MaxCn, 100000, 499999, regionsOfInterest));
+                baseCounters.Add(new BaseCounter(MaxCn, 500000, int.MaxValue, regionsOfInterest));
             }
 
             _cnvChecker.CountExcludedBasesInTruthSetIntervals();
@@ -121,16 +122,16 @@ namespace EvaluateCNV
                     baseCounter.TotalVariants++;
                 }
 
-                if (CN > maxCN) CN = maxCN;
+                if (CN > MaxCn) CN = MaxCn;
                 string chr = call.Chr;
-                if (!_cnvChecker.KnownCN.ContainsKey(chr)) chr = call.Chr.Replace("chr", "");
-                if (!_cnvChecker.KnownCN.ContainsKey(chr)) chr = "chr" + call.Chr;
-                if (!_cnvChecker.KnownCN.ContainsKey(chr))
+                if (!_cnvChecker.KnownCn.ContainsKey(chr)) chr = call.Chr.Replace("chr", "");
+                if (!_cnvChecker.KnownCn.ContainsKey(chr)) chr = "chr" + call.Chr;
+                if (!_cnvChecker.KnownCn.ContainsKey(chr))
                 {
                     Console.WriteLine("Error: Skipping variant call for chromosome {0} with no truth data", call.Chr);
                     continue;
                 }
-                foreach (CNInterval interval in _cnvChecker.KnownCN[chr])
+                foreach (CNInterval interval in _cnvChecker.KnownCn[chr])
                 {
                     int overlapStart = Math.Max(call.Start, interval.Start);
                     int overlapEnd = Math.Min(call.End, interval.End);
@@ -152,7 +153,6 @@ namespace EvaluateCNV
                     int knownCn = interval.Cn;
                     if (knownCn > maxCN) knownCn = maxCN;
                     baseCounter.BaseCount[knownCn, CN] += overlapBases;
-
                     interval.BasesCovered += overlapBases;
                     if (knownCn == CN)
                     {
@@ -179,7 +179,7 @@ namespace EvaluateCNV
 
             CalculateMedianAndMeanAccuracies(baseCounter);
 
-            var allIntervals = _cnvChecker.KnownCN.SelectMany(kvp => kvp.Value).ToList();
+            var allIntervals = _cnvChecker.KnownCn.SelectMany(kvp => kvp.Value).ToList();
 
             // find truth interval with highest number of false negatives (hurts recall)
             var variantIntervals = allIntervals.Where(interval => interval.Cn != interval.ReferenceCopyNumber).ToList();
@@ -206,9 +206,9 @@ namespace EvaluateCNV
             baseCounter.MeanAccuracy = 0;
             baseCounter.MedianAccuracy = 0;
             var eventAccuracies = new List<double>();
-            foreach (string chr in _cnvChecker.KnownCN.Keys)
+            foreach (string chr in _cnvChecker.KnownCn.Keys)
             {
-                foreach (var interval in _cnvChecker.KnownCN[chr])
+                foreach (var interval in _cnvChecker.KnownCn[chr])
                 {
                     if (interval.Cn == 2) continue;
                     int basecount = interval.Length - interval.BasesExcluded;
@@ -287,15 +287,17 @@ namespace EvaluateCNV
             _cnvChecker.HandleVcfHeaderInfo(outputWriter, new FileLocation(cnvCallsPath));
 
             // Report stats:
+            var precision = (isGainBasesCorrect + isLossBasesCorrect) / (double)(callGainBases + callLossBases);
+            var recall = (isGainBasesCorrect + isLossBasesCorrect) / (double)(isGainBases + isLossBases);
+            var f1Score = 2 * precision * recall / (precision + recall);
             outputWriter.WriteLine(includePassingOnly ? "Results for PASSing variants" : "Results for all variants");
             outputWriter.WriteLine("Accuracy\t{0:F4}", 100 * totalBasesRight / (double)totalBases);
+            // SK: I felt the direction based performance metrices make more sense
             outputWriter.WriteLine("DirectionAccuracy\t{0:F4}", 100 * totalBasesRightDirection / (double)totalBases);
-            outputWriter.WriteLine("Recall\t{0:F4}",
-                100 * (isGainBasesCorrect + isLossBasesCorrect) / (double)(isGainBases + isLossBases));
-            outputWriter.WriteLine("DirectionRecall\t{0:F4}",
-                100 * (isGainBasesCorrectDirection + isLossBasesCorrectDirection) / (double)(isGainBases + isLossBases));
-            outputWriter.WriteLine("Precision\t{0:F4}",
-                100 * (isGainBasesCorrect + isLossBasesCorrect) / (double)(callGainBases + callLossBases));
+            outputWriter.WriteLine("F-score\t{0:F4}", f1Score);
+            outputWriter.WriteLine("Recall\t{0:F4}", 100 * recall);
+            outputWriter.WriteLine("DirectionRecall\t{0:F4}", 100 * (isGainBasesCorrectDirection + isLossBasesCorrectDirection) / (double)(isGainBases + isLossBases));
+            outputWriter.WriteLine("Precision\t{0:F4}", 100 * precision);
             outputWriter.WriteLine("DirectionPrecision\t{0:F4}",
                 100 * (isGainBasesCorrectDirection + isLossBasesCorrectDirection) / (double)(callGainBases + callLossBases));
             outputWriter.WriteLine("GainRecall\t{0:F4}", 100 * (isGainBasesCorrect) / (double)(isGainBases));
