@@ -148,9 +148,10 @@ namespace CanvasPedigreeCaller
             var workerDirectory = new DirectoryLocation(Isas.Framework.Utilities.Utilities.GetAssemblyFolder(typeof(CanvasPedigreeCaller)));
             var commandManager = new CommandManager(new ExecutableProcessor(settings, logger, workerDirectory));
             var result = -1;
-            WorkDoerFactory.RunWithWorkDoer(logger, settings, outputDirectory, workDoer =>
+            var pedigreeCallerWorkDirectory = outputDirectory.GetDirectoryLocation("CanvasPedigreeCaller");
+            WorkDoerFactory.RunWithWorkDoer(logger, settings, pedigreeCallerWorkDirectory, workDoer =>
             {
-                var workManager = WorkManagerFactory.GetWorkManager(workDoer, logger, outputDirectory, settings);
+                var workManager = WorkManagerFactory.GetWorkManager(workDoer, logger, pedigreeCallerWorkDirectory, settings);
                 IBedGraphToBigWigConverter bigWigConverter;
                 if (CrossPlatform.IsThisLinux())
                 {
