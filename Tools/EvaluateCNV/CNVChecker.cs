@@ -86,7 +86,7 @@ namespace EvaluateCNV
     class CNVChecker
     {
         #region Members
-        public Dictionary<string, List<CNInterval>> KnownCN = null;
+        public Dictionary<string, List<CNInterval>> KnownCn = null;
         public Dictionary<string, List<CNInterval>> RegionsOfInterest = null;
         public Dictionary<string, List<CNInterval>> ExcludeIntervals = null;
         private readonly CNVEvaluator _cnvEvaluator;
@@ -150,7 +150,7 @@ namespace EvaluateCNV
             bool stripChr = false;
 
             // Load our "oracle" of known copy numbers:
-            this.KnownCN = new Dictionary<string, List<CNInterval>>();
+            this.KnownCn = new Dictionary<string, List<CNInterval>>();
             int count = 0;
             using (GzipReader reader = new GzipReader(oracleVCFPath))
             {
@@ -162,7 +162,7 @@ namespace EvaluateCNV
                     string[] bits = fileLine.Split('\t');
                     string chromosome = bits[0];
                     if (stripChr) chromosome = chromosome.Replace("chr", "");
-                    if (!KnownCN.ContainsKey(chromosome)) KnownCN[chromosome] = new List<CNInterval>();
+                    if (!KnownCn.ContainsKey(chromosome)) KnownCn[chromosome] = new List<CNInterval>();
                     CNInterval interval = new CNInterval(chromosome);
                     interval.Start = int.Parse(bits[1]);
                     interval.CN = -1;
@@ -206,7 +206,7 @@ namespace EvaluateCNV
                     }
                     else
                     {
-                        KnownCN[chromosome].Add(interval);
+                        KnownCn[chromosome].Add(interval);
                         count++;
                     }
                 }
@@ -229,7 +229,7 @@ namespace EvaluateCNV
             }
         }
 
-        protected void LoadKnownCN(string oraclePath, double heterogeneityFraction)
+        protected void LoadKnownCn(string oraclePath, double heterogeneityFraction)
         {
             if (!File.Exists(oraclePath))
             {
@@ -238,7 +238,7 @@ namespace EvaluateCNV
 
             if (oraclePath.EndsWith(".bed"))
             {
-                this.KnownCN = this.LoadIntervalsFromBed(oraclePath, true, heterogeneityFraction);
+                this.KnownCn = this.LoadIntervalsFromBed(oraclePath, true, heterogeneityFraction);
                 return;
             }
             LoadKnownCNVCF(oraclePath);
@@ -247,7 +247,7 @@ namespace EvaluateCNV
 
         public void InitializeIntervalMetrics()
         {
-            foreach (var chromosomeIntervals in this.KnownCN.Values)
+            foreach (var chromosomeIntervals in this.KnownCn.Values)
                 foreach (var interval in chromosomeIntervals)
                     interval.InitializeInterval();
         }
@@ -261,9 +261,9 @@ namespace EvaluateCNV
             int count10kb50kb = 0;
             int count50kb500kb = 0;
             int count500kbplus = 0;
-            foreach (string key in KnownCN.Keys)
+            foreach (string key in KnownCn.Keys)
             {
-                foreach (CNInterval interval in KnownCN[key])
+                foreach (CNInterval interval in KnownCn[key])
                 {
                     if (interval.CN == 2) continue;
                     long length = interval.Length;
@@ -328,10 +328,10 @@ namespace EvaluateCNV
 
         public void CountExcludedBasesInTruthSetIntervals()
         {
-            foreach (string key in KnownCN.Keys)
+            foreach (string key in KnownCn.Keys)
             {
                 if (!ExcludeIntervals.ContainsKey(key)) continue;
-                foreach (CNInterval interval in KnownCN[key])
+                foreach (CNInterval interval in KnownCn[key])
                 {
                     foreach (CNInterval excludeInterval in ExcludeIntervals[key])
                     {
@@ -417,7 +417,7 @@ namespace EvaluateCNV
 
         public IEnumerable<CNVCall> GetCnvCallsFromBed(string bedPath, int[] cnIndices = null)
         {
-            if (cnIndices == null) { cnIndices = new int[] { 3 }; }
+            if (cnIndices == null) { cnIndices = new[] { 3 }; }
             int maxCnIndex = cnIndices.Max();
             using (FileStream stream = new FileStream(bedPath, FileMode.Open, FileAccess.Read))
             using (StreamReader reader = new StreamReader(stream))
@@ -468,8 +468,8 @@ namespace EvaluateCNV
             var cnvCallsFile = new FileLocation(cnvCallsPath);
             var ploidyInfo = LoadPloidy(options.PloidyFile, cnvCallsFile);
 
-            LoadKnownCN(truthSetPath, heterogeneityFraction);
-            ploidyInfo.MakeChromsomeNameAgnosticWithAllChromosomes(KnownCN.Keys);
+            LoadKnownCn(truthSetPath, heterogeneityFraction);
+            ploidyInfo.MakeChromsomeNameAgnosticWithAllChromosomes(KnownCn.Keys);
             SetTruthsetReferencePloidy(ploidyInfo);
 
             // LoadRegionsOfInterest(options.RoiBed?.FullName);
@@ -513,9 +513,9 @@ namespace EvaluateCNV
 
         private void SetTruthsetReferencePloidy(PloidyInfo ploidyInfo)
         {
-            foreach (string chromosome in KnownCN.Keys)
+            foreach (string chromosome in KnownCn.Keys)
             {
-                foreach (CNInterval truthInterval in KnownCN[chromosome])
+                foreach (CNInterval truthInterval in KnownCn[chromosome])
                 {
                     foreach (PloidyInterval ploidyRegion in ploidyInfo.PloidyByChromosome[chromosome])
                     {
