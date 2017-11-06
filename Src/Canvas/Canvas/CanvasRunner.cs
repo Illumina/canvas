@@ -341,7 +341,7 @@ namespace Canvas
                 var intermediateDataPaths = new List<IFileLocation>();
                 intermediateDataPathsByBamPath[bamPath] = intermediateDataPaths;
                 foreach (GenomeMetadata.SequenceMetadata sequenceMetadata in
-                        genomeMetadata.Sequences.OrderByDescending(sequence => sequence.Length))
+                        genomeMetadata.Contigs().OrderByDescending(sequence => sequence.Length))
                 {
                     // Only invoke CanvasBin for autosomes + allosomes;
                     // don't invoke it for mitochondrial chromosome or extra contigs or decoys
@@ -640,7 +640,7 @@ namespace Canvas
 
             string bamPath = callset.SingleSampleCallset.Bam.BamFile.FullName;
             string normalVcfPath = callset.SingleSampleCallset.NormalVcfPath.FullName;
-            foreach (GenomeMetadata.SequenceMetadata chromosome in genomeMetadata.Sequences)
+            foreach (GenomeMetadata.SequenceMetadata chromosome in genomeMetadata.Contigs())
             {
                 // Only invoke for autosomes + allosomes;
                 // don't invoke it for mitochondrial chromosome or extra contigs or decoys
@@ -1100,8 +1100,8 @@ namespace Canvas
                 commandLine.AppendFormat("-n \"{0}\" ", callset.Sample.SampleName);
                 commandLine.AppendFormat("-t \"{0}\" ", callset.SampleType.ToString());
             }
-            var vcf = callsets.AnalysisDetails.OutputFolder.GetFileLocation("CNV.vcf.gz");
-            commandLine.Append($"-o \"{vcf}\" ");
+            var outDir = callsets.AnalysisDetails.OutputFolder;
+            commandLine.Append($"-o \"{outDir}\" ");
             commandLine.AppendFormat("-r \"{0}\" ", callsets.AnalysisDetails.WholeGenomeFastaFolder);
 
             if (callsets.AnalysisDetails.PloidyVcf != null)

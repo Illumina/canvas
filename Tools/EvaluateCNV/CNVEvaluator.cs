@@ -21,24 +21,24 @@ namespace EvaluateCNV
         public long[,] RoiBaseCount;
 
 
-        public BaseCounter(int maxCN, int minSize, int maxSize, bool hasRoi = false)
+        public BaseCounter(int maxCn, int minSize, int maxSize, bool hasRoi = false)
         {
             MinSize = minSize;
             MaxSize = maxSize;
-            BaseCount = new long[maxCN + 1, maxCN + 1];
+            BaseCount = new long[maxCn + 1, maxCn + 1];
             if (hasRoi)
-                RoiBaseCount = new long[maxCN + 1, maxCN + 1];
+                RoiBaseCount = new long[maxCn + 1, maxCn + 1];
         }
     }
 
-    class CNVEvaluator
+    class CnvEvaluator
     {
         private CNVChecker _cnvChecker;
         #region Members
         static int maxCN = 10;
         #endregion
 
-        public CNVEvaluator(CNVChecker cnvChecker)
+        public CnvEvaluator(CNVChecker cnvChecker)
         {
             _cnvChecker = cnvChecker;
         }
@@ -87,7 +87,7 @@ namespace EvaluateCNV
                 using (StreamWriter outputWriter = new StreamWriter(stream))
                 {
                     outputWriter.NewLine = "\n";
-                    WriteResults(truthSetPath, cnvCallsPath, outputWriter, baseCounter, includePassingOnly);
+                    WriteResults(cnvCallsPath, outputWriter, baseCounter, includePassingOnly);
                 }
             }
         }
@@ -149,12 +149,12 @@ namespace EvaluateCNV
                         }
                     }
 
-                    int knownCN = interval.CN;
-                    if (knownCN > maxCN) knownCN = maxCN;
-                    baseCounter.BaseCount[knownCN, CN] += overlapBases;
+                    int knownCn = interval.CN;
+                    if (knownCn > maxCN) knownCn = maxCN;
+                    baseCounter.BaseCount[knownCn, CN] += overlapBases;
 
                     interval.BasesCovered += overlapBases;
-                    if (knownCN == CN)
+                    if (knownCn == CN)
                     {
                         interval.BasesCalledCorrectly += overlapBases;
                     }
@@ -171,7 +171,7 @@ namespace EvaluateCNV
                             int roiOverlapEnd = Math.Min(roiInterval.End, overlapEnd);
                             if (roiOverlapStart >= roiOverlapEnd) continue;
                             int roiOverlapBases = roiOverlapEnd - roiOverlapStart;
-                            baseCounter.RoiBaseCount[knownCN, CN] += roiOverlapBases;
+                            baseCounter.RoiBaseCount[knownCn, CN] += roiOverlapBases;
                         }
                     }
                 }
@@ -228,7 +228,7 @@ namespace EvaluateCNV
                               $" for variants sizes {baseCounter.MinSize} to {baseCounter.MaxSize}");
         }
 
-        private void WriteResults(string truthSetPath, string cnvCallsPath, StreamWriter outputWriter, BaseCounter baseCounter, bool includePassingOnly)
+        private void WriteResults(string cnvCallsPath, StreamWriter outputWriter, BaseCounter baseCounter, bool includePassingOnly)
         {
             // Compute overall stats:
             long totalBases = 0;
@@ -244,41 +244,41 @@ namespace EvaluateCNV
             long callLossBases = 0;
             long isLossBasesCorrect = 0;
             long isLossBasesCorrectDirection = 0;
-            for (int trueCN = 0; trueCN <= maxCN; trueCN++)
+            for (int trueCn = 0; trueCn <= maxCN; trueCn++)
             {
-                for (int callCN = 0; callCN <= maxCN; callCN++)
+                for (int callCn = 0; callCn <= maxCN; callCn++)
                 {
-                    long bases = baseCounter.BaseCount[trueCN, callCN];
+                    long bases = baseCounter.BaseCount[trueCn, callCn];
                     totalBases += bases;
-                    if (trueCN == callCN) totalBasesRight += bases;
-                    if (trueCN < 2 && callCN < 2 || trueCN == 2 && callCN == 2 || trueCN > 2 && callCN > 2)
+                    if (trueCn == callCn) totalBasesRight += bases;
+                    if (trueCn < 2 && callCn < 2 || trueCn == 2 && callCn == 2 || trueCn > 2 && callCn > 2)
                         totalBasesRightDirection += bases;
-                    if (trueCN < 2) isLossBases += bases;
-                    if (trueCN > 2) isGainBases += bases;
-                    if (callCN < 2) callLossBases += bases;
-                    if (callCN > 2) callGainBases += bases;
-                    if (trueCN == callCN && trueCN < 2) isLossBasesCorrect += bases;
-                    if (trueCN == callCN && trueCN > 2) isGainBasesCorrect += bases;
-                    if (trueCN > 2 && callCN > 2) isGainBasesCorrectDirection += bases;
-                    if (trueCN < 2 && callCN < 2) isLossBasesCorrectDirection += bases;
+                    if (trueCn < 2) isLossBases += bases;
+                    if (trueCn > 2) isGainBases += bases;
+                    if (callCn < 2) callLossBases += bases;
+                    if (callCn > 2) callGainBases += bases;
+                    if (trueCn == callCn && trueCn < 2) isLossBasesCorrect += bases;
+                    if (trueCn == callCn && trueCn > 2) isGainBasesCorrect += bases;
+                    if (trueCn > 2 && callCn > 2) isGainBasesCorrectDirection += bases;
+                    if (trueCn < 2 && callCn < 2) isLossBasesCorrectDirection += bases;
                 }
             }
 
             // Compute ROI stats:
-            long ROIBases = 0;
-            long ROIBasesCorrect = 0;
-            long ROIBasesCorrectDirection = 0;
+            long roiBases = 0;
+            long roiBasesCorrect = 0;
+            long roiBasesCorrectDirection = 0;
             if (baseCounter.RoiBaseCount != null)
             {
-                for (int trueCN = 0; trueCN <= maxCN; trueCN++)
+                for (int trueCn = 0; trueCn <= maxCN; trueCn++)
                 {
-                    for (int callCN = 0; callCN <= maxCN; callCN++)
+                    for (int callCn = 0; callCn <= maxCN; callCn++)
                     {
-                        long bases = baseCounter.RoiBaseCount[trueCN, callCN];
-                        ROIBases += bases;
-                        if (trueCN == callCN) ROIBasesCorrect += bases;
-                        if (trueCN < 2 && callCN < 2 || trueCN == 2 && callCN == 2 || trueCN > 2 && callCN > 2)
-                            ROIBasesCorrectDirection += bases;
+                        long bases = baseCounter.RoiBaseCount[trueCn, callCn];
+                        roiBases += bases;
+                        if (trueCn == callCn) roiBasesCorrect += bases;
+                        if (trueCn < 2 && callCn < 2 || trueCn == 2 && callCn == 2 || trueCn > 2 && callCn > 2)
+                            roiBasesCorrectDirection += bases;
                     }
                 }
             }
@@ -312,10 +312,10 @@ namespace EvaluateCNV
             outputWriter.WriteLine("MedianEventAccuracy\t{0:F4}", 100 * baseCounter.MedianAccuracy);
             outputWriter.WriteLine("VariantEventsCalled\t{0}", baseCounter.TotalVariants);
             outputWriter.WriteLine("VariantBasesCalled\t{0}", baseCounter.TotalVariantBases);
-            if (baseCounter.RoiBaseCount != null && ROIBases > 0)
+            if (baseCounter.RoiBaseCount != null && roiBases > 0)
             {
-                outputWriter.WriteLine("ROIAccuracy\t{0:F4}", 100 * ROIBasesCorrect / (double)ROIBases);
-                outputWriter.WriteLine("ROIDirectionAccuracy\t{0:F4}", 100 * ROIBasesCorrectDirection / (double)ROIBases);
+                outputWriter.WriteLine("ROIAccuracy\t{0:F4}", 100 * roiBasesCorrect / (double)roiBases);
+                outputWriter.WriteLine("ROIDirectionAccuracy\t{0:F4}", 100 * roiBasesCorrectDirection / (double)roiBases);
             }
             // to separate passing and all variant results
             outputWriter.WriteLine();

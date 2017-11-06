@@ -42,7 +42,7 @@ namespace CanvasTest
                 ref usableFragmentCount, bins, ref binIndexStart);
             FragmentBinner.BinTask.BinOneAlignment(alignment2, qualityThreshold, readNameToBinIndex, samePositionReadNames,
                 ref usableFragmentCount, bins, ref binIndexStart);
-            Assert.Equal(bins[0].Count, 1);
+            Assert.Equal(1, bins[0].Count);
 
             // First read passes filters
             bins[0].Count = 0; // reset bin count
@@ -51,7 +51,7 @@ namespace CanvasTest
                 ref usableFragmentCount, bins, ref binIndexStart);
             FragmentBinner.BinTask.BinOneAlignment(alignment2, qualityThreshold, readNameToBinIndex, samePositionReadNames,
                 ref usableFragmentCount, bins, ref binIndexStart);
-            Assert.Equal(bins[0].Count, 0);
+            Assert.Equal(0, bins[0].Count);
 
             // Second read passes filters
             bins[0].Count = 0; // reset bin count
@@ -61,7 +61,7 @@ namespace CanvasTest
                 ref usableFragmentCount, bins, ref binIndexStart);
             FragmentBinner.BinTask.BinOneAlignment(alignment2, qualityThreshold, readNameToBinIndex, samePositionReadNames,
                 ref usableFragmentCount, bins, ref binIndexStart);
-            Assert.Equal(bins[0].Count, 0);
+            Assert.Equal(0, bins[0].Count);
 
             // Both fail filters
             bins[0].Count = 0; // reset bin count
@@ -71,7 +71,7 @@ namespace CanvasTest
                 ref usableFragmentCount, bins, ref binIndexStart);
             FragmentBinner.BinTask.BinOneAlignment(alignment2, qualityThreshold, readNameToBinIndex, samePositionReadNames,
                 ref usableFragmentCount, bins, ref binIndexStart);
-            Assert.Equal(bins[0].Count, 0);
+            Assert.Equal(0, bins[0].Count);
         }
 
         [Fact]
@@ -93,7 +93,7 @@ namespace CanvasTest
             string dataFolder = Path.Combine(assemblyFolder, "Data");
             string bedPath = Path.Combine(dataFolder, "bins_chrM.bed");
             string bamPath = Path.Combine(dataFolder, "single-end.bam");
-            Dictionary<string, List<SampleGenomicBin>> bins = Utilities.LoadBedFile(bedPath, gcIndex: 3);
+            Dictionary<string, List<SampleGenomicBin>> bins = CanvasCommon.Utilities.LoadBedFile(bedPath, gcIndex: 3);
             string chrom = "chrM";
             FragmentBinner.BinTask binTask = new FragmentBinner.BinTask(null, chrom, bamPath, bins[chrom]);
             bool exceptionCaught = false;

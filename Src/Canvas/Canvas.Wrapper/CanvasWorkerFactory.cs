@@ -14,7 +14,7 @@ namespace Canvas.Wrapper
     public class CanvasWorkerFactory
     {
         private readonly IWorkManager _workManager;
-        private readonly ISampleSettings _sampleSettings;
+        private readonly ISettings _sampleSettings;
         private readonly ILogger _logger;
         private readonly ExecutableProcessor _executableProcessor;
         private readonly DbSnpVcfProcessor _dbSnpVcfProcessor;
@@ -23,8 +23,52 @@ namespace Canvas.Wrapper
         public static string CanvasCoverageModeSetting = "CanvasCoverageMode";
         private readonly ICommandManager _commandManager;
 
+        public class Settings
+        {
+            public static Setting<string> CanvasCoverageModeSetting => SampleSettings.CreateSetting<string>("CanvasCoverageModeSetting", "coverage mode");
+            public static Setting<bool> EnableCNVDetectionSetting => SampleSettings.CreateSetting(
+                "RunCNVDetection",
+                "Enable/disable CNV Detection step", converter : DetectCnvs);
+            public static Setting<bool> RetainIntermediateCnvFilesSetting => SampleSettings
+                .CreateSetting(
+                    "RetainIntermediateCNVFiles",
+                    "Include intermediate CNV files in the workflow output.",
+                    false);
+            public static Setting<int?> QualityScoreThresholdSetting => 
+                    SampleSettings
+                        .CreateSetting<int?>(
+                            "CanvasQualityScoreThreshold",
+                            "Quality score threshold for PASSing variant call",
+                            null,
+                            nullableInt => nullableInt.HasValue && nullableInt.Value >= 1,
+                            value => int.Parse(value));
+            public static Setting<int?> CountsPerBinSetting => 
+                SampleSettings
+                        .CreateSetting<int?>(
+                            "CanvasCountsPerBin",
+                            "Median number of read counts per bin",
+                            null,
+                            nullableInt => nullableInt.HasValue && nullableInt.Value >= 1,
+                            value => int.Parse(value));
+        }
+
+
+        [Obsolete("Pass ISettings rather than ISampleSettings")]
         public CanvasWorkerFactory(
             ISampleSettings sampleSettings,
+            IWorkManager workManager,
+            ILogger logger,
+            ExecutableProcessor executableProcessor,
+            DbSnpVcfProcessor dbSnpVcfProcessor,
+            bool detectCnvDefault,
+            TabixWrapper tabixWrapper, ICommandManager commandManager) : this((ISettings)sampleSettings, workManager,
+            logger, executableProcessor, dbSnpVcfProcessor, detectCnvDefault, tabixWrapper, commandManager)
+        {
+
+        }
+
+        public CanvasWorkerFactory(
+            ISettings sampleSettings,
             IWorkManager workManager,
             ILogger logger,
             ExecutableProcessor executableProcessor,
@@ -119,22 +163,9 @@ namespace Canvas.Wrapper
 
         private bool RunCnvDetection(bool detectCnvDefault)
         {
-            return _sampleSettings.GetSetting(GetRunCnvDetectionSetting(detectCnvDefault));
+            if (!_sampleSettings.HasSetting(Settings.EnableCNVDetectionSetting)) return detectCnvDefault;
+            return _sampleSettings.GetSetting(Settings.EnableCNVDetectionSetting);
         }
-
-        public Setting<bool> RunCnvDetectionSetting => GetRunCnvDetectionSetting(_detectCnvDefault);
-
-
-        public static Setting<bool> GetRunCnvDetectionSetting(bool detectCnvDefault)
-        {
-            return SampleSettings.CreateSetting(
-                "RunCNVDetection",
-                "Enable/disable CNV Detection step",
-                detectCnvDefault,
-                null,
-                DetectCnvs);
-        }
-
         private static bool DetectCnvs(string name)
         {
             string tempSetting = name.ToLowerInvariant();
@@ -166,14 +197,9 @@ namespace Canvas.Wrapper
 
         internal bool IncludeIntermediateResults()
         {
-            return _sampleSettings.GetSetting(RetainIntermediateCnvFilesSetting);
+            return _sampleSettings.GetSetting(Settings.RetainIntermediateCnvFilesSetting);
         }
 
-        public static Setting<bool> RetainIntermediateCnvFilesSetting => SampleSettings
-            .CreateSetting(
-                "RetainIntermediateCNVFiles",
-                "Include intermediate CNV files in the workflow output.",
-                false);
 
         internal IFileLocation GetCanvasExe()
         {
@@ -229,55 +255,28 @@ namespace Canvas.Wrapper
 
         private void UpdateWithSomaticQualityThreshold(Dictionary<string, string> allCustomParams)
         {
-            int? qualityScoreThreshold = _sampleSettings.GetSetting(QualityScoreThresholdSetting);
+            int? qualityScoreThreshold = _sampleSettings.GetSetting(Settings.QualityScoreThresholdSetting);
             if (qualityScoreThreshold.HasValue)
             {
                 UpdateCustomParametersWithSetting(allCustomParams, "CanvasSomaticCaller", $" --qualitythreshold {qualityScoreThreshold.Value}");
             }
         }
 
-        public static Setting<int?> QualityScoreThresholdSetting
-        {
-            get
-            {
-                return SampleSettings
-                    .CreateSetting<int?>(
-                        "CanvasQualityScoreThreshold",
-                        "Quality score threshold for PASSing variant call",
-                        null,
-                        nullableInt => nullableInt.HasValue && nullableInt.Value >= 1,
-                        value => int.Parse(value));
-            }
-        }
 
         private void UpdateWithCanvasCountsPerBin(Dictionary<string, string> allCustomParams)
         {
-            int? canvasCountsPerBin = _sampleSettings.GetSetting(CountsPerBinSetting);
+            int? canvasCountsPerBin = _sampleSettings.GetSetting(Settings.CountsPerBinSetting);
             if (canvasCountsPerBin.HasValue)
             {
                 UpdateCustomParametersWithSetting(allCustomParams, "CanvasBin", $" -d {canvasCountsPerBin.Value}");
             }
         }
 
-        public static Setting<int?> CountsPerBinSetting
-        {
-            get
-            {
-                return SampleSettings
-                    .CreateSetting<int?>(
-                        "CanvasCountsPerBin",
-                        "Median number of read counts per bin",
-                        null,
-                        nullableInt => nullableInt.HasValue && nullableInt.Value >= 1,
-                        value => int.Parse(value));
-            }
-        }
-
         private void UpdateWithCoverageMode(Dictionary<string, string> allCustomParams)
         {
-            string canvasCoverageMode = _sampleSettings.GetSetting(CanvasCoverageModeSetting);
-            if (canvasCoverageMode != null)
+            if (_sampleSettings.HasSetting(Settings.CanvasCoverageModeSetting))
             {
+                string canvasCoverageMode = _sampleSettings.GetSetting(Settings.CanvasCoverageModeSetting);
                 UpdateCustomParametersWithSetting(allCustomParams, "CanvasBin", $" -m {canvasCoverageMode}");
             }
         }

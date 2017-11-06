@@ -54,62 +54,61 @@ namespace CanvasCommon
 
     public class Balleles
     {
+        internal List<Ballele> Range { get; private set; }
 
-        private List<Ballele> _range;
-
-        public Balleles()
+        public Balleles(IEnumerable<Ballele> alleles)
         {
-            _range = new List<Ballele>();
+            Range = alleles?.ToList() ?? throw new ArgumentNullException(nameof(alleles));
         }
-        public Balleles(List<Ballele> alleles)
+
+        public Balleles() : this(Enumerable.Empty<Ballele>())
         {
-            _range = alleles;
         }
 
         public void Add(Balleles alleles)
         {
-            _range.AddRange(alleles._range);
+            Range.AddRange(alleles.Range);
         }
 
         public void Add(Ballele allele)
         {
-            _range.Add(allele);
+            Range.Add(allele);
         }
 
         public int Size()
         {
-            return _range.Count;
+            return Range.Count;
         }
 
-        public List<int> TotalCoverage => _range?.Select(allele => allele.TotalCoverage).ToList();
+        public double? MeanMAF => Frequencies.Average();
+        public List<int> TotalCoverage => Range.Select(allele => allele.TotalCoverage).ToList();
 
         public void PruneBalleles(double frequencyThreshold)
         {
-            _range = _range?.Where(v => v.Frequency > frequencyThreshold).ToList();
+            Range = Range.Where(v => v.Frequency > frequencyThreshold).ToList();
         }
 
-        public List<float> Frequencies => _range?.Select(allele => allele.Frequency).ToList();
-        public List<double> MaxFrequencies => _range?.Select(allele => allele.GetMaxFrequency()).ToList();
+        public List<float> Frequencies => Range.Select(allele => allele.Frequency).ToList();
+        public List<double> MaxFrequencies => Range.Select(allele => allele.GetMaxFrequency()).ToList();
 
 
         public List<Tuple<int, int>> GetAlleleCounts()
         {
-            return _range.Select(allele => new Tuple<int, int>(allele.CountsA, allele.CountsB)).ToList();
+            return Range.Select(allele => new Tuple<int, int>(allele.CountsA, allele.CountsB)).ToList();
         }
 
         public Tuple<int, int> MedianCounts(Balleles balleles)
         {
-            var item1 = Utilities.Median(balleles._range.Select(allele => Math.Max(allele.CountsA, allele.CountsB)).ToList());
-            var item2 = Utilities.Median(balleles._range.Select(allele => Math.Min(allele.CountsA, allele.CountsB)).ToList());
+            var item1 = Utilities.Median(balleles.Range.Select(allele => Math.Max(allele.CountsA, allele.CountsB)).ToList());
+            var item2 = Utilities.Median(balleles.Range.Select(allele => Math.Min(allele.CountsA, allele.CountsB)).ToList());
             return new Tuple<int, int>(item1, item2);
         }
 
         public Balleles GetBallelesSubrange(int start, int end, int defaultAlleleCountThreshold)
         {
-            var array = _range.Where(x => x.Position >= start && x.Position <= end).ToList();
+            var array = Range.Where(x => x.Position >= start && x.Position <= end).ToList();
             return new Balleles(array);
         }
-
     }
 
     public class CoverageInfo
@@ -201,7 +200,8 @@ namespace CanvasCommon
         public string Filter = "PASS";
         public Tuple<int, int> StartConfidenceInterval; // if not null, this is a confidence interval around Start, reported in the CIPOS tag
         public Tuple<int, int> EndConfidenceInterval; // if not null, this is a confidence interval around End, reported in the CIEND tag
-        public Balleles Balleles;
+        public Balleles Balleles { get; private set; }
+
         public string Chr { get; }
         /// <summary>
         /// bed format start position
@@ -296,14 +296,16 @@ namespace CanvasCommon
             {
                 StartConfidenceInterval = s.StartConfidenceInterval;
                 Begin = s.Begin;
+                GenomicBins = s.GenomicBins.Concat(GenomicBins).ToList();
+                Balleles = new Balleles(s.Balleles.Range.Concat(Balleles.Range));
             }
             if (s.End > End)
             {
                 EndConfidenceInterval = s.EndConfidenceInterval;
                 End = s.End;
+                GenomicBins = GenomicBins.Concat(s.GenomicBins).ToList();
+                Balleles = new Balleles(Balleles.Range.Concat(s.Balleles.Range));
             }
-            GenomicBins.AddRange(s.GenomicBins);
-            if (Balleles != null && s.Balleles != null) Balleles.Add(s.Balleles);
         }
 
         public int SizeOveralp(CanvasSegment segment)
@@ -567,7 +569,7 @@ namespace CanvasCommon
                 writer.Write("#Chromosome\tStart\tEnd\tCopyNumber\tMajorChromosomeCount\tMedianHits\tNormalizedCoverage\tMedianMinorAlleleFrequency\tReferencePloidy\t");
                 for (int i = 0; i < NumberVariantFrequencyBins; i++) { writer.Write("VariantFrequencyBin{0}\t", i); }
                 writer.WriteLine();
-                foreach (GenomeMetadata.SequenceMetadata chromosome in genome.Sequences)
+                foreach (GenomeMetadata.SequenceMetadata chromosome in genome.Contigs())
                 {
                     if (!segmentsByChromosome.ContainsKey(chromosome.Name))
                     {
@@ -1156,5 +1158,6 @@ namespace CanvasCommon
             }
             return segments;
         }
+
     }
 }
