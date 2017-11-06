@@ -92,10 +92,10 @@ namespace EvaluateCNV
             }
         }
 
-        private void CalculateMetrics(PloidyInfo ploidyInfo, IEnumerable<CNVCall> calls, BaseCounter baseCounter, bool optionsSkipDiploid)
+        private void CalculateMetrics(PloidyInfo ploidyInfo, IEnumerable<CnvCall> calls, BaseCounter baseCounter, bool optionsSkipDiploid)
         {
             ploidyInfo.MakeChromsomeNameAgnosticWithAllChromosomes(calls.Select(call => call.Chr));
-            foreach (CNVCall call in calls)
+            foreach (CnvCall call in calls)
             {
                 int CN = call.CN;
                 if (CN < 0 || call.End < 0) continue; // Not a CNV call, apparently
@@ -149,7 +149,7 @@ namespace EvaluateCNV
                         }
                     }
 
-                    int knownCn = interval.CN;
+                    int knownCn = interval.Cn;
                     if (knownCn > maxCN) knownCn = maxCN;
                     baseCounter.BaseCount[knownCn, CN] += overlapBases;
 
@@ -182,14 +182,14 @@ namespace EvaluateCNV
             var allIntervals = _cnvChecker.KnownCN.SelectMany(kvp => kvp.Value).ToList();
 
             // find truth interval with highest number of false negatives (hurts recall)
-            var variantIntervals = allIntervals.Where(interval => interval.CN != interval.ReferenceCopyNumber).ToList();
+            var variantIntervals = allIntervals.Where(interval => interval.Cn != interval.ReferenceCopyNumber).ToList();
             if (variantIntervals.Any())
             {
                 var intervalMaxFalseNegatives = variantIntervals.MaxBy(interval => interval.BasesNotCalled + interval.BasesCalledIncorrectly);
                 Console.WriteLine($"Truth interval with most false negatives (hurts recall): {intervalMaxFalseNegatives}");
             }
             // find truth interval with highest number of false positive (hurts precision)
-            var refIntervals = allIntervals.Where(interval => interval.CN == interval.ReferenceCopyNumber).ToList();
+            var refIntervals = allIntervals.Where(interval => interval.Cn == interval.ReferenceCopyNumber).ToList();
             if (refIntervals.Any())
             {
                 var intervalMaxFalsePositives = refIntervals.MaxBy(interval => interval.BasesCalledIncorrectly);
@@ -210,7 +210,7 @@ namespace EvaluateCNV
             {
                 foreach (var interval in _cnvChecker.KnownCN[chr])
                 {
-                    if (interval.CN == 2) continue;
+                    if (interval.Cn == 2) continue;
                     int basecount = interval.Length - interval.BasesExcluded;
                     if (basecount <= 0) continue;
                     double accuracy = interval.BasesCalledCorrectly / (double)basecount;
