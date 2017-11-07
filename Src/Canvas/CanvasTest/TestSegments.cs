@@ -37,7 +37,7 @@ namespace CanvasTest
         }
 
         [Fact]
-        public void TestCIPOS()
+        public void TestCipos()
         {
             // Merge two segments, and confirm we keep the correct confidence intervals post-merge:
             List<SampleGenomicBin> counts = new List<SampleGenomicBin>()
