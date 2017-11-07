@@ -151,7 +151,7 @@ namespace EvaluateCNV
                     }
 
                     int knownCn = interval.Cn;
-                    if (knownCn > maxCN) knownCn = maxCN;
+                    if (knownCn > MaxCn) knownCn = MaxCn;
                     baseCounter.BaseCount[knownCn, CN] += overlapBases;
                     interval.BasesCovered += overlapBases;
                     if (knownCn == CN)
@@ -244,9 +244,9 @@ namespace EvaluateCNV
             long callLossBases = 0;
             long isLossBasesCorrect = 0;
             long isLossBasesCorrectDirection = 0;
-            for (int trueCn = 0; trueCn <= maxCN; trueCn++)
+            for (int trueCn = 0; trueCn <= MaxCn; trueCn++)
             {
-                for (int callCn = 0; callCn <= maxCN; callCn++)
+                for (int callCn = 0; callCn <= MaxCn; callCn++)
                 {
                     long bases = baseCounter.BaseCount[trueCn, callCn];
                     totalBases += bases;
@@ -270,9 +270,9 @@ namespace EvaluateCNV
             long roiBasesCorrectDirection = 0;
             if (baseCounter.RoiBaseCount != null)
             {
-                for (int trueCn = 0; trueCn <= maxCN; trueCn++)
+                for (int trueCn = 0; trueCn <= MaxCn; trueCn++)
                 {
-                    for (int callCn = 0; callCn <= maxCN; callCn++)
+                    for (int callCn = 0; callCn <= MaxCn; callCn++)
                     {
                         long bases = baseCounter.RoiBaseCount[trueCn, callCn];
                         roiBases += bases;
