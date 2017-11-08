@@ -11,6 +11,7 @@ namespace CanvasCommon
 
     public static class CnvTypeExtensions
     {
+        public const string CnvTag = "CNV";
         public static string ToVcfId(this CnvType cnvType)
         {
             switch (cnvType)
@@ -37,7 +38,7 @@ namespace CanvasCommon
                 case CnvType.Gain:
                 case CnvType.Loss:
                 case CnvType.ComplexCnv:
-                    return "CNV";
+                    return CnvTag;
                 case CnvType.LossOfHeterozygosity:
                     return "LOH";
                 default:
@@ -45,20 +46,7 @@ namespace CanvasCommon
             }
         }
 
-        public static string ToAltId(this CnvType cnvType)
-        {
-            switch (cnvType)
-            {
-                case CnvType.Gain:
-                case CnvType.Loss:
-                case CnvType.LossOfHeterozygosity:
-                case CnvType.ComplexCnv:
-                    return "<CNV>";
-                case CnvType.Reference:
-                    return ".";
-                default:
-                    throw new Illumina.Common.IlluminaException($"ALT is unsupported for CNV type: {cnvType}");
-            }
-        }
+        public static bool IsReference(CnvType cnvType) => cnvType.Equals(CnvType.Reference);
+
     }
 }
