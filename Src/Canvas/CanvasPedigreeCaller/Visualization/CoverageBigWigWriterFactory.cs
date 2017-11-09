@@ -7,10 +7,10 @@ namespace CanvasPedigreeCaller.Visualization
     public class CoverageBigWigWriterFactory
     {
         private readonly ILogger _logger;
-        private readonly BedGraphToBigWigConverter _converter;
+        private readonly IBedGraphToBigWigConverter _converter;
         private readonly GenomeMetadata _genome;
 
-        public CoverageBigWigWriterFactory(ILogger logger, BedGraphToBigWigConverter converter, GenomeMetadata genome)
+        public CoverageBigWigWriterFactory(ILogger logger, IBedGraphToBigWigConverter converter, GenomeMetadata genome)
         {
             _logger = logger;
             _converter = converter;

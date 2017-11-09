@@ -12,10 +12,10 @@ namespace CanvasPedigreeCaller.Visualization
     {
         private readonly ILogger _logger;
         private readonly ICoverageBedGraphWriter _writer;
-        private readonly BedGraphToBigWigConverter _converter;
+        private readonly IBedGraphToBigWigConverter _converter;
         private readonly GenomeMetadata _genome;
 
-        public CoverageBigWigWriter(ILogger logger, ICoverageBedGraphWriter writer, BedGraphToBigWigConverter converter, GenomeMetadata genome)
+        public CoverageBigWigWriter(ILogger logger, ICoverageBedGraphWriter writer, IBedGraphToBigWigConverter converter, GenomeMetadata genome)
         {
             _logger = logger;
             _writer = writer;
