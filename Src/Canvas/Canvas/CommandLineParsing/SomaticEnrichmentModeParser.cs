@@ -6,7 +6,7 @@ using CanvasCommon.CommandLineParsing.OptionProcessing;
 
 namespace Canvas.CommandLineParsing
 {
-    public class SomaticEnrichmentModeParser : ModeParser
+    public class SomaticEnrichmentModeParser : ModeParser<SomaticEnrichmentInput>
     {
         private static readonly CommonOptionsParser CommonOptionsParser = new CommonOptionsParser();
         private static readonly SingleSampleCommonOptionsParser SingleSampleCommonOptionsParser = new SingleSampleCommonOptionsParser();
@@ -16,53 +16,72 @@ namespace Canvas.CommandLineParsing
         {
         }
 
-        public override ParsingResult<IModeRunner> Parse(SuccessfulResultCollection parseInput)
+        public override IParsingResult<SomaticEnrichmentInput> GetSerializedResult(SuccessfulResultCollection result, CommonOptions commonOptions)
         {
-            CommonOptions commonOptions = parseInput.Get(CommonOptionsParser);
-            SomaticEnrichmentOptions somaticEnrichmentOptions = parseInput.Get(SomaticEnrichmentOptionsParser);
-            SingleSampleCommonOptions singleSampleCommonOptions = parseInput.Get(SingleSampleCommonOptionsParser);
-            return ParsingResult<IModeRunner>.SuccessfulResult(new SomaticEnrichmentRunner(commonOptions, singleSampleCommonOptions, somaticEnrichmentOptions));
+            SomaticEnrichmentOptions somaticEnrichmentOptions = result.Get(SomaticEnrichmentOptionsParser);
+            SingleSampleCommonOptions singleSampleCommonOptions = result.Get(SingleSampleCommonOptionsParser);
+            return ParsingResult<SomaticEnrichmentInput>.SuccessfulResult(
+                new SomaticEnrichmentInput(commonOptions, somaticEnrichmentOptions, singleSampleCommonOptions));
         }
 
-        public override OptionCollection<IModeRunner> GetOptions()
+        public override IModeRunner GetRunner(SomaticEnrichmentInput result)
         {
-            return new OptionCollection<IModeRunner>
+            return new SomaticEnrichmentRunner(result);
+        }
+
+        public override OptionCollection<IModeLauncher> GetModeOptions()
+        {
+            return new OptionCollection<IModeLauncher>
             {
                 SomaticEnrichmentOptionsParser, CommonOptionsParser, SingleSampleCommonOptionsParser
             };
         }
     }
 
+    public class SomaticEnrichmentInput
+    {
+        public SomaticEnrichmentInput(CommonOptions commonOptions, SomaticEnrichmentOptions somaticEnrichmentOptions, SingleSampleCommonOptions singleSampleCommonOptions)
+        {
+            CommonOptions = commonOptions;
+            SomaticEnrichmentOptions = somaticEnrichmentOptions;
+            SingleSampleCommonOptions = singleSampleCommonOptions;
+        }
+
+        public CommonOptions CommonOptions { get; }
+        public SomaticEnrichmentOptions SomaticEnrichmentOptions { get; }
+        public SingleSampleCommonOptions SingleSampleCommonOptions { get; }
+    }
+
     internal class SomaticEnrichmentOptionsParser : Option<SomaticEnrichmentOptions>
     {
-        public static string ControlPloidyBedOptionName = $"control-{SingleSampleCommonOptionsParser.PloidyBedOptionName}";
+        public static string ControlPloidyVcfOptionName = $"control-{SingleSampleCommonOptionsParser.PloidyVcfOptionName}";
         private static readonly FileOption Bam = FileOption.CreateRequired("tumor sample .bam file", "b", "bam");
         private static readonly FileOption Manifest = FileOption.CreateRequired("Nextera manifest file", "manifest");
         private static readonly MultiValueOption<IFileLocation> ControlBams = new MultiValueOption<IFileLocation>(FileOption.Create("Bam file of an unmatched control sample", "control-bam"));
         private static readonly FileOption ControlBinned = FileOption.Create("Canvas .binned file containing precomputed control bin data to use for normalization", "control-binned");
         private static readonly ValueOption<uint?> ControlBinSize = ValueOption<uint?>.Create("bin size for control .binned file", "control-bin-size");
-        private static readonly FileOption ControlPloidyBed = FileOption.Create(".bed file containing regions of known ploidy for the control .binned file", ControlPloidyBedOptionName);
+        private static readonly FileOption ControlPloidyVcf = FileOption.Create(".vcf file containing regions of known ploidy for the control .binned file", ControlPloidyVcfOptionName);
 
         public override OptionCollection<SomaticEnrichmentOptions> GetOptions()
         {
             return new OptionCollection<SomaticEnrichmentOptions>
             {
-               Bam, Manifest, ControlBams, ControlBinned, ControlBinSize, ControlPloidyBed
+               Bam, Manifest, ControlBams, ControlBinned, ControlBinSize, ControlPloidyVcf
             };
         }
 
-        public override ParsingResult<SomaticEnrichmentOptions> Parse(SuccessfulResultCollection parseInput)
+        public override IParsingResult<SomaticEnrichmentOptions> Parse(SuccessfulResultCollection parseInput)
         {
             var bam = parseInput.Get(Bam);
             var manifest = parseInput.Get(Manifest);
             var controlBams = parseInput.Get(ControlBams);
             var controlBinned = parseInput.Get(ControlBinned);
             var controlBinSize = parseInput.Get(ControlBinSize);
-            var controlPloidy = parseInput.Get(ControlPloidyBed);
+            var controlPloidy = parseInput.Get(ControlPloidyVcf);
 
             var controlBinnedBools = new List<bool> { controlBinned != null, controlBinSize != null, controlPloidy != null };
             if (controlBams.Any() && controlBinnedBools.Any(controlBinnedBool => controlBinnedBool))
-                return ParsingResult<SomaticEnrichmentOptions>.FailedResult($"Error: option {ControlBams.Info.Name} cannot be combined with any of {ControlBinned.Info.Name}, {ControlBinSize.Info.Name}, {ControlPloidyBed.Info.Name} ");
+                return ParsingResult<SomaticEnrichmentOptions>.FailedResult($"Error: option {ControlBams.Info.Name} cannot be combined with any of {ControlBinned.Info.Name}, {ControlBinSize.Info.Name}, {ControlPloidyVcf.Info.Name} ");
 
             if (controlBinned != null && controlBinSize == null)
                 return ParsingResult<SomaticEnrichmentOptions>.FailedResult($"Error: {ControlBinSize.Info.Name} is required when using the {ControlBinned.Info.Name} option");

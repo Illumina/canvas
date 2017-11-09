@@ -1,34 +1,80 @@
-﻿using System;
-using System.Collections.Generic;
-using Illumina.Common.FileSystem;
+﻿using Illumina.Common.FileSystem;
 using Illumina.SecondaryAnalysis.VariantCalling;
-using Isas.Framework;
+using Isas.ClassicBioinfoTools.Tabix;
 using Isas.Framework.Logging;
 using Isas.Framework.Settings;
 using Isas.Framework.WorkManagement;
+using Isas.Framework.WorkManagement.CommandBuilding;
 using Isas.SequencingFiles;
+using System;
+using System.Collections.Generic;
 
 namespace Canvas.Wrapper
 {
     public class CanvasWorkerFactory
     {
         private readonly IWorkManager _workManager;
-        private readonly ISampleSettings _sampleSettings;
+        private readonly ISettings _sampleSettings;
         private readonly ILogger _logger;
         private readonly ExecutableProcessor _executableProcessor;
         private readonly DbSnpVcfProcessor _dbSnpVcfProcessor;
         private readonly bool _detectCnvDefault;
-        public static string CanvasCountPerBinSetting = "CanvasCountsPerBin";
+        private readonly TabixWrapper _tabixWrapper;
         public static string CanvasCoverageModeSetting = "CanvasCoverageMode";
-        public static string CanvasQualityScoreThresholdSetting = "CanvasQualityScoreThreshold";
+        private readonly ICommandManager _commandManager;
 
+        public class Settings
+        {
+            public static Setting<string> CanvasCoverageModeSetting => SampleSettings.CreateSetting<string>("CanvasCoverageModeSetting", "coverage mode");
+            public static Setting<bool> EnableCNVDetectionSetting => SampleSettings.CreateSetting(
+                "RunCNVDetection",
+                "Enable/disable CNV Detection step", converter : DetectCnvs);
+            public static Setting<bool> RetainIntermediateCnvFilesSetting => SampleSettings
+                .CreateSetting(
+                    "RetainIntermediateCNVFiles",
+                    "Include intermediate CNV files in the workflow output.",
+                    false);
+            public static Setting<int?> QualityScoreThresholdSetting => 
+                    SampleSettings
+                        .CreateSetting<int?>(
+                            "CanvasQualityScoreThreshold",
+                            "Quality score threshold for PASSing variant call",
+                            null,
+                            nullableInt => nullableInt.HasValue && nullableInt.Value >= 1,
+                            value => int.Parse(value));
+            public static Setting<int?> CountsPerBinSetting => 
+                SampleSettings
+                        .CreateSetting<int?>(
+                            "CanvasCountsPerBin",
+                            "Median number of read counts per bin",
+                            null,
+                            nullableInt => nullableInt.HasValue && nullableInt.Value >= 1,
+                            value => int.Parse(value));
+        }
+
+
+        [Obsolete("Pass ISettings rather than ISampleSettings")]
         public CanvasWorkerFactory(
             ISampleSettings sampleSettings,
             IWorkManager workManager,
             ILogger logger,
             ExecutableProcessor executableProcessor,
             DbSnpVcfProcessor dbSnpVcfProcessor,
-            bool detectCnvDefault)
+            bool detectCnvDefault,
+            TabixWrapper tabixWrapper, ICommandManager commandManager) : this((ISettings)sampleSettings, workManager,
+            logger, executableProcessor, dbSnpVcfProcessor, detectCnvDefault, tabixWrapper, commandManager)
+        {
+
+        }
+
+        public CanvasWorkerFactory(
+            ISettings sampleSettings,
+            IWorkManager workManager,
+            ILogger logger,
+            ExecutableProcessor executableProcessor,
+            DbSnpVcfProcessor dbSnpVcfProcessor,
+            bool detectCnvDefault,
+            TabixWrapper tabixWrapper, ICommandManager commandManager)
         {
             _workManager = workManager;
             _sampleSettings = sampleSettings;
@@ -36,11 +82,12 @@ namespace Canvas.Wrapper
             _executableProcessor = executableProcessor;
             _dbSnpVcfProcessor = dbSnpVcfProcessor;
             _detectCnvDefault = detectCnvDefault;
+            _tabixWrapper = tabixWrapper;
+            _commandManager = commandManager;
         }
         private IFileLocation GetRuntimeExecutable()
         {
             return new FileLocation(_executableProcessor.GetEnvironmentExecutablePath("dotnet"));
-
         }
 
         public ICanvasWorker<CanvasEnrichmentInput, CanvasEnrichmentOutput> GetCanvasEnrichmentWorker()
@@ -55,39 +102,14 @@ namespace Canvas.Wrapper
                 annotationProvider,
                 GetCanvasSingleSampleInputCommandLineBuilderWithSomaticQualityThreshold(annotationProvider),
                 new CanvasEnrichmentInputCreator<CanvasEnrichmentInput>(),
-                GetCanvasPloidyBedCreator());
+                GetCanvasPloidyVcfCreator());
             return GetCanvasWorker(canvasCnvCaller, CanvasEnrichmentOutput.GetFromStub);
-        }
-
-        public ICanvasWorker<CanvasResequencingInput, CanvasOutput> GetCanvasResequencingWorker(bool smallVariantCallingDisabled)
-        {
-            // special case: we don't do CNV calling when variant caller is disabled and we are not using a custom dbsnp vcf
-            if (!CustomDbSnpVcf() && smallVariantCallingDisabled)
-            {
-                _logger.Info("Not running Canvas when small variant calling is disabled, unless a custom dbSNP VCF file is provided");
-                if (RunCnvDetection(false))
-                    throw new ArgumentException("CNV calling must be disabled when small variant calling is disabled, unless a custom dbSNP VCF file is provided");
-                return new NullCanvasWorker<CanvasResequencingInput, CanvasOutput>();
-            }
-
-            var annotationProvider = GetAnnotationFileProvider();
-            var runtimeExecutable = GetRuntimeExecutable();
-            var canvasCnvCaller = new CanvasResequencingCnvCaller(
-                _workManager,
-                _logger,
-                GetCanvasExe(),
-                runtimeExecutable,
-                annotationProvider,
-                GetCanvasSingleSampleInputCommandLineBuilder(annotationProvider),
-                GetCanvasPloidyBedCreator());
-            return GetCanvasWorker(canvasCnvCaller, CanvasOutput.GetFromStub);
         }
 
         private bool CustomDbSnpVcf()
         {
             return GetDbSnpVcfPath() != null;
         }
-
         public ICanvasWorker<CanvasTumorNormalWgsInput, CanvasOutput> GetCanvasTumorNormalWorker()
         {
             var annotationProvider = GetAnnotationFileProvider();
@@ -99,7 +121,7 @@ namespace Canvas.Wrapper
                 runtimeExecutable,
                 annotationProvider,
                 GetCanvasSingleSampleInputCommandLineBuilderWithSomaticQualityThreshold(annotationProvider),
-                GetCanvasPloidyBedCreator());
+                GetCanvasPloidyVcfCreator());
             return GetCanvasWorker(canvasCnvCaller, CanvasOutput.GetFromStub);
         }
 
@@ -115,18 +137,18 @@ namespace Canvas.Wrapper
                 annotationProvider,
                 GetCanvasSingleSampleInputCommandLineBuilderWithSomaticQualityThreshold(annotationProvider),
                 new CanvasEnrichmentInputCreator<CanvasTumorNormalEnrichmentInput>(),
-                GetCanvasPloidyBedCreator());
+                GetCanvasPloidyVcfCreator());
             return GetCanvasWorker(canvasCnvCaller, CanvasOutput.GetFromStub);
         }
 
-        private CanvasPloidyBedCreator GetCanvasPloidyBedCreator()
+        private CanvasPloidyVcfCreator GetCanvasPloidyVcfCreator()
         {
-            return new CanvasPloidyBedCreator(_logger, _workManager, GetPloidyCorrector());
+            return new CanvasPloidyVcfCreator(GetPloidyCorrector());
         }
 
         internal PloidyCorrector GetPloidyCorrector()
         {
-            return new PloidyCorrector(_logger, _workManager, new PloidyEstimator(_logger, _workManager, _executableProcessor.GetExecutable("samtools"), false), new Isas.ClassicBioinfoTools.Tabix.TabixWrapper(_logger, _workManager, _executableProcessor.GetExecutable("tabix")), true);
+            return new PloidyCorrector(_logger, _workManager, new PloidyEstimator(_logger, _workManager, _executableProcessor.GetExecutable("samtools"), false, _commandManager), _tabixWrapper, true);
         }
 
         public bool RequireNormalVcf()
@@ -141,15 +163,9 @@ namespace Canvas.Wrapper
 
         private bool RunCnvDetection(bool detectCnvDefault)
         {
-            bool detectCnvs = detectCnvDefault;
-            string settingString = _sampleSettings.GetStringSetting("RunCNVDetection", null);
-            if (!string.IsNullOrEmpty(settingString))
-            {
-                detectCnvs = DetectCnvs(settingString);
-            }
-            return detectCnvs;
+            if (!_sampleSettings.HasSetting(Settings.EnableCNVDetectionSetting)) return detectCnvDefault;
+            return _sampleSettings.GetSetting(Settings.EnableCNVDetectionSetting);
         }
-
         private static bool DetectCnvs(string name)
         {
             string tempSetting = name.ToLowerInvariant();
@@ -181,8 +197,9 @@ namespace Canvas.Wrapper
 
         internal bool IncludeIntermediateResults()
         {
-            return _sampleSettings.GetSetting("RetainIntermediateCNVFiles", false);
+            return _sampleSettings.GetSetting(Settings.RetainIntermediateCnvFilesSetting);
         }
+
 
         internal IFileLocation GetCanvasExe()
         {
@@ -238,16 +255,17 @@ namespace Canvas.Wrapper
 
         private void UpdateWithSomaticQualityThreshold(Dictionary<string, string> allCustomParams)
         {
-            int? qualityScoreThreshold = _sampleSettings.GetSetting(CanvasQualityScoreThresholdSetting, (int?)null);
+            int? qualityScoreThreshold = _sampleSettings.GetSetting(Settings.QualityScoreThresholdSetting);
             if (qualityScoreThreshold.HasValue)
             {
                 UpdateCustomParametersWithSetting(allCustomParams, "CanvasSomaticCaller", $" --qualitythreshold {qualityScoreThreshold.Value}");
             }
         }
 
+
         private void UpdateWithCanvasCountsPerBin(Dictionary<string, string> allCustomParams)
         {
-            int? canvasCountsPerBin = _sampleSettings.GetSetting(CanvasCountPerBinSetting, (int?)null);
+            int? canvasCountsPerBin = _sampleSettings.GetSetting(Settings.CountsPerBinSetting);
             if (canvasCountsPerBin.HasValue)
             {
                 UpdateCustomParametersWithSetting(allCustomParams, "CanvasBin", $" -d {canvasCountsPerBin.Value}");
@@ -256,9 +274,9 @@ namespace Canvas.Wrapper
 
         private void UpdateWithCoverageMode(Dictionary<string, string> allCustomParams)
         {
-            string canvasCoverageMode = _sampleSettings.GetSetting(CanvasCoverageModeSetting);
-            if (canvasCoverageMode != null)
+            if (_sampleSettings.HasSetting(Settings.CanvasCoverageModeSetting))
             {
+                string canvasCoverageMode = _sampleSettings.GetSetting(Settings.CanvasCoverageModeSetting);
                 UpdateCustomParametersWithSetting(allCustomParams, "CanvasBin", $" -m {canvasCoverageMode}");
             }
         }

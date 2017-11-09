@@ -1,8 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
-  <PropertyGroup>    
+  <PropertyGroup>
     <TargetFramework>netcoreapp1.1</TargetFramework>
-    <RuntimeFrameworkVersion>1.1.0</RuntimeFrameworkVersion>
     <GenerateAssemblyTitleAttribute>false</GenerateAssemblyTitleAttribute>
     <GenerateAssemblyDescriptionAttribute>false</GenerateAssemblyDescriptionAttribute>
     <GenerateAssemblyConfigurationAttribute>false</GenerateAssemblyConfigurationAttribute>
@@ -12,17 +11,29 @@
     <GenerateAssemblyInformationalVersionAttribute>false</GenerateAssemblyInformationalVersionAttribute>
     <GenerateAssemblyCompanyAttribute>false</GenerateAssemblyCompanyAttribute>
     <GenerateAssemblyCopyrightAttribute>false</GenerateAssemblyCopyrightAttribute>
+    <Platforms>x64</Platforms>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <WarningsAsErrors>NU1605</WarningsAsErrors>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" />
 
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" />
+
   <ItemGroup>
-    <PackageReference Include="Illumina.Common" Version="3.12.0.238" />
-    <PackageReference Include="Isas.Framework.UnitTestUtilities" Version="6.16.0.449" />
-    <PackageReference Include="Isas.SequencingFiles" Version="4.2.1.304" />
-    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="15.0.0" />
-    <PackageReference Include="xunit" Version="2.2.0" />
-    <PackageReference Include="xunit.runner.visualstudio" Version="2.2.0" />
+    <PackageReference Include="Castle.Core" Version="4.1.1" />
+    <PackageReference Include="Illumina.Common" Version="4.13.0.353" />
+    <PackageReference Include="Isas.Framework.UnitTestUtilities" Version="7.16.1.755" />
+    <PackageReference Include="Isas.SequencingFiles" Version="5.5.0.395" />
+    <PackageReference Include="JetBrains.Annotations" Version="11.0.0" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="15.3.0" />
+    <PackageReference Include="NSubstitute" Version="2.0.3" />
+    <PackageReference Include="protobuf-net" Version="2.3.2" />
+    <PackageReference Include="xunit" Version="2.3.0-beta5-build3769" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.3.0-beta5-build3769" />
+    <DotNetCliToolReference Include="dotnet-xunit" Version="2.3.0-beta5-build3769" />
   </ItemGroup>
 
   <ItemGroup>
@@ -30,6 +41,7 @@
     <ProjectReference Include="..\CanvasClean\CanvasClean.csproj" />
     <ProjectReference Include="..\CanvasCommon\CanvasCommon.csproj" />
     <ProjectReference Include="..\CanvasPartition\CanvasPartition.csproj" />
+    <ProjectReference Include="..\CanvasPedigreeCaller\CanvasPedigreeCaller.csproj" />
     <ProjectReference Include="..\CanvasSNV\CanvasSNV.csproj" />
     <ProjectReference Include="..\CanvasSomaticCaller\CanvasSomaticCaller.csproj" />
     <ProjectReference Include="..\Canvas\Canvas.csproj" />

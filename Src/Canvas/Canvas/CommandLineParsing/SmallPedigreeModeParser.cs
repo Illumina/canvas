@@ -3,29 +3,43 @@ using CanvasCommon.CommandLineParsing.OptionProcessing;
 
 namespace Canvas.CommandLineParsing
 {
-    internal class SmallPedigreeModeParser : ModeParser
+    internal class SmallPedigreeModeParser : ModeParser<SmallPedigreeInput>
     {
-        private static readonly CommonOptionsParser CommonOptionsParser = new CommonOptionsParser();
         private static readonly SmallPedigreeOptionsParser SmallPedigreeOptionsParser = new SmallPedigreeOptionsParser();
 
         public SmallPedigreeModeParser(string name, string description) : base(name, description)
         {
         }
 
-        public override ParsingResult<IModeRunner> Parse(SuccessfulResultCollection parseInput)
+        public override IParsingResult<SmallPedigreeInput> GetSerializedResult(SuccessfulResultCollection result, CommonOptions commonOptions)
         {
-            CommonOptions commonOptions = parseInput.Get(CommonOptionsParser);
-            SmallPedigreeOptions smallPedigreeOptions = parseInput.Get(SmallPedigreeOptionsParser);
-            return ParsingResult<IModeRunner>.SuccessfulResult(new SmallPedigreeWgsRunner(commonOptions, smallPedigreeOptions));
+            var smallPedigreeOptions = result.Get(SmallPedigreeOptionsParser);
+            return ParsingResult<SmallPedigreeInput>.SuccessfulResult(new SmallPedigreeInput(commonOptions, smallPedigreeOptions));
         }
 
-        public override OptionCollection<IModeRunner> GetOptions()
+        public override IModeRunner GetRunner(SmallPedigreeInput result)
         {
-            return new OptionCollection<IModeRunner>
+            return new SmallPedigreeWgsRunner(result);
+        }
+
+        public override OptionCollection<IModeLauncher> GetModeOptions()
+        {
+            return new OptionCollection<IModeLauncher>
             {
-                SmallPedigreeOptionsParser, CommonOptionsParser
+                SmallPedigreeOptionsParser
             };
         }
     }
 
+    public class SmallPedigreeInput
+    {
+        public SmallPedigreeInput(CommonOptions commonOptions, SmallPedigreeOptions smallPedigreeOptions)
+        {
+            CommonOptions = commonOptions;
+            SmallPedigreeOptions = smallPedigreeOptions;
+        }
+
+        public CommonOptions CommonOptions { get; }
+        public SmallPedigreeOptions SmallPedigreeOptions { get; }
+    }
 }

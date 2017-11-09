@@ -1,4 +1,4 @@
-Canvas Copy Number Variant Caller
+Canvas Copy Number Variant Caller 
 =================================
 
 Canvas is a tool for calling copy number variants (CNVs) from human DNA sequencing data.  It can work either with germline data, or paired tumor/normal samples.  Its primary input is aligned reads (in .bam format), and its primary output is a report (in a .vcf file) giving the copy number status of the genome. 

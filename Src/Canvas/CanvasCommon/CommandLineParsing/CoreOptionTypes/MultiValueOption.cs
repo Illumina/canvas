@@ -21,7 +21,7 @@ namespace CanvasCommon.CommandLineParsing.CoreOptionTypes
             }
         }
 
-        public override ParsingResult<List<T>> Parse(SuccessfulResultCollection input)
+        public override IParsingResult<List<T>> Parse(SuccessfulResultCollection input)
         {
             var values = input.Get(Info);
             var results = new List<T>();

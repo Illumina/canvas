@@ -18,7 +18,7 @@ namespace CanvasCommon.CommandLineParsing.CoreOptionTypes
             return new DirectoryOption(new ValueOptionInfo<string>(false, description, names));
         }
 
-        public override ParsingResult<IDirectoryLocation> Parse(string value)
+        public override IParsingResult<IDirectoryLocation> Parse(string value)
         {
             IDirectoryLocation location = value == null ? null : new DirectoryLocation(value);
             if (location == null || location.Exists)

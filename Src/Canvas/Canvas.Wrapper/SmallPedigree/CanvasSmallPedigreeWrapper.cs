@@ -45,7 +45,9 @@ namespace Canvas.Wrapper.SmallPedigree
         public StringBuilder GetMultiSampleCommandLine(SampleSet<CanvasPedigreeSample> samples, GenomeMetadata genomeMetadata, Vcf vcf, IDirectoryLocation sampleSandbox)
         {
             StringBuilder commandLine = new StringBuilder();
-            foreach (var sampleKvp in samples)
+            // move proband to the front of collection (enum Proband gets the lowest int value )
+            var sortedBySampleTypeSamples = samples.OrderBy(sample => sample.Value.SampleType);
+            foreach (var sampleKvp in sortedBySampleTypeSamples)
             {
                 var sampleId = sampleKvp.Key.Id;
                 var sample = sampleKvp.Value;
@@ -53,15 +55,14 @@ namespace Canvas.Wrapper.SmallPedigree
             }
             IFileLocation kmerFasta = _annotationFileProvider.GetKmerFasta(genomeMetadata);
             commandLine.Append($" --reference \"{kmerFasta}\"");
-            IDirectoryLocation wholeGenomeFasta = new FileLocation(genomeMetadata.Sequences.First().FastaPath).Directory;
+            IDirectoryLocation wholeGenomeFasta = new FileLocation(genomeMetadata.Contigs().First().FastaPath).Directory;
             commandLine.Append($" --genome-folder \"{wholeGenomeFasta}\"");
             IFileLocation filterBed = _annotationFileProvider.GetFilterBed(genomeMetadata);
             commandLine.Append($" --filter-bed \"{filterBed}\"");
             commandLine.Append($" --output \"{sampleSandbox}\"");
             return commandLine;
         }
-
-
+        
         public CanvasSmallPedigreeOutput Run(CanvasSmallPedigreeInput input, IDirectoryLocation sampleSandbox)
         {
             if (!_annotationFileProvider.IsSupported(input.GenomeMetadata))
@@ -95,10 +96,12 @@ namespace Canvas.Wrapper.SmallPedigree
             if (ploidyVcf != null)
                 commandLine.Append($" --{SmallPedigreeOptionsParser.PloidyVcfOptionName} \"{ploidyVcf.VcfFile}\"");
 
+            var moreCustomParameters = new Dictionary<string, string>();
 
-            //var canvasPartitionParam = $@"--commoncnvs {_annotationFileProvider.GetCanvasAnnotationFile(input.GenomeMetadata, "commoncnvs.bed")}";
-            //var moreCustomParameters = new Dictionary<string, string> { ["CanvasPartition"] = canvasPartitionParam };
-            commandLine.Append(_singleSampleInputCommandLineBuilder.GetCustomParameters());
+            // common cnv feature disabled by default due to CANV-397
+            // string canvasPedigreeCallerParam = $@"--commoncnvs {_annotationFileProvider.GetCanvasAnnotationFile(input.GenomeMetadata, "commoncnvs.bed")}";
+            // moreCustomParameters["CanvasPedigreeCaller"] = canvasPedigreeCallerParam;
+            commandLine.Append(_singleSampleInputCommandLineBuilder.GetCustomParameters(moreCustomParameters));
             commandLine = _singleSampleInputCommandLineBuilder.MergeCustomCanvasParameters(commandLine);
             // use Proband or, when proband is not available, first sample as pedigree id
             var pedigreeId = input.Samples.Where(x => x.Value.SampleType == SampleType.Proband).Select(x => x.Key.Id).FirstOrDefault();
@@ -107,8 +110,8 @@ namespace Canvas.Wrapper.SmallPedigree
 
             var singleSampleJob = new UnitOfWork()
             {
-                ExecutablePath = CrossPlatform.IsThisLinux() ? _runtimeExecutable.FullName : _canvasExe.FullName,
-                CommandLine = CrossPlatform.IsThisLinux() ? _canvasExe + " " + commandLine : commandLine.ToString(),
+                ExecutablePath = _runtimeExecutable.FullName,
+                CommandLine = _canvasExe + " " + commandLine,
                 LoggingStub = "Canvas_" + pedigreeId,
             };
             _workManager.DoWorkSingleThread(singleSampleJob);

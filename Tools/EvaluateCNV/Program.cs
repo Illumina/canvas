@@ -8,43 +8,44 @@ namespace EvaluateCNV
 {
     class Program
     {
-        public static void Main(string[] args)
+        public static int Main(string[] args)
         {
             EvaluateCnvOptionsParser optionsParser = new EvaluateCnvOptionsParser();
             if (args.Length < 4)
             {
-                ShowHelp(optionsParser);
-                return;
+                ShowHelp(optionsParser, Console.Error);
+                return 1;
             }
             var parsingResult = optionsParser.Parse(args.Skip(4));
 
             if (!parsingResult.Success)
             {
-                Console.WriteLine(parsingResult.ErrorMessage);
-                ShowHelp(optionsParser);
-                Environment.Exit(1);
+                Console.Error.WriteLine(parsingResult.ErrorMessage);
+                ShowHelp(optionsParser, Console.Error);
+                return 1;
             }
             var options = parsingResult.Result;
             if (options.Help)
             {
-                ShowHelp(optionsParser);
-                return;
+                ShowHelp(optionsParser, Console.Out);
+                return 0;
             }
 
             CNVChecker checker = new CNVChecker(options.DQscoreThreshold);
             checker.Evaluate(args[0], args[1], args[2], args[3], options);
+            return 0;
         }
 
-        public static void ShowHelp(EvaluateCnvOptionsParser optionsParser)
+        public static void ShowHelp(EvaluateCnvOptionsParser optionsParser, System.IO.TextWriter writer)
         {
-            Console.WriteLine("EvaluateCNV {0}",
+            writer.WriteLine("EvaluateCNV {0}",
                     System.Reflection.Assembly.GetEntryAssembly().GetName().Version);
-            Console.WriteLine("For more info see: http://confluence.illumina.com/display/BIOINFO/EvaluateCNV");
-            Console.WriteLine();
-            Console.WriteLine("Usage info:");
-            Console.WriteLine("EvaluateCNV $TruthSetPath $CNV.vcf $ExcludedRegionsBed $OutputDir [OPTIONS]+[$RegionOfInterestBed]");
-            Console.WriteLine("Options:");
-            optionsParser.ShowHelp(Console.Out);
+            writer.WriteLine("For more info see: http://confluence.illumina.com/display/BIOINFO/EvaluateCNV");
+            writer.WriteLine();
+            writer.WriteLine("Usage info:");
+            writer.WriteLine("EvaluateCNV $TruthSetPath $CNV.vcf $ExcludedRegionsBed $OutputDir [OPTIONS]+ [$RegionOfInterestBed]");
+            writer.WriteLine("Options:");
+            optionsParser.ShowHelp(writer.WriteLine);
         }
     }
 
@@ -74,7 +75,7 @@ namespace EvaluateCNV
             };
         }
 
-        public override ParsingResult<EvaluateCnvOptions> Parse(SuccessfulResultCollection parseInput)
+        public override IParsingResult<EvaluateCnvOptions> Parse(SuccessfulResultCollection parseInput)
         {
             string baseFileName = parseInput.Get(BaseFileName);
             IFileLocation roiBed = parseInput.Get(RegionOfInterestBed);

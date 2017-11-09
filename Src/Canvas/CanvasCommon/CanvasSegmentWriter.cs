@@ -1,11 +1,10 @@
 using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.IO;
 using System.Linq;
 using Illumina.Common.FileSystem;
+using Isas.Framework.DataTypes.Maps;
 using Isas.SequencingFiles;
-//using MathNet.Numerics.Statistics;
 
 namespace CanvasCommon
 {
@@ -17,7 +16,7 @@ namespace CanvasCommon
         private static void SanityCheckChromosomeNames(GenomeMetadata genome, List<CanvasSegment> segments)
         {
             var chromosomeNames = new HashSet<string>();
-            foreach (GenomeMetadata.SequenceMetadata chromosome in genome.Sequences)
+            foreach (GenomeMetadata.SequenceMetadata chromosome in genome.Contigs())
             {
                 chromosomeNames.Add(chromosome.Name.ToLowerInvariant());
             }
@@ -35,8 +34,8 @@ namespace CanvasCommon
             double totalWeight = 0;
             foreach (CanvasSegment segment in segments.Where(segment => segment.Filter == "PASS"))
             {
-                totalWeight += segment.End - segment.Begin;
-                totalPloidy += segment.CopyNumber * (segment.End - segment.Begin);
+                totalWeight += segment.Length;
+                totalPloidy += segment.CopyNumber * (segment.Length);
             }
             if (totalWeight > 0)
             {
@@ -62,12 +61,14 @@ namespace CanvasCommon
             GenomeMetadata genome = new GenomeMetadata();
             genome.Deserialize(new FileLocation(Path.Combine(wholeGenomeFastaDirectory, "GenomeSize.xml")));
 
-            foreach (GenomeMetadata.SequenceMetadata chromosome in genome.Sequences)
+            foreach (GenomeMetadata.SequenceMetadata chromosome in genome.Contigs()) 
             {
                 writer.WriteLine($"##contig=<ID={chromosome.Name},length={chromosome.Length}>");
             }
             string qualityFilter = $"q{qualityThreshold}";
             writer.WriteLine("##ALT=<ID=CNV,Description=\"Copy number variable region\">");
+            WriteHeaderAllAltCnTags(writer);
+            //TODO: we don't actually use the filters 
             writer.WriteLine($"##FILTER=<ID={qualityFilter},Description=\"Quality below {qualityThreshold}\">");
             writer.WriteLine("##FILTER=<ID=L10kb,Description=\"Length shorter than 10kb\">");
             writer.WriteLine("##INFO=<ID=CIEND,Number=2,Type=Integer,Description=\"Confidence interval around END for imprecise variants\">");
@@ -76,13 +77,13 @@ namespace CanvasCommon
             writer.WriteLine("##INFO=<ID=END,Number=1,Type=Integer,Description=\"End position of the variant described in this record\">");
             writer.WriteLine("##INFO=<ID=SVTYPE,Number=1,Type=String,Description=\"Type of structural variant\">");
             writer.WriteLine("##INFO=<ID=SUBCLONAL,Number=0,Type=Flag,Description=\"Subclonal variant\">");
+            writer.WriteLine("##INFO=<ID=COMMONCNV,Number=0,Type=Flag,Description=\"Common CNV variant identified from pre-specified bed intervals\">");
             writer.WriteLine("##FORMAT=<ID=RC,Number=1,Type=Float,Description=\"Mean counts per bin in the region\">");
             writer.WriteLine("##FORMAT=<ID=BC,Number=1,Type=Float,Description=\"Number of bins in the region\">");
             writer.WriteLine("##FORMAT=<ID=CN,Number=1,Type=Integer,Description=\"Copy number genotype for imprecise events\">");
             writer.WriteLine("##FORMAT=<ID=MCC,Number=1,Type=Integer,Description=\"Major chromosome count (equal to copy number for LOH regions)\">");
             writer.WriteLine("##FORMAT=<ID=MCCQ,Number=1,Type=Float,Description=\"Major chromosome count quality score\">");
             writer.WriteLine("##FORMAT=<ID=QS,Number=1,Type=Float,Description=\"Phred-scaled quality score. If CN is reference then this is -10log10(prob(variant)) otherwise this is -10log10(prob(no variant).\">");
-
             if (denovoQualityThreshold.HasValue)
             {
                 writer.WriteLine($"##FORMAT=<ID=DQ,Number=1,Type=Float,Description=\"De novo quality. Threshold for passing de novo call: {denovoQualityThreshold}\">");
@@ -93,6 +94,14 @@ namespace CanvasCommon
             return genome;
         }
 
+        public static void WriteHeaderAllAltCnTags(BgzipOrStreamWriter writer, int maxCopyNum = 5)
+        {
+            foreach (var copyNum in Enumerable.Range(0, maxCopyNum + 1))
+            {
+                if (copyNum == 1) continue;
+                writer.WriteLine($"##ALT=<ID=CN{copyNum},Description=\"Copy number allele: {copyNum} copies\">");
+            }
+        }
 
         /// <summary>
         /// Outputs the copy number calls to a text file.
@@ -101,7 +110,7 @@ namespace CanvasCommon
             BgzipOrStreamWriter writer, bool isPedigreeInfoSupplied = true, int? denovoQualityThreshold = null)
         {
             var nSamples = segments.Count;
-            foreach (GenomeMetadata.SequenceMetadata chromosome in genome.Sequences)
+            foreach (GenomeMetadata.SequenceMetadata chromosome in genome.Contigs())
             {
                 for (int segmentIndex = 0; segmentIndex < segments.First().Count; segmentIndex++)
                 {
@@ -119,10 +128,10 @@ namespace CanvasCommon
                     }
                     var cnvType = AssignCnvType(cnvTypes);
 
-                    WriteInfoField(writer, firstSampleSegment, cnvType, denovoQualityThreshold, isMultisample: segments.Count > 1);
+                    WriteInfoField(writer, firstSampleSegment, cnvType, isMultisample: segments.Count > 1);
                     //  FORMAT field
                     if (segments.Count == 1)
-                        WriteSingleSampleInfo(writer, firstSampleSegment);
+                        WriteSingleSampleFormat(writer, firstSampleSegment, denovoQualityThreshold.HasValue);
                     else
                         WriteFormatField(writer, currentSegments, denovoQualityThreshold.HasValue);
                 }
@@ -147,20 +156,28 @@ namespace CanvasCommon
             return cnvType;
         }
 
-        private static void WriteSingleSampleInfo(BgzipOrStreamWriter writer, CanvasSegment segment)
+        private static void WriteSingleSampleFormat(BgzipOrStreamWriter writer, CanvasSegment segment, bool reportDQ)
         {
-            writer.Write("\tRC:BC:CN:MCC", segment.End);
-            writer.Write($"\t{segment.MeanCount:F2}:{segment.BinCount}:{segment.CopyNumber}");
+            const string nullValue = ".";
+            writer.Write("\tRC:BC:CN:MCC");
+            if (reportDQ)
+                writer.Write(":DQ");
+            writer.Write($"\t{segment.MedianCount:F2}:{segment.BinCount}:{segment.CopyNumber}");
             writer.Write(segment.MajorChromosomeCount.HasValue ? $":{segment.MajorChromosomeCount}" : ":.");
+            if (reportDQ)
+            {
+                string dqscore = segment.DqScore.HasValue ? $"{segment.DqScore.Value:F2}" : nullValue;
+                writer.Write($":{dqscore}");
+            }
             writer.WriteLine();
         }
 
         private static void WriteFormatField(BgzipOrStreamWriter writer, List<CanvasSegment> segments, bool reportDQ)
         {
+            const string nullValue = ".";
             writer.Write("\tRC:BC:CN:MCC:MCCQ:QS");
             if (reportDQ)
                 writer.Write(":DQ");
-            const string nullValue = ".";
             foreach (var segment in segments)
             {
                 string mcc = segment.MajorChromosomeCount.HasValue ? segment.MajorChromosomeCount.ToString() : nullValue;
@@ -168,7 +185,7 @@ namespace CanvasCommon
                 writer.Write($"\t{segment.MeanCount:F2}:{segment.BinCount}:{ segment.CopyNumber}:{mcc}:{mccq}:{segment.QScore:F2}");
                 if (reportDQ)
                 {
-                    string dqscore = segment.DQScore.HasValue ? $"{segment.DQScore.Value:F2}" : nullValue;
+                    string dqscore = segment.DqScore.HasValue ? $"{segment.DqScore.Value:F2}" : nullValue;
                     writer.Write($":{dqscore}");
                 }
             }
@@ -181,20 +198,19 @@ namespace CanvasCommon
         /// <param name="writer"></param>
         /// <param name="segment"></param>
         /// <param name="cnvType"></param>
-        /// <param name="denovoQualityThreshold"></param>
+        /// <param name="isMultisample"></param>
         /// <returns></returns>
-        private static void WriteInfoField(BgzipOrStreamWriter writer, CanvasSegment segment, CnvType cnvType, int? denovoQualityThreshold, bool isMultisample)
+        private static void WriteInfoField(BgzipOrStreamWriter writer, CanvasSegment segment, CnvType cnvType, bool isMultisample)
         {
             // From vcf 4.1 spec:
             //     If any of the ALT alleles is a symbolic allele (an angle-bracketed ID String “<ID>”) then the padding base is required and POS denotes the 
             //     coordinate of the base preceding the polymorphism.
-            string alternateAllele = cnvType.ToAltId();
+            string alternateAllele = segment.GetAltCopyNumbers(cnvType);
             int position = (alternateAllele.StartsWith("<") && alternateAllele.EndsWith(">"))
                 ? segment.Begin
                 : segment.Begin + 1;
             writer.Write($"{segment.Chr}\t{position}\tCanvas:{cnvType.ToVcfId()}:{segment.Chr}:{segment.Begin + 1}-{segment.End}\t");
-            string qScore = "";
-            qScore = isMultisample ? "." : $"{segment.QScore:F2}";
+            string qScore = isMultisample ? "." : $"{segment.QScore:F2}";
             writer.Write($"N\t{alternateAllele}\t{qScore}\t{segment.Filter}\t");
 
             if (cnvType != CnvType.Reference)
@@ -203,10 +219,13 @@ namespace CanvasCommon
             if (segment.IsHeterogeneous)
                 writer.Write("SUBCLONAL;");
 
+            if (segment.IsCommonCnv)
+                writer.Write("COMMONCNV;");
+            
             writer.Write($"END={segment.End}");
 
             if (cnvType != CnvType.Reference)
-                writer.Write($";CNVLEN={segment.End - segment.Begin}");
+                writer.Write($";CNVLEN={segment.Length}");
 
             if (segment.StartConfidenceInterval != null)
                 writer.Write($";CIPOS={segment.StartConfidenceInterval.Item1},{segment.StartConfidenceInterval.Item2}");
@@ -220,37 +239,23 @@ namespace CanvasCommon
                 List<string> extraHeaders, PloidyInfo ploidy, int qualityThreshold, bool isPedigreeInfoSupplied, int? denovoQualityThreshold = null)
         {
             using (BgzipOrStreamWriter writer = new BgzipOrStreamWriter(outVcfPath))
-            {
+            {   
                 var genome = WriteVcfHeader(segments, diploidCoverage, wholeGenomeFastaDirectory, new List<string> { sampleName },
                     extraHeaders, qualityThreshold, writer, denovoQualityThreshold);
                 WriteVariants(new List<List<CanvasSegment>> { segments.ToList() }, new List<PloidyInfo> { ploidy }, genome, writer, isPedigreeInfoSupplied, denovoQualityThreshold);
             }
         }
 
-        public static void WriteMultiSampleSegments(string outVcfPath, List<List<CanvasSegment>> segments, List<double?> diploidCoverage,
+        public static void WriteMultiSampleSegments(string outVcfPath, ISampleMap<List<CanvasSegment>> segments, List<double> diploidCoverage,
         string wholeGenomeFastaDirectory, List<string> sampleNames, List<string> extraHeaders, List<PloidyInfo> ploidies, int qualityThreshold,
         bool isPedigreeInfoSupplied = true, int? denovoQualityThreshold = null)
         {
             using (BgzipOrStreamWriter writer = new BgzipOrStreamWriter(outVcfPath))
             {
-                var genome = WriteVcfHeader(segments.First(), GetMean(diploidCoverage), wholeGenomeFastaDirectory, sampleNames,
+                var genome = WriteVcfHeader(segments.Values.First(), diploidCoverage.Average(), wholeGenomeFastaDirectory, sampleNames,
                     extraHeaders, qualityThreshold, writer, denovoQualityThreshold);
-                WriteVariants(segments, ploidies, genome, writer, isPedigreeInfoSupplied, denovoQualityThreshold);
+                WriteVariants(segments.Values.ToList(), ploidies, genome, writer, isPedigreeInfoSupplied, denovoQualityThreshold);
             }
         }
-
-        private static double GetMean(IEnumerable<double?> values)
-        {
-            double result = 0;
-            int count = 0;
-            foreach (double? value in values)
-            {
-                if (value == null) continue;
-                result += (double)value;
-                count++;
-            }
-            return result / count;
-        }
-
     }
 }

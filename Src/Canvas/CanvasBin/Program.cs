@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using Illumina.Common;
 using Illumina.Common.FileSystem;
 
@@ -101,6 +102,11 @@ namespace CanvasBin
             Console.WriteLine("CanvasBin {0}", System.Reflection.Assembly.GetEntryAssembly().GetName().Version.ToString());
 
             List<string> extraArgs = p.Parse(args);
+
+            if (extraArgs.Any())
+            {
+                throw new IlluminaException($"Unknown arguments: {string.Join(",", extraArgs)}");
+            }
 
             // Check for required arguments. Display the help message if any of them are missing.
             if (string.IsNullOrEmpty(parameters.referenceFile))

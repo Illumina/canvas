@@ -40,7 +40,7 @@ namespace Canvas.Wrapper
             commandLine.Append($" --sample-name \"{sampleId}\"");
             IFileLocation kmerFasta = _annotationFileProvider.GetKmerFasta(genomeMetadata);
             commandLine.Append($" --reference \"{kmerFasta}\"");
-            IDirectoryLocation wholeGenomeFasta = new FileLocation(genomeMetadata.Sequences.First().FastaPath).Directory;
+            IDirectoryLocation wholeGenomeFasta = new FileLocation(genomeMetadata.Contigs().First().FastaPath).Directory;
             commandLine.Append($" --genome-folder \"{wholeGenomeFasta}\"");
             IFileLocation filterBed = _annotationFileProvider.GetFilterBed(genomeMetadata);
             commandLine.Append($" --filter-bed \"{filterBed}\"");

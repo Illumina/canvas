@@ -5,20 +5,28 @@ namespace Canvas.Wrapper
 {
     public class DbSnpVcfProcessor
     {
-        private readonly ISampleSettings _sampleSettings;
+        private readonly ISettings _sampleSettings;
 
-        public DbSnpVcfProcessor(ISampleSettings sampleSettings)
+        [System.Obsolete("Pass in ISettings")]
+        public DbSnpVcfProcessor(ISampleSettings sampleSettings) : this((ISettings)sampleSettings)
+        {
+        }
+        public DbSnpVcfProcessor(ISettings sampleSettings)
         {
             _sampleSettings = sampleSettings;
         }
 
+
         public IFileLocation GetDbSnpVcfPath()
         {
-            string dbSnpVcfPath = _sampleSettings.GetStringSetting("dbsnpvcfpath", null);
-            IFileLocation dbSnpVcf = null;
-            if (dbSnpVcfPath != null)
-                dbSnpVcf = new FileLocation(dbSnpVcfPath);
-            return dbSnpVcf;
+            return _sampleSettings.GetSetting(DbSnpVcfPathSetting);
         }
+
+        public Setting<IFileLocation> DbSnpVcfPathSetting = SampleSettings.CreateSetting<IFileLocation>(
+            "DBSnpVcfPath",
+            "Path to a vcf file containing SNP sites to use for calculating B-allele frequencies during CNV calling",
+            null,
+            null,
+            path => new FileLocation(path));
     }
 }

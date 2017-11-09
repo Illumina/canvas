@@ -1,4 +1,5 @@
 using Canvas.CommandLineParsing;
+using CanvasCommon;
 using Illumina.SecondaryAnalysis.VariantCalling;
 using Isas.Framework.DataTypes;
 using Isas.SequencingFiles;

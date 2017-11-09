@@ -144,7 +144,6 @@ namespace CanvasSNV
                         int countAlt = int.Parse(bits[5]);
                         if (countRef + countAlt < 10) continue;
                         float VF = countAlt / (float)(countRef + countAlt);
-                        int bin = (int)Math.Round(100 * VF);
                         if (!KnownCN.ContainsKey(chromosome))
                         {
                             Console.WriteLine("Warning: CN not known for {0}", chromosome);
@@ -186,28 +185,6 @@ namespace CanvasSNV
                         {
                             writer.WriteLine("{0}\t{1}\t{2}", bin, Histogram[bin], 100 * Histogram[bin] / (float)total);
                         }
-
-                        //float[] MinorAlleleFrequencies = new float[interval.Frequencies.Count];
-                        //float total = 0;
-                        //for (int index = 0; index < interval.Frequencies.Count; index++)
-                        //{
-                        //    MinorAlleleFrequencies[index] = interval.Frequencies[index];
-                        //    if (MinorAlleleFrequencies[index] > 0.5) MinorAlleleFrequencies[index] = 1 - MinorAlleleFrequencies[index];
-                        //    total += MinorAlleleFrequencies[index];
-                        //}
-                        //float mean = total / MinorAlleleFrequencies.Length;
-                        //float sumSquares = 0;
-                        //foreach (float MAF in MinorAlleleFrequencies)
-                        //{
-                        //    float diff = MAF - mean;
-                        //    sumSquares += diff * diff;
-                        //}
-                        //float stddev = (float)Math.Sqrt(sumSquares / MinorAlleleFrequencies.Length);
-                        //Array.Sort(MinorAlleleFrequencies);
-                        //float median = MinorAlleleFrequencies[MinorAlleleFrequencies.Length / 2];
-                        //writer.Write("{0}\t{1}\t{2}\t{3}\t", chromosome, interval.Start, interval.End, interval.CN);
-                        //writer.WriteLine("{0}\t{1}\t{2}\t{3}", MinorAlleleFrequencies.Length, mean,
-                        //    median, stddev);
                     }
                 }
             }

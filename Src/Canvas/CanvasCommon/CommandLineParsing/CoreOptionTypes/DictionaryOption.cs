@@ -34,7 +34,7 @@ namespace CanvasCommon.CommandLineParsing.CoreOptionTypes
             };
         }
 
-        public override ParsingResult<Dictionary<string, string>> Parse(SuccessfulResultCollection parseInput)
+        public override IParsingResult<Dictionary<string, string>> Parse(SuccessfulResultCollection parseInput)
         {
             List<string> inputs = parseInput.Get(_option);
             var result = new Dictionary<string, string>();

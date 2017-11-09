@@ -32,18 +32,33 @@ namespace CanvasCommon
             return allCombinations.Count == 0 ? new List<List<int>>{new List<int>{currentState}} : allCombinations;
         }
 
-        public static List<double> NegativeBinomialWrapper(double mean, double variance, int maxValue, bool adjustR = false)
+        /// <summary>
+        /// Calculate density using the negative binomial distribution. clumpingParameter reflects the tightness of 
+        /// distibution.
+        /// </summary>
+        /// <param name="mean"></param>
+        /// <param name="variance"></param>
+        /// <param name="maxValue"></param>
+        /// <param name="adjustClumpingParameter"></param>
+        /// <returns></returns>
+        public static List<double> NegativeBinomialWrapper(double mean, double variance, int maxValue, bool adjustClumpingParameter = false)
         {
-            var density = Enumerable.Repeat(0.0, maxValue).ToList();
-            double r = Math.Pow(Math.Max(mean, 0.1), 2) / (Math.Max(variance, mean * 1.2) - mean);
-            r = Math.Max(adjustR ? 6.0 : 2.0, r);
+            var negativeBinomialDensity = Enumerable.Repeat(0.0, maxValue).ToList();
+            const double minMeanValue = 0.1; // handle the case of zero counts
+            const double adjustClumpingParameterMin1 = 6.0; 
+            const double adjustClumpingParameterMin2 = 2.0; 
+
+            // handle the case where variance is less than mean
+            double clumpingParameter = Math.Pow(Math.Max(mean, minMeanValue), 2) / (Math.Max(variance, mean * 1.2) - mean);
+            clumpingParameter = Math.Max(adjustClumpingParameter ? adjustClumpingParameterMin1 : adjustClumpingParameterMin2, clumpingParameter);
             for (int x = 0; x < maxValue; x++)
             {
-                var tmpDensity = Math.Exp(Math.Log(Math.Pow(1 + mean / r, -r)) + Math.Log(Math.Pow(mean / (mean + r), x)) + SpecialFunctions.GammaLn(r + x) -
-                             SpecialFunctions.FactorialLn(x) - SpecialFunctions.GammaLn(r));
-                density[x] = Double.IsNaN(tmpDensity) || Double.IsInfinity(tmpDensity) ? 0 : tmpDensity;
+                // density function for negative binomial distribution
+                var tmpDensity = Math.Exp(Math.Log(Math.Pow(1 + mean / clumpingParameter, -clumpingParameter)) + Math.Log(Math.Pow(mean / (mean + clumpingParameter), x)) + SpecialFunctions.GammaLn(clumpingParameter + x) -
+                             SpecialFunctions.FactorialLn(x) - SpecialFunctions.GammaLn(clumpingParameter));
+                negativeBinomialDensity[x] = Double.IsNaN(tmpDensity) || Double.IsInfinity(tmpDensity) ? 0 : tmpDensity;
             }
-            return density;
+            return negativeBinomialDensity;
         }
     }
 }

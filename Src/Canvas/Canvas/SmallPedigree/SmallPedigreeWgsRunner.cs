@@ -14,10 +14,10 @@ namespace Canvas.SmallPedigree
         public CommonOptions CommonOptions { get; }
         public SmallPedigreeOptions SmallPedigreeOptions { get; }
 
-        public SmallPedigreeWgsRunner(CommonOptions commonOptions, SmallPedigreeOptions smallPedigreeOptions)
+        public SmallPedigreeWgsRunner(SmallPedigreeInput input )
         {
-            SmallPedigreeOptions = smallPedigreeOptions;
-            CommonOptions = commonOptions;
+            SmallPedigreeOptions = input.SmallPedigreeOptions;
+            CommonOptions = input.CommonOptions;
         }
 
         public void Run(ILogger logger, ICheckpointRunner checkpointRunner, IWorkManager workManager, IFileLocation runtimeExecutable)
@@ -52,6 +52,7 @@ namespace Canvas.SmallPedigree
                 CommonOptions.FilterBed,
                 SmallPedigreeOptions.MultiSamplePloidyVcf,
                 SmallPedigreeOptions.CommonCnvsBed);
+
             return new SmallPedigreeCallset(callSets, analysisDetails);
         }
     }

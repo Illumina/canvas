@@ -33,10 +33,9 @@ namespace CanvasCommon
 
         public double Fit() 
         {
-            double likelihood = FitGaussians(this.ModelPoints, this.Segments);
             EMComputeGaussianMeans(this.ModelPoints, this.Segments);
             foreach (var modelPoint in this.ModelPoints) { modelPoint.Ploidy.Sigma = null; }
-            likelihood = FitGaussians(this.ModelPoints, this.Segments);
+            double likelihood = FitGaussians(this.ModelPoints, this.Segments);
             return likelihood;
         }
 
@@ -48,7 +47,7 @@ namespace CanvasCommon
             {
                 modelPoint.Ploidy.Omega = 1.0 / modelPoints.Count;
                 modelPoint.Ploidy.Mu = new double[Dim];
-                modelPoint.Ploidy.Mu[0] = modelPoint.MAF;
+                modelPoint.Ploidy.Mu[0] = modelPoint.Maf;
                 modelPoint.Ploidy.Mu[1] = modelPoint.Coverage;
 
                 // initialize covariance matrix
@@ -120,7 +119,7 @@ namespace CanvasCommon
             Dictionary<ModelPoint, double> temp = new Dictionary<ModelPoint, double>();
             foreach (var modelPoint in modelPoints)
             {
-                temp[modelPoint] = modelPoint.Ploidy.Omega * Sigma(segment.MAF, segment.Coverage, modelPoint.Ploidy.Mu, modelPoint.Ploidy.Sigma);
+                temp[modelPoint] = modelPoint.Ploidy.Omega * Sigma(segment.Maf, segment.Coverage, modelPoint.Ploidy.Mu, modelPoint.Ploidy.Sigma);
                 tempsum1 += temp[modelPoint];
             }
 
@@ -257,7 +256,7 @@ namespace CanvasCommon
                 {
                     if (m2 == m1) { continue; }
                     // pretend m1 is a segment
-                    double prob = m2.Ploidy.Omega * Sigma(m1.MAF, m1.Coverage, m2.Ploidy.Mu, m2.Ploidy.Sigma);
+                    double prob = m2.Ploidy.Omega * Sigma(m1.Maf, m1.Coverage, m2.Ploidy.Mu, m2.Ploidy.Sigma);
                     if (prob > maxProb)
                     {
                         maxProb = prob;
@@ -320,7 +319,7 @@ namespace CanvasCommon
                     double weight = segment.PosteriorProbs[modelPoint] * segment.Weight;
                     sumWeights += weight;
 
-                    tempvec[0] = segment.MAF - modelPoint.Ploidy.Mu[0];
+                    tempvec[0] = segment.Maf - modelPoint.Ploidy.Mu[0];
                     tempvec[1] = segment.Coverage - modelPoint.Ploidy.Mu[1];
 
                     sumMat[0][0] += weight * tempvec[0] * tempvec[0];
@@ -381,7 +380,7 @@ namespace CanvasCommon
                     if (segment.PosteriorProbs[modelPoint] < postProbThres) { continue; }
                     double weight = segment.PosteriorProbs[modelPoint] * segment.Weight;
                     sumWeights += weight;
-                    tempsum[0] += weight * segment.MAF;
+                    tempsum[0] += weight * segment.Maf;
                     tempsum[1] += weight * segment.Coverage;
                 }
                 double mu0 = tempsum[0] / sumWeights;
@@ -404,62 +403,16 @@ namespace CanvasCommon
                 foreach (var modelPoint in modelPoints)
                 {
                     // do not consider segments with no MAFs during likelihood calculation
-                    if (segment.MAF == -1)
+                    if (segment.Maf == -1)
                         temp += modelPoint.Ploidy.Omega;
                     else
-                        temp += modelPoint.Ploidy.Omega * Sigma(segment.MAF, segment.Coverage, modelPoint.Ploidy.Mu, modelPoint.Ploidy.Sigma);
+                        temp += modelPoint.Ploidy.Omega * Sigma(segment.Maf, segment.Coverage, modelPoint.Ploidy.Mu, modelPoint.Ploidy.Sigma);
                 }
                 likelihood += Math.Log(temp) * segment.Weight; // each segment represents segment.Weight points
             }
 
             return likelihood / segments.Select(s => s.Weight).Sum();
         }
-
-        /// <summary>
-        /// http://en.wikipedia.org/wiki/Bayesian_information_criterion
-        /// </summary>
-        /// <param name="modelPoints"></param>
-        /// <param name="segments"></param>
-        /// <param name="omegaThres"></param>
-        /// <returns></returns>
-        private double EMComputeBIC(List<ModelPoint> modelPoints, List<SegmentInfo> segments,
-            double omegaThres = 1E-10, double sigmaThres = 1E-7)
-        {
-            double likelihood = 0; // log likelihood
-
-            foreach (var segment in segments)
-            {
-                if (segment.ClusterId == CanvasCommon.PloidyInfo.OutlierClusterFlag) { continue; }
-                double temp = 0;
-                foreach (var modelPoint in modelPoints)
-                {
-                    if (modelPoint.Ploidy.Omega <= omegaThres) { continue; }
-                    temp += modelPoint.Ploidy.Omega * Sigma(segment.MAF, segment.Coverage, modelPoint.Ploidy.Mu, modelPoint.Ploidy.Sigma);
-                }
-                likelihood += Math.Log(temp) * segment.Weight; // each segment represents segment.Weight points
-            }
-
-            int k = 0;
-            foreach (var modelPoint in modelPoints) 
-            {
-                if (modelPoint.Ploidy.Omega <= omegaThres) { continue; }
-                k += 6; // number of parameters: omega 1, mu 2, sigma 3
-                if (modelPoint.Ploidy.Sigma[0][0] <= sigmaThres || modelPoint.Ploidy.Sigma[1][1] <= sigmaThres) // omega 1, mu 1, sigma 1
-                {   // modelPoint.Ploidy.Sigma[0][0] <= sigmaThres && modelPoint.Ploidy.Sigma[1][1] <= sigmaThres: omega 1, mu 2
-                    k -= 3;
-                }
-                else if (Math.Abs(modelPoint.Ploidy.Sigma[0][1]) <= sigmaThres) 
-                { // omega 1, mu 2, sigma 2
-                    k -= 1;
-                }
-            }
-
-            double n = segments.Select(s => s.Weight).Sum(); // number of data points
-            double bic = -2 * likelihood + k * (Math.Log(n) - Math.Log(2 * Math.PI));
-
-            return bic / n;
-        }
-
 
         private double FitGaussians(List<ModelPoint> modelPoints, List<SegmentInfo> segments)
         {

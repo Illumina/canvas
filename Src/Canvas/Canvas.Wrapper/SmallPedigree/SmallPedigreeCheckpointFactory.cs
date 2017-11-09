@@ -18,20 +18,18 @@ namespace Canvas.Wrapper.SmallPedigree
         private readonly IFileLocation _pedigreefileNameStub;
 
         public SmallPedigreeCheckpointFactory(
-            ISampleSettings sampleSettings,
             IWorkManager workManager,
             ILogger logger,
             ExecutableProcessor executableProcessor,
-            DbSnpVcfProcessor dbSnpVcfProcessor,
-            bool detectCnvDefault, IFileLocation pedigreefileNameStub)
+            IFileLocation pedigreefileNameStub,
+            CanvasWorkerFactory canvasWorkerFactory)
         {
             _workManager = workManager;
             _logger = logger;
             _executableProcessor = executableProcessor;
             _pedigreefileNameStub = pedigreefileNameStub;
-            _canvasWorkerFactory = new CanvasWorkerFactory(sampleSettings, workManager, logger, executableProcessor, dbSnpVcfProcessor, detectCnvDefault);
+            _canvasWorkerFactory = canvasWorkerFactory;
         }
-
 
         public ISmallPedigreeCheckpoint GetSmallPedigreeCheckpoint()
         {
@@ -91,7 +89,7 @@ namespace Canvas.Wrapper.SmallPedigree
             {
                 fileMover.Move(output.Partitioned, SingleSampleCallset.GetPartitionedPath(stub));
                 fileMover.Move(output.VariantFrequencies, SingleSampleCallset.GetVfSummaryPath(stub));
-                fileMover.Move(output.VariantFrequenciesBaf, SingleSampleCallset.GetVfSummaryPath(stub));
+                fileMover.Move(output.VariantFrequenciesBaf, SingleSampleCallset.GetVfSummaryBafPath(stub));
             }
         }
 

@@ -6,8 +6,6 @@
     <AssemblyName>Canvas</AssemblyName>
     <OutputType>Exe</OutputType>
     <PackageId>Canvas</PackageId>
-    <RuntimeFrameworkVersion>1.1.0</RuntimeFrameworkVersion>
-    <PackageTargetFallback>$(PackageTargetFallback);dnxcore50</PackageTargetFallback>
     <GenerateAssemblyTitleAttribute>false</GenerateAssemblyTitleAttribute>
     <GenerateAssemblyDescriptionAttribute>false</GenerateAssemblyDescriptionAttribute>
     <GenerateAssemblyConfigurationAttribute>false</GenerateAssemblyConfigurationAttribute>
@@ -17,15 +15,13 @@
     <GenerateAssemblyInformationalVersionAttribute>false</GenerateAssemblyInformationalVersionAttribute>
     <GenerateAssemblyCompanyAttribute>false</GenerateAssemblyCompanyAttribute>
     <GenerateAssemblyCopyrightAttribute>false</GenerateAssemblyCopyrightAttribute>
+    <Platforms>x64</Platforms>
+    <DebugType>Full</DebugType>
   </PropertyGroup>
 
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
-    <OutputPath>..\x64\CanvasCore\</OutputPath>
-  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" />
 
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <OutputPath>..\x64\CanvasCore\</OutputPath>
-  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" />
 
   <ItemGroup>
     <ProjectReference Include="..\CanvasBin\CanvasBin.csproj" />
@@ -33,10 +29,11 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Illumina.Common" Version="3.12.0.238" />
-    <PackageReference Include="Isas.Framework" Version="6.16.0.449" />
-    <PackageReference Include="Isas.Manifests" Version="3.0.1.64" />
-    <PackageReference Include="Isas.SequencingFiles" Version="4.2.1.304" />
+    <PackageReference Include="Illumina.Common" Version="4.13.0.353" />
+    <PackageReference Include="Isas.Framework" Version="7.16.1.755" />
+    <PackageReference Include="Isas.Manifests" Version="4.9.1.154" />
+    <PackageReference Include="Isas.SequencingFiles" Version="5.5.0.395" />
+    <PackageReference Include="protobuf-net" Version="2.3.2" />
     <PackageReference Include="System.ComponentModel.TypeConverter" Version="4.3.0" />
   </ItemGroup>
 

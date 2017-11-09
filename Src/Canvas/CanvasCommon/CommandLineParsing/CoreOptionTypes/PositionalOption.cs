@@ -11,11 +11,11 @@ namespace CanvasCommon.CommandLineParsing.CoreOptionTypes
         private ValueOption<T1> _option1;
         private ValueOption<T2> _option2;
         private ValueOption<T3> _option3;
-        private Func<T1, T2, T3, ParsingResult<TOut>> _parse;
+        private Func<T1, T2, T3, IParsingResult<TOut>> _parse;
         private bool _required;
 
         public OptionInfo<List<List<string>>> Info { get; }
-        public PositionalOption(Func<T1, T2, T3, ParsingResult<TOut>> parse, bool required, ValueOption<T1> option1, ValueOption<T2> option2, ValueOption<T3> option3, params string[] names)
+        public PositionalOption(Func<T1, T2, T3, IParsingResult<TOut>> parse, bool required, ValueOption<T1> option1, ValueOption<T2> option2, ValueOption<T3> option3, params string[] names)
         {
             _required = required;
             _parse = parse;
@@ -25,7 +25,7 @@ namespace CanvasCommon.CommandLineParsing.CoreOptionTypes
             Info = new PositionalOptionInfo(required, new IOptionInfo[] { option1.Info, option2.Info, option3.Info }, names);
         }
 
-        public override ParsingResult<List<TOut>> Parse(SuccessfulResultCollection input)
+        public override IParsingResult<List<TOut>> Parse(SuccessfulResultCollection input)
         {
             var multipleValues = input.Get(Info);
             var outputs = new List<TOut>();
@@ -46,7 +46,7 @@ namespace CanvasCommon.CommandLineParsing.CoreOptionTypes
             return ParsingResult<List<TOut>>.SuccessfulResult(outputs);
         }
 
-        private ParsingResult<T> GetOptionResult<T>(int valueIndex, List<string> values, ValueOption<T> option1)
+        private IParsingResult<T> GetOptionResult<T>(int valueIndex, List<string> values, ValueOption<T> option1)
         {
             string value = valueIndex < values.Count ? values[valueIndex] : null;
 

@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using CanvasCommon.CommandLineParsing.CoreOptionTypes;
 using Illumina.Common;
+using static CanvasCommon.CommandLineParsing.CoreOptionTypes.OptionExtensions;
 
 namespace CanvasCommon.CommandLineParsing.OptionProcessing
 {
@@ -16,6 +17,8 @@ namespace CanvasCommon.CommandLineParsing.OptionProcessing
         IResultCollection ParseInternal(IEnumerable<string> args);
         IResultCollection ParseInternal(Dictionary<IOption, OptionData> optionResults, IEnumerable<string> remainingArgs = null);
         IEnumerable<IOptionInfo> GetLeafs();
+        void Add<T>(Option<T> option);
+        IResultCollection Parse(IEnumerable<string> args);
     }
 
     public class OptionCollection<TResult> : IOptionCollection, IEnumerable<KeyValuePair<IOption, IOptionCollection>>
@@ -115,7 +118,7 @@ namespace CanvasCommon.CommandLineParsing.OptionProcessing
 
         private static IParsingResult GetParseResult(OptionInfo<string> optionInfo, OptionData optionData)
         {
-            ParsingResult<string> result = ParsingResult<string>.SuccessfulResult(optionData.Data.FirstOrDefault()?.FirstOrDefault());
+            var result = ParsingResult<string>.SuccessfulResult(optionData.Data.FirstOrDefault()?.FirstOrDefault());
             if (optionData.Data.Count > 1)
                 result = ParsingResult<string>.FailedResult($"Error: {optionInfo.Name} can only be specified once");
             return optionInfo.Parse(new SuccessfulResultCollection(optionInfo, result));
@@ -123,7 +126,7 @@ namespace CanvasCommon.CommandLineParsing.OptionProcessing
 
         private static IParsingResult GetParseResult(OptionInfo<List<string>> multiOptionInfo, OptionData optionData)
         {
-            return multiOptionInfo.Parse(new SuccessfulResultCollection(multiOptionInfo, ParsingResult<List<string>>.SuccessfulResult(optionData.Data.Select(list=>list.FirstOrDefault()).ToList())));
+            return multiOptionInfo.Parse(new SuccessfulResultCollection(multiOptionInfo, ParsingResult<List<string>>.SuccessfulResult(optionData.Data.Select(list => list.FirstOrDefault()).ToList())));
         }
 
         private static IParsingResult GetParseResult(OptionInfo<List<List<string>>> positionalInfo, OptionData optionData)
@@ -161,9 +164,18 @@ namespace CanvasCommon.CommandLineParsing.OptionProcessing
             return leafs;
         }
 
-        public void ShowHelp(TextWriter writer)
+        public void ShowHelp(WriteLine writeLine)
         {
-            GetOptionSet().WriteOptionDescriptions(writer);
+            var stringWriter = new StringWriter();
+            GetOptionSet().WriteOptionDescriptions(stringWriter);
+            stringWriter.ToString().Split(stringWriter.NewLine).ForEach(message =>
+            {
+                if (message == "")
+                {
+                    message = " ";
+                }
+                writeLine(message);
+            });
         }
 
         IResultCollection IOptionCollection.ParseInternal(IEnumerable<string> args)
@@ -189,6 +201,11 @@ namespace CanvasCommon.CommandLineParsing.OptionProcessing
         IEnumerator IEnumerable.GetEnumerator()
         {
             return _optionCollections.GetEnumerator();
+        }
+
+        IResultCollection IOptionCollection.Parse(IEnumerable<string> args)
+        {
+            return Parse(args);
         }
     }
 }

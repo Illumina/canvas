@@ -1,6 +1,8 @@
 using System.Collections.Generic;
 using System.IO;
 using CanvasCommon.CommandLineParsing.OptionProcessing;
+using Isas.Framework.Logging;
+using static CanvasCommon.CommandLineParsing.CoreOptionTypes.OptionExtensions;
 
 namespace CanvasCommon.CommandLineParsing.CoreOptionTypes
 {
@@ -8,12 +10,17 @@ namespace CanvasCommon.CommandLineParsing.CoreOptionTypes
     {
         IOptionCollection GetOptions();
         IParsingResult Parse(SuccessfulResultCollection parseInput);
+        void ShowHelp(WriteLine writer);
     }
 
     public abstract class Option<TParseOutput> : IOption
     {
         public abstract OptionCollection<TParseOutput> GetOptions();
-        public abstract ParsingResult<TParseOutput> Parse(SuccessfulResultCollection parseInput);
+        public abstract IParsingResult<TParseOutput> Parse(SuccessfulResultCollection parseInput);
+        public void ShowHelp(WriteLine writer)
+        {
+            OptionExtensions.ShowHelp(this, writer);
+        }
 
         IOptionCollection IOption.GetOptions()
         {
@@ -24,16 +31,18 @@ namespace CanvasCommon.CommandLineParsing.CoreOptionTypes
         {
             return Parse(parseInput);
         }
+
     }
 
     public static class OptionExtensions
     {
-        public static ParsingResult<T> Parse<T>(this Option<T> option, IEnumerable<string> args, bool allowUnparsedArguments = false)
+        public delegate void WriteLine(string message);
+        public static IParsingResult<T> Parse<T>(this Option<T> option, IEnumerable<string> args, bool allowUnparsedArguments = false)
         {
             OptionCollection<T> options = new OptionCollection<T>();
             options.Add(option);
             ResultCollection<T> result = options.Parse(args);
-            ParsingResult<T> failedResult;
+            IParsingResult<T> failedResult;
             if (!result.Validate(out failedResult, allowUnparsedArguments))
             {
                 return failedResult;
@@ -41,7 +50,7 @@ namespace CanvasCommon.CommandLineParsing.CoreOptionTypes
             return result.Get(option);
         }
 
-        public static void ShowHelp<T>(this Option<T> option, TextWriter writer)
+        public static void ShowHelp<T>(this Option<T> option, WriteLine writer)
         {
             OptionCollection<T> options = new OptionCollection<T>();
             options.Add(option);

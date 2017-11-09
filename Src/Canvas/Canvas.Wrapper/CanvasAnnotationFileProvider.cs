@@ -31,7 +31,7 @@ namespace Canvas.Wrapper
 
         public bool IsSupported(GenomeMetadata genome)
         {
-            string species = genome.Sequences.FirstOrDefault()?.Species;
+            string species = genome.Contigs().FirstOrDefault()?.Species;
             return "Homo_sapiens".Equals(species, StringComparison.OrdinalIgnoreCase);
         }
 
@@ -64,7 +64,7 @@ namespace Canvas.Wrapper
 
         private IReferenceGenome GetReferenceGenomeFromGenomeMetadata(GenomeMetadata genomeMetadata)
         {
-            return _referenceGenomeFactory.GetReferenceGenome(new DirectoryLocation(Path.GetDirectoryName(genomeMetadata.Sequences.First().FastaPath)));
+            return _referenceGenomeFactory.GetReferenceGenome(new DirectoryLocation(Path.GetDirectoryName(genomeMetadata.Contigs().First().FastaPath)));
         }
     }
 }

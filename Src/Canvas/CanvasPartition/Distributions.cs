@@ -52,7 +52,6 @@ namespace CanvasPartition
             var m = this.GetDimensions();
             for (int dimension = 0; dimension < m; dimension++)
             {
-                // var newVariance = CanvasCommon.Utilities.WeightedVariance(data.Select(x => x[dimension]).ToList(), gamma);
                 var newMeans = CanvasCommon.Utilities.WeightedMean(data.Select(x => x[dimension]).ToList(),
                     gamma.ToList());
                 Means[dimension] = newMeans;

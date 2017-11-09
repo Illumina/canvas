@@ -7,12 +7,13 @@ namespace CanvasCommon.CommandLineParsing.OptionProcessing
     public interface IResultCollection
     {
         bool Validate(out IParsingResult result);
-        ParsingResult<T> Get<T>(Option<T> option);
+        IParsingResult<T> Get<T>(Option<T> option);
+        IEnumerable<string> RemainingArgs { get; }
     }
 
     public class ResultCollection<TResult> : IResultCollection
     {
-        private readonly ParsingResult<TResult> _failedResult;
+        private readonly IParsingResult<TResult> _failedResult;
         private readonly Dictionary<IOption, IParsingResult> _results;
         public IEnumerable<string> RemainingArgs { get; }
 
@@ -23,28 +24,28 @@ namespace CanvasCommon.CommandLineParsing.OptionProcessing
             RemainingArgs = remainingArgs;
         }
 
-        public ResultCollection(ParsingResult<TResult> failedResult)
+        public ResultCollection(IParsingResult<TResult> failedResult)
         {
             _failedResult = failedResult;
             RemainingArgs = Enumerable.Empty<string>();
         }
 
-        public ParsingResult<T> Get<T>(Option<T> option)
+        public IParsingResult<T> Get<T>(Option<T> option)
         {
             if (_failedResult != null)
                 return ParsingResult<T>.FailedResult(_failedResult.ErrorMessage);
-            return (ParsingResult<T>)_results[option];
+            return (IParsingResult<T>)_results[option];
         }
 
         bool IResultCollection.Validate(out IParsingResult failedResult)
         {
-            ParsingResult<TResult> failedResult2;
+            IParsingResult<TResult> failedResult2;
             bool b = Validate(out failedResult2);
             failedResult = failedResult2;
             return b;
         }
 
-        public bool Validate(out ParsingResult<TResult> failedResult, bool allowUnparsedArguments = false)
+        public bool Validate(out IParsingResult<TResult> failedResult, bool allowUnparsedArguments = false)
         {
             if (_failedResult != null)
             {

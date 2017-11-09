@@ -10,7 +10,7 @@ namespace Canvas.Wrapper
         public Dictionary<NexteraManifest, IFileLocation> WriteManifests(SampleSet<TCanvasEnrichmentInput> inputs, IDirectoryLocation sandbox)
         {
             var manifests = new Dictionary<NexteraManifest, IFileLocation>();
-            foreach (var input in inputs.SampleData)
+            foreach (var input in inputs.Values)
             {
                 var manifest = input.NexteraManifest;
                 if (manifests.ContainsKey(manifest)) continue;
@@ -29,7 +29,7 @@ namespace Canvas.Wrapper
         public Dictionary<NexteraManifest, IFileLocation> CreateDbSnpVcfForManifests(SampleSet<TCanvasEnrichmentInput> inputs, IDirectoryLocation sandBox, ICanvasAnnotationFileProvider annotationFileProvider)
         {
             var dbSnpVcfs = new Dictionary<NexteraManifest, IFileLocation>();
-            foreach (var input in inputs.SampleData)
+            foreach (var input in inputs.Values)
             {
                 var manifest = input.NexteraManifest;
                 if (dbSnpVcfs.ContainsKey(manifest)) continue;

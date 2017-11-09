@@ -42,7 +42,7 @@ namespace CanvasTest
                 ref usableFragmentCount, bins, ref binIndexStart);
             FragmentBinner.BinTask.BinOneAlignment(alignment2, qualityThreshold, readNameToBinIndex, samePositionReadNames,
                 ref usableFragmentCount, bins, ref binIndexStart);
-            Assert.Equal(bins[0].Count, 1);
+            Assert.Equal(1, bins[0].Count);
 
             // First read passes filters
             bins[0].Count = 0; // reset bin count
@@ -51,7 +51,7 @@ namespace CanvasTest
                 ref usableFragmentCount, bins, ref binIndexStart);
             FragmentBinner.BinTask.BinOneAlignment(alignment2, qualityThreshold, readNameToBinIndex, samePositionReadNames,
                 ref usableFragmentCount, bins, ref binIndexStart);
-            Assert.Equal(bins[0].Count, 0);
+            Assert.Equal(0, bins[0].Count);
 
             // Second read passes filters
             bins[0].Count = 0; // reset bin count
@@ -61,7 +61,7 @@ namespace CanvasTest
                 ref usableFragmentCount, bins, ref binIndexStart);
             FragmentBinner.BinTask.BinOneAlignment(alignment2, qualityThreshold, readNameToBinIndex, samePositionReadNames,
                 ref usableFragmentCount, bins, ref binIndexStart);
-            Assert.Equal(bins[0].Count, 0);
+            Assert.Equal(0, bins[0].Count);
 
             // Both fail filters
             bins[0].Count = 0; // reset bin count
@@ -71,7 +71,7 @@ namespace CanvasTest
                 ref usableFragmentCount, bins, ref binIndexStart);
             FragmentBinner.BinTask.BinOneAlignment(alignment2, qualityThreshold, readNameToBinIndex, samePositionReadNames,
                 ref usableFragmentCount, bins, ref binIndexStart);
-            Assert.Equal(bins[0].Count, 0);
+            Assert.Equal(0, bins[0].Count);
         }
 
         [Fact]
@@ -131,6 +131,16 @@ namespace CanvasTest
                     exceptionCaught = true;
             }
             Assert.True(exceptionCaught);
+        }
+
+        [Fact]
+        public void TestSerializeIntermediateData()
+        {
+            using (var stream = new MemoryStream())
+            {
+                var data = new CanvasBin.CanvasBin.IntermediateData();
+                ProtoBuf.Serializer.Serialize(stream, data);
+            }
         }
     }
 }

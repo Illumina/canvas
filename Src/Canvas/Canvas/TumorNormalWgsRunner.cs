@@ -14,11 +14,11 @@ namespace Canvas
         public CommonOptions CommonOptions { get; }
         public SingleSampleCommonOptions SingleSampleCommonOptions { get; }
 
-        public TumorNormalWgsRunner(CommonOptions commonOptions, SingleSampleCommonOptions singleSampleCommonOptions, TumorNormalOptions tumorNormalOptions)
+        public TumorNormalWgsRunner(TumorNormalWgsInput input)
         {
-            _tumorNormalOptions = tumorNormalOptions;
-            CommonOptions = commonOptions;
-            SingleSampleCommonOptions = singleSampleCommonOptions;
+            _tumorNormalOptions = input.TumorNormalOptions;
+            CommonOptions = input.CommonOptions;
+            SingleSampleCommonOptions = input.SingleSampleCommonOptions;
         }
 
         public void Run(ILogger logger, ICheckpointRunner checkpointRunner, IWorkManager workManager, IFileLocation runtimeExecutable)
@@ -30,7 +30,7 @@ namespace Canvas
 
         private CanvasCallset GetCallset()
         {
-            AnalysisDetails analysisDetails = new AnalysisDetails(CommonOptions.OutputDirectory, CommonOptions.WholeGenomeFasta, CommonOptions.KmerFasta, CommonOptions.FilterBed, SingleSampleCommonOptions.PloidyBed, null);
+            AnalysisDetails analysisDetails = new AnalysisDetails(CommonOptions.OutputDirectory, CommonOptions.WholeGenomeFasta, CommonOptions.KmerFasta, CommonOptions.FilterBed, SingleSampleCommonOptions.PloidyVcf, null);
             IFileLocation outputVcfPath = CommonOptions.OutputDirectory.GetFileLocation("CNV.vcf.gz");
             CanvasCallset callSet = new CanvasCallset(
                     _tumorNormalOptions.TumorBam,

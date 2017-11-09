@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using CanvasCommon;
 using CanvasCommon.CommandLineParsing.CoreOptionTypes;
 using CanvasCommon.CommandLineParsing.OptionProcessing;
 using Illumina.Common.FileSystem;
@@ -12,7 +13,7 @@ namespace Canvas.CommandLineParsing
     internal class SmallPedigreeOptionsParser : Option<SmallPedigreeOptions>
     {
         public const string PloidyVcfOptionName = "ploidy-vcf";
-        internal static readonly ValueOption<SampleType> SampleType = ValueOption<SampleType>.CreateWithDefault(CommandLineParsing.SampleType.Other, "Pedigree member type (either proband, mother, father or other). Default is other", "pedigree-member");
+        internal static readonly ValueOption<SampleType> SampleType = ValueOption<SampleType>.CreateWithDefault(CanvasCommon.SampleType.Other, "Pedigree member type (either proband, mother, father or other). Default is other", "pedigree-member");
         private static readonly StringOption SampleName = StringOption.Create("sample name. Default is SM tag in RG header of the .bam", SingleSampleCommonOptionsParser.SampleName.Info.Names.ToArray());
         internal static readonly PositionalOption<IFileLocation, SampleType, string, SmallPedigreeSampleOptions> Bams =
             new PositionalOption<IFileLocation, SampleType, string, SmallPedigreeSampleOptions>(Parse, true,
@@ -26,7 +27,7 @@ namespace Canvas.CommandLineParsing
         private static readonly FileOption CommonCnvsBed = FileOption.Create(".bed file containing regions of known common CNVs", "common-cnvs-bed");
         private static readonly ExclusiveFileOption BAlleleSites = ExclusiveFileOption.CreateRequired(SampleBAlleleSites, PopulationBAlleleSites);
 
-        private static ParsingResult<SmallPedigreeSampleOptions> Parse(IFileLocation bam, SampleType sampleType, string sampleName)
+        private static IParsingResult<SmallPedigreeSampleOptions> Parse(IFileLocation bam, SampleType sampleType, string sampleName)
         {
             if (sampleName == null)
             {
@@ -54,30 +55,57 @@ namespace Canvas.CommandLineParsing
             };
         }
 
-        public override ParsingResult<SmallPedigreeOptions> Parse(SuccessfulResultCollection parseInput)
+        public override IParsingResult<SmallPedigreeOptions> Parse(SuccessfulResultCollection parseInput)
         {
             var bams = parseInput.Get(Bams);
             var ploidyVcf = parseInput.Get(PloidyVcf);
             var bAlleleSites = parseInput.Get(BAlleleSites);
             var commonCnvsBed = parseInput.Get(CommonCnvsBed);
 
-            ParsingResult<SmallPedigreeOptions> failedResult;
+            IParsingResult<SmallPedigreeOptions> failedResult;
             if (HasMoreThanOneSameSampleType(bams, out failedResult))
+                return failedResult;
+            if (HasUnavailableSampleTypeCombinations(bams, out failedResult))
                 return failedResult;
             return ParsingResult<SmallPedigreeOptions>.SuccessfulResult(new SmallPedigreeOptions(bams, commonCnvsBed, bAlleleSites.Result, bAlleleSites.MatchedOption.Equals(PopulationBAlleleSites), ploidyVcf));
         }
 
-        private bool HasMoreThanOneSameSampleType(List<SmallPedigreeSampleOptions> bams, out ParsingResult<SmallPedigreeOptions> failedResult)
+        private bool HasUnavailableSampleTypeCombinations(List<SmallPedigreeSampleOptions> bams, out IParsingResult<SmallPedigreeOptions> failedResult)
         {
             failedResult = null;
-            if (HasMoreThanOne(bams, CommandLineParsing.SampleType.Mother, out failedResult) ||
-                HasMoreThanOne(bams, CommandLineParsing.SampleType.Father, out failedResult) ||
-                HasMoreThanOne(bams, CommandLineParsing.SampleType.Proband, out failedResult))
+            bool haveProband = bams.Any(x => x.SampleType == CanvasCommon.SampleType.Proband);
+            bool haveMother = bams.Any(x => x.SampleType == CanvasCommon.SampleType.Mother);
+            bool haveFather = bams.Any(x => x.SampleType == CanvasCommon.SampleType.Father);
+            bool haveSibling = bams.Any(x => x.SampleType == CanvasCommon.SampleType.Sibling);
+            bool haveOther = bams.Any(x => x.SampleType == CanvasCommon.SampleType.Other);
+
+            bool haveTrio = haveProband && haveMother && haveFather;
+
+            if (haveTrio && haveOther)
+            {
+                failedResult = ParsingResult<SmallPedigreeOptions>.FailedResult("SampleType other with trio or quad is not currently supported");
+                return true;
+            }
+            if (haveSibling && !haveProband)
+            {
+                failedResult = ParsingResult<SmallPedigreeOptions>.FailedResult("SampleType sibling without proband information is not currently supported");
+                return true;
+            }
+            return false;
+        }
+
+
+        private bool HasMoreThanOneSameSampleType(List<SmallPedigreeSampleOptions> bams, out IParsingResult<SmallPedigreeOptions> failedResult)
+        {
+            failedResult = null;
+            if (HasMoreThanOne(bams, CanvasCommon.SampleType.Mother, out failedResult) ||
+                HasMoreThanOne(bams, CanvasCommon.SampleType.Father, out failedResult) ||
+                HasMoreThanOne(bams, CanvasCommon.SampleType.Proband, out failedResult))
                 return true;
             return false;
         }
 
-        private bool HasMoreThanOne(List<SmallPedigreeSampleOptions> bams, SampleType sampleType, out ParsingResult<SmallPedigreeOptions> failedResult)
+        private bool HasMoreThanOne(List<SmallPedigreeSampleOptions> bams, SampleType sampleType, out IParsingResult<SmallPedigreeOptions> failedResult)
         {
             failedResult = null;
             var sameType = bams.Where(bam => bam.SampleType == sampleType);

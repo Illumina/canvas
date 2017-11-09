@@ -1,8 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using Illumina.Common;
-using Isas.SequencingFiles;
 using Isas.SequencingFiles.Vcf;
 
 namespace CanvasCommon
@@ -59,9 +56,9 @@ namespace CanvasCommon
         {
             if (!PloidyByChromosome.ContainsKey(segment.Chr)) return 2;
             int[] baseCounts = new int[5];
-            baseCounts[2] = segment.End - segment.Begin;
+            baseCounts[2] = segment.Length;
 
-            foreach (PloidyInterval interval in this.PloidyByChromosome[segment.Chr])
+            foreach (PloidyInterval interval in PloidyByChromosome[segment.Chr])
             {
                 if (interval.Ploidy == 2) continue;
                 int overlapStart = Math.Max(segment.Begin, interval.Start);
@@ -70,47 +67,61 @@ namespace CanvasCommon
                 int overlapBases = overlapEnd - overlapStart;
                 if (overlapBases < 0) continue;
                 baseCounts[2] -= overlapBases;
-                baseCounts[interval.Ploidy] += overlapBases; // ASSUMPTION: Bed file ploidy shouldn't be >4 (i.e. we wouldn't handle an XXXXXY genome):
+                baseCounts[interval.Ploidy] += overlapBases; // ASSUMPTION: Vcf file ploidy shouldn't be >4 (i.e. we wouldn't handle an XXXXXY genome):
             }
             int bestCount = 0;
-            int referenceCN = 2;
-            for (int CN = 0; CN < baseCounts.Length; CN++)
+            int referenceCopyNumber = 2;
+            for (int copyNumber = 0; copyNumber < baseCounts.Length; copyNumber++)
             {
-                if (baseCounts[CN] > bestCount)
+                if (baseCounts[copyNumber] > bestCount)
                 {
-                    bestCount = baseCounts[CN];
-                    referenceCN = CN;
+                    bestCount = baseCounts[copyNumber];
+                    referenceCopyNumber = copyNumber;
                 }
             }
-            return referenceCN;
+            return referenceCopyNumber;
         }
 
-        public static PloidyInfo LoadPloidyFromVcfFile(string vcfPath, string sampleName)
+        // Only one sample column allowed, if no sampleId provided, 
+        public static PloidyInfo LoadPloidyFromVcfFileNoSampleId(string vcfPath)
+        {
+            // check how many sample columns in the VCF file
+            using (VcfReader reader = new VcfReader(vcfPath))
+            {
+                var sampleCount = reader.Samples.Count;
+                if (sampleCount == 0)
+                    throw new ArgumentException(
+                        $"File '{vcfPath}' does not contain any genotype column");
+                else if (sampleCount > 1)
+                    throw new ArgumentException(
+                        $"File '{vcfPath}' cannot have more than one genotype columns when no sample ID provided'");
+            }
+            return LoadPloidyFromVcfFile(vcfPath, 0);
+        }
+
+        private static PloidyInfo LoadPloidyFromVcfFile(string vcfPath, int sampleIndex)
         {
             PloidyInfo ploidy = new PloidyInfo();
 
             using (VcfReader reader = new VcfReader(vcfPath))
             {
-                int sampleIndex = reader.Samples.IndexOf(sampleName);
-                    if (sampleIndex == -1)
-                        throw new ArgumentException(
-                            $"File '{vcfPath}' does not contain a genotype column for sample '{sampleName}'");
-
-                ploidy.HeaderLine = string.Join(" ", reader.HeaderLines);
+                //the ploidy.vcf header lines need to be updated to include reference sex chromosome info for one or multiple samples
+                //ploidy.HeaderLine = string.Join(" ", reader.HeaderLines);
 
                 while (true)
                 {
-                    VcfVariant record;
-                    bool result = reader.GetNextVariant(out record);
+                    bool result = reader.GetNextVariant(out var record);
                     if (!result) break;
                     string chromosome = record.ReferenceName;
                     if (!ploidy.PloidyByChromosome.ContainsKey(chromosome))
                     {
                         ploidy.PloidyByChromosome[chromosome] = new List<PloidyInterval>();
                     }
-                    PloidyInterval interval = new PloidyInterval(chromosome);
-                    interval.Start = record.ReferencePosition;
-                    interval.End = int.Parse(record.InfoFields["END"]);
+                    PloidyInterval interval = new PloidyInterval(chromosome)
+                    {
+                        Start = record.ReferencePosition,
+                        End = int.Parse(record.InfoFields["END"])
+                    };
                     var genotypeColumn = record.GenotypeColumns[sampleIndex];
                     if (genotypeColumn.ContainsKey("CN"))
                     {
@@ -125,41 +136,18 @@ namespace CanvasCommon
             return ploidy;
         }
 
-        public static PloidyInfo LoadPloidyFromBedFile(string filePath)
+
+        public static PloidyInfo LoadPloidyFromVcfFile(string vcfPath, string sampleId)
         {
-            PloidyInfo ploidy = new PloidyInfo();
-            if (string.IsNullOrEmpty(filePath)) return ploidy;
-            int count = 0;
-            using (GzipReader reader = new GzipReader(filePath))
+            int sampleIndex;
+            using (VcfReader reader = new VcfReader(vcfPath))
             {
-                while (true)
-                {
-                    string fileLine = reader.ReadLine();
-                    if (fileLine == null) break;
-                    // save anything that looks like a vcf header line (we will add it to the output vcf)
-                    // TODO: support adding multiple header lines to the output vcf
-                    if (fileLine.StartsWith("##"))
-                    {
-                        ploidy.HeaderLine = fileLine.Trim();
-                        continue;
-                    }
-                    if (fileLine.Length == 0 || fileLine[0] == '#') continue;
-                    string[] bits = fileLine.Split('\t');
-                    string chromosome = bits[0];
-                    if (!ploidy.PloidyByChromosome.ContainsKey(chromosome))
-                    {
-                        ploidy.PloidyByChromosome[chromosome] = new List<PloidyInterval>();
-                    }
-                    PloidyInterval interval = new PloidyInterval(chromosome);
-                    interval.Start = int.Parse(bits[1]);
-                    interval.End = int.Parse(bits[2]);
-                    interval.Ploidy = int.Parse(bits[4]);
-                    ploidy.PloidyByChromosome[chromosome].Add(interval);
-                    count++;
-                }
+                sampleIndex = reader.Samples.IndexOf(sampleId);
+                if (sampleIndex == -1)
+                    throw new ArgumentException(
+                        $"File '{vcfPath}' does not contain a genotype column for sample '{sampleId}'");
             }
-            Console.WriteLine("Reference ploidy: Loaded {0} intervals across {1} chromosomes", count, ploidy.PloidyByChromosome.Keys.Count);
-            return ploidy;
+            return LoadPloidyFromVcfFile(vcfPath, sampleIndex);
         }
     }
 
@@ -187,7 +175,7 @@ namespace CanvasCommon
     /// </summary>
     public class SegmentPloidy
     {
-        public int ID; // A 0-based index for this ploidy, for array indexing.
+        public int Index; // A 0-based index for this ploidy, for array indexing.
         public int CopyNumber;
         public int MajorChromosomeCount;
         public double MinorAlleleFrequency; // for PURE tumor
@@ -207,16 +195,16 @@ namespace CanvasCommon
     /// </summary>
     public class ModelPoint
     {
-        public double MAF;
+        public double Maf;
         public double Coverage;
         public double Weight;
-        public double MAFWeight;
-        public int CN;
+        public double MafWeight;
+        public int CopyNumber;
         public int? ClusterId;
         public int? FinalClusterId;
         public double? KnearestNeighbour;
         public SegmentPloidy Ploidy;
-        public double EmpiricalMAF;
+        public double EmpiricalMaf;
         public double EmpiricalCoverage;
         public double Distance;
     }

@@ -6,8 +6,6 @@
     <AssemblyName>CanvasPartition</AssemblyName>
     <OutputType>Exe</OutputType>
     <PackageId>CanvasPartition</PackageId>
-    <RuntimeFrameworkVersion>1.1.0</RuntimeFrameworkVersion>
-    <PackageTargetFallback>$(PackageTargetFallback);dnxcore50</PackageTargetFallback>
     <GenerateAssemblyTitleAttribute>false</GenerateAssemblyTitleAttribute>
     <GenerateAssemblyDescriptionAttribute>false</GenerateAssemblyDescriptionAttribute>
     <GenerateAssemblyConfigurationAttribute>false</GenerateAssemblyConfigurationAttribute>
@@ -17,15 +15,19 @@
     <GenerateAssemblyInformationalVersionAttribute>false</GenerateAssemblyInformationalVersionAttribute>
     <GenerateAssemblyCompanyAttribute>false</GenerateAssemblyCompanyAttribute>
     <GenerateAssemblyCopyrightAttribute>false</GenerateAssemblyCopyrightAttribute>
+    <Platforms>x64</Platforms>
   </PropertyGroup>
 
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
-    <OutputPath>..\x64\CanvasCore\</OutputPath>
-  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" />
 
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <OutputPath>..\x64\CanvasCore\</OutputPath>
-  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" />
+
+  <Target Name="CanvasPartitionCopyTargetBuild" AfterTargets="Build">
+    <Exec Command="robocopy /MIR $(TargetDir) $(MSBuildThisFileDirectory)..\Canvas\bin\$(Platform)\$(Configuration)\$(TargetFramework)\$(PackageId) /XD publish || if %ERRORLEVEL% LSS 8 exit 0" />
+  </Target>
+  <Target Name="CanvasPartitionCopyTargetPublish" AfterTargets="Publish">
+    <Exec Command="robocopy /MIR $(ProjectDir)$(PublishDir) $(MSBuildThisFileDirectory)..\Canvas\bin\$(Platform)\$(Configuration)\$(TargetFramework)\publish\$(PackageId)  || if %ERRORLEVEL% LSS 8 exit 0" />
+  </Target>
 
   <ItemGroup>
     <ProjectReference Include="..\CanvasCommon\CanvasCommon.csproj" />
@@ -36,9 +38,10 @@
     </None>
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="Illumina.Common" Version="3.12.0.238" />
-    <PackageReference Include="Isas.SequencingFiles" Version="4.2.1.304" />
+    <PackageReference Include="Illumina.Common" Version="4.13.0.353" />
+    <PackageReference Include="Isas.SequencingFiles" Version="5.5.0.395" />
     <PackageReference Include="MathNet.Numerics.Core" Version="3.17.0" />
+    <PackageReference Include="protobuf-net" Version="2.3.2" />
   </ItemGroup>
 
 </Project>

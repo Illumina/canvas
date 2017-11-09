@@ -6,11 +6,28 @@ using CanvasCommon.CommandLineParsing.OptionProcessing;
 using Illumina.Common.FileSystem;
 using Xunit;
 using System.Linq;
+using CanvasCommon;
+using Isas.Framework.Checkpointing;
+using Isas.Framework.FrameworkFactory;
+using Isas.Framework.Logging;
+using Isas.Framework.Utilities;
+using Isas.Framework.WorkManagement;
+using NSubstitute;
 
 namespace CanvasTest.Canvas.CommandLineParsing
 {
     public class ModeParserTests
     {
+        private FrameworkServices _services;
+        private ICheckpointRunner _checkpointer;
+
+        public ModeParserTests()
+        {
+            var logger = Substitute.For<ILogger>();
+            _checkpointer = Substitute.For<ICheckpointRunner>();
+            _services = new FrameworkServices(logger, _checkpointer, Substitute.For<IWorkManager>());
+        }
+
         private const string Version = "Version";
         private const string Copyright = "Copyright";
 
@@ -33,18 +50,17 @@ namespace CanvasTest.Canvas.CommandLineParsing
             };
 
             // act
-            var result = parser.Parse(noArgs, standardWriter, errorWriter);
+            var result = parser.Run(noArgs, standardWriter, errorWriter);
             string errorOutput = errorWriter.ToString();
 
             // assert
-            Assert.False(result.Success);
+            Assert.Equal(-1, result);
             Assert.Contains(messageToDisplay, errorOutput);
             Assert.Empty(standardWriter.ToString());
         }
 
-        private static MainParser GetMainParser(ModeParser germlineWgsModeParser)
+        private static MainParser GetMainParser(IModeParser germlineWgsModeParser)
         {
-
             return new MainParser(Version, Copyright, germlineWgsModeParser);
         }
 
@@ -68,11 +84,11 @@ namespace CanvasTest.Canvas.CommandLineParsing
             };
 
             // act
-            var result = parser.Parse(args, standardWriter, errorWriter);
+            var result = parser.Run(args, standardWriter, errorWriter);
             string standardOutput = standardWriter.ToString();
 
             // assert
-            Assert.True(result.Success);
+            Assert.Equal(0, result);
             Assert.Contains(messageToDisplay, standardOutput);
             Assert.Empty(errorWriter.ToString());
         }
@@ -98,11 +114,11 @@ namespace CanvasTest.Canvas.CommandLineParsing
             };
 
             // act
-            var result = parser.Parse(args, standardWriter, errorWriter);
+            var result = parser.Run(args, standardWriter, errorWriter);
             string errorOutput = errorWriter.ToString();
 
             // assert
-            Assert.False(result.Success);
+            Assert.Equal(-1, result);
             Assert.Contains(messageToDisplay, errorOutput);
             Assert.Empty(standardWriter.ToString());
         }
@@ -123,17 +139,17 @@ namespace CanvasTest.Canvas.CommandLineParsing
             };
 
             // act
-            parser.Parse(modeArgs, standardWriter, errorWriter);
+            var result = parser.Run(modeArgs, standardWriter, errorWriter);
             string errorOutput = errorWriter.ToString();
 
             // assert
+            Assert.NotEqual(0, result);
             Assert.Contains(messageToDisplay, errorOutput);
             Assert.Empty(standardWriter.ToString());
         }
 
-        [Theory]
-        [InlineData("required")]
-        public void Parse_ModeWithVersion_ReturnsSuccecssAndDisplaysVersion(string messageToDisplay)
+        [Fact]
+        public void Parse_ModeWithVersion_ReturnsSuccessAndDisplaysVersion()
         {
             StringWriter standardWriter = new StringWriter();
             StringWriter errorWriter = new StringWriter();
@@ -147,12 +163,37 @@ namespace CanvasTest.Canvas.CommandLineParsing
             };
 
             // act
-            var result = parser.Parse(modeArgs, standardWriter, errorWriter);
+            var result = parser.Run(modeArgs, standardWriter, errorWriter);
             string output = standardWriter.ToString().Trim();
 
             // assert
-            Assert.True(result.Success);
+            Assert.Equal(0, result);
             Assert.Equal(Version, output);
+            Assert.Empty(errorWriter.ToString());
+        }
+
+        [Theory]
+        [InlineData("Mode-specific options:")]
+        public void Parse_ModeWithHelp_ReturnsSuccessAndDisplaysHelp(string messageToDisplay)
+        {
+            StringWriter standardWriter = new StringWriter();
+            StringWriter errorWriter = new StringWriter();
+
+            // arrange
+            GermlineWgsModeParser germlineWgsModeParser = new GermlineWgsModeParser("WGS", "Run Canvas from WGS data");
+            MainParser parser = GetMainParser(germlineWgsModeParser);
+            string[] modeArgs =
+            {
+                "WGS", "-h"
+            };
+
+            // act
+            var result = parser.Run(modeArgs, standardWriter, errorWriter);
+            string output = standardWriter.ToString().Trim();
+
+            // assert
+            Assert.Equal(0, result);
+            Assert.Contains(messageToDisplay, output);
             Assert.Empty(errorWriter.ToString());
         }
 
@@ -201,7 +242,7 @@ namespace CanvasTest.Canvas.CommandLineParsing
             string inputArgument1 = "input";
             string inputArgument2 = "input2";
             string inputArgument3 = "input3";
-            Func<string, string, string, ParsingResult<Tuple<string, string, string>>> parse = (value1, value2, value3) => ParsingResult<Tuple<string, string, string>>.SuccessfulResult(Tuple.Create(value1, value2, value3));
+            Func<string, string, string, IParsingResult<Tuple<string, string, string>>> parse = (value1, value2, value3) => ParsingResult<Tuple<string, string, string>>.SuccessfulResult(Tuple.Create(value1, value2, value3));
             var option1 = StringOption.CreateRequired("value1 option", "value1");
             var option2 = StringOption.CreateRequired("value2 option", "value2");
             var option3 = StringOption.CreateRequired("value3 option", "value2");
@@ -227,7 +268,7 @@ namespace CanvasTest.Canvas.CommandLineParsing
             // arrange
             string inputArgument1 = "input";
             string inputArgument2 = "input2";
-            Func<string, string, string, ParsingResult<Tuple<string, string, string>>> parse = (value1, value2, value3) => ParsingResult<Tuple<string, string, string>>.SuccessfulResult(Tuple.Create(value1, value2, value3));
+            Func<string, string, string, IParsingResult<Tuple<string, string, string>>> parse = (value1, value2, value3) => ParsingResult<Tuple<string, string, string>>.SuccessfulResult(Tuple.Create(value1, value2, value3));
             var option1 = StringOption.CreateRequired("value1 option", "value1");
             var option2 = StringOption.CreateRequired("value2 option", "value2");
             var option3 = StringOption.Create("value3 option", "value2");
@@ -244,7 +285,7 @@ namespace CanvasTest.Canvas.CommandLineParsing
             Assert.True(result.Success);
             Assert.Equal(inputArgument1, result.Result[0].Item1);
             Assert.Equal(inputArgument2, result.Result[0].Item2);
-            Assert.Equal(null, result.Result[0].Item3);
+            Assert.Null(result.Result[0].Item3);
         }
 
         [Fact]
@@ -252,7 +293,7 @@ namespace CanvasTest.Canvas.CommandLineParsing
         {
             // arrange
             string inputArgument1 = "input";
-            Func<string, string, string, ParsingResult<Tuple<string, string, string>>> parse = (value1, value2, value3) => ParsingResult<Tuple<string, string, string>>.SuccessfulResult(Tuple.Create(value1, value2, value3));
+            Func<string, string, string, IParsingResult<Tuple<string, string, string>>> parse = (value1, value2, value3) => ParsingResult<Tuple<string, string, string>>.SuccessfulResult(Tuple.Create(value1, value2, value3));
             var option1 = StringOption.CreateRequired("value1 option", "value1");
             var option2 = StringOption.CreateRequired("value2 option", "value2");
             var option3 = StringOption.Create("value3 option", "value2");
@@ -272,7 +313,7 @@ namespace CanvasTest.Canvas.CommandLineParsing
         [Fact]
         public void ParseRequiredPositionalOption_WithNoInputArguments_ReturnsFailedResult()
         {
-            Func<string, string, string, ParsingResult<Tuple<string, string, string>>> parse = (value1, value2, value3) => ParsingResult<Tuple<string, string, string>>.SuccessfulResult(Tuple.Create(value1, value2, value3));
+            Func<string, string, string, IParsingResult<Tuple<string, string, string>>> parse = (value1, value2, value3) => ParsingResult<Tuple<string, string, string>>.SuccessfulResult(Tuple.Create(value1, value2, value3));
             var option1 = StringOption.Create("value1 option", "value1");
             var option2 = StringOption.Create("value2 option", "value2");
             var option3 = StringOption.Create("value3 option", "value2");
@@ -291,7 +332,7 @@ namespace CanvasTest.Canvas.CommandLineParsing
         [Fact]
         public void ParsePositionalOption_WithTooManyInputArguments_ReturnsFailedResult()
         {
-            Func<string, string, string, ParsingResult<Tuple<string, string, string>>> parse = (value1, value2, value3) => ParsingResult<Tuple<string, string, string>>.SuccessfulResult(Tuple.Create(value1, value2, value3));
+            Func<string, string, string, IParsingResult<Tuple<string, string, string>>> parse = (value1, value2, value3) => ParsingResult<Tuple<string, string, string>>.SuccessfulResult(Tuple.Create(value1, value2, value3));
             var option1 = StringOption.Create("value1 option", "value1");
             var option2 = StringOption.Create("value2 option", "value2");
             var option3 = StringOption.Create("value3 option", "value2");
@@ -308,7 +349,7 @@ namespace CanvasTest.Canvas.CommandLineParsing
             var result = collection.Parse(stringInputArgument);
 
             // assert
-            ParsingResult<Tuple<Tuple<string, string, string>, string>> failedResult;
+            IParsingResult<Tuple<Tuple<string, string, string>, string>> failedResult;
             Assert.False(result.Validate(out failedResult));
         }
 
@@ -336,7 +377,7 @@ namespace CanvasTest.Canvas.CommandLineParsing
             };
 
             // act
-            ParsingResult<string> result = valueOption.Parse(stringInputArgument);
+            IParsingResult<string> result = valueOption.Parse(stringInputArgument);
 
             // assert
             Assert.False(result.Success);
@@ -360,7 +401,7 @@ namespace CanvasTest.Canvas.CommandLineParsing
             };
 
                 // act
-                ParsingResult<CommonOptions> result = commonOptionsParser.Parse(stringInputArgument);
+                IParsingResult<CommonOptions> result = commonOptionsParser.Parse(stringInputArgument);
 
                 // assert
                 Assert.Equal("", result.ErrorMessage);
@@ -389,7 +430,7 @@ namespace CanvasTest.Canvas.CommandLineParsing
             };
 
                 // act
-                ParsingResult<CommonOptions> result = commonOptionsParser.Parse(stringInputArgument);
+                IParsingResult<CommonOptions> result = commonOptionsParser.Parse(stringInputArgument);
 
                 // assert
                 Assert.False(result.Success);
@@ -406,23 +447,19 @@ namespace CanvasTest.Canvas.CommandLineParsing
             StringWriter standardWriter = new StringWriter();
             StringWriter errorWriter = new StringWriter();
 
-            using (TemporaryDirectoryFixture tempDirectory = new TemporaryDirectoryFixture())
+            // arrange
+            GermlineWgsModeParser germlineWgsModeParser = new GermlineWgsModeParser(name, description);
+            MainParser parser = GetMainParser(germlineWgsModeParser);
+            string[] args =
             {
-
-                // arrange
-                GermlineWgsModeParser germlineWgsModeParser = new GermlineWgsModeParser(name, description);
-                MainParser parser = GetMainParser(germlineWgsModeParser);
-                string[] args =
-                {
                 "-h"
             };
 
-                // act
-                var result = parser.Parse(args, standardWriter, errorWriter);
+            // act
+            var result = parser.Run(args, standardWriter, errorWriter);
 
-                // assert
-                Assert.True(result.Success);
-            }
+            // assert
+            Assert.Equal(0, result);
         }
 
         [Fact]
@@ -506,77 +543,67 @@ namespace CanvasTest.Canvas.CommandLineParsing
         [Fact]
         public void ParseRequiredExclusiveOption_WithNeitherOptionSpecified_ReturnsFailedParseResult()
         {
-            using (TemporaryDirectoryFixture tempDirectory = new TemporaryDirectoryFixture())
+            FileOption option1 = FileOption.CreateRequired("file1 option", "file1");
+            FileOption option2 = FileOption.CreateRequired("file2 option", "file2");
+            // arrange
+            ExclusiveFileOption multiFileOption = ExclusiveFileOption.CreateRequired(option1, option2);
+            string[] args =
             {
 
-                FileOption option1 = FileOption.CreateRequired("file1 option", "file1");
-                FileOption option2 = FileOption.CreateRequired("file2 option", "file2");
-                // arrange
-                ExclusiveFileOption multiFileOption = ExclusiveFileOption.CreateRequired(option1, option2);
-                string[] args =
-                {
+            };
 
-                };
+            // act
+            var result = multiFileOption.Parse(args);
 
-                // act
-                var result = multiFileOption.Parse(args);
-
-                // assert
-                Assert.Contains("must be specified", result.ErrorMessage);
-                Assert.False(result.Success);
-            }
+            // assert
+            Assert.Contains("must be specified", result.ErrorMessage);
+            Assert.False(result.Success);
         }
 
         [Fact]
         public void ParseDictionaryOption_WithMultipleKeyValueArguments_ReturnsDictionary()
         {
-            using (TemporaryDirectoryFixture tempDirectory = new TemporaryDirectoryFixture())
+            // arrange
+            DictionaryOption dictOption = DictionaryOption.Create("dictionary", "kvp");
+            string key1 = "key1";
+            string value1 = "value1";
+            string key2 = "key2";
+            string value2 = "value2";
+            string[] args =
             {
-
-                // arrange
-                DictionaryOption dictOption = DictionaryOption.Create("dictionary", "kvp");
-                string key1 = "key1";
-                string value1 = "value1";
-                string key2 = "key2";
-                string value2 = "value2";
-                string[] args =
-                {
-                "--kvp", $"{key1}, {value1}","--kvp",  $"{key2}, {value2}"
+            "--kvp", $"{key1}, {value1}","--kvp",  $"{key2}, {value2}"
             };
 
-                // act
-                var result = dictOption.Parse(args);
+            // act
+            var result = dictOption.Parse(args);
 
-                // assert
-                Assert.Equal("", result.ErrorMessage);
-                Assert.True(result.Success);
-                Assert.Equal(value1, result.Result[key1]);
-                Assert.Equal(value2, result.Result[key2]);
-            }
+            // assert
+            Assert.Equal("", result.ErrorMessage);
+            Assert.True(result.Success);
+            Assert.Equal(value1, result.Result[key1]);
+            Assert.Equal(value2, result.Result[key2]);
         }
 
         [Fact]
         public void ParseDictionaryOption_WithKeyOnlyArgument_ReturnsFailedResult()
         {
-            using (TemporaryDirectoryFixture tempDirectory = new TemporaryDirectoryFixture())
-            {
 
-                // arrange
-                DictionaryOption dictOption = DictionaryOption.Create("dictionary", "kvp");
-                string key = "key1";
-                string[] args =
-                {
-                "--kvp", key
+            // arrange
+            DictionaryOption dictOption = DictionaryOption.Create("dictionary", "kvp");
+            string key = "key1";
+            string[] args =
+            {
+            "--kvp", key
             };
 
-                // act
-                var result = dictOption.Parse(args);
+            // act
+            var result = dictOption.Parse(args);
 
-                // assert
-                Assert.False(result.Success);
-                Assert.Contains("Error", result.ErrorMessage);
-                Assert.Contains("format", result.ErrorMessage);
-            }
+            // assert
+            Assert.False(result.Success);
+            Assert.Contains("Error", result.ErrorMessage);
+            Assert.Contains("format", result.ErrorMessage);
+
         }
 
         [Fact]
@@ -662,38 +689,5 @@ namespace CanvasTest.Canvas.CommandLineParsing
             var result = new SmallPedigreeOptionsParser().Parse(stringInputArgument);
             Assert.True(result.Success);
         }
-
-        [Fact]
-        public void Parse_SpwWgsMode_ReturnsSuccess()
-        {
-            // arrange
-            var germlineWgsModeParser = new SmallPedigreeModeParser("SmallPedigree-WGS", "run spw");
-            MainParser parser = GetMainParser(germlineWgsModeParser);
-            string[] args =
-            {
-                "SmallPedigree-WGS",
-                "--bam", "/illumina/scratch/STE_DataAnalysis/repo/SmallPedigreeWorkflow/Chr15Bam/NA12877-PcrFree_S1.REF_chr15.bam", "father", "NA12877-PcrFree",
-                "--bam", "/illumina/scratch/STE_DataAnalysis/repo/SmallPedigreeWorkflow/Chr15Bam/NA12878-PcrFree_S2.REF_chr15.bam", "mother", "NA12878-PcrFree",
-                "--bam", "/illumina/scratch/STE_DataAnalysis/repo/SmallPedigreeWorkflow/Chr15Bam/NA12882-PcrFree_S3.REF_chr15.bam", "proband", "NA12882-PcrFree",
-                "--reference", "/illumina/development/Isas/Genomes/Homo_sapiens/NCBI/GRCh38Decoy/Annotation/Canvas/kmerv2.fa",
-                "--genome-folder", "/illumina/development/Isas/Genomes/Homo_sapiens/NCBI/GRCh38Decoy/Sequence/WholeGenomeFasta",
-                "--filter-bed", "/illumina/development/Isas/Genomes/Homo_sapiens/NCBI/GRCh38Decoy/Annotation/Canvas/filter13.bed",
-                "--output", "/illumina/scratch/bioinfoSD/eroller/SPW_NewCanvas/Temp_06-DetectCNV",
-                "--sample-b-allele-vcf", "/illumina/scratch/bioinfoSD/eroller/SPW_NewCanvas/Pedigree.vcf.gz",
-                "--ploidy-vcf", "/illumina/scratch/bioinfoSD/eroller/SPW_NewCanvas/Temp_06-DetectCNV/ploidy.vcf.gz",
-                "--custom-parameters", "CanvasPartition,--commoncnvs /illumina/development/Isas/Genomes/Homo_sapiens/NCBI/GRCh38Decoy/Annotation/Canvas/commoncnvs.bed"
-            };
-
-            // act
-            using (var standardWriter = new StringWriter())
-            using (var errorWriter = new StringWriter())
-            {
-                var result = parser.Parse(args, standardWriter, errorWriter);
-                // assert
-                Assert.False(result.Success);
-                Assert.Contains("does not exist", result.ErrorMessage);
-            }
-        }
-
     }
 }

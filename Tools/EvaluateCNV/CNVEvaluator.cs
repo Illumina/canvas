@@ -1,9 +1,11 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using CanvasCommon;
 using Illumina.Common;
+using Illumina.Common.FileSystem;
 
 namespace EvaluateCNV
 {
@@ -19,24 +21,25 @@ namespace EvaluateCNV
         public long[,] RoiBaseCount;
 
 
-        public BaseCounter(int maxCN, int minSize, int maxSize, bool hasRoi = false)
+        public BaseCounter(int maxCn, int minSize, int maxSize, bool hasRoi = false)
         {
             MinSize = minSize;
             MaxSize = maxSize;
-            BaseCount = new long[maxCN + 1, maxCN + 1];
+            BaseCount = new long[maxCn + 1, maxCn + 1];
             if (hasRoi)
-                RoiBaseCount = new long[maxCN + 1, maxCN + 1];
+                RoiBaseCount = new long[maxCn + 1, maxCn + 1];
         }
     }
 
-    class CNVEvaluator
+    class CnvEvaluator
     {
-        private CNVChecker _cnvChecker;
+        private readonly CNVChecker _cnvChecker;
         #region Members
-        static int maxCN = 10;
+        private const int MaxCn = 10; // Currently the max copynum is 5 
+
         #endregion
 
-        public CNVEvaluator(CNVChecker cnvChecker)
+        public CnvEvaluator(CNVChecker cnvChecker)
         {
             _cnvChecker = cnvChecker;
         }
@@ -48,14 +51,14 @@ namespace EvaluateCNV
             // the "cnaqc" exclusion set:
             _cnvChecker.InitializeIntervalMetrics();
             bool regionsOfInterest = _cnvChecker.RegionsOfInterest != null;
-            var baseCounters = new List<BaseCounter> { new BaseCounter(maxCN, 0, Int32.MaxValue, regionsOfInterest) };
+            var baseCounters = new List<BaseCounter> { new BaseCounter(MaxCn, 0, Int32.MaxValue, regionsOfInterest) };
             if (options.SplitBySize)
             {
-                baseCounters.Add(new BaseCounter(maxCN, 0, 4999, regionsOfInterest));
-                baseCounters.Add(new BaseCounter(maxCN, 5000, 9999, regionsOfInterest));
-                baseCounters.Add(new BaseCounter(maxCN, 10000, 99999, regionsOfInterest));
-                baseCounters.Add(new BaseCounter(maxCN, 100000, 499999, regionsOfInterest));
-                baseCounters.Add(new BaseCounter(maxCN, 500000, int.MaxValue, regionsOfInterest));
+                baseCounters.Add(new BaseCounter(MaxCn, 0, 4999, regionsOfInterest));
+                baseCounters.Add(new BaseCounter(MaxCn, 5000, 9999, regionsOfInterest));
+                baseCounters.Add(new BaseCounter(MaxCn, 10000, 99999, regionsOfInterest));
+                baseCounters.Add(new BaseCounter(MaxCn, 100000, 499999, regionsOfInterest));
+                baseCounters.Add(new BaseCounter(MaxCn, 500000, int.MaxValue, regionsOfInterest));
             }
 
             _cnvChecker.CountExcludedBasesInTruthSetIntervals();
@@ -77,19 +80,23 @@ namespace EvaluateCNV
                     fileName += baseCounter.MaxSize == int.MaxValue ? "+" : $"_{ Math.Round(baseCounter.MaxSize / 1000.0)}kb";
                 }
                 fileName += ".txt";
-                using (FileStream stream = new FileStream(Path.Combine(outputPath, fileName), includePassingOnly ?
+                var outputDir = new DirectoryLocation(outputPath);
+                outputDir.Create();
+                var outputFile = outputDir.GetFileLocation(fileName);
+                using (FileStream stream = new FileStream(outputFile.FullName, includePassingOnly ?
                 FileMode.Create : FileMode.Append, FileAccess.Write))
                 using (StreamWriter outputWriter = new StreamWriter(stream))
                 {
-                    WriteResults(truthSetPath, cnvCallsPath, outputWriter, baseCounter, includePassingOnly);
+                    outputWriter.NewLine = "\n";
+                    WriteResults(cnvCallsPath, outputWriter, baseCounter, includePassingOnly);
                 }
             }
         }
 
-        private void CalculateMetrics(PloidyInfo ploidyInfo, IEnumerable<CNVCall> calls, BaseCounter baseCounter, bool optionsSkipDiploid)
+        private void CalculateMetrics(PloidyInfo ploidyInfo, IEnumerable<CnvCall> calls, BaseCounter baseCounter, bool optionsSkipDiploid)
         {
             ploidyInfo.MakeChromsomeNameAgnosticWithAllChromosomes(calls.Select(call => call.Chr));
-            foreach (CNVCall call in calls)
+            foreach (CnvCall call in calls)
             {
                 int CN = call.CN;
                 if (CN < 0 || call.End < 0) continue; // Not a CNV call, apparently
@@ -115,16 +122,16 @@ namespace EvaluateCNV
                     baseCounter.TotalVariants++;
                 }
 
-                if (CN > maxCN) CN = maxCN;
+                if (CN > MaxCn) CN = MaxCn;
                 string chr = call.Chr;
-                if (!_cnvChecker.KnownCN.ContainsKey(chr)) chr = call.Chr.Replace("chr", "");
-                if (!_cnvChecker.KnownCN.ContainsKey(chr)) chr = "chr" + call.Chr;
-                if (!_cnvChecker.KnownCN.ContainsKey(chr))
+                if (!_cnvChecker.KnownCn.ContainsKey(chr)) chr = call.Chr.Replace("chr", "");
+                if (!_cnvChecker.KnownCn.ContainsKey(chr)) chr = "chr" + call.Chr;
+                if (!_cnvChecker.KnownCn.ContainsKey(chr))
                 {
                     Console.WriteLine("Error: Skipping variant call for chromosome {0} with no truth data", call.Chr);
                     continue;
                 }
-                foreach (CNInterval interval in _cnvChecker.KnownCN[chr])
+                foreach (CNInterval interval in _cnvChecker.KnownCn[chr])
                 {
                     int overlapStart = Math.Max(call.Start, interval.Start);
                     int overlapEnd = Math.Min(call.End, interval.End);
@@ -143,12 +150,11 @@ namespace EvaluateCNV
                         }
                     }
 
-                    int knownCN = interval.CN;
-                    if (knownCN > maxCN) knownCN = maxCN;
-                    baseCounter.BaseCount[knownCN, CN] += overlapBases;
-
+                    int knownCn = interval.Cn;
+                    if (knownCn > MaxCn) knownCn = MaxCn;
+                    baseCounter.BaseCount[knownCn, CN] += overlapBases;
                     interval.BasesCovered += overlapBases;
-                    if (knownCN == CN)
+                    if (knownCn == CN)
                     {
                         interval.BasesCalledCorrectly += overlapBases;
                     }
@@ -165,7 +171,7 @@ namespace EvaluateCNV
                             int roiOverlapEnd = Math.Min(roiInterval.End, overlapEnd);
                             if (roiOverlapStart >= roiOverlapEnd) continue;
                             int roiOverlapBases = roiOverlapEnd - roiOverlapStart;
-                            baseCounter.RoiBaseCount[knownCN, CN] += roiOverlapBases;
+                            baseCounter.RoiBaseCount[knownCn, CN] += roiOverlapBases;
                         }
                     }
                 }
@@ -173,17 +179,22 @@ namespace EvaluateCNV
 
             CalculateMedianAndMeanAccuracies(baseCounter);
 
-            var allIntervals = _cnvChecker.KnownCN.SelectMany(kvp => kvp.Value);
+            var allIntervals = _cnvChecker.KnownCn.SelectMany(kvp => kvp.Value).ToList();
 
             // find truth interval with highest number of false negatives (hurts recall)
-            var variantIntervals = allIntervals.Where(interval => interval.CN != interval.ReferenceCopyNumber);
-            var intervalMaxFalseNegatives = variantIntervals.MaxBy(interval => interval.BasesNotCalled + interval.BasesCalledIncorrectly);
-            Console.WriteLine($"Truth interval with most false negatives (hurts recall): {intervalMaxFalseNegatives}");
-
+            var variantIntervals = allIntervals.Where(interval => interval.Cn != interval.ReferenceCopyNumber).ToList();
+            if (variantIntervals.Any())
+            {
+                var intervalMaxFalseNegatives = variantIntervals.MaxBy(interval => interval.BasesNotCalled + interval.BasesCalledIncorrectly);
+                Console.WriteLine($"Truth interval with most false negatives (hurts recall): {intervalMaxFalseNegatives}");
+            }
             // find truth interval with highest number of false positive (hurts precision)
-            var refIntervals = allIntervals.Where(interval => interval.CN == interval.ReferenceCopyNumber);
-            var intervalMaxFalsePositives = refIntervals.MaxBy(interval => interval.BasesCalledIncorrectly);
-            Console.WriteLine($"Truth interval with most false positives (hurts precision): {intervalMaxFalsePositives}");
+            var refIntervals = allIntervals.Where(interval => interval.Cn == interval.ReferenceCopyNumber).ToList();
+            if (refIntervals.Any())
+            {
+                var intervalMaxFalsePositives = refIntervals.MaxBy(interval => interval.BasesCalledIncorrectly);
+                Console.WriteLine($"Truth interval with most false positives (hurts precision): {intervalMaxFalsePositives}");
+            }
         }
 
         /// <summary>
@@ -195,11 +206,11 @@ namespace EvaluateCNV
             baseCounter.MeanAccuracy = 0;
             baseCounter.MedianAccuracy = 0;
             var eventAccuracies = new List<double>();
-            foreach (string chr in _cnvChecker.KnownCN.Keys)
+            foreach (string chr in _cnvChecker.KnownCn.Keys)
             {
-                foreach (var interval in _cnvChecker.KnownCN[chr])
+                foreach (var interval in _cnvChecker.KnownCn[chr])
                 {
-                    if (interval.CN == 2) continue;
+                    if (interval.Cn == 2) continue;
                     int basecount = interval.Length - interval.BasesExcluded;
                     if (basecount <= 0) continue;
                     double accuracy = interval.BasesCalledCorrectly / (double)basecount;
@@ -217,7 +228,7 @@ namespace EvaluateCNV
                               $" for variants sizes {baseCounter.MinSize} to {baseCounter.MaxSize}");
         }
 
-        static void WriteResults(string truthSetPath, string cnvCallsPath, StreamWriter outputWriter, BaseCounter baseCounter, bool includePassingOnly)
+        private void WriteResults(string cnvCallsPath, StreamWriter outputWriter, BaseCounter baseCounter, bool includePassingOnly)
         {
             // Compute overall stats:
             long totalBases = 0;
@@ -233,58 +244,60 @@ namespace EvaluateCNV
             long callLossBases = 0;
             long isLossBasesCorrect = 0;
             long isLossBasesCorrectDirection = 0;
-            for (int trueCN = 0; trueCN <= maxCN; trueCN++)
+            for (int trueCn = 0; trueCn <= MaxCn; trueCn++)
             {
-                for (int callCN = 0; callCN <= maxCN; callCN++)
+                for (int callCn = 0; callCn <= MaxCn; callCn++)
                 {
-                    long bases = baseCounter.BaseCount[trueCN, callCN];
+                    long bases = baseCounter.BaseCount[trueCn, callCn];
                     totalBases += bases;
-                    if (trueCN == callCN) totalBasesRight += bases;
-                    if (trueCN < 2 && callCN < 2 || trueCN == 2 && callCN == 2 || trueCN > 2 && callCN > 2)
+                    if (trueCn == callCn) totalBasesRight += bases;
+                    if (trueCn < 2 && callCn < 2 || trueCn == 2 && callCn == 2 || trueCn > 2 && callCn > 2)
                         totalBasesRightDirection += bases;
-                    if (trueCN < 2) isLossBases += bases;
-                    if (trueCN > 2) isGainBases += bases;
-                    if (callCN < 2) callLossBases += bases;
-                    if (callCN > 2) callGainBases += bases;
-                    if (trueCN == callCN && trueCN < 2) isLossBasesCorrect += bases;
-                    if (trueCN == callCN && trueCN > 2) isGainBasesCorrect += bases;
-                    if (trueCN > 2 && callCN > 2) isGainBasesCorrectDirection += bases;
-                    if (trueCN < 2 && callCN < 2) isLossBasesCorrectDirection += bases;
+                    if (trueCn < 2) isLossBases += bases;
+                    if (trueCn > 2) isGainBases += bases;
+                    if (callCn < 2) callLossBases += bases;
+                    if (callCn > 2) callGainBases += bases;
+                    if (trueCn == callCn && trueCn < 2) isLossBasesCorrect += bases;
+                    if (trueCn == callCn && trueCn > 2) isGainBasesCorrect += bases;
+                    if (trueCn > 2 && callCn > 2) isGainBasesCorrectDirection += bases;
+                    if (trueCn < 2 && callCn < 2) isLossBasesCorrectDirection += bases;
                 }
             }
 
             // Compute ROI stats:
-            long ROIBases = 0;
-            long ROIBasesCorrect = 0;
-            long ROIBasesCorrectDirection = 0;
+            long roiBases = 0;
+            long roiBasesCorrect = 0;
+            long roiBasesCorrectDirection = 0;
             if (baseCounter.RoiBaseCount != null)
             {
-                for (int trueCN = 0; trueCN <= maxCN; trueCN++)
+                for (int trueCn = 0; trueCn <= MaxCn; trueCn++)
                 {
-                    for (int callCN = 0; callCN <= maxCN; callCN++)
+                    for (int callCn = 0; callCn <= MaxCn; callCn++)
                     {
-                        long bases = baseCounter.RoiBaseCount[trueCN, callCN];
-                        ROIBases += bases;
-                        if (trueCN == callCN) ROIBasesCorrect += bases;
-                        if (trueCN < 2 && callCN < 2 || trueCN == 2 && callCN == 2 || trueCN > 2 && callCN > 2)
-                            ROIBasesCorrectDirection += bases;
+                        long bases = baseCounter.RoiBaseCount[trueCn, callCn];
+                        roiBases += bases;
+                        if (trueCn == callCn) roiBasesCorrect += bases;
+                        if (trueCn < 2 && callCn < 2 || trueCn == 2 && callCn == 2 || trueCn > 2 && callCn > 2)
+                            roiBasesCorrectDirection += bases;
                     }
                 }
             }
 
-            // Report stats:
-            outputWriter.WriteLine(includePassingOnly ? "Results for PASSing variants" : "Results for all variants");
+            // load and append VCF header information 
+            _cnvChecker.HandleVcfHeaderInfo(outputWriter, new FileLocation(cnvCallsPath));
 
-            outputWriter.WriteLine("TruthSet\t{0}", truthSetPath);
-            outputWriter.WriteLine("CNVCalls\t{0}", cnvCallsPath);
+            // Report stats:
+            var precision = (isGainBasesCorrect + isLossBasesCorrect) / (double)(callGainBases + callLossBases);
+            var recall = (isGainBasesCorrect + isLossBasesCorrect) / (double)(isGainBases + isLossBases);
+            var f1Score = 2 * precision * recall / (precision + recall);
+            outputWriter.WriteLine(includePassingOnly ? "Results for PASSing variants" : "Results for all variants");
             outputWriter.WriteLine("Accuracy\t{0:F4}", 100 * totalBasesRight / (double)totalBases);
+            // SK: I felt the direction based performance metrices make more sense
             outputWriter.WriteLine("DirectionAccuracy\t{0:F4}", 100 * totalBasesRightDirection / (double)totalBases);
-            outputWriter.WriteLine("Recall\t{0:F4}",
-                100 * (isGainBasesCorrect + isLossBasesCorrect) / (double)(isGainBases + isLossBases));
-            outputWriter.WriteLine("DirectionRecall\t{0:F4}",
-                100 * (isGainBasesCorrectDirection + isLossBasesCorrectDirection) / (double)(isGainBases + isLossBases));
-            outputWriter.WriteLine("Precision\t{0:F4}",
-                100 * (isGainBasesCorrect + isLossBasesCorrect) / (double)(callGainBases + callLossBases));
+            outputWriter.WriteLine("F-score\t{0:F4}", f1Score);
+            outputWriter.WriteLine("Recall\t{0:F4}", 100 * recall);
+            outputWriter.WriteLine("DirectionRecall\t{0:F4}", 100 * (isGainBasesCorrectDirection + isLossBasesCorrectDirection) / (double)(isGainBases + isLossBases));
+            outputWriter.WriteLine("Precision\t{0:F4}", 100 * precision);
             outputWriter.WriteLine("DirectionPrecision\t{0:F4}",
                 100 * (isGainBasesCorrectDirection + isLossBasesCorrectDirection) / (double)(callGainBases + callLossBases));
             outputWriter.WriteLine("GainRecall\t{0:F4}", 100 * (isGainBasesCorrect) / (double)(isGainBases));
@@ -301,10 +314,10 @@ namespace EvaluateCNV
             outputWriter.WriteLine("MedianEventAccuracy\t{0:F4}", 100 * baseCounter.MedianAccuracy);
             outputWriter.WriteLine("VariantEventsCalled\t{0}", baseCounter.TotalVariants);
             outputWriter.WriteLine("VariantBasesCalled\t{0}", baseCounter.TotalVariantBases);
-            if (baseCounter.RoiBaseCount != null && ROIBases > 0)
+            if (baseCounter.RoiBaseCount != null && roiBases > 0)
             {
-                outputWriter.WriteLine("ROIAccuracy\t{0:F4}", 100 * ROIBasesCorrect / (double)ROIBases);
-                outputWriter.WriteLine("ROIDirectionAccuracy\t{0:F4}", 100 * ROIBasesCorrectDirection / (double)ROIBases);
+                outputWriter.WriteLine("ROIAccuracy\t{0:F4}", 100 * roiBasesCorrect / (double)roiBases);
+                outputWriter.WriteLine("ROIDirectionAccuracy\t{0:F4}", 100 * roiBasesCorrectDirection / (double)roiBases);
             }
             // to separate passing and all variant results
             outputWriter.WriteLine();

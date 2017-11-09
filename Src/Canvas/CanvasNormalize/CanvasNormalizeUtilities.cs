@@ -15,7 +15,7 @@ namespace CanvasNormalize
         {
             if (referencePloidy == null) { return defaultPloidy; }
 
-            CanvasSegment segment = new CanvasSegment(chrom, start, end, new List<float>());
+            CanvasSegment segment = new CanvasSegment(chrom, start, end, new List<SampleGenomicBin>());
 
             return referencePloidy.GetReferenceCopyNumber(segment);
         }
@@ -31,12 +31,12 @@ namespace CanvasNormalize
             }
         }
 
-        public static void RatiosToCounts(IEnumerable<SampleGenomicBin> ratios, IFileLocation referencePloidyBedFile,
+        public static void RatiosToCounts(IEnumerable<SampleGenomicBin> ratios, IFileLocation referencePloidyVcfFile,
             IFileLocation outputPath)
         {
             PloidyInfo referencePloidy = null;
-            if (referencePloidyBedFile != null && referencePloidyBedFile.Exists)
-                referencePloidy = PloidyInfo.LoadPloidyFromBedFile(referencePloidyBedFile.FullName);
+            if (referencePloidyVcfFile != null && referencePloidyVcfFile.Exists)
+                referencePloidy = PloidyInfo.LoadPloidyFromVcfFileNoSampleId(referencePloidyVcfFile.FullName);
 
             CanvasIO.WriteToTextFile(outputPath.FullName, RatiosToCounts(ratios, referencePloidy));
         }

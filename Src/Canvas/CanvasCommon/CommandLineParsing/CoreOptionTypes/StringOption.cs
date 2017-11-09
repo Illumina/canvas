@@ -18,7 +18,7 @@ namespace CanvasCommon.CommandLineParsing.CoreOptionTypes
             return new StringOption(new ValueOptionInfo<string>(false, description, names));
         }
 
-        public override ParsingResult<string> Parse(string value)
+        public override IParsingResult<string> Parse(string value)
         {
             return ParsingResult<string>.SuccessfulResult(value);
         }
