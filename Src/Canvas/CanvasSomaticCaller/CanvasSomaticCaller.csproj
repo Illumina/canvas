@@ -1,0 +1,48 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netcoreapp1.1</TargetFramework>
+    <DefineConstants>$(DefineConstants);DotNetCore</DefineConstants>
+    <AssemblyName>CanvasSomaticCaller</AssemblyName>
+    <OutputType>Exe</OutputType>
+    <PackageId>CanvasSomaticCaller</PackageId>
+    <GenerateAssemblyTitleAttribute>false</GenerateAssemblyTitleAttribute>
+    <GenerateAssemblyDescriptionAttribute>false</GenerateAssemblyDescriptionAttribute>
+    <GenerateAssemblyConfigurationAttribute>false</GenerateAssemblyConfigurationAttribute>
+    <GenerateAssemblyProductAttribute>false</GenerateAssemblyProductAttribute>
+    <GenerateAssemblyVersionAttribute>false</GenerateAssemblyVersionAttribute>
+    <GenerateAssemblyFileVersionAttribute>false</GenerateAssemblyFileVersionAttribute>
+    <GenerateAssemblyInformationalVersionAttribute>false</GenerateAssemblyInformationalVersionAttribute>
+    <GenerateAssemblyCompanyAttribute>false</GenerateAssemblyCompanyAttribute>
+    <GenerateAssemblyCopyrightAttribute>false</GenerateAssemblyCopyrightAttribute>
+    <Platforms>x64</Platforms>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" />
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" />
+
+  <Target Name="CanvasSomaticCallerCopyTargetBuild" AfterTargets="Build">
+    <Exec Command="robocopy /MIR $(TargetDir) $(MSBuildThisFileDirectory)..\Canvas\bin\$(Platform)\$(Configuration)\$(TargetFramework)\$(PackageId) /XD publish || if %ERRORLEVEL% LSS 8 exit 0" />
+  </Target>
+  <Target Name="CanvasSomaticCallerCopyTargetPublish" AfterTargets="Publish">
+    <Exec Command="robocopy /MIR $(ProjectDir)$(PublishDir) $(MSBuildThisFileDirectory)..\Canvas\bin\$(Platform)\$(Configuration)\$(TargetFramework)\publish\$(PackageId)  || if %ERRORLEVEL% LSS 8 exit 0" />
+  </Target>
+  
+  <ItemGroup>
+    <ProjectReference Include="..\CanvasCommon\CanvasCommon.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="SomaticCallerParameters.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Illumina.Common" Version="4.13.0.353" />
+    <PackageReference Include="Isas.Framework" Version="7.16.1.755" />
+    <PackageReference Include="Isas.SequencingFiles" Version="5.5.0.395" />
+    <PackageReference Include="protobuf-net" Version="2.3.2" />
+  </ItemGroup>
+
+</Project>
