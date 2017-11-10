@@ -282,6 +282,8 @@ namespace CanvasCommon
         {
             if (CnvTypeExtensions.IsReference(cnvType)) return ".";
             if (!MajorChromosomeCount.HasValue) return $"<{CnvTypeExtensions.CnvTag}>";
+            if (MajorChromosomeCount <= 1)
+                throw new ArgumentOutOfRangeException($"MajorChromosomeCount should be always bigger than 1: {MajorChromosomeCount} provided.");
             var tagList = new[] { CopyNumber - MajorChromosomeCount, MajorChromosomeCount }.Where(x => x != 1).Select(x => $"<CN{x}>");
             return string.Join(",", tagList);
         }

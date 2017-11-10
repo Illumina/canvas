@@ -78,6 +78,7 @@ namespace CanvasCommon
             writer.WriteLine("##INFO=<ID=SVTYPE,Number=1,Type=String,Description=\"Type of structural variant\">");
             writer.WriteLine("##INFO=<ID=SUBCLONAL,Number=0,Type=Flag,Description=\"Subclonal variant\">");
             writer.WriteLine("##INFO=<ID=COMMONCNV,Number=0,Type=Flag,Description=\"Common CNV variant identified from pre-specified bed intervals\">");
+            writer.WriteLine("##FORMAT=<ID=GT,Number=1,Type=string,Description=\"Genotype\">");
             writer.WriteLine("##FORMAT=<ID=RC,Number=1,Type=Float,Description=\"Mean counts per bin in the region\">");
             writer.WriteLine("##FORMAT=<ID=BC,Number=1,Type=Float,Description=\"Number of bins in the region\">");
             writer.WriteLine("##FORMAT=<ID=CN,Number=1,Type=Integer,Description=\"Copy number genotype for imprecise events\">");
@@ -88,8 +89,9 @@ namespace CanvasCommon
             {
                 writer.WriteLine($"##FORMAT=<ID=DQ,Number=1,Type=Float,Description=\"De novo quality. Threshold for passing de novo call: {denovoQualityThreshold}\">");
             }
-            string names = string.Join("\t", sampleNames.ToArray());
-            writer.WriteLine("#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\t" + names);
+            var titleColumns = new List<string> {"#CHROM", "POS", "ID", "REF", "ALT", "QUAL", "FILTER", "INFO", "FORMAT"};
+            titleColumns.AddRange(sampleNames);
+            writer.WriteLine(string.Join("\t",  titleColumns));
             SanityCheckChromosomeNames(genome, segments);
             return genome;
         }
@@ -127,8 +129,8 @@ namespace CanvasCommon
                         cnvTypes.Add(currentSegments[sampleIndex].GetCnvType(referenceCopyNumbers[sampleIndex]));
                     }
                     var cnvType = AssignCnvType(cnvTypes);
-
-                    WriteInfoField(writer, firstSampleSegment, cnvType, isMultisample: segments.Count > 1);
+                    string alternateAllele = segment.GetAltCopyNumbers(cnvType);
+                    WriteColumnsUntillInfoField(writer, firstSampleSegment, cnvType, isMultisample: segments.Count > 1);
                     //  FORMAT field
                     if (segments.Count == 1)
                         WriteSingleSampleFormat(writer, firstSampleSegment, denovoQualityThreshold.HasValue);
@@ -159,7 +161,7 @@ namespace CanvasCommon
         private static void WriteSingleSampleFormat(BgzipOrStreamWriter writer, CanvasSegment segment, bool reportDQ)
         {
             const string nullValue = ".";
-            writer.Write("\tRC:BC:CN:MCC");
+            writer.Write("\tGT:RC:BC:CN:MCC");
             if (reportDQ)
                 writer.Write(":DQ");
             writer.Write($"\t{segment.MedianCount:F2}:{segment.BinCount}:{segment.CopyNumber}");
@@ -175,7 +177,7 @@ namespace CanvasCommon
         private static void WriteFormatField(BgzipOrStreamWriter writer, List<CanvasSegment> segments, bool reportDQ)
         {
             const string nullValue = ".";
-            writer.Write("\tRC:BC:CN:MCC:MCCQ:QS");
+            writer.Write("\tRC:BC:CN:MCC:MCCQ:QS"); // why MCCQ and QS are only output for multiple VCF? It seems quite straightforward to have one method for both single and multi-sample VCFs,especially if we could have the same FORMAT column for both of them
             if (reportDQ)
                 writer.Write(":DQ");
             foreach (var segment in segments)
@@ -200,7 +202,7 @@ namespace CanvasCommon
         /// <param name="cnvType"></param>
         /// <param name="isMultisample"></param>
         /// <returns></returns>
-        private static void WriteInfoField(BgzipOrStreamWriter writer, CanvasSegment segment, CnvType cnvType, bool isMultisample)
+        private static void WriteColumnsUntillInfoField(BgzipOrStreamWriter writer, CanvasSegment segment, CnvType cnvType, bool isMultisample)
         {
             // From vcf 4.1 spec:
             //     If any of the ALT alleles is a symbolic allele (an angle-bracketed ID String “<ID>”) then the padding base is required and POS denotes the 
