@@ -30,23 +30,11 @@ namespace CanvasCommon
 
         public bool IsPass => FailedFilterTags.Count == 0;
 
-        private static CanvasFilter GetSharedFilter(IReadOnlyList<CanvasFilter> sampleFilters)
-        {
-            if (sampleFilters.First().IsPass) return PassFilter;
-            var sharedFilterTags = sampleFilters.First().FailedFilterTags.ToList();
-            foreach (var sampleFilter in sampleFilters.Skip(1))
-            {
-                if (sampleFilter.IsPass) return PassFilter;
-                sharedFilterTags = sharedFilterTags.Intersect(sampleFilter.FailedFilterTags).ToList();
-            }
-            sharedFilterTags.Add(AllSampleFailedTag);
-            return Create(sharedFilterTags);
-        }
+        public static CanvasFilter UpdateRecordLevelFilter(CanvasFilter recordLevelFilter,
+            IReadOnlyList<CanvasFilter> sampleFilters) => sampleFilters.Any(x => x.IsPass)
+                ? recordLevelFilter
+                : Create(recordLevelFilter.FailedFilterTags.Concat(AllSampleFailedTag));
 
-        public static CanvasFilter UpdateRecordLevelFilter(CanvasFilter recordLevelFilter, IReadOnlyList<CanvasFilter> sampleFilters) => Create(recordLevelFilter.FailedFilterTags.Concat(GetSharedFilter(sampleFilters).FailedFilterTags));
-
-        public static CanvasFilter GetRecordLevelFilterFromSampleFiltersOnly(
-            IReadOnlyList<CanvasFilter> sampleFilters) => UpdateRecordLevelFilter(PassFilter, sampleFilters);
 
         public static string FormatCnvSizeWithSuffix(int size)
         {
