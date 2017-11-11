@@ -7,27 +7,11 @@ using Illumina.Common.FileSystem;
 using Xunit;
 using System.Linq;
 using CanvasCommon;
-using Isas.Framework.Checkpointing;
-using Isas.Framework.FrameworkFactory;
-using Isas.Framework.Logging;
-using Isas.Framework.Utilities;
-using Isas.Framework.WorkManagement;
-using NSubstitute;
 
 namespace CanvasTest.Canvas.CommandLineParsing
 {
     public class ModeParserTests
     {
-        private FrameworkServices _services;
-        private ICheckpointRunner _checkpointer;
-
-        public ModeParserTests()
-        {
-            var logger = Substitute.For<ILogger>();
-            _checkpointer = Substitute.For<ICheckpointRunner>();
-            _services = new FrameworkServices(logger, _checkpointer, Substitute.For<IWorkManager>());
-        }
-
         private const string Version = "Version";
         private const string Copyright = "Copyright";
 
