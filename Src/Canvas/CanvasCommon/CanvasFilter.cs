@@ -14,6 +14,7 @@ namespace CanvasCommon
         public const string SampleFilterFailed = "FT";
         public static readonly CanvasFilter PassFilter = Create(Enumerable.Empty<string>());
         private IReadOnlyList<string> FailedFilterTags { get; }
+        public bool IsPass => FailedFilterTags.Count == 0;
 
         private CanvasFilter(IReadOnlyList<string> failedFilterTags)
         {
@@ -26,14 +27,15 @@ namespace CanvasCommon
             return new CanvasFilter(allFailedFilterTags.ToReadOnlyList());
         }
 
-        public string ToVcfString() => IsPass ? Pass : string.Join(";", FailedFilterTags);
-
-        public bool IsPass => FailedFilterTags.Count == 0;
-
         public static CanvasFilter UpdateRecordLevelFilter(CanvasFilter recordLevelFilter,
             IReadOnlyList<CanvasFilter> sampleFilters) => sampleFilters.Any(x => x.IsPass)
                 ? recordLevelFilter
                 : Create(recordLevelFilter.FailedFilterTags.Concat(AllSampleFailedTag));
+
+        public static CanvasFilter GetRecordLevelFilterFromSampleFiltersOnly(IReadOnlyList<CanvasFilter> sampleFilters) => UpdateRecordLevelFilter(PassFilter, sampleFilters);
+
+
+        public string ToVcfString() => IsPass ? Pass : string.Join(";", FailedFilterTags);
 
 
         public static string FormatCnvSizeWithSuffix(int size)
