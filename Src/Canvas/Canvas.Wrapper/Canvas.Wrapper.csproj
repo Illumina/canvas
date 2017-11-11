@@ -27,11 +27,11 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Illumina.Common" Version="4.13.0.353" />
+    <PackageReference Include="Illumina.Common" Version="4.14.1.359" />
     <PackageReference Include="ClassicBioinfoTools" Version="2.4.0.195" />
-    <PackageReference Include="Isas.Framework" Version="7.16.1.755" />
-    <PackageReference Include="Isas.Manifests" Version="4.9.1.154" />
-    <PackageReference Include="Isas.Ploidy" Version="3.0.0.78" />
+    <PackageReference Include="Isas.Framework" Version="7.16.4.769" />
+    <PackageReference Include="Isas.Manifests" Version="4.10.1.163" />
+    <PackageReference Include="Isas.Ploidy" Version="3.0.0.84" />
     <PackageReference Include="Isas.SequencingFiles" Version="5.5.0.395" />
     <PackageReference Include="protobuf-net" Version="2.3.2" />
   </ItemGroup>
