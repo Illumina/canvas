@@ -278,6 +278,14 @@ namespace CanvasCommon
             return CnvType.Reference;
         }
 
+        public string GetAltCopyNumbers(CnvType cnvType)
+        {
+            if (CnvTypeExtensions.IsReference(cnvType)) return ".";
+            if (!MajorChromosomeCount.HasValue) return $"<{CnvTypeExtensions.CnvTag}>";
+            var tagList = new[] { CopyNumber - MajorChromosomeCount, MajorChromosomeCount }.Where(x => x != 1).Select(x => $"<CN{x}>");
+            return string.Join(",", tagList);
+        }
+
         /// <summary>
         /// Merge another neighboring segment into this one.
         /// </summary>
@@ -574,7 +582,7 @@ namespace CanvasCommon
                         counts.Clear();
                         MAF.Clear();
                         VF.Clear();
-                        Dictionary<string, long> CopyNumberAndChromCount = new Dictionary<string, long>();
+                        Dictionary<(int CopyNum, int? MajorChromCounts), long> copyNumberAndChromCount = new Dictionary<(int, int?), long>();
                         Dictionary<int, long> basesByCopyNumber = new Dictionary<int, long>();
                         // Accumulate counts and MAF from the segments:
                         List<CanvasSegment> chrSegments = new List<CanvasSegment>();
@@ -586,9 +594,9 @@ namespace CanvasCommon
                             if (segment.End < pointStartPos) continue;
 
                             int weight = Math.Min(segment.End, pointEndPos) - Math.Max(segment.Begin, pointStartPos);
-                            string key = String.Format("{0} {1}", segment.CopyNumber, segment.MajorChromosomeCount);
-                            if (!CopyNumberAndChromCount.ContainsKey(key)) CopyNumberAndChromCount[key] = 0;
-                            CopyNumberAndChromCount[key] += weight;
+                            var key = (segment.CopyNumber, segment.MajorChromosomeCount);
+                            if (!copyNumberAndChromCount.ContainsKey(key)) copyNumberAndChromCount[key] = 0;
+                            copyNumberAndChromCount[key] += weight;
                             if (!basesByCopyNumber.ContainsKey(segment.CopyNumber)) basesByCopyNumber[segment.CopyNumber] = 0;
                             basesByCopyNumber[segment.CopyNumber] += weight;
                             overlapSegments.Add(segment);
@@ -607,19 +615,10 @@ namespace CanvasCommon
                         }
 
                         // Find the most common major chromosome count, for the most common copy number:
-                        int? majorChromosomeCount = null;
-                        bestCount = 0;
-                        foreach (string key in CopyNumberAndChromCount.Keys)
-                        {
-                            string[] bits = key.Split();
-                            if (bits[1].Length == 0) continue;
-                            if (Int32.Parse(bits[0]) != majorCopyNumber) continue;
-                            long count = CopyNumberAndChromCount[key];
-                            if (count < bestCount) continue;
-                            bestCount = count;
-                            majorChromosomeCount = Int32.Parse(bits[1]);
-                        }
-
+                        var copyNumsSortedbyMajorChromCounts = copyNumberAndChromCount.Where(x => x.Key.CopyNum == majorCopyNumber)
+                            .OrderByDescending(x => x.Value).ToList();
+                        var majorChromosomeCount = copyNumsSortedbyMajorChromCounts.IsNullOrEmpty() ? null : copyNumsSortedbyMajorChromCounts.First().Key.MajorChromCounts;                       
+                       
                         // Note allele frequency and coverage info, for all overlap segments that match (more or less)
                         // the most common copy number:
                         foreach (CanvasSegment segment in overlapSegments)
@@ -747,7 +746,6 @@ namespace CanvasCommon
         /// </summary>
         /// <param name="canvasSegments"></param>
         /// <param name="commonCnvSegments"></param>
-        /// <param name="chr"></param>
         /// <param name="defaultAlleleCountThreshold"></param>
         /// <returns></returns>
         public static List<OverlappingSegmentsRegion> MergeCommonCnvSegments(List<CanvasSegment> canvasSegments,
@@ -838,7 +836,7 @@ namespace CanvasCommon
         /// quality score.  Two consecutive segments are considered neighbors if they're on the same chromosome
         /// and the space between them doesn't overlap with any excluded intervals.
         /// </summary>
-        public static List<CanvasSegment> MergeSegmentsUsingExcludedIntervals(List<CanvasSegment> segments, int MinimumCallSize,
+        public static List<CanvasSegment> MergeSegmentsUsingExcludedIntervals(List<CanvasSegment> segments, int minimumCallSize,
             Dictionary<string, List<SampleGenomicBin>> excludedIntervals)
         {
             // Assimilate short segments into the *best* available neighbor:
@@ -848,7 +846,7 @@ namespace CanvasCommon
             int segmentIndex = 0;
             while (segmentIndex < segments.Count)
             {
-                if (segments[segmentIndex].End - segments[segmentIndex].Begin >= MinimumCallSize)
+                if (segments[segmentIndex].End - segments[segmentIndex].Begin >= minimumCallSize)
                 {
                     mergedSegments.Add(segments[segmentIndex]);
                     segmentIndex++;
@@ -861,7 +859,7 @@ namespace CanvasCommon
                 {
                     // Stop, if you jump to another chromosome, or cross a forbidden interval:
                     if (segments[checkIndex].Chr != segments[segmentIndex].Chr) break;
-                    if (segments[checkIndex].End - segments[checkIndex].Begin < MinimumCallSize) continue;
+                    if (segments[checkIndex].End - segments[checkIndex].Begin < minimumCallSize) continue;
                     if (IsForbiddenInterval(segments[checkIndex].Chr, segments[checkIndex].End, segments[segmentIndex].Begin, excludedIntervals)) break;
                     prevIndex = checkIndex;
                     prevQ = segments[checkIndex].QScore;
@@ -873,7 +871,7 @@ namespace CanvasCommon
                 for (int checkIndex = segmentIndex + 1; checkIndex < segments.Count; checkIndex++)
                 {
                     if (segments[checkIndex].Chr != segments[segmentIndex].Chr) break;
-                    if (segments[checkIndex].End - segments[checkIndex].Begin < MinimumCallSize) continue;
+                    if (segments[checkIndex].End - segments[checkIndex].Begin < minimumCallSize) continue;
                     if (IsForbiddenInterval(segments[checkIndex].Chr, segments[segmentIndex].End, segments[checkIndex].Begin, excludedIntervals)) break;
                     nextIndex = checkIndex;
                     nextQ = segments[checkIndex].QScore;
@@ -1081,7 +1079,7 @@ namespace CanvasCommon
         /// <summary>
         /// Assume that the rows are sorted by the start position and ascending order
         /// </summary>
-        public static CoverageInfo ReadBEDInput(string inputbed, string forbiddenIntervalBedPath = null)
+        public static CoverageInfo ReadBedInput(string inputbed, string forbiddenIntervalBedPath = null)
         {
             const int idxChr = 0, idxStart = 1, idxEnd = 2, idxScore = 3;
             var binFilter = new GenomicBinFilter(forbiddenIntervalBedPath);
