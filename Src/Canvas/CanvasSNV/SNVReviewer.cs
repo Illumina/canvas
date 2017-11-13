@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Reflection.Metadata.Ecma335;
 using Illumina.Common;
 using Illumina.Common.CSV;
 using Isas.SequencingFiles;
@@ -74,7 +75,6 @@ namespace CanvasSNV
         {
             Console.WriteLine("{0} Loading variants of interest from {1}", DateTime.Now, vcfPath);
             this.Variants = new List<VcfVariant>();
-            int overallCount = 0;
             int countThisChromosome = 0;
             int sampleIndex = 0;
             using (VcfReader reader = new VcfReader(vcfPath, requireGenotypes: false))
@@ -91,12 +91,10 @@ namespace CanvasSNV
                         throw new ArgumentException($"File '{vcfPath}' conatins >1 samples, name for a sample of interest must be provided");
                 }
 
-                VcfVariant variant = new VcfVariant();
                 while (true)
                 {
-                    bool result = reader.GetNextVariant(out variant);
+                    bool result = reader.GetNextVariant(out var variant);
                     if (!result) break;
-                    overallCount++;
                     if (variant.ReferenceName != this.Chromosome)
                     {
                         // Shortcut: If we've seen records for the desired chromosome, then as soon as we hit another chromosome,
@@ -120,13 +118,8 @@ namespace CanvasSNV
                         }
 
                         // Also require they have a high enough quality score:
-                        if (variant.GenotypeColumns[sampleIndex].ContainsKey("GQX")) // Note: Allow no GQX field, in case we want to use another caller (e.g. Pisces) and not crash
-                        {
-                            if (variant.GenotypeColumns[sampleIndex]["GQX"].Equals("."))
-                                continue;
-                            if (float.Parse(variant.GenotypeColumns[sampleIndex]["GQX"]) < 30)
-                                continue;
-                        }
+                        if (FilterByGqx(variant, sampleIndex)) continue;
+
                     }
                     // Note: Let's NOT require the variant be in dbSNP.  Maybe we didn't do annotation, either because
                     // we chose not to or because we're on a reference without annotation available.
@@ -343,5 +336,21 @@ namespace CanvasSNV
                     throw new ArgumentException("Invalid single nucleotide allele: " + allele);
             }
         }
+
+        private static bool FilterByGqx(VcfVariant variant, int sampleIndex)
+        {
+            if (variant.Filters != "PASS" || 
+                variant.GenotypeColumns[sampleIndex].ContainsKey("FT") && variant.GenotypeColumns[sampleIndex]["FT"] != "PASS") // Don't filter by GQX field once all filters are passed
+            { 
+                if (variant.GenotypeColumns[sampleIndex].ContainsKey("GQX")) // Note: Allow no GQX field, in case we want to use another caller (e.g. Pisces) and not crash
+                {
+                    if (variant.GenotypeColumns[sampleIndex]["GQX"].Equals(".") ||
+                        float.Parse(variant.GenotypeColumns[sampleIndex]["GQX"]) < 30)
+                        return true;
+                }
+            }
+            return false;
+        }
+
     }
 }
