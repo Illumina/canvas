@@ -105,21 +105,12 @@ namespace CanvasSNV
                     countThisChromosome++;
                     // Single-allele SNVs only:
                     if (variant.VariantAlleles.Length != 1 || variant.VariantAlleles[0].Length != 1 || variant.ReferenceAllele.Length != 1) continue;
-                    // PF variants only:
-                    if (variant.GenotypeColumns != null && variant.GenotypeColumns.Any() && variant.Filters != "PASS") continue; // FILTER may not say PASS for a dbSNP VCF file
+ 
                     if (variant.GenotypeColumns != null && variant.GenotypeColumns.Any()) // not available if we use a dbSNP VCF file
                     {
-                        if (!variant.GenotypeColumns[sampleIndex].ContainsKey("GT")) continue; // no genotype - we don't know if it's a het SNV.
-                        if (isSomatic)
-                        {
-                            string genotype = variant.GenotypeColumns[0]["GT"];
-                            if (genotype != "0/1" && genotype != "1/0" && genotype != "0|1" && genotype != "1|0")
-                                continue;
-                        }
-
-                        // Also require they have a high enough quality score:
-                        if (FilterByGqx(variant, sampleIndex)) continue;
-
+                        if (!PassedAllFilters(variant, sampleIndex) ||   // PF variants only (FILTER may not say PASS for a dbSNP VCF file)
+                            !variant.GenotypeColumns[sampleIndex].ContainsKey("GT") || //no genotype - we don't know if it's a het SNV.
+                            SomaticNotHetSnv(isSomatic, variant)) continue; // somatic but not a het SNV
                     }
                     // Note: Let's NOT require the variant be in dbSNP.  Maybe we didn't do annotation, either because
                     // we chose not to or because we're on a reference without annotation available.
@@ -130,7 +121,6 @@ namespace CanvasSNV
                     variant.GenotypeColumns?.Clear();
 
                     this.Variants.Add(variant);
-                    variant = new VcfVariant();
                 }
             }
             Console.WriteLine("Retained {0} variants, out of {1} records for {2}", this.Variants.Count, countThisChromosome, this.Chromosome);
@@ -337,17 +327,21 @@ namespace CanvasSNV
             }
         }
 
-        private static bool FilterByGqx(VcfVariant variant, int sampleIndex)
+        private static bool PassedAllFilters(VcfVariant variant, int sampleIndex)
         {
-            if (variant.Filters != "PASS" || 
-                variant.GenotypeColumns[sampleIndex].ContainsKey("FT") && variant.GenotypeColumns[sampleIndex]["FT"] != "PASS") // Don't filter by GQX field once all filters are passed
-            { 
-                if (variant.GenotypeColumns[sampleIndex].ContainsKey("GQX")) // Note: Allow no GQX field, in case we want to use another caller (e.g. Pisces) and not crash
-                {
-                    if (variant.GenotypeColumns[sampleIndex]["GQX"].Equals(".") ||
-                        float.Parse(variant.GenotypeColumns[sampleIndex]["GQX"]) < 30)
-                        return true;
-                }
+            return variant.Filters == "PASS" &&
+                    (!variant.GenotypeColumns[sampleIndex].ContainsKey("FT") ||
+                     variant.GenotypeColumns[sampleIndex]["FT"] == "PASS"
+                    ); 
+        }
+
+        private static bool SomaticNotHetSnv(bool isSomatic, VcfVariant variant)
+        {
+            if (isSomatic)
+            {
+                string genotype = variant.GenotypeColumns[0]["GT"];
+                if (genotype != "0/1" && genotype != "1/0" && genotype != "0|1" && genotype != "1|0")
+                    return true;
             }
             return false;
         }
