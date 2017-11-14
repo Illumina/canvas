@@ -1,4 +1,5 @@
-﻿using System.IO;
+﻿using System;
+using System.IO;
 using System.Runtime.CompilerServices;
 using System.Text;
 using Canvas;
@@ -7,6 +8,7 @@ using Illumina.Common.FileSystem;
 using Isas.Framework.Checkpointing;
 using Isas.Framework.Logging;
 using Isas.Framework.WorkManagement;
+using Isas.Framework.WorkManagement.CommandBuilding;
 using Xunit;
 using NSubstitute;
 
@@ -19,14 +21,16 @@ namespace CanvasTest.Canvas
         {
             var logger = Substitute.For<ILogger>();
             var workManager = Substitute.For<IWorkManager>();
+            var workDoer = Substitute.For<IWorkDoer>();
             var checkpointRunner = Substitute.For<ICheckpointRunner>();
+            Func<string, ICommandFactory> runtimePrefix = component => Substitute.For<ICommandFactory>();
             string dotnetPath = @"C:\path\to\dotnet.exe";
             var runtimeExecutable = new FileLocation(dotnetPath);
             bool isSomatic = true;
             var coverageMode = new CanvasCoverageMode();
             int countsPerBin = 0;
             string canvasFolder = @"C:\path\to\Canvas\"; 
-            var canvasRunner = new CanvasRunner(logger, workManager, checkpointRunner, runtimeExecutable, isSomatic, coverageMode, countsPerBin, null, canvasFolder);
+            var canvasRunner = new CanvasRunner(logger, workManager, workDoer, checkpointRunner, runtimeExecutable, runtimePrefix, isSomatic, coverageMode, countsPerBin, null, canvasFolder);
             string prefix = "something before ";
             var commandLineBuilder = new StringBuilder(prefix);
             string canvasExecutableStub = "CanvasBin";

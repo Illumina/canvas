@@ -1,9 +1,11 @@
-﻿using Canvas.CommandLineParsing;
+﻿using System;
+using Canvas.CommandLineParsing;
 using CanvasCommon;
 using Illumina.Common.FileSystem;
 using Isas.Framework.Checkpointing;
 using Isas.Framework.Logging;
 using Isas.Framework.WorkManagement;
+using Isas.Framework.WorkManagement.CommandBuilding;
 using Isas.Manifests.NexteraManifest;
 
 namespace Canvas
@@ -25,9 +27,9 @@ namespace Canvas
             SingleSampleCommonOptions = input.SingleSampleCommonOptions;
         }
 
-        public void Run(ILogger logger, ICheckpointRunner checkpointRunner, IWorkManager workManager, IFileLocation runtimeExecutable)
+        public void Run(ILogger logger, ICheckpointRunner checkpointRunner, IWorkManager workManager, IWorkDoer workDoer, IFileLocation runtimeExecutable, Func<string, ICommandFactory> runtimeCommandPrefix)
         {
-            CanvasRunner runner = new CanvasRunner(logger, workManager, checkpointRunner, runtimeExecutable, true, CanvasCoverageMode.GCContentWeighted, 300, CommonOptions.CustomParams);
+            CanvasRunner runner = new CanvasRunner(logger, workManager, workDoer, checkpointRunner, runtimeExecutable, runtimeCommandPrefix, true, CanvasCoverageMode.GCContentWeighted, 300, CommonOptions.CustomParams);
             var callset = GetCallset(logger);
             runner.CallSample(callset);
         }
