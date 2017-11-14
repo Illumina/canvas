@@ -11,6 +11,9 @@ namespace CanvasTest
 {
     public class TestCanvasBin
     {
+        [Theory]
+        [InlineData(100, 120)]
+        [InlineData(100, 100)]
         public void TestBinOneAlignment(int pos1, int pos2)
         {
             uint qualityThreshold = 3;
@@ -73,19 +76,7 @@ namespace CanvasTest
                 ref usableFragmentCount, bins, ref binIndexStart);
             Assert.Equal(0, bins[0].Count);
         }
-
-        [Fact]
-        public void TestBinOneAlignmentDifferentPosition()
-        {
-            TestBinOneAlignment(100, 120);
-        }
-
-        [Fact]
-        public void TestBinOneAlignmentSamePosition()
-        {
-            TestBinOneAlignment(100, 100);
-        }
-
+        
         [Fact]
         public void TestBinSingleEndBam()
         {

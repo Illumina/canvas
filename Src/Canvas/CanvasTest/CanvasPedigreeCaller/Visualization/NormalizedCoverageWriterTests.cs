@@ -30,7 +30,8 @@ namespace CanvasTest
                     new SampleGenomicBin("chr1", 0, 1, 3f)
                 })
                 {
-                    CopyNumber = 0
+                    CopyNumber = 0,
+                    Filter = CanvasFilter.PassFilter
                 }
             };
 
@@ -53,7 +54,8 @@ namespace CanvasTest
                     new SampleGenomicBin("chr1", 0, 1, 3f)
                 })
                 {
-                    CopyNumber = 2
+                    CopyNumber = 2,
+                    Filter = CanvasFilter.PassFilter
                 }
             };
 
@@ -74,7 +76,7 @@ namespace CanvasTest
                 })
                 {
                     CopyNumber = 1,
-                    Filter = "PASS"
+                    Filter = CanvasFilter.PassFilter 
                 },
                 new CanvasSegment("chr1", 1, 2, new List<SampleGenomicBin>
                 {
@@ -82,7 +84,7 @@ namespace CanvasTest
                 })
                 {
                     CopyNumber = 10,
-                    Filter = "Filtered"
+                    Filter = CanvasFilter.Create(new[] {"Filtered"})
                 }
             };
 
@@ -105,7 +107,7 @@ namespace CanvasTest
                 })
                 {
                     CopyNumber = 3,
-                    Filter = "PASS"
+                    Filter = CanvasFilter.PassFilter
                 },
                 new CanvasSegment("chr1", 1, 2, new List<SampleGenomicBin>
                 {
@@ -113,7 +115,7 @@ namespace CanvasTest
                 })
                 {
                     CopyNumber = 2,
-                    Filter = "PASS"
+                    Filter = CanvasFilter.PassFilter
                 }
             };
 
