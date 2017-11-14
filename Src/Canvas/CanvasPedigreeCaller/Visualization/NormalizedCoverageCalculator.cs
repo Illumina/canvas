@@ -46,7 +46,7 @@ namespace CanvasPedigreeCaller.Visualization
 
         private static IEnumerable<CanvasSegment> GetSegmentsForNormalizationEstimation(IReadOnlyList<CanvasSegment> segments)
         {
-            bool PassFilter(CanvasSegment segment) => segment.Filter == "PASS";
+            bool PassFilter(CanvasSegment segment) => segment.Filter.IsPass;
             if (segments.Any(PassFilter))
                 return segments.Where(PassFilter);
             return segments;
