@@ -197,7 +197,7 @@ namespace CanvasCommon
         public bool IsHeterogeneous;
         private const int NumberVariantFrequencyBins = 100;
         private const int OverlapWindowThreshold = 500;
-        public string Filter = "PASS";
+        public CanvasFilter Filter;
         public Tuple<int, int> StartConfidenceInterval; // if not null, this is a confidence interval around Start, reported in the CIPOS tag
         public Tuple<int, int> EndConfidenceInterval; // if not null, this is a confidence interval around End, reported in the CIEND tag
         public Balleles Balleles { get; private set; }
@@ -1041,27 +1041,17 @@ namespace CanvasCommon
         /// <summary>
         /// Set segment.Filter for each of our segments.
         /// </summary>
-        public static void FilterSegments(int qualityFilterThreshold, List<CanvasSegment> segments)
+        public static void SetFilterForSegments(int qualityFilterThreshold, List<CanvasSegment> segments, int segmantSizeCutoff)
         {
             string qualityFilter = $"q{qualityFilterThreshold}";
+            string sizeFilter = "L" + CanvasFilter.FormatCnvSizeWithSuffix(segmantSizeCutoff);
             foreach (var segment in segments)
             {
-                string filter = null;
-                if (segment.QScore < qualityFilterThreshold)
-                {
-                    filter = qualityFilter;
-                }
-                if (segment.Length < 10000)
-                {
-                    if (filter != null)
-                        filter = filter + ";L10kb";
-                    else
-                        filter = "L10kb";
-                }
-                if (filter == null)
-                    filter = "PASS";
-
-                segment.Filter = filter;
+                if (segment.Filter != null) throw new Exception($"Filter has already been set: {segment.Filter.ToVcfString()}");
+                var filterTags = new List<string>();
+                if (segment.QScore < qualityFilterThreshold) filterTags.Add(qualityFilter);
+                if (segment.End - segment.Begin < segmantSizeCutoff) filterTags.Add(sizeFilter);
+                segment.Filter = CanvasFilter.Create(filterTags);
             }
         }
 

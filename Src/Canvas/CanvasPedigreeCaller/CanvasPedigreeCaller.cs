@@ -165,7 +165,7 @@ namespace CanvasPedigreeCaller
         }
 
         /// <summary>
-        /// Create CanvasSegments from common CNVs bed file and overlap with CanvasPartition
+        /// CreatRecordLevelFilter CanvasSegments from common CNVs bed file and overlap with CanvasPartition
         /// segments to create SegmentHaplotypes
         /// </summary>
         private IEnumerable<ISampleMap<OverlappingSegmentsRegion>> CreateSegmentSetsFromCommonCnvs(ISampleMap<string> variantFrequencyFiles,
