@@ -6,6 +6,7 @@ using System.IO;
 using Illumina.Common;
 using Illumina.Common.FileSystem;
 using Isas.SequencingFiles;
+using Isas.SequencingFiles.Vcf;
 
 
 namespace CanvasCommon
@@ -266,7 +267,8 @@ namespace CanvasCommon
             new SortedList<double>(Counts.Select(Convert.ToDouble));
             return sorted.Median();
         }
-        public CnvType GetCnvType(int referenceCopyNumber)
+
+        public CnvType GetAlleleCopyNumbers(int referenceCopyNumber)
         {
             if (CopyNumber < referenceCopyNumber)
                 return CnvType.Loss;
@@ -278,14 +280,36 @@ namespace CanvasCommon
             return CnvType.Reference;
         }
 
-        public string GetAltCopyNumbers(CnvType cnvType)
+        public int[] GetAlleleCopyNumbers(int referenceCopyNumber)
         {
-            if (CnvTypeExtensions.IsReference(cnvType)) return ".";
-            if (!MajorChromosomeCount.HasValue) return $"<{CnvTypeExtensions.CnvTag}>";
+            if (CopyNumber < referenceCopyNumber)
+            {
+                switch (CopyNumber)
+                {
+                    case 1:
+                        return new[] {0, 1};
+                    case 0:
+                        return new[] {0, 0};
+                }
+
+            }
+            //TODO
+            if (CopyNumber > referenceCopyNumber)
+                return CnvType.Gain;
+            if (referenceCopyNumber == 2 &&
+                MajorChromosomeCount.HasValue && MajorChromosomeCount == CopyNumber)
+                return CnvType.LossOfHeterozygosity;
+            return CnvType.Reference;
+        }
+
+        public string[] GetAltGenotypes(int referenceCopyNumber)
+        {
+            var cnvType = GetCnvType(referenceCopyNumber);
+            if (CnvTypeExtensions.IsReference(cnvType)) return new string[] { };
+            if (!MajorChromosomeCount.HasValue) return new[] { $"<{CnvTypeExtensions.CnvTag}>" };
             if (MajorChromosomeCount <= 1)
                 throw new ArgumentOutOfRangeException($"MajorChromosomeCount should be always bigger than 1: {MajorChromosomeCount} provided.");
-            var tagList = new[] { CopyNumber - MajorChromosomeCount, MajorChromosomeCount }.Where(x => x != 1).Select(x => $"<CN{x}>");
-            return string.Join(",", tagList);
+            return new[] { CopyNumber - MajorChromosomeCount, MajorChromosomeCount }.Where(x => x != 1).Select(x => $"<CN{x}>").ToArray();
         }
 
         /// <summary>
@@ -619,8 +643,8 @@ namespace CanvasCommon
                         // Find the most common major chromosome count, for the most common copy number:
                         var copyNumsSortedbyMajorChromCounts = copyNumberAndChromCount.Where(x => x.Key.CopyNum == majorCopyNumber)
                             .OrderByDescending(x => x.Value).ToList();
-                        var majorChromosomeCount = copyNumsSortedbyMajorChromCounts.IsNullOrEmpty() ? null : copyNumsSortedbyMajorChromCounts.First().Key.MajorChromCounts;                       
-                       
+                        var majorChromosomeCount = copyNumsSortedbyMajorChromCounts.IsNullOrEmpty() ? null : copyNumsSortedbyMajorChromCounts.First().Key.MajorChromCounts;
+
                         // Note allele frequency and coverage info, for all overlap segments that match (more or less)
                         // the most common copy number:
                         foreach (CanvasSegment segment in overlapSegments)

@@ -1,11 +1,14 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.IO;
 using System.Linq;
 using Illumina.Common;
 using Illumina.Common.FileSystem;
+using Isas.Framework.DataTypes;
 using Isas.Framework.DataTypes.Maps;
 using Isas.SequencingFiles;
+
 
 namespace CanvasCommon
 {
@@ -69,9 +72,8 @@ namespace CanvasCommon
             string qualityFilter = $"q{qualityThreshold}";
             writer.WriteLine("##ALT=<ID=CNV,Description=\"Copy number variable region\">");
             WriteHeaderAllAltCnTags(writer);
-            //TODO: we don't actually use the filters 
             writer.WriteLine($"##FILTER=<ID={qualityFilter},Description=\"Quality below {qualityThreshold}\">");
-            writer.WriteLine("##FILTER=<ID=L10kb,Description=\"Length shorter than 10kb\">");
+            //writer.WriteLine("##FILTER=<ID=L10kb,Description=\"Length shorter than 10kb\">");
             writer.WriteLine("##INFO=<ID=CIEND,Number=2,Type=Integer,Description=\"Confidence interval around END for imprecise variants\">");
             writer.WriteLine("##INFO=<ID=CIPOS,Number=2,Type=Integer,Description=\"Confidence interval around POS for imprecise variants\">");
             writer.WriteLine("##INFO=<ID=CNVLEN,Number=1,Type=Integer,Description=\"Number of reference positions spanned by this CNV\">");
@@ -109,38 +111,32 @@ namespace CanvasCommon
         /// <summary>
         /// Outputs the copy number calls to a text file.
         /// </summary>
-        private static void WriteVariants(IReadOnlyCollection<List<CanvasSegment>> segmentsOfAllSamples, List<PloidyInfo> ploidies, GenomeMetadata genome,
+        private static void WriteVariants(CanvasSegment[] segmentsOfAllSamples, int nSamples, List<PloidyInfo> ploidies, GenomeMetadata genome,
             BgzipOrStreamWriter writer, bool isPedigreeInfoSupplied = true, int? denovoQualityThreshold = null)
         {
-            var nSamples = segmentsOfAllSamples.Count;
             foreach (GenomeMetadata.SequenceMetadata chromosome in genome.Contigs())
             {
-                for (int segmentIndex = 0; segmentIndex < segmentsOfAllSamples.First().Count; segmentIndex++)
+                for (int index = 0; index < segmentsOfAllSamples.Length; index+=nSamples)
                 {
-                    var firstSampleSegment = segmentsOfAllSamples.First()[segmentIndex];
-                    var index = segmentIndex;
+                    var firstSampleSegment = segmentsOfAllSamples[index];
+                    var currentSegments = new ArraySegment<CanvasSegment>(segmentsOfAllSamples, index, nSamples);
                     var recordLevelFilter = CanvasFilter.GetRecordLevelFilterFromSampleFiltersOnly(
-                                                segmentsOfAllSamples
-                                                .Select(sample => sample[index].Filter)
+                                                currentSegments
+                                                .Select(x => x.Filter)
                                                 .ToReadOnlyList())
                                                 .ToVcfString();
-                    if (!firstSampleSegment.Chr.Equals(chromosome.Name, StringComparison.OrdinalIgnoreCase))
+                    if (!firstSampleSegment.Chr.Equals(chromosome.Name, StringComparison.OrdinalIgnoreCase)) //TODO: this is extremely inefficient. Segments should be sorted by chromosome
                         continue;
-                    var referenceCopyNumbers = segmentsOfAllSamples.Zip(ploidies, (segment, ploidy) => ploidy?.GetReferenceCopyNumber(segment[segmentIndex]) ?? 2).ToList();
-                    var currentSegments = segmentsOfAllSamples.Select(x => x[segmentIndex]).ToList();
+                    var referenceCopyNumbers = currentSegments.Zip(ploidies, (segment, ploidy) => ploidy?.GetReferenceCopyNumber(segment) ?? 2).ToList();
                     var cnvTypes = new List<CnvType>();
                     for (int sampleIndex = 0; sampleIndex < nSamples; sampleIndex++)
                     {
-                        cnvTypes.Add(currentSegments[sampleIndex].GetCnvType(referenceCopyNumbers[sampleIndex]));
+                        cnvTypes.Add(currentSegments.Array[sampleIndex].GetCnvType(referenceCopyNumbers[sampleIndex]));
                     }
                     var cnvType = AssignCnvType(cnvTypes);
-<<<<<<< HEAD
-                    string alternateAllele = segment.GetAltCopyNumbers(cnvType);
+                    string alternateAllele = string.Join(",",
+                        currentSegments.Select(x => x.GetAltCopyNumbers(cnvType)).Distinct());
                     WriteColumnsUntillInfoField(writer, firstSampleSegment, cnvType, isMultisample: segments.Count > 1);
-=======
-
-                    WriteInfoField(writer, firstSampleSegment, cnvType, recordLevelFilter, segmentsOfAllSamples.Count > 1);
->>>>>>> develop
                     //  FORMAT field
                     if (segmentsOfAllSamples.Count == 1)
                         WriteSingleSampleFormat(writer, firstSampleSegment, denovoQualityThreshold.HasValue);
@@ -150,26 +146,7 @@ namespace CanvasCommon
             }
         }
 
-
-
-        private static CnvType AssignCnvType(List<CnvType> cnvTypes)
-        {
-            CnvType cnvType;
-            if (cnvTypes.TrueForAll(x => x == CnvType.Reference))
-                cnvType = CnvType.Reference;
-            else if (cnvTypes.TrueForAll(x => x == CnvType.Reference || x == CnvType.Loss))
-                cnvType = CnvType.Loss;
-            else if (cnvTypes.TrueForAll(x => x == CnvType.Reference || x == CnvType.Gain))
-                cnvType = CnvType.Gain;
-            else if (cnvTypes.TrueForAll(x => x == CnvType.Reference || x == CnvType.LossOfHeterozygosity))
-                cnvType = CnvType.LossOfHeterozygosity;
-            else if (cnvTypes.Count == 1)
-                throw new ArgumentOutOfRangeException($"cnvType {cnvTypes.First()} is invalid for single sample.");
-            else
-                cnvType = CnvType.ComplexCnv;
-            return cnvType;
-        }
-
+ 
         private static void WriteSingleSampleFormat(BgzipOrStreamWriter writer, CanvasSegment segment, bool reportDQ)
         {
             const string nullValue = ".";
@@ -215,11 +192,7 @@ namespace CanvasCommon
         /// <param name="cnvType"></param>
         /// <param name="isMultisample"></param>
         /// <returns></returns>
-<<<<<<< HEAD
-        private static void WriteColumnsUntillInfoField(BgzipOrStreamWriter writer, CanvasSegment segment, CnvType cnvType, bool isMultisample)
-=======
-        private static void WriteInfoField(BgzipOrStreamWriter writer, CanvasSegment segment, CnvType cnvType, string recordLevelFilter, bool isMultisample)
->>>>>>> develop
+        private static void WriteInfoField(BgzipOrStreamWriter writer, CanvasSegment segment, CnvType cnvType, bool isMultisample)
         {
             // From vcf 4.1 spec:
             //     If any of the ALT alleles is a symbolic allele (an angle-bracketed ID String “<ID>”) then the padding base is required and POS denotes the 
@@ -261,7 +234,7 @@ namespace CanvasCommon
             {   
                 var genome = WriteVcfHeader(segments, diploidCoverage, wholeGenomeFastaDirectory, new List<string> { sampleName },
                     extraHeaders, qualityThreshold, writer, denovoQualityThreshold);
-                WriteVariants(new List<List<CanvasSegment>> { segments.ToList() }, new List<PloidyInfo> { ploidy }, genome, writer, isPedigreeInfoSupplied, denovoQualityThreshold);
+                WriteVariants(segments.ToArray(), 1, new List<PloidyInfo> { ploidy }, genome, writer, isPedigreeInfoSupplied, denovoQualityThreshold);
             }
         }
 
@@ -273,8 +246,13 @@ namespace CanvasCommon
             {
                 var genome = WriteVcfHeader(segments.Values.First(), diploidCoverage.Average(), wholeGenomeFastaDirectory, sampleNames,
                     extraHeaders, qualityThreshold, writer, denovoQualityThreshold);
-                WriteVariants(segments.Values.ToList(), ploidies, genome, writer, isPedigreeInfoSupplied, denovoQualityThreshold);
+                WriteVariants(GetFlattenArrayForSegmentsOfAllSamples(segments), segments.Count(), ploidies, genome, writer, isPedigreeInfoSupplied, denovoQualityThreshold);
             }
+        }
+
+        private static CanvasSegment[] GetFlattenArrayForSegmentsOfAllSamples(ISampleMap<List<CanvasSegment>> segments)
+        {
+            ;
         }
     }
 }
