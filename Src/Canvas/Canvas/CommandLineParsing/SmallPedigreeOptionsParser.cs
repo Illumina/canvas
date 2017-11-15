@@ -77,18 +77,13 @@ namespace Canvas.CommandLineParsing
             bool haveMother = bams.Any(x => x.SampleType == CanvasCommon.SampleType.Mother);
             bool haveFather = bams.Any(x => x.SampleType == CanvasCommon.SampleType.Father);
             bool haveSibling = bams.Any(x => x.SampleType == CanvasCommon.SampleType.Sibling);
-            bool haveOther = bams.Any(x => x.SampleType == CanvasCommon.SampleType.Other);
 
-            bool haveTrio = haveProband && haveMother && haveFather;
+            bool haveTrio = (haveProband || haveSibling) && haveMother && haveFather;
+            bool haveOther = bams.Any(x => x.SampleType == CanvasCommon.SampleType.Other);
 
             if (haveTrio && haveOther)
             {
                 failedResult = ParsingResult<SmallPedigreeOptions>.FailedResult("SampleType other with trio or quad is not currently supported");
-                return true;
-            }
-            if (haveSibling && !haveProband)
-            {
-                failedResult = ParsingResult<SmallPedigreeOptions>.FailedResult("SampleType sibling without proband information is not currently supported");
                 return true;
             }
             return false;

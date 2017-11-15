@@ -72,7 +72,7 @@ namespace CanvasPedigreeCaller
 
             var segmentsForVariantCalling = GetHighestLikelihoodSegments(segmentSetsFromCommonCnvs, samplesInfo, copyNumberModels).ToList();
             PedigreeInfo pedigreeInfo = null;
-            if (kinships.Values.Any(kin => kin == SampleType.Proband))
+            if (kinships.Values.Any(kin => kin == SampleType.Proband || kin == SampleType.Sibling) && kinships.Values.Any(kin => kin == SampleType.Mother) && kinships.Values.Any(kin => kin == SampleType.Father))
                 pedigreeInfo = PedigreeInfo.GetPedigreeInfo(kinships, _callerParameters);
             Parallel.ForEach(
                 segmentsForVariantCalling,
