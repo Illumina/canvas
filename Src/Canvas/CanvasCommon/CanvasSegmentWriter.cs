@@ -33,7 +33,7 @@ namespace CanvasCommon
         {
             double totalPloidy = 0;
             double totalWeight = 0;
-            foreach (CanvasSegment segment in segments.Where(segment => segment.Filter != null && segment.Filter.IsPass))
+            foreach (CanvasSegment segment in segments.Where(segment => segment.Filter.IsPass))
             {
                 totalWeight += segment.Length;
                 totalPloidy += segment.CopyNumber * (segment.Length);

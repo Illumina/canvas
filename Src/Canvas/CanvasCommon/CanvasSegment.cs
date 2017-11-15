@@ -197,7 +197,7 @@ namespace CanvasCommon
         public bool IsHeterogeneous;
         private const int NumberVariantFrequencyBins = 100;
         private const int OverlapWindowThreshold = 500;
-        public CanvasFilter Filter;
+        public CanvasFilter Filter = CanvasFilter.Create(Enumerable.Empty<string>());
         public Tuple<int, int> StartConfidenceInterval; // if not null, this is a confidence interval around Start, reported in the CIPOS tag
         public Tuple<int, int> EndConfidenceInterval; // if not null, this is a confidence interval around End, reported in the CIEND tag
         public Balleles Balleles { get; private set; }
@@ -1047,7 +1047,6 @@ namespace CanvasCommon
             string sizeFilter = "L" + CanvasFilter.FormatCnvSizeWithSuffix(segmantSizeCutoff);
             foreach (var segment in segments)
             {
-                if (segment.Filter != null) throw new Exception($"Filter has already been set: {segment.Filter.ToVcfString()}");
                 var filterTags = new List<string>();
                 if (segment.QScore < qualityFilterThreshold) filterTags.Add(qualityFilter);
                 if (segment.End - segment.Begin < segmantSizeCutoff) filterTags.Add(sizeFilter);
