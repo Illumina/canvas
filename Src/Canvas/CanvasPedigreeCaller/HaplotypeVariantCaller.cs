@@ -7,7 +7,7 @@ namespace CanvasPedigreeCaller
 {
     internal class HaplotypeVariantCaller : IVariantCaller
     {
-        private readonly List<Genotype> _alleleCopyNumberGenotypes;
+        private readonly List<PhasedGenotype> _alleleCopyNumberGenotypes;
         private readonly PedigreeCallerParameters _callerParameters;
 
         public HaplotypeVariantCaller(PedigreeCallerParameters callerParameters)
@@ -30,14 +30,14 @@ namespace CanvasPedigreeCaller
         /// </summary>
         /// <param name="numberOfCnStates"></param>
         /// <returns> </returns>
-        private static List<Genotype> GenerateGenotypeCombinations(int numberOfCnStates)
+        public static List<PhasedGenotype> GenerateGenotypeCombinations(int numberOfCnStates)
         {
-            var genotypes = new List<Genotype>();
+            var genotypes = new List<PhasedGenotype>();
             for (int cn = 0; cn < numberOfCnStates; cn++)
             {
                 for (int gt = 0; gt <= cn; gt++)
                 {
-                    genotypes.Add(new Genotype(gt, cn - gt));
+                    genotypes.Add(new PhasedGenotype(gt, cn - gt));
                 }
             }
             return genotypes;

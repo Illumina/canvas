@@ -2,13 +2,26 @@ namespace CanvasCommon
 {
     public class Genotype
     {
-        public int CountsA { get; }
-        public int CountsB { get; }
-        
-        public Genotype(int countsA, int countsB)
+        public int TotalCopyNumber { get; }
+
+        public PhasedGenotype PhasedGenotype { get; }
+
+        private Genotype(int totalCopyNumber, PhasedGenotype phasedGenotype)
         {
-            CountsA = countsA;
-            CountsB = countsB;
+            TotalCopyNumber = totalCopyNumber;
+            PhasedGenotype = phasedGenotype;
         }
+
+        public Genotype Create(int totalCopyNumber)
+        {
+            return new Genotype(totalCopyNumber, null);
+        }
+
+        public Genotype Create(PhasedGenotype phasedGenotype)
+        {
+            return new Genotype(phasedGenotype.CopyNumberA + phasedGenotype.CopyNumberB, phasedGenotype);
+        }
+
+        public bool HasAlleleCopyNumbers => PhasedGenotype != null;
     }
 }
