@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices.ComTypes;
 using Illumina.Common;
 using Illumina.Common.FileSystem;
 using Isas.Framework.DataTypes;
@@ -65,7 +66,7 @@ namespace CanvasCommon
             GenomeMetadata genome = new GenomeMetadata();
             genome.Deserialize(new FileLocation(Path.Combine(wholeGenomeFastaDirectory, "GenomeSize.xml")));
 
-            foreach (GenomeMetadata.SequenceMetadata chromosome in genome.Contigs()) 
+            foreach (GenomeMetadata.SequenceMetadata chromosome in genome.Contigs())
             {
                 writer.WriteLine($"##contig=<ID={chromosome.Name},length={chromosome.Length}>");
             }
@@ -92,9 +93,9 @@ namespace CanvasCommon
             {
                 writer.WriteLine($"##FORMAT=<ID=DQ,Number=1,Type=Float,Description=\"De novo quality. Threshold for passing de novo call: {denovoQualityThreshold}\">");
             }
-            var titleColumns = new List<string> {"#CHROM", "POS", "ID", "REF", "ALT", "QUAL", "FILTER", "INFO", "FORMAT"};
+            var titleColumns = new List<string> { "#CHROM", "POS", "ID", "REF", "ALT", "QUAL", "FILTER", "INFO", "FORMAT" };
             titleColumns.AddRange(sampleNames);
-            writer.WriteLine(string.Join("\t",  titleColumns));
+            writer.WriteLine(string.Join("\t", titleColumns));
             SanityCheckChromosomeNames(genome, segments);
             return genome;
         }
@@ -116,7 +117,7 @@ namespace CanvasCommon
         {
             foreach (GenomeMetadata.SequenceMetadata chromosome in genome.Contigs())
             {
-                for (int index = 0; index < segmentsOfAllSamples.Length; index+=nSamples)
+                for (int index = 0; index < segmentsOfAllSamples.Length; index += nSamples)
                 {
                     var firstSampleSegment = segmentsOfAllSamples[index];
                     var currentSegments = new ArraySegment<CanvasSegment>(segmentsOfAllSamples, index, nSamples);
@@ -128,45 +129,90 @@ namespace CanvasCommon
                     if (!firstSampleSegment.Chr.Equals(chromosome.Name, StringComparison.OrdinalIgnoreCase)) //TODO: this is extremely inefficient. Segments should be sorted by chromosome
                         continue;
                     var referenceCopyNumbers = currentSegments.Zip(ploidies, (segment, ploidy) => ploidy?.GetReferenceCopyNumber(segment) ?? 2).ToList();
-                    var cnvTypes = new List<CnvType>();
+                    var cnvTypes = new CnvType[nSamples];
+                    var sampleSetAlleleCopyNumbers = new int[nSamples][];
                     for (int sampleIndex = 0; sampleIndex < nSamples; sampleIndex++)
                     {
-                        cnvTypes.Add(currentSegments.Array[sampleIndex].GetCnvType(referenceCopyNumbers[sampleIndex]));
+                        (cnvTypes[sampleIndex], sampleSetAlleleCopyNumbers[sampleIndex]) = currentSegments.Array[sampleIndex].GetCnvTypeAndAlleleCopyNumbers(referenceCopyNumbers[sampleIndex]);
                     }
-                    var cnvType = AssignCnvType(cnvTypes);
-                    string alternateAllele = string.Join(",",
-                        currentSegments.Select(x => x.GetAltCopyNumbers(cnvType)).Distinct());
-                    WriteColumnsUntillInfoField(writer, firstSampleSegment, cnvType, isMultisample: segments.Count > 1);
-                    //  FORMAT field
-                    if (segmentsOfAllSamples.Count == 1)
-                        WriteSingleSampleFormat(writer, firstSampleSegment, denovoQualityThreshold.HasValue);
-                    else
-                        WriteFormatField(writer, currentSegments, denovoQualityThreshold.HasValue);
+                    var sampleSetCnvType = AssignCnvType(cnvTypes);
+                    var (alternateAllele, genotypes) = GetAltAllelesAndGenotypes(sampleSetAlleleCopyNumbers);
+                    WriteColumnsUntillInfoField(writer, firstSampleSegment, sampleSetCnvType, alternateAllele, recordLevelFilter, nSamples > 1);
+                    WriteFormatAndSampleFields(writer, currentSegments.Array, genotypes, denovoQualityThreshold.HasValue);
                 }
             }
         }
 
- 
-        private static void WriteSingleSampleFormat(BgzipOrStreamWriter writer, CanvasSegment segment, bool reportDQ)
+        private static CnvType AssignCnvType(CnvType[] cnvTypes)
         {
-            const string nullValue = ".";
-            writer.Write("\tGT:RC:BC:CN:MCC");
-            if (reportDQ)
-                writer.Write(":DQ");
-            writer.Write($"\t{segment.MedianCount:F2}:{segment.BinCount}:{segment.CopyNumber}");
-            writer.Write(segment.MajorChromosomeCount.HasValue ? $":{segment.MajorChromosomeCount}" : ":.");
-            if (reportDQ)
-            {
-                string dqscore = segment.DqScore.HasValue ? $"{segment.DqScore.Value:F2}" : nullValue;
-                writer.Write($":{dqscore}");
-            }
-            writer.WriteLine();
+            var nonRefTypes = cnvTypes.Where(x => x != CnvType.Reference).Distinct().ToArray();
+            if (!nonRefTypes.Any()) return CnvType.Reference;
+            if (nonRefTypes.Length > 1) return CnvType.ComplexCnv;
+            return nonRefTypes.First();
+            // Why throw exception for single sample? if this logic is correct, why it is not checked in the first place
+            //else if (cnvTypes.Count == 1)
+            //    throw new ArgumentOutOfRangeException($"sampleSetCnvType {cnvTypes.First()} is invalid for single sample.");
         }
 
+        private static (string, string[]) GetAltAllelesAndGenotypes(int[][] sampleSetAlleleCopyNumbers)
+        {
+            var uniqAltAlleles = sampleSetAlleleCopyNumbers.SelectMany(x => x).Distinct().Where(x => x != 1).OrderBy(x => x).ToList();
+            var altAlleles = uniqAltAlleles.Select(x => $"<CN{x}>").ToArray();
+            if (altAlleles.Last() == $"<CN{int.MaxValue}>") altAlleles[altAlleles.Length - 1] = "<DUP>"; // DUP is always the last one
+            var sampleGenotypes = sampleSetAlleleCopyNumbers.Select(x => AlleleCopyNumberToGenotype(x, uniqAltAlleles)).ToArray();
+            return (string.Join(",", altAlleles), sampleGenotypes);
+        }
+
+
+        private static string AlleleCopyNumberToGenotype(int[] alleleCopyNumbers, List<int> uniqAltAlleles)
+        {
+            var genotypes = new char[alleleCopyNumbers.Length];
+            for (int i = 0; i < alleleCopyNumbers.Length; i++)
+            {
+                switch (alleleCopyNumbers[i])
+                {
+                    case 1:
+                        genotypes[i] = '0';
+                        break;
+                    case -1:
+                        genotypes[i] = '.';
+                        break;
+                    default:
+                        genotypes[i] = (char)uniqAltAlleles.IndexOf(alleleCopyNumbers[i]);
+                        break;
+                }
+            }
+            return string.Join("/", genotypes);
+        }
+
+        private static void WriteFormatAndSampleFields(BgzipOrStreamWriter writer, CanvasSegment[] segments, string[] genotypes, bool reportDQ)
+        {
+            const string nullValue = ".";
+            writer.Write("\tGT:RC:BC:CN:MCC:MCCQ:QS:FT");
+            if (reportDQ)
+                writer.Write(":DQ");
+            for (int i = 0; i < segments.Length; i++)
+            {
+                var segment = segments[i];
+                string mcc = segment.MajorChromosomeCount.HasValue ? segment.MajorChromosomeCount.ToString() : nullValue;
+                string mccq = segment.MajorChromosomeCountScore.HasValue ? $"{segment.MajorChromosomeCountScore.Value:F2}" : nullValue;
+
+                writer.Write($"\t{genotypes[i]}:{segment.MedianCount:F2}:{segment.BinCount}:{segment.CopyNumber}:{ mcc}:{ mccq}:{ segment.QScore:F2}:{segment.Filter.ToVcfString()}");
+                if (reportDQ)
+                {
+                    string dqscore = segment.DqScore.HasValue ? $"{segment.DqScore.Value:F2}" : nullValue;
+                    writer.Write($":{dqscore}");
+                }
+                writer.WriteLine();
+            }
+        }
+
+        //TODO: why MCCQ and QS are only output for multiple VCF? It seems quite straightforward to have one method for both single and multi-sample VCFs,especially if we could have the same FORMAT column for both of them
+        /*
         private static void WriteFormatField(BgzipOrStreamWriter writer, List<CanvasSegment> segments, bool reportDQ)
         {
             const string nullValue = ".";
-            writer.Write("\tRC:BC:CN:MCC:MCCQ:QS"); // why MCCQ and QS are only output for multiple VCF? It seems quite straightforward to have one method for both single and multi-sample VCFs,especially if we could have the same FORMAT column for both of them
+            writer.Write("\tRC:BC:CN:MCC:MCCQ:QS"); 
             if (reportDQ)
                 writer.Write(":DQ");
             foreach (var segment in segments)
@@ -182,47 +228,49 @@ namespace CanvasCommon
             }
             writer.WriteLine();
         }
+        */
 
         /// <summary>
         /// Write to a file a single CanvasSegment record as a non-sample VCF columns 
         /// </summary>
         /// <param name="writer"></param>
-        /// <param name="segment"></param>
+        /// <param name="firstSampleSegment"></param>
+        /// <param name="alternateAllele"></param>
         /// <param name="recordLevelFilter"></param>
-        /// <param name="cnvType"></param>
+        /// <param name="sampleSetCnvType"></param>
         /// <param name="isMultisample"></param>
         /// <returns></returns>
-        private static void WriteInfoField(BgzipOrStreamWriter writer, CanvasSegment segment, CnvType cnvType, bool isMultisample)
+        private static void WriteColumnsUntillInfoField(BgzipOrStreamWriter writer, CanvasSegment firstSampleSegment, CnvType sampleSetCnvType, string alternateAllele, string recordLevelFilter, bool isMultisample)
         {
             // From vcf 4.1 spec:
             //     If any of the ALT alleles is a symbolic allele (an angle-bracketed ID String “<ID>”) then the padding base is required and POS denotes the 
             //     coordinate of the base preceding the polymorphism.
-            string alternateAllele = segment.GetAltCopyNumbers(cnvType);
+            // Is this check necessary? CANVAS always output symbolic allele, right?
             int position = (alternateAllele.StartsWith("<") && alternateAllele.EndsWith(">"))
-                ? segment.Begin
-                : segment.Begin + 1;
-            writer.Write($"{segment.Chr}\t{position}\tCanvas:{cnvType.ToVcfId()}:{segment.Chr}:{segment.Begin + 1}-{segment.End}\t");
-            string qScore = isMultisample ? "." : $"{segment.QScore:F2}";
+                ? firstSampleSegment.Begin
+                : firstSampleSegment.Begin + 1;
+            writer.Write($"{firstSampleSegment.Chr}\t{position}\tCanvas:{sampleSetCnvType.ToVcfId()}:{firstSampleSegment.Chr}:{firstSampleSegment.Begin + 1}-{firstSampleSegment.End}\t");
+            string qScore = isMultisample ? "." : $"{firstSampleSegment.QScore:F2}";
             writer.Write($"N\t{alternateAllele}\t{qScore}\t{recordLevelFilter}\t");
 
-            if (cnvType != CnvType.Reference)
-                writer.Write($"SVTYPE={cnvType.ToSvType()};");
+            if (sampleSetCnvType != CnvType.Reference)
+                writer.Write($"SVTYPE={sampleSetCnvType.ToSvType()};");
 
-            if (segment.IsHeterogeneous)
+            if (firstSampleSegment.IsHeterogeneous)
                 writer.Write("SUBCLONAL;");
 
-            if (segment.IsCommonCnv)
+            if (firstSampleSegment.IsCommonCnv)
                 writer.Write("COMMONCNV;");
-            
-            writer.Write($"END={segment.End}");
 
-            if (cnvType != CnvType.Reference)
-                writer.Write($";CNVLEN={segment.Length}");
+            writer.Write($"END={firstSampleSegment.End}");
 
-            if (segment.StartConfidenceInterval != null)
-                writer.Write($";CIPOS={segment.StartConfidenceInterval.Item1},{segment.StartConfidenceInterval.Item2}");
-            if (segment.EndConfidenceInterval != null)
-                writer.Write($";CIEND={segment.EndConfidenceInterval.Item1},{segment.EndConfidenceInterval.Item2}");
+            if (sampleSetCnvType != CnvType.Reference)
+                writer.Write($";CNVLEN={firstSampleSegment.Length}");
+
+            if (firstSampleSegment.StartConfidenceInterval != null)
+                writer.Write($";CIPOS={firstSampleSegment.StartConfidenceInterval.Item1},{firstSampleSegment.StartConfidenceInterval.Item2}");
+            if (firstSampleSegment.EndConfidenceInterval != null)
+                writer.Write($";CIEND={firstSampleSegment.EndConfidenceInterval.Item1},{firstSampleSegment.EndConfidenceInterval.Item2}");
         }
 
 
@@ -231,7 +279,7 @@ namespace CanvasCommon
                 List<string> extraHeaders, PloidyInfo ploidy, int qualityThreshold, bool isPedigreeInfoSupplied, int? denovoQualityThreshold = null)
         {
             using (BgzipOrStreamWriter writer = new BgzipOrStreamWriter(outVcfPath))
-            {   
+            {
                 var genome = WriteVcfHeader(segments, diploidCoverage, wholeGenomeFastaDirectory, new List<string> { sampleName },
                     extraHeaders, qualityThreshold, writer, denovoQualityThreshold);
                 WriteVariants(segments.ToArray(), 1, new List<PloidyInfo> { ploidy }, genome, writer, isPedigreeInfoSupplied, denovoQualityThreshold);
@@ -252,7 +300,19 @@ namespace CanvasCommon
 
         private static CanvasSegment[] GetFlattenArrayForSegmentsOfAllSamples(ISampleMap<List<CanvasSegment>> segments)
         {
-            ;
+            var nSample = segments.Count();
+            var nSegment = segments.First().Value.Count;
+            var flattenArray = new CanvasSegment[nSegment * nSample];
+            var allSegments = segments.Values.ToArray();
+            for (int i = 0; i < nSample; i++)
+            {
+                var segmentsOfOneSample = allSegments[i];
+                for (int j = 0; j < nSegment; j++)
+                {
+                    flattenArray[j*nSample + i] = segmentsOfOneSample[j];
+                }
+            }
+            return flattenArray;
         }
     }
 }
