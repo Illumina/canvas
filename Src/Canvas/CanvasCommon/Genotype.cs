@@ -12,7 +12,7 @@ namespace CanvasCommon
             PhasedGenotype = phasedGenotype;
         }
 
-        public Genotype Create(int totalCopyNumber)
+        public static Genotype Create(int totalCopyNumber)
         {
             return new Genotype(totalCopyNumber, null);
         }

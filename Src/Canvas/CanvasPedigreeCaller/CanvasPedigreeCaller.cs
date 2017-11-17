@@ -13,6 +13,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using CanvasPedigreeCaller.Visualization;
 using Isas.Framework.DataTypes.Maps;
+using Genotype = CanvasCommon.Genotype;
 
 namespace CanvasPedigreeCaller
 {
@@ -309,8 +310,8 @@ namespace CanvasPedigreeCaller
             foreach (var canvasSegment in canvasSegments)
             {
                 var copyNumbersLikelihoods = _copyNumberLikelihoodCalculator.GetCopyNumbersLikelihoods(canvasSegment, samplesInfo, copyNumberModel);
-                GetCopyNumbersNoPedigreeInfo(canvasSegment, copyNumbersLikelihoods);
-                segmentSetLikelihood += copyNumbersLikelihoods.MaximalLikelihood;
+                var (sampleCopyNumbers,  maximalLikelihood) = GetCopyNumbersNoPedigreeInfo(canvasSegment, copyNumbersLikelihoods);
+                segmentSetLikelihood += maximalLikelihood;
             }
 
             segmentSetLikelihood /= nSegments;
@@ -320,18 +321,18 @@ namespace CanvasPedigreeCaller
         /// <summary>
         /// Calculates maximal likelihood for copy numbers. Updated CanvasSegment CopyNumber only. 
         /// </summary>
-        public static ISampleMap<int> GetCopyNumbersNoPedigreeInfo(ISampleMap<CanvasSegment> segments, CopyNumbersLikelihoods copyNumbersLikelihoods)
+        public static (SampleMap<int> sampleCopyNumbers, double maximalLikelihood) GetCopyNumbersNoPedigreeInfo(ISampleMap<CanvasSegment> segments,
+            ISampleMap<Dictionary<Genotype, double>> copyNumbersLikelihoods)
         {
             var sampleCopyNumbers = new SampleMap<int>();
             double maximalLikelihood = 1;
             foreach (var sampleId in segments.SampleIds)
             {
-                var (copyNumber, maxSampleLikelihood) = copyNumbersLikelihoods.SingleSampleLikelihoods[sampleId].MaxBy(x => x.Value);
+                var (copyNumber, maxSampleLikelihood) = copyNumbersLikelihoods[sampleId].MaxBy(x => x.Value);
                 maximalLikelihood *= maxSampleLikelihood;
-                sampleCopyNumbers.Add(sampleId, copyNumber);
+                sampleCopyNumbers.Add(sampleId, copyNumber.TotalCopyNumber);
             }
-            copyNumbersLikelihoods.MaximalLikelihood = maximalLikelihood;
-            return sampleCopyNumbers;
+            return (sampleCopyNumbers: sampleCopyNumbers, maximalLikelihood: maximalLikelihood);
         }
 
         /// <summary>
@@ -340,7 +341,7 @@ namespace CanvasPedigreeCaller
         /// <param name="numberOfCnStates"></param>
         /// <param name="maxAlleleNumber"></param>
         /// <returns></returns>
-        public static List<List<int>> GenerateCopyNumberCombinations(int numberOfCnStates, int maxAlleleNumber)
+            public static List<List<int>> GenerateCopyNumberCombinations(int numberOfCnStates, int maxAlleleNumber)
         {
             if (numberOfCnStates <= 0)
                 throw new ArgumentOutOfRangeException(nameof(numberOfCnStates));

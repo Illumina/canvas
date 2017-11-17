@@ -173,7 +173,7 @@ namespace CanvasPedigreeCaller
 
             var copyNumbers = pedigreeInfo != null
                 ? GetCopyNumbersWithPedigreeInfo(canvasSegments, pedigreeInfo, copyNumbersLikelihoods)
-                : CanvasPedigreeCaller.GetCopyNumbersNoPedigreeInfo(canvasSegments, copyNumbersLikelihoods);
+                : CanvasPedigreeCaller.GetCopyNumbersNoPedigreeInfo(canvasSegments, copyNumbersLikelihoods).sampleCopyNumbers;
 
             EstimateQScores(canvasSegments, samplesInfo, pedigreeInfo, copyNumbersLikelihoods, copyNumbers);
 
@@ -260,7 +260,7 @@ namespace CanvasPedigreeCaller
                 }
             }
         }
-        
+
         private double GetProbandLikelihood(CopyNumberModel copyNumberModel, int childCopyNumber, PhasedGenotype parent1GtStates, PhasedGenotype parent2GtStates, bool isInheritedCnv, CanvasSegment canvasSegment,
             double bestLikelihood, ref PhasedGenotype bestGtState)
         {
