@@ -268,18 +268,6 @@ namespace CanvasCommon
             return sorted.Median();
         }
 
-        public CnvType GetAlleleCopyNumbers(int referenceCopyNumber)
-        {
-            if (CopyNumber < referenceCopyNumber)
-                return CnvType.Loss;
-            if (CopyNumber > referenceCopyNumber)
-                return CnvType.Gain;
-            if (referenceCopyNumber == 2 &&
-                MajorChromosomeCount.HasValue && MajorChromosomeCount == CopyNumber)
-                return CnvType.LossOfHeterozygosity;
-            return CnvType.Reference;
-        }
-
         public (CnvType, int[]) GetCnvTypeAndAlleleCopyNumbers(int referenceCopyNumber)
         {
             if (CopyNumber == referenceCopyNumber)
@@ -298,17 +286,6 @@ namespace CanvasCommon
             }
             return CopyNumber == 0 ? (CnvType.Loss, new int[referenceCopyNumber]) : (CnvType.Loss, new[] { 0, 1 });
         }
-
-
-    public string[] GetAltGenotypes(int referenceCopyNumber)
-    {
-        var cnvType = GetCnvType(referenceCopyNumber);
-        if (CnvTypeExtensions.IsReference(cnvType)) return new string[] { };
-        if (!MajorChromosomeCount.HasValue) return new[] { $"<{CnvTypeExtensions.CnvTag}>" };
-        if (MajorChromosomeCount <= 1)
-            throw new ArgumentOutOfRangeException($"MajorChromosomeCount should be always bigger than 1: {MajorChromosomeCount} provided.");
-        return new[] { CopyNumber - MajorChromosomeCount, MajorChromosomeCount }.Where(x => x != 1).Select(x => $"<CN{x}>").ToArray();
-    }
 
     /// <summary>
     /// Merge another neighboring segment into this one.

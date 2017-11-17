@@ -154,31 +154,37 @@ namespace CanvasCommon
             //    throw new ArgumentOutOfRangeException($"sampleSetCnvType {cnvTypes.First()} is invalid for single sample.");
         }
 
-        private static (string, string[]) GetAltAllelesAndGenotypes(int[][] sampleSetAlleleCopyNumbers)
+        internal static (string, string[]) GetAltAllelesAndGenotypes(int[][] sampleSetAlleleCopyNumbers)
         {
-            var uniqAltAlleles = sampleSetAlleleCopyNumbers.SelectMany(x => x).Distinct().Where(x => x != 1).OrderBy(x => x).ToList();
+            var uniqAltAlleles = sampleSetAlleleCopyNumbers.SelectMany(x => x).Distinct().Where(x => x != 1 && x != -1).OrderBy(x => x).ToList();
             var altAlleles = uniqAltAlleles.Select(x => $"<CN{x}>").ToArray();
-            if (altAlleles.Last() == $"<CN{int.MaxValue}>") altAlleles[altAlleles.Length - 1] = "<DUP>"; // DUP is always the last one
+            string altAlleleString = ".";
+            if (altAlleles.Any())
+            {
+                if (altAlleles.Last() == $"<CN{int.MaxValue}>")
+                    altAlleles[altAlleles.Length - 1] = "<DUP>"; // DUP is always the last one
+                altAlleleString = string.Join(",", altAlleles);
+            }
             var sampleGenotypes = sampleSetAlleleCopyNumbers.Select(x => AlleleCopyNumberToGenotype(x, uniqAltAlleles)).ToArray();
-            return (string.Join(",", altAlleles), sampleGenotypes);
+            return (altAlleleString, sampleGenotypes);
         }
 
 
         private static string AlleleCopyNumberToGenotype(int[] alleleCopyNumbers, List<int> uniqAltAlleles)
         {
-            var genotypes = new char[alleleCopyNumbers.Length];
+            var genotypes = new string[alleleCopyNumbers.Length];
             for (int i = 0; i < alleleCopyNumbers.Length; i++)
             {
                 switch (alleleCopyNumbers[i])
                 {
                     case 1:
-                        genotypes[i] = '0';
+                        genotypes[i] = "0";
                         break;
                     case -1:
-                        genotypes[i] = '.';
+                        genotypes[i] = ".";
                         break;
                     default:
-                        genotypes[i] = (char)uniqAltAlleles.IndexOf(alleleCopyNumbers[i]);
+                        genotypes[i] = (uniqAltAlleles.IndexOf(alleleCopyNumbers[i])+1).ToString();
                         break;
                 }
             }
@@ -309,7 +315,7 @@ namespace CanvasCommon
                 var segmentsOfOneSample = allSegments[i];
                 for (int j = 0; j < nSegment; j++)
                 {
-                    flattenArray[j*nSample + i] = segmentsOfOneSample[j];
+                    flattenArray[j * nSample + i] = segmentsOfOneSample[j];
                 }
             }
             return flattenArray;
