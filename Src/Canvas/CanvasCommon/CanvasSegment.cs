@@ -198,7 +198,7 @@ namespace CanvasCommon
         public bool IsHeterogeneous;
         private const int NumberVariantFrequencyBins = 100;
         private const int OverlapWindowThreshold = 500;
-        public CanvasFilter Filter;
+        public CanvasFilter Filter = CanvasFilter.PassFilter;
         public Tuple<int, int> StartConfidenceInterval; // if not null, this is a confidence interval around Start, reported in the CIPOS tag
         public Tuple<int, int> EndConfidenceInterval; // if not null, this is a confidence interval around End, reported in the CIEND tag
         public Balleles Balleles { get; private set; }
