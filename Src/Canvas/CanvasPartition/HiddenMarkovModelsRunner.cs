@@ -24,8 +24,6 @@ namespace CanvasPartition
         }
 
         public Dictionary<string, SegmentationInput.Segment[]> Run(List<SegmentationInput> segmentation) {
-            Dictionary<string, List<SampleGenomicBin>> commonCNVintervals = null;
-
             var segmentByChr = new Dictionary<string, SegmentationInput.Segment[]>();
 
             var cts = new CancellationTokenSource();
