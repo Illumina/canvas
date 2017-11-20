@@ -380,7 +380,7 @@ namespace CanvasPedigreeCaller
                             {pedigreeInfo.ParentsIds.First(), parent1GtStates.Key},
                             {pedigreeInfo.ParentsIds.Last(), parent2GtStates.Key}
                         };
-                        pedigreeInfo.OffspringIds.Zip(offspringsGtStates).ForEach(x => key.Add(x.Item1, Genotype.Create(x.Item2)));
+                        pedigreeInfo.OffspringIds.Zip(offspringsGtStates).ForEach(x => key.Add(x.Item1, Genotype.Create(x.Item2.CopyNumberA + x.Item2.CopyNumberB)));
                         jointLikelihood.SetJointLikelihood(key, currentLikelihood);
 
                         if (currentLikelihood > jointLikelihood.MaximalLikelihood)

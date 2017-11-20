@@ -23,5 +23,25 @@ namespace CanvasCommon
         }
 
         public bool HasAlleleCopyNumbers => PhasedGenotype != null;
+
+        public override int GetHashCode()
+        {
+            if (PhasedGenotype != null)
+                return TotalCopyNumber * 100 + PhasedGenotype.CopyNumberA * 10 + PhasedGenotype.CopyNumberB;
+            return TotalCopyNumber;
+        }
+
+        public override bool Equals(object obj)
+        {
+            return Equals(obj as Genotype);
+        }
+        private bool Equals(Genotype obj)
+        {
+            if (obj != null && obj.PhasedGenotype != null && PhasedGenotype != null)
+                return obj.TotalCopyNumber == TotalCopyNumber
+                   && obj.PhasedGenotype.CopyNumberA == PhasedGenotype.CopyNumberA &&
+                   obj.PhasedGenotype.CopyNumberB == PhasedGenotype.CopyNumberB;
+            return obj != null && obj.TotalCopyNumber == TotalCopyNumber;
+        }
     }
 }
