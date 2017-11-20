@@ -1,7 +1,6 @@
 using System.IO;
 using CanvasCommon.CommandLineParsing.OptionProcessing;
 using Isas.Framework.Checkpointing;
-using Isas.Framework.FrameworkFactory;
 using Isas.Framework.Logging;
 using Isas.Framework.Settings;
 using Isas.Framework.WorkManagement;
