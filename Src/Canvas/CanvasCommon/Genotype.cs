@@ -17,7 +17,7 @@ namespace CanvasCommon
             return new Genotype(totalCopyNumber, null);
         }
 
-        public Genotype Create(PhasedGenotype phasedGenotype)
+        public static Genotype Create(PhasedGenotype phasedGenotype)
         {
             return new Genotype(phasedGenotype.CopyNumberA + phasedGenotype.CopyNumberB, phasedGenotype);
         }

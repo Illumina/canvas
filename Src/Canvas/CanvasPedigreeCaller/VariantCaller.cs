@@ -56,20 +56,20 @@ namespace CanvasPedigreeCaller
         }
 
         private void EstimateQScores(ISampleMap<CanvasSegment> canvasSegments, ISampleMap<SampleMetrics> pedigreeMembersInfo,
-            PedigreeInfo pedigreeInfo, CopyNumbersLikelihoods copyNumberLikelihoods, ISampleMap<int> copyNumbers)
+            PedigreeInfo pedigreeInfo, ISampleMap<Dictionary<Genotype, double>> SingleSampleointLikelihoods, JointLikelihoods copyNumberLikelihoods, ISampleMap<Genotype> copyNumbers)
         {
             foreach (var sampleId in canvasSegments.SampleIds)
             {
-                canvasSegments[sampleId].QScore = GetSingleSampleQualityScore(copyNumberLikelihoods.SingleSampleLikelihoods[sampleId], copyNumbers[sampleId]);
-                canvasSegments[sampleId].CopyNumber = copyNumbers[sampleId];
+                canvasSegments[sampleId].QScore = GetSingleSampleQualityScore(SingleSampleointLikelihoods[sampleId], copyNumbers[sampleId]);
+                canvasSegments[sampleId].CopyNumber = copyNumbers[sampleId].TotalCopyNumber;
                 if (canvasSegments[sampleId].QScore < _qualityFilterThreshold)
                     canvasSegments[sampleId].Filter = CanvasFilter.Create(new[] {$"q{_qualityFilterThreshold}"});
             }
             if (pedigreeInfo != null)
-                SetDenovoQualityScores(canvasSegments, pedigreeMembersInfo, pedigreeInfo.ParentsIds, pedigreeInfo.OffspringIds, copyNumberLikelihoods);
+                SetDenovoQualityScores(canvasSegments, pedigreeMembersInfo, pedigreeInfo.ParentsIds, pedigreeInfo.OffspringIds, copyNumberLikelihoods, copyNumbers);
         }
 
-        private double GetSingleSampleQualityScore(Dictionary<int, double> copyNumbersLikelihoods, int cnState)
+        private double GetSingleSampleQualityScore(Dictionary<Genotype, double> copyNumbersLikelihoods, Genotype cnState)
         {
             double normalizationConstant = copyNumbersLikelihoods.Select(ll => ll.Value).Sum();
             double qscore = -10.0 * Math.Log10((normalizationConstant - copyNumbersLikelihoods[cnState]) / normalizationConstant);
@@ -79,7 +79,7 @@ namespace CanvasPedigreeCaller
         }
 
         private void SetDenovoQualityScores(ISampleMap<CanvasSegment> canvasSegments, ISampleMap<SampleMetrics> samplesInfo, List<SampleId> parentIDs, List<SampleId> offspringIDs,
-            CopyNumbersLikelihoods copyNumberLikelihoods)
+            JointLikelihoods copyNumbersLikelihoods, ISampleMap<Genotype> copyNumbers)
         {
             foreach (var probandId in offspringIDs)
             {
@@ -96,36 +96,23 @@ namespace CanvasPedigreeCaller
                 if (parentIDs.Concat(probandId).Any(id => !IsPassVariant(canvasSegments, id)))
                     continue;
 
-                double deNovoQualityScore = GetConditionalDeNovoQualityScore(copyNumberLikelihoods, probandId, canvasSegments, parentIDs);
+                double deNovoQualityScore = GetConditionalDeNovoQualityScore(copyNumbersLikelihoods, probandId, copyNumbers);
                 if (Double.IsInfinity(deNovoQualityScore) | deNovoQualityScore > _callerParameters.MaxQscore)
                     deNovoQualityScore = _callerParameters.MaxQscore;
                 canvasSegments[probandId].DqScore = deNovoQualityScore;
             }
         }
 
-        private double GetConditionalDeNovoQualityScore(CopyNumbersLikelihoods copyNumbersLikelihoods, SampleId probandId, ISampleMap<CanvasSegment> canvasSegments,
-            List<SampleId> parentIDs)
+        private double GetConditionalDeNovoQualityScore(JointLikelihoods jointLikelihoods, SampleId probandId, ISampleMap<Genotype> copyNumberGenotypes)
         {
-            var numerator = 0.0;
-            var denominator = 0.0;
-            const int diploidState = 2;
-            var probandCopyNumber = canvasSegments[probandId].CopyNumber;
-            var probandMarginalProbabilities = copyNumbersLikelihoods.GetMarginalProbability(_callerParameters.MaximumCopyNumber, probandId);
-            double normalization = probandMarginalProbabilities[probandCopyNumber] + probandMarginalProbabilities[diploidState];
-            double probandMarginalAlt = probandMarginalProbabilities[probandCopyNumber] / normalization;
-
-            foreach (var copyNumberIndex in copyNumbersLikelihoods.CopyNumbers.Where(copyNumbers => copyNumbers[probandId] == canvasSegments[probandId].CopyNumber))
-            {
-                double holder = copyNumbersLikelihoods.GetJointLikelihood(copyNumberIndex);
-                denominator += holder;
-                if (copyNumberIndex[parentIDs.First()] == diploidState && copyNumberIndex[parentIDs.Last()] == diploidState)
-                    numerator += holder;
-            }
-
             const double q60 = 0.000001;
-            double denovoProbability = (1 - numerator / denominator) * (1 - probandMarginalAlt);
+            double marginalAltLikelihood = jointLikelihoods.GetMarginalLikelihood(new KeyValuePair<SampleId, Genotype>(probandId, copyNumberGenotypes[probandId]));
+            double marginalRefLikelihood = jointLikelihoods.GetMarginalNonAltLikelihood(new KeyValuePair<SampleId, Genotype>(probandId, copyNumberGenotypes[probandId]));
+            double normalization = marginalAltLikelihood + marginalRefLikelihood;
+            double denovoProbability = jointLikelihoods.GetJointLikelihood(copyNumberGenotypes) / marginalAltLikelihood * marginalRefLikelihood / normalization;
             return -10.0 * Math.Log10(Math.Max(denovoProbability, q60));
         }
+
 
         private bool IsPassVariant(ISampleMap<CanvasSegment> canvasSegments, SampleId sampleId)
         {
@@ -169,13 +156,13 @@ namespace CanvasPedigreeCaller
             ISampleMap<CopyNumberModel> copyNumberModel,
             PedigreeInfo pedigreeInfo)
         {
-            var copyNumbersLikelihoods = _copyNumberLikelihoodCalculator.GetCopyNumbersLikelihoods(canvasSegments, samplesInfo, copyNumberModel);
+            var singleSampleLikelihoods = _copyNumberLikelihoodCalculator.GetCopyNumbersLikelihoods(canvasSegments, samplesInfo, copyNumberModel);
 
-            var copyNumbers = pedigreeInfo != null
-                ? GetCopyNumbersWithPedigreeInfo(canvasSegments, pedigreeInfo, copyNumbersLikelihoods)
-                : CanvasPedigreeCaller.GetCopyNumbersNoPedigreeInfo(canvasSegments, copyNumbersLikelihoods).sampleCopyNumbers;
+            var (copyNumbers, jointLikelihoods) = pedigreeInfo != null
+                ? CanvasPedigreeCaller.GetCopyNumbersWithPedigreeInfo(canvasSegments, pedigreeInfo, singleSampleLikelihoods, _callerParameters.DeNovoRate)
+                : CanvasPedigreeCaller.GetCopyNumbersNoPedigreeInfo(canvasSegments, singleSampleLikelihoods);
 
-            EstimateQScores(canvasSegments, samplesInfo, pedigreeInfo, copyNumbersLikelihoods, copyNumbers);
+            EstimateQScores(canvasSegments, samplesInfo, pedigreeInfo, singleSampleLikelihoods, jointLikelihoods, copyNumbers);
 
             // TODO: this will be integrated with GetCopyNumbers* on a model level as a part of https://jira.illumina.com/browse/CANV-404
             if (!UseMafInformation(canvasSegments) && pedigreeInfo != null)
