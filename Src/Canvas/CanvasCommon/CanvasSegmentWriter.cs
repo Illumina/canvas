@@ -1,9 +1,7 @@
 using System;
 using System.Collections.Generic;
-using System.Collections.Immutable;
 using System.IO;
 using System.Linq;
-using System.Runtime.InteropServices.ComTypes;
 using Illumina.Common;
 using Illumina.Common.FileSystem;
 using Isas.Framework.DataTypes;
@@ -151,30 +149,6 @@ namespace CanvasCommon
                         recordLevelFilter, nSamples > 1);
                     WriteFormatAndSampleFields(writer, currentSegments, genotypes,
                         denovoQualityThreshold.HasValue);
-                    /*
-                    foreach (var (sampleId, segment) in sampleMap)
-                    {
-
-                        if (!firstSampleSegment.Chr.Equals(chromosome.Name, StringComparison.OrdinalIgnoreCase)
-                        ) //TODO: this is extremely inefficient. Segments should be sorted by chromosome
-                            continue;
-                        var referenceCopyNumbers = currentSegments.Zip(ploidies,
-                            (segment, ploidy) => ploidy?.GetReferenceCopyNumber(segment) ?? 2).ToList();
-                        var cnvTypes = new CnvType[nSamples];
-                        var sampleSetAlleleCopyNumbers = new int[nSamples][];
-                        for (int sampleIndex = 0; sampleIndex < nSamples; sampleIndex++)
-                        {
-                            (cnvTypes[sampleIndex], sampleSetAlleleCopyNumbers[sampleIndex]) = currentSegments
-                                .Array[sampleIndex].GetCnvTypeAndAlleleCopyNumbers(referenceCopyNumbers[sampleIndex]);
-                        }
-                        var sampleSetCnvType = AssignCnvType(cnvTypes);
-                        var (alternateAllele, genotypes) = GetAltAllelesAndGenotypes(sampleSetAlleleCopyNumbers);
-                        WriteColumnsUntilInfoField(writer, firstSampleSegment, sampleSetCnvType, alternateAllele,
-                            recordLevelFilter, nSamples > 1);
-                        WriteFormatAndSampleFields(writer, currentSegments.Array, genotypes,
-                            denovoQualityThreshold.HasValue);
-                    }
-                    */
                 }
             }
         }
@@ -316,23 +290,6 @@ namespace CanvasCommon
                     extraHeaders, writer, qualityThreshold, denovoQualityThreshold, sizeThreshold);
                 WriteVariants(segments.Zip(), ploidies, genome, writer, isPedigreeInfoSupplied, denovoQualityThreshold);
             }
-        }
-
-        private static CanvasSegment[] GetFlattenArrayForSegmentsOfAllSamples(ISampleMap<List<CanvasSegment>> segments)
-        {
-            var nSample = segments.Count();
-            var nSegment = segments.First().Value.Count;
-            var flattenArray = new CanvasSegment[nSegment * nSample];
-            var allSegments = segments.Values.ToArray();
-            for (int i = 0; i < nSample; i++)
-            {
-                var segmentsOfOneSample = allSegments[i];
-                for (int j = 0; j < nSegment; j++)
-                {
-                    flattenArray[j * nSample + i] = segmentsOfOneSample[j];
-                }
-            }
-            return flattenArray;
         }
     }
 }
