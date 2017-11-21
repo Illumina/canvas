@@ -116,33 +116,65 @@ namespace CanvasCommon
         /// <summary>
         /// Outputs the copy number calls to a text file.
         /// </summary>
-        private static void WriteVariants(CanvasSegment[] segmentsOfAllSamples, int nSamples, List<PloidyInfo> ploidies, GenomeMetadata genome,
+        private static void WriteVariants(IEnumerable<ISampleMap<CanvasSegment>> segmentsOfAllSamples, List<PloidyInfo> ploidies, GenomeMetadata genome,
             BgzipOrStreamWriter writer, bool isPedigreeInfoSupplied = true, int? denovoQualityThreshold = null)
         {
-            foreach (GenomeMetadata.SequenceMetadata chromosome in genome.Contigs())
+            var segmentsOfAllSamplesArray = segmentsOfAllSamples.ToArray(); // TODO: not necessary when chrom match logic has been updated
+            int nSamples = segmentsOfAllSamplesArray.First().Values.Count();
+            foreach (GenomeMetadata.SequenceMetadata chromosome in genome.Contigs()) //TODO: this is extremely inefficient. Segments should be sorted by chromosome
             {
-                for (int index = 0; index < segmentsOfAllSamples.Length; index += nSamples)
+                //for (int index = 0; index < segmentsOfAllSamples.Length; index += nSamples)
+                foreach (var sampleMap in segmentsOfAllSamplesArray)
                 {
-                    var firstSampleSegment = segmentsOfAllSamples[index];
-                    var currentSegments = new ArraySegment<CanvasSegment>(segmentsOfAllSamples, index, nSamples);
-                    var recordLevelFilter = CanvasFilter.GetRecordLevelFilterFromSampleFiltersOnly(
-                                                currentSegments
-                                                .Select(x => x.Filter)
-                                                .ToReadOnlyList())
-                                                .ToVcfString();
-                    if (!firstSampleSegment.Chr.Equals(chromosome.Name, StringComparison.OrdinalIgnoreCase)) //TODO: this is extremely inefficient. Segments should be sorted by chromosome
+                    var currentSegments = sampleMap.Values.ToArray();
+                    var firstSampleSegment = currentSegments.First();
+                    if (!firstSampleSegment.Chr.Equals(chromosome.Name, StringComparison.OrdinalIgnoreCase)
+                    ) //TODO: this is extremely inefficient. Segments should be sorted by chromosome
                         continue;
-                    var referenceCopyNumbers = currentSegments.Zip(ploidies, (segment, ploidy) => ploidy?.GetReferenceCopyNumber(segment) ?? 2).ToList();
+                    var recordLevelFilter = CanvasFilter.GetRecordLevelFilterFromSampleFiltersOnly(
+                                            sampleMap
+                                            .Select(x => x.Value.Filter)
+                                            .ToReadOnlyList())
+                                            .ToVcfString();
+                    var referenceCopyNumbers = currentSegments.Zip(ploidies,
+                        (segment, ploidy) => ploidy?.GetReferenceCopyNumber(segment) ?? 2).ToList();
                     var cnvTypes = new CnvType[nSamples];
                     var sampleSetAlleleCopyNumbers = new int[nSamples][];
                     for (int sampleIndex = 0; sampleIndex < nSamples; sampleIndex++)
                     {
-                        (cnvTypes[sampleIndex], sampleSetAlleleCopyNumbers[sampleIndex]) = currentSegments.Array[sampleIndex].GetCnvTypeAndAlleleCopyNumbers(referenceCopyNumbers[sampleIndex]);
+                        (cnvTypes[sampleIndex], sampleSetAlleleCopyNumbers[sampleIndex]) = currentSegments[sampleIndex]
+                            .GetCnvTypeAndAlleleCopyNumbers(referenceCopyNumbers[sampleIndex]);
                     }
                     var sampleSetCnvType = AssignCnvType(cnvTypes);
                     var (alternateAllele, genotypes) = GetAltAllelesAndGenotypes(sampleSetAlleleCopyNumbers);
-                    WriteColumnsUntilInfoField(writer, firstSampleSegment, sampleSetCnvType, alternateAllele, recordLevelFilter, nSamples > 1);
-                    WriteFormatAndSampleFields(writer, currentSegments.Array, genotypes, denovoQualityThreshold.HasValue);
+                    WriteColumnsUntilInfoField(writer, firstSampleSegment, sampleSetCnvType, alternateAllele,
+                        recordLevelFilter, nSamples > 1);
+                    WriteFormatAndSampleFields(writer, currentSegments, genotypes,
+                        denovoQualityThreshold.HasValue);
+                    /*
+                    foreach (var (sampleId, segment) in sampleMap)
+                    {
+
+                        if (!firstSampleSegment.Chr.Equals(chromosome.Name, StringComparison.OrdinalIgnoreCase)
+                        ) //TODO: this is extremely inefficient. Segments should be sorted by chromosome
+                            continue;
+                        var referenceCopyNumbers = currentSegments.Zip(ploidies,
+                            (segment, ploidy) => ploidy?.GetReferenceCopyNumber(segment) ?? 2).ToList();
+                        var cnvTypes = new CnvType[nSamples];
+                        var sampleSetAlleleCopyNumbers = new int[nSamples][];
+                        for (int sampleIndex = 0; sampleIndex < nSamples; sampleIndex++)
+                        {
+                            (cnvTypes[sampleIndex], sampleSetAlleleCopyNumbers[sampleIndex]) = currentSegments
+                                .Array[sampleIndex].GetCnvTypeAndAlleleCopyNumbers(referenceCopyNumbers[sampleIndex]);
+                        }
+                        var sampleSetCnvType = AssignCnvType(cnvTypes);
+                        var (alternateAllele, genotypes) = GetAltAllelesAndGenotypes(sampleSetAlleleCopyNumbers);
+                        WriteColumnsUntilInfoField(writer, firstSampleSegment, sampleSetCnvType, alternateAllele,
+                            recordLevelFilter, nSamples > 1);
+                        WriteFormatAndSampleFields(writer, currentSegments.Array, genotypes,
+                            denovoQualityThreshold.HasValue);
+                    }
+                    */
                 }
             }
         }
@@ -233,7 +265,6 @@ namespace CanvasCommon
             // From vcf 4.1 spec:
             //     If any of the ALT alleles is a symbolic allele (an angle-bracketed ID String “<ID>”) then the padding base is required and POS denotes the 
             //     coordinate of the base preceding the polymorphism.
-            // Is this check necessary? CANVAS always output symbolic allele, right?
             int position = (alternateAllele.StartsWith("<") && alternateAllele.EndsWith(">"))
                 ? firstSampleSegment.Begin
                 : firstSampleSegment.Begin + 1;
@@ -270,7 +301,9 @@ namespace CanvasCommon
             {
                 var genome = WriteVcfHeader(segments, diploidCoverage, wholeGenomeFastaDirectory, new List<string> { sampleName },
                     extraHeaders, writer, qualityThreshold, denovoQualityThreshold, sizeThreshold);
-                WriteVariants(segments.ToArray(), 1, new List<PloidyInfo> { ploidy }, genome, writer, isPedigreeInfoSupplied, denovoQualityThreshold);
+                var sampleId = new SampleId(sampleName);
+                var segmentsOfAllSamples = segments.Select(x => new SampleMap<CanvasSegment> {{sampleId, x}});
+                WriteVariants(segmentsOfAllSamples, new List<PloidyInfo> { ploidy }, genome, writer, isPedigreeInfoSupplied, denovoQualityThreshold);
             }
         }
 
@@ -281,7 +314,7 @@ namespace CanvasCommon
             {
                 var genome = WriteVcfHeader(segments.Values.First(), diploidCoverage.Average(), wholeGenomeFastaDirectory, sampleNames,
                     extraHeaders, writer, qualityThreshold, denovoQualityThreshold, sizeThreshold);
-                WriteVariants(GetFlattenArrayForSegmentsOfAllSamples(segments), segments.Count(), ploidies, genome, writer, isPedigreeInfoSupplied, denovoQualityThreshold);
+                WriteVariants(segments.Zip(), ploidies, genome, writer, isPedigreeInfoSupplied, denovoQualityThreshold);
             }
         }
 
