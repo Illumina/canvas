@@ -143,7 +143,7 @@ namespace CanvasPedigreeCaller
                 throw new IlluminaException($"De novo quality score threshold must be >= 0 and < {callerParameters.MaxQscore}");
 
             var logger = new Logger(new[] { Console.Out }, new[] { Console.Error });
-            var settings = new SettingsProcessor();
+            var settings = IsasConfigurationSettings.GetConfigSettings();
             var outputDirectory = new DirectoryLocation(outDir);
             var workerDirectory = new DirectoryLocation(Isas.Framework.Utilities.Utilities.GetAssemblyFolder(typeof(CanvasPedigreeCaller)));
             var commandManager = new CommandManager(new ExecutableProcessor(settings, logger, workerDirectory));

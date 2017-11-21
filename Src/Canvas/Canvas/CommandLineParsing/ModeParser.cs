@@ -1,8 +1,8 @@
 using System.IO;
 using CanvasCommon.CommandLineParsing.OptionProcessing;
 using Isas.Framework.Checkpointing;
-using Isas.Framework.FrameworkFactory;
 using Isas.Framework.Logging;
+using Isas.Framework.Settings;
 using Isas.Framework.WorkManagement;
 using static CanvasCommon.CommandLineParsing.CoreOptionTypes.OptionExtensions;
 
@@ -12,7 +12,7 @@ namespace Canvas.CommandLineParsing
     {
         string Name { get; }
         string Description { get; }
-        IParsingResult<IModeLauncher> Parse(MainParser main, ILogger logger, ICheckpointRunner checkpointRunner, IWorkManager workManager, IWorkDoer workDoer, string[] args, TextWriter standardWriter,
+        IParsingResult<IModeLauncher> Parse(MainParser main, ILogger logger, ISettings settings, ICheckpointRunner checkpointRunner, IWorkManager workManager, IWorkDoer workDoer, string[] args, TextWriter standardWriter,
             TextWriter errorWriter);
         OptionCollection<IModeLauncher> GetModeOptions();
         void ShowHelp(WriteLine writer);
@@ -29,7 +29,7 @@ namespace Canvas.CommandLineParsing
             Description = description;
         }
 
-        public IParsingResult<IModeLauncher> Parse(MainParser main, ILogger logger, ICheckpointRunner checkpointRunner, IWorkManager workManager, IWorkDoer workDoer, string[] args, TextWriter standardWriter, TextWriter errorWriter)
+        public IParsingResult<IModeLauncher> Parse(MainParser main, ILogger logger, ISettings settings, ICheckpointRunner checkpointRunner, IWorkManager workManager, IWorkDoer workDoer, string[] args, TextWriter standardWriter, TextWriter errorWriter)
         {
             var results = main.GetParseResults(args);
 
@@ -48,7 +48,7 @@ namespace Canvas.CommandLineParsing
                 return ParsingResult<IModeLauncher>.FailedResult(parsingResult);
             }
             var runner = GetRunner(parsingResult.Result);
-            return ParsingResult<IModeLauncher>.SuccessfulResult(new ModeLauncher(logger, checkpointRunner, workManager, workDoer, runner, args, main.GetVersion(), Name));
+            return ParsingResult<IModeLauncher>.SuccessfulResult(new ModeLauncher(logger, settings, checkpointRunner, workManager, workDoer, runner, args, main.GetVersion(), Name));
         }
 
         private void ShowError(MainParser main, WriteLine errorWriter, string errorMessage)
