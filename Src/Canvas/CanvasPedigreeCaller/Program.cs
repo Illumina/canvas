@@ -152,7 +152,7 @@ namespace CanvasPedigreeCaller
             WorkDoerFactory.RunWithWorkDoer(logger, settings, pedigreeCallerWorkDirectory, workDoer =>
             {
                 var workManager = WorkManagerFactory.GetWorkManager(workDoer, logger, pedigreeCallerWorkDirectory, settings);
-                /*IBedGraphToBigWigConverter bigWigConverter;
+                IBedGraphToBigWigConverter bigWigConverter;
 
                 if (CrossPlatform.IsThisLinux())
                 {
@@ -162,8 +162,7 @@ namespace CanvasPedigreeCaller
                 {
                     bigWigConverter = new NullBedGraphToBigWigConverter(logger, "BedGraph to BigWig conversion unavailable on Windows.");
                 }
-                */
-                var bigWigConverter = new NullBedGraphToBigWigConverter(logger, "BedGraph to BigWig conversion unavailable on Windows.");
+                
                 var referenceGenome = new ReferenceGenomeFactory().GetReferenceGenome(new DirectoryLocation(referenceFolder));
                 var genomeMetadata = referenceGenome.GenomeMetadata;
                 var coverageBigWigWriter = new CoverageBigWigWriterFactory(logger, bigWigConverter, genomeMetadata).Create();
