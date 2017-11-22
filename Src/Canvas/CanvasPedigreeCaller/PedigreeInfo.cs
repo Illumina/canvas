@@ -29,9 +29,8 @@ namespace CanvasPedigreeCaller
                 .ToList();
             var offspringIds = kinships.Where(kin => kin.Value.Equals(SampleType.Proband) || kin.Value.Equals(SampleType.Sibling)).Select(kin => kin.Key)
                 .ToList();
-            var parentalGenotypes = GenerateParentalGenotypes(callerParameters.MaximumCopyNumber);
-            var offspringsGenotypes =
-                new List<List<PhasedGenotype>>(Convert.ToInt32(Math.Pow(parentalGenotypes.Count, offspringIds.Count)));
+            var parentalGenotypes = GeneratePhasedGenotype(callerParameters.MaximumCopyNumber);
+            var offspringsGenotypes = new List<List<PhasedGenotype>>(Convert.ToInt32(Math.Pow(parentalGenotypes.Count, offspringIds.Count)));
             GenerateOffspringGenotypes(offspringsGenotypes, parentalGenotypes, offspringIds.Count, new List<PhasedGenotype>());
             if (offspringsGenotypes.Count > callerParameters.MaxNumOffspringGenotypes)
             {
@@ -42,8 +41,7 @@ namespace CanvasPedigreeCaller
             return new PedigreeInfo(offspringIds, parentsIds, offspringsGenotypes, transitionMatrix);
         }
 
-
-        public static List<PhasedGenotype> GenerateParentalGenotypes(int numCnStates)
+        public static List<PhasedGenotype> GeneratePhasedGenotype(int numCnStates)
         {
             var genotypes = new List<PhasedGenotype>();
             for (int cn = 0; cn < numCnStates; cn++)
