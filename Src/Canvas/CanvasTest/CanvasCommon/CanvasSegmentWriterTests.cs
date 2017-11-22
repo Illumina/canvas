@@ -56,18 +56,19 @@ namespace CanvasTest
             Assert.Equal(expectedGenotypes, sampleGenotypes);
         }
 
+        [Fact]
         public void GetAltAllelesAndGenotypes_hemizygous_regions()
         {
             int[][] alleleCopyNumbers =
             {
                 new[] {0}, // Loss
                 new[] {1}, // Ref
-                new[] {2}, // Gain
+                new[] {2} // Gain
             };
 
             var (altAlleleString, sampleGenotypes) = CanvasSegmentWriter.GetAltAllelesAndGenotypes(alleleCopyNumbers);
 
-            string[] expectedGenotypes = { "1", "0", "2", "0/2", "1/2" };
+            string[] expectedGenotypes = { "1", "0", "2"};
             Assert.Equal("<CN0>,<CN2>", altAlleleString);
             Assert.Equal(expectedGenotypes, sampleGenotypes);
         }
