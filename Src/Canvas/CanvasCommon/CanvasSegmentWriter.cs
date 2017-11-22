@@ -121,7 +121,6 @@ namespace CanvasCommon
             int nSamples = segmentsOfAllSamplesArray.First().Values.Count();
             foreach (GenomeMetadata.SequenceMetadata chromosome in genome.Contigs()) //TODO: this is extremely inefficient. Segments should be sorted by chromosome
             {
-                //for (int index = 0; index < segmentsOfAllSamples.Length; index += nSamples)
                 foreach (var sampleMap in segmentsOfAllSamplesArray)
                 {
                     var currentSegments = sampleMap.Values.ToArray();
@@ -159,9 +158,6 @@ namespace CanvasCommon
             if (!nonRefTypes.Any()) return CnvType.Reference;
             if (nonRefTypes.Length > 1) return CnvType.ComplexCnv;
             return nonRefTypes.First();
-            // Why throw exception for single sample? if this logic is correct, why it is not checked in the first place
-            //else if (cnvTypes.Count == 1)
-            //    throw new ArgumentOutOfRangeException($"sampleSetCnvType {cnvTypes.First()} is invalid for single sample.");
         }
 
         internal static (string, string[]) GetAltAllelesAndGenotypes(int[][] sampleSetAlleleCopyNumbers)
@@ -198,7 +194,12 @@ namespace CanvasCommon
                         break;
                 }
             }
-            return string.Join("/", genotypes);
+            return string.Join("/", genotypes.OrderBy(GenotypeToIntMapping));
+        }
+
+        private static int GenotypeToIntMapping(string genotype)  // '.' first, then in numeric order
+        {
+            return genotype == "." ? -1 : int.Parse(genotype);
         }
 
         private static void WriteFormatAndSampleFields(BgzipOrStreamWriter writer, CanvasSegment[] segments, string[] genotypes, bool reportDQ)
@@ -212,7 +213,7 @@ namespace CanvasCommon
                 var segment = segments[i];
                 string mcc = segment.MajorChromosomeCount.HasValue ? segment.MajorChromosomeCount.ToString() : nullValue;
                 string mccq = segment.MajorChromosomeCountScore.HasValue ? $"{segment.MajorChromosomeCountScore.Value:F2}" : nullValue;
-
+       
                 writer.Write($"\t{genotypes[i]}:{segment.MedianCount:F2}:{segment.BinCount}:{segment.CopyNumber}:{mcc}:{mccq}:{segment.QScore:F2}:{segment.Filter.ToVcfString()}");
                 if (reportDQ)
                 {

@@ -24,7 +24,7 @@ namespace CanvasTest
         }
 
         [Fact]
-        public void GetAltAllelesAndGenotypes_diff_genotypes()
+        public void GetAltAllelesAndGenotypes_various_genotypes()
         {
             int[][] alleleCopyNumbers =
             {
@@ -36,7 +36,7 @@ namespace CanvasTest
             };
             var (altAlleleString, sampleGenotypes) = CanvasSegmentWriter.GetAltAllelesAndGenotypes(alleleCopyNumbers);
 
-            string[] expectedGenotypes = { "./3", "0/0", "1/0", "0/2", "1/2" };
+            string[] expectedGenotypes = { "./3", "0/0", "0/1", "0/2", "1/2" };
             Assert.Equal("<CN0>,<CN2>,<DUP>", altAlleleString);
             Assert.Equal(expectedGenotypes, sampleGenotypes);
         }
@@ -53,6 +53,22 @@ namespace CanvasTest
 
             string[] expectedGenotypes = { "0/0", "0/0" };
             Assert.Equal(".", altAlleleString);
+            Assert.Equal(expectedGenotypes, sampleGenotypes);
+        }
+
+        public void GetAltAllelesAndGenotypes_hemizygous_regions()
+        {
+            int[][] alleleCopyNumbers =
+            {
+                new[] {0}, // Loss
+                new[] {1}, // Ref
+                new[] {2}, // Gain
+            };
+
+            var (altAlleleString, sampleGenotypes) = CanvasSegmentWriter.GetAltAllelesAndGenotypes(alleleCopyNumbers);
+
+            string[] expectedGenotypes = { "1", "0", "2", "0/2", "1/2" };
+            Assert.Equal("<CN0>,<CN2>", altAlleleString);
             Assert.Equal(expectedGenotypes, sampleGenotypes);
         }
     }
