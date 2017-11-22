@@ -11,12 +11,12 @@
     <copyright>Copyright 2017</copyright>
     <tags>Canvas</tags>
     <dependencies>
-      <dependency id="ClassicBioinfoTools" version="[2.2.0.165,3.0.0)" />
-      <dependency id="Isas.Manifests" version="[4.9.1.154,5.0.0)" />
-      <dependency id="Isas.Ploidy" version="[3.0.0.78,4.0.0)" />
-      <dependency id="Isas.SequencingFiles" version="[5.4.0.383,6.0.0)" />
-      <dependency id="Isas.Framework" version="[7.11.1.596,8.0.0)" />
-      <dependency id="Illumina.Common" version="[4.12.0.348,5.0.0)" />
+      <dependency id="ClassicBioinfoTools" version="[2.4.0.206,3.0.0)" />
+      <dependency id="Isas.Manifests" version="[5.0.0.168,6.0.0)" />
+      <dependency id="Isas.Ploidy" version="[3.0.0.90,4.0.0)" />
+      <dependency id="Isas.SequencingFiles" version="[6.0.0.402,7.0.0)" />
+      <dependency id="Isas.Framework" version="[8.1.0.804,9.0.0)" />
+      <dependency id="Illumina.Common" version="[5.0.0.364,6.0.0)" />
       <dependency id="MathNet.Numerics.Core" version="[3.17.0,4.0.0)" />
       <dependency id="protobuf-net" version="[2.3.2,3.0.0)" />
     </dependencies>
