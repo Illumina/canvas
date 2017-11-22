@@ -32,7 +32,7 @@ namespace CanvasCommon
         public override int GetHashCode()
         {
             if (PhasedGenotype != null)
-                return TotalCopyNumber * 100 + PhasedGenotype.CopyNumberA * 10 + PhasedGenotype.CopyNumberB;
+                return TotalCopyNumber * 100 + PhasedGenotype.GetHashCode();
             return TotalCopyNumber;
         }
 

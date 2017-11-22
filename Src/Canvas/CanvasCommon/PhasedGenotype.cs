@@ -23,5 +23,19 @@ namespace CanvasCommon
             return CopyNumberA == phasedGenotype.CopyNumberA || CopyNumberA == phasedGenotype.CopyNumberB || CopyNumberB == phasedGenotype.CopyNumberA || CopyNumberB == phasedGenotype.CopyNumberB;
         }
 
+        public override int GetHashCode()
+        {
+            return CopyNumberA * 10 + CopyNumberB;
+        }
+
+        public override bool Equals(object obj)
+        {
+            return Equals(obj as PhasedGenotype);
+        }
+
+        private bool Equals(PhasedGenotype obj)
+        {
+            return obj != null && obj.CopyNumberA == CopyNumberA && obj.CopyNumberB == CopyNumberB; 
+        }
     }
 }

@@ -108,7 +108,7 @@ namespace CanvasPedigreeCaller
         /// <param name="genotypeLikelihoods"></param>
         /// <param name="copyNumberLikelihoods"></param>
         /// <returns></returns>
-        private static ISampleMap<Dictionary<Genotype, double>> JoinLikelihoods(ISampleMap<Dictionary<PhasedGenotype, double>> genotypeLikelihoods,
+        private ISampleMap<Dictionary<Genotype, double>> JoinLikelihoods(ISampleMap<Dictionary<PhasedGenotype, double>> genotypeLikelihoods,
             ISampleMap<Dictionary<Genotype, double>> copyNumberLikelihoods)
         {
             var jointSampleLikelihoods = new SampleMap<Dictionary<Genotype, double>>();
@@ -120,7 +120,7 @@ namespace CanvasPedigreeCaller
                 foreach (var genotypeLikelihood in genotypeLikelihoods[sampleId])
                 {
                     double scaler = areaGt > areaCn ? areaCn / areaGt : areaGt / areaCn;
-                    int totalCopyNumber = genotypeLikelihood.Key.CopyNumberA + genotypeLikelihood.Key.CopyNumberA;
+                    int totalCopyNumber = genotypeLikelihood.Key.CopyNumberA + genotypeLikelihood.Key.CopyNumberB;
                     double jointLikelihood = genotypeLikelihood.Value * scaler *
                                              copyNumberLikelihoods[sampleId][Genotype.Create(totalCopyNumber)];
                     jointLikelihoods[Genotype.Create(genotypeLikelihood.Key)] = jointLikelihood;
@@ -139,7 +139,8 @@ namespace CanvasPedigreeCaller
                 canvasSegments[sampleId].CopyNumber = copyNumbers[sampleId].TotalCopyNumber;
                 if (canvasSegments[sampleId].QScore < _qualityFilterThreshold)
                     canvasSegments[sampleId].Filter = CanvasFilter.Create("q{_qualityFilterThreshold}".Yield());
-                canvasSegments[sampleId].MajorChromosomeCount = Math.Max(copyNumbers[sampleId].PhasedGenotype.CopyNumberA, copyNumbers[sampleId].PhasedGenotype.CopyNumberB);
+                if (copyNumbers[sampleId].PhasedGenotype != null)
+                    canvasSegments[sampleId].MajorChromosomeCount = Math.Max(copyNumbers[sampleId].PhasedGenotype.CopyNumberA, copyNumbers[sampleId].PhasedGenotype.CopyNumberB);
             }
             if (pedigreeInfo != null)
                 SetDenovoQualityScores(canvasSegments, pedigreeMembersInfo, pedigreeInfo.ParentsIds, pedigreeInfo.OffspringIds, jointLikelihoods, copyNumbers);

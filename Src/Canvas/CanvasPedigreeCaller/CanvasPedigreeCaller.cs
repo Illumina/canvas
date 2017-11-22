@@ -341,11 +341,10 @@ namespace CanvasPedigreeCaller
         /// Return joint likelihood object and the copy number states with the highest likelihood 
         /// </summary>
         public static (ISampleMap<Genotype> copyNumbersGenotypes, JointLikelihoods jointLikelihood) GetCopyNumbersWithPedigreeInfo(ISampleMap<CanvasSegment> segments,
-            PedigreeInfo pedigreeInfo, ISampleMap<Dictionary<Genotype, double>> singleSampleLikelihoods,
-            double deNovoRate, IEnumerable<IEnumerable<PhasedGenotype>> offspringGenotypeStates = null)
+            PedigreeInfo pedigreeInfo, ISampleMap<Dictionary<Genotype, double>> singleSampleLikelihoods, double deNovoRate)
         {
-            if (offspringGenotypeStates == null)
-                offspringGenotypeStates = pedigreeInfo.OffspringGenotypes;
+            // check if Genotype uses Phased Genotypes
+            var usePhasedGenotypes = singleSampleLikelihoods.Values.First().Keys.First().PhasedGenotype != null;
             var sampleCopyNumbersGenotypes = new SampleMap<Genotype>();
             foreach (var sampleId in segments.SampleIds)
                 sampleCopyNumbersGenotypes.Add(sampleId, Genotype.Create(2));
@@ -356,7 +355,7 @@ namespace CanvasPedigreeCaller
             {
                 foreach (var parent2GtStates in singleSampleLikelihoods[pedigreeInfo.ParentsIds.Last()])
                 {
-                    foreach (var genotypes in offspringGenotypeStates)
+                    foreach (var genotypes in pedigreeInfo.OffspringGenotypes)
                     {
                         var enumerable = genotypes.ToList();
 
@@ -368,8 +367,8 @@ namespace CanvasPedigreeCaller
                         {
                             var offspringId = pedigreeInfo.OffspringIds[index];
                             offspringsGtStates.Add(enumerable[index]);
-                            var totalCopyNumber = Genotype.Create(enumerable[index].CopyNumberA + enumerable[index].CopyNumberB);
-                            double ll = singleSampleLikelihoods[offspringId][totalCopyNumber];
+                            var offspringGtKey = usePhasedGenotypes ? Genotype.Create(enumerable[index]) : Genotype.Create(enumerable[index].CopyNumberA + enumerable[index].CopyNumberB);
+                            double ll = singleSampleLikelihoods[offspringId][offspringGtKey];
                             currentLikelihood *= ll;
                             currentLikelihood *= EstimateTransmissionProbability(parent1GtStates, parent2GtStates,
                                 new KeyValuePair<PhasedGenotype, double>(enumerable[index], ll), deNovoRate, pedigreeInfo);
@@ -380,7 +379,8 @@ namespace CanvasPedigreeCaller
                             {pedigreeInfo.ParentsIds.First(), parent1GtStates.Key},
                             {pedigreeInfo.ParentsIds.Last(), parent2GtStates.Key}
                         };
-                        pedigreeInfo.OffspringIds.Zip(offspringsGtStates).ForEach(x => key.Add(x.Item1, Genotype.Create(x.Item2.CopyNumberA + x.Item2.CopyNumberB)));
+                        
+                        pedigreeInfo.OffspringIds.Zip(offspringsGtStates).ForEach(x => key.Add(x.Item1, usePhasedGenotypes ? Genotype.Create(x.Item2) : Genotype.Create(x.Item2.CopyNumberA + x.Item2.CopyNumberB)));
                         jointLikelihood.SetJointLikelihood(key, currentLikelihood);
 
                         if (currentLikelihood > jointLikelihood.MaximalLikelihood)
