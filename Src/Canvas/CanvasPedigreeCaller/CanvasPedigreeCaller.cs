@@ -104,14 +104,14 @@ namespace CanvasPedigreeCaller
             var diploidCoverage = samplesInfo.Select(info => info.Value.MeanCoverage).ToList();
             var names = samplesInfo.SampleIds.Select(id => id.ToString()).ToList();
             CanvasSegmentWriter.WriteMultiSampleSegments(outVcfFile.FullName, mergedVariantCalledSegments, diploidCoverage, referenceFolder, names,
-                null, ploidies, _qualityFilterThreshold, isPedigreeInfoSupplied, denovoQualityThreshold);
+                null, ploidies, _qualityFilterThreshold, denovoQualityThreshold, null, isPedigreeInfoSupplied);
 
             foreach (var sampleId in samplesInfo.SampleIds)
             {
                 var outputVcfPath = SingleSampleCallset.GetSingleSamplePedigreeVcfOutput(outputFolder, sampleId.ToString());
                 CanvasSegmentWriter.WriteSegments(outputVcfPath.FullName, mergedVariantCalledSegments[sampleId],
                     samplesInfo[sampleId].MeanCoverage, referenceFolder, sampleId.ToString(), null,
-                    samplesInfo[sampleId].Ploidy, _qualityFilterThreshold, isPedigreeInfoSupplied, denovoQualityThreshold);
+                    samplesInfo[sampleId].Ploidy, _qualityFilterThreshold, isPedigreeInfoSupplied, denovoQualityThreshold, null);
 
                 var visualizationTemp = outputFolder.CreateSubdirectory($"VisualizationTemp{sampleId}");
                 var bigWig = _coverageBigWigWriter.Write(mergedVariantCalledSegments[sampleId], visualizationTemp);

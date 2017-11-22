@@ -415,7 +415,7 @@ namespace CanvasSomaticCaller
                     Console.WriteLine("IsTrainingMode activated. Not calling any CNVs. Reason: {0}", e.Message);
                     _segments.Clear();
                     CanvasSegmentWriter.WriteSegments(outputVCFPath, _segments, _model.DiploidCoverage, referenceFolder, name, ExtraHeaders,
-                    ReferencePloidy, QualityFilterThreshold, isPedigreeInfoSupplied: false);
+                    ReferencePloidy, QualityFilterThreshold, false, null, CanvasFilter.SegmentSizeCutoff);
                     Environment.Exit(0);
                 }
                 else if (e is NotEnoughUsableSegementsException)
@@ -468,7 +468,7 @@ namespace CanvasSomaticCaller
 
             // Write out results.  Note that model may be null here, in training mode, if we hit an UncallableDataException:
             CanvasSegmentWriter.WriteSegments(outputVCFPath, mergedSegments, _model?.DiploidCoverage, referenceFolder, name, ExtraHeaders,
-                ReferencePloidy, QualityFilterThreshold, isPedigreeInfoSupplied: false);
+                ReferencePloidy, QualityFilterThreshold, false, null, CanvasFilter.SegmentSizeCutoff);
 
             return 0;
         }

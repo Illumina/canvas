@@ -286,7 +286,7 @@ namespace CanvasDiploidCaller
             {
                 Console.WriteLine("CanvasDiploidCaller: No segments loaded; no CNV calls will be made.");
                 CanvasSegmentWriter.WriteSegments(outFile, _allSegments, _model?.DiploidCoverage, referenceFolder,
-                    sampleName, null, null, QualityFilterThreshold, isPedigreeInfoSupplied: false);
+                    sampleName, null, null, QualityFilterThreshold, false, null, null);
                 return 0;
             }
             PloidyInfo ploidy = null;
@@ -354,7 +354,7 @@ namespace CanvasDiploidCaller
             if (!string.IsNullOrEmpty(ploidy?.HeaderLine)) extraHeaders.Add(ploidy.HeaderLine);
 
             CanvasSegmentWriter.WriteSegments(outFile, mergedSegments, _model.DiploidCoverage, referenceFolder, sampleName,
-                extraHeaders, ploidy, QualityFilterThreshold, isPedigreeInfoSupplied: false);
+                extraHeaders, ploidy, QualityFilterThreshold, false, null, null);
             return 0;
         }
     }
