@@ -21,7 +21,7 @@ namespace CanvasPedigreeCaller
             _totalLikelihood = 0;
         }
 
-        public void SetJointLikelihood(ISampleMap<Genotype> samplesGenotypes, double likelihood)
+        public void AddJointLikelihood(ISampleMap<Genotype> samplesGenotypes, double likelihood)
         {
             _jointLikelihoods[samplesGenotypes] = likelihood;
             _totalLikelihood += likelihood;

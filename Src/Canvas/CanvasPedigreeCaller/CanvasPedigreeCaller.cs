@@ -345,10 +345,7 @@ namespace CanvasPedigreeCaller
         {
             // check if Genotype uses Phased Genotypes
             var usePhasedGenotypes = singleSampleLikelihoods.Values.First().Keys.First().PhasedGenotype != null;
-            var sampleCopyNumbersGenotypes = new SampleMap<Genotype>();
-            foreach (var sampleId in segments.SampleIds)
-                sampleCopyNumbersGenotypes.Add(sampleId, Genotype.Create(2));
-
+            ISampleMap<Genotype> sampleCopyNumbersGenotypes = null;
             var jointLikelihood = new JointLikelihoods();
 
             foreach (var parent1GtStates in singleSampleLikelihoods[pedigreeInfo.ParentsIds.First()])
@@ -381,7 +378,7 @@ namespace CanvasPedigreeCaller
                         };
                         
                         pedigreeInfo.OffspringIds.Zip(offspringsGtStates).ForEach(x => key.Add(x.Item1, usePhasedGenotypes ? Genotype.Create(x.Item2) : Genotype.Create(x.Item2.CopyNumberA + x.Item2.CopyNumberB)));
-                        jointLikelihood.SetJointLikelihood(key, currentLikelihood);
+                        jointLikelihood.AddJointLikelihood(key, currentLikelihood);
 
                         if (currentLikelihood > jointLikelihood.MaximalLikelihood)
                         {
@@ -391,6 +388,8 @@ namespace CanvasPedigreeCaller
                     }
                 }
             }
+            if (sampleCopyNumbersGenotypes == null)
+                throw new IlluminaException("Maximal likelihood was not found");
             return (copyNumbersGenotypes: sampleCopyNumbersGenotypes, jointLikelihood: jointLikelihood);
         }
 
