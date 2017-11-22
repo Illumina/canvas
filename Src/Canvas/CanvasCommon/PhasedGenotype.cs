@@ -12,6 +12,7 @@ namespace CanvasCommon
             CopyNumberA = copyNumberA;
             CopyNumberB = copyNumberB;
         }
+
         /// <summary>
         /// Returns true when condition is satisfied and allele copy numbers are present
         /// </summary>
@@ -19,7 +20,7 @@ namespace CanvasCommon
         /// <returns></returns>
         public bool ContainsSharedAlleles(PhasedGenotype phasedGenotype)
         {
-            return CopyNumberA == phasedGenotype.CopyNumberA | CopyNumberA == phasedGenotype.CopyNumberB | CopyNumberB == phasedGenotype.CopyNumberA | CopyNumberB == phasedGenotype.CopyNumberB;
+            return CopyNumberA == phasedGenotype.CopyNumberA || CopyNumberA == phasedGenotype.CopyNumberB || CopyNumberB == phasedGenotype.CopyNumberA || CopyNumberB == phasedGenotype.CopyNumberB;
         }
 
     }
