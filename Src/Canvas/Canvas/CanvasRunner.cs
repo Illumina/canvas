@@ -840,13 +840,6 @@ namespace Canvas
                     $"Error: Missing filter bed file required for CNV calling at '{canvasBedPath}'");
             }
 
-            // interim proband number restriction 
-            var numProbands = callset.PedigreeSample.Where(x => x.SampleType == SampleType.Proband).ToList().Count;
-            if (numProbands > 2)
-            {
-                throw new Illumina.Common.IlluminaException(
-                    $"Error: Cannot run Canvas with more than two probands");
-            }
             // CanvasSNV
             var canvasSnvTask = _checkpointRunner.RunCheckpointAsync("CanvasSNV", () => InvokeCanvasSnv(callset));
 
