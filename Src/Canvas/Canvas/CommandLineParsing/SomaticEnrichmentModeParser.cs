@@ -8,7 +8,6 @@ namespace Canvas.CommandLineParsing
 {
     public class SomaticEnrichmentModeParser : ModeParser<SomaticEnrichmentInput>
     {
-        private static readonly CommonOptionsParser CommonOptionsParser = new CommonOptionsParser();
         private static readonly SingleSampleCommonOptionsParser SingleSampleCommonOptionsParser = new SingleSampleCommonOptionsParser();
         private static readonly SomaticEnrichmentOptionsParser SomaticEnrichmentOptionsParser = new SomaticEnrichmentOptionsParser();
 
@@ -33,7 +32,7 @@ namespace Canvas.CommandLineParsing
         {
             return new OptionCollection<IModeLauncher>
             {
-                SomaticEnrichmentOptionsParser, CommonOptionsParser, SingleSampleCommonOptionsParser
+                SomaticEnrichmentOptionsParser, SingleSampleCommonOptionsParser
             };
         }
     }
