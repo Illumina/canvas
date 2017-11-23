@@ -77,7 +77,7 @@ namespace CanvasCommon
                 string sizeFilterValue = CanvasFilter.FormatCnvSizeWithSuffix(sizeThreshold.Value);
                 writer.WriteLine($"##FILTER=<ID=L{sizeFilterValue},Description=\"Length shorter than {sizeFilterValue}\">");
             }
-            writer.WriteLine("##FILTER=<ID=FailedFT,Description=\"Sample-level filter failed in all the samples\">")
+            writer.WriteLine("##FILTER=<ID=FailedFT,Description=\"Sample-level filter failed in all the samples\">");
             writer.WriteLine("##INFO=<ID=CIEND,Number=2,Type=Integer,Description=\"Confidence interval around END for imprecise variants\">");
             writer.WriteLine("##INFO=<ID=CIPOS,Number=2,Type=Integer,Description=\"Confidence interval around POS for imprecise variants\">");
             writer.WriteLine("##INFO=<ID=CNVLEN,Number=1,Type=Integer,Description=\"Number of reference positions spanned by this CNV\">");
