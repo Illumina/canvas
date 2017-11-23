@@ -157,9 +157,9 @@ namespace CanvasPedigreeCaller
             PedigreeInfo pedigreeInfo)
         {
             var singleSampleLikelihoods = _copyNumberLikelihoodCalculator.GetCopyNumbersLikelihoods(canvasSegments, samplesInfo, copyNumberModel);
-
+            /*
             var (copyNumbers, jointLikelihoods) = pedigreeInfo != null
-                ? CanvasPedigreeCaller.GetCopyNumbersWithPedigreeInfo(canvasSegments, pedigreeInfo, singleSampleLikelihoods, _callerParameters.DeNovoRate)
+                ? GetCopyNumbersWithPedigreeInfo(canvasSegments, pedigreeInfo, singleSampleLikelihoods)
                 : CanvasPedigreeCaller.GetCopyNumbersNoPedigreeInfo(canvasSegments, singleSampleLikelihoods);
 
             EstimateQScores(canvasSegments, samplesInfo, pedigreeInfo, singleSampleLikelihoods, jointLikelihoods, copyNumbers);
@@ -169,6 +169,7 @@ namespace CanvasPedigreeCaller
                 AssignMccWithPedigreeInfo(canvasSegments, copyNumberModel, pedigreeInfo);
             if (!UseMafInformation(canvasSegments) && pedigreeInfo == null)
                 AssignMccNoPedigreeInfo(canvasSegments, copyNumberModel, _genotypes);
+                */
         }
         
         /// <summary>
@@ -305,8 +306,6 @@ namespace CanvasPedigreeCaller
             return copyNumberModel.GetCurrentGtLikelihood(canvasSegment.Balleles.GetAlleleCounts(), gtStates);
         }
 
-        /// <summary>
-        /// Calculates maximal likelihood for copy numbers. Updated CanvasSegment CopyNumber only. 
         /// </summary>
         private ISampleMap<int> GetCopyNumbersWithPedigreeInfo(ISampleMap<CanvasSegment> segments,
             PedigreeInfo pedigreeInfo, CopyNumbersLikelihoods copyNumbersLikelihoods)
@@ -319,16 +318,16 @@ namespace CanvasPedigreeCaller
             {
                 foreach (int copyNumberParent2 in copyNumbersRange)
                 {
-                    foreach (var offspringGtStates in pedigreeInfo.OffspringGenotypes)
+                    foreach (var offspringGtStates in pedigreeInfo.OffspringPhasedGenotypes)
                     {
                         double currentLikelihood = parent1Likelihood[copyNumberParent1] * parent2Likelihood[copyNumberParent2];
                         for (var counter = 0; counter < pedigreeInfo.OffspringIds.Count; counter++)
                         {
                             var child = pedigreeInfo.OffspringIds[counter];
-                            int copyNumberChild = Math.Min(offspringGtStates[counter].CopyNumberA + offspringGtStates[counter].CopyNumberB,
+                            int copyNumberChild = Math.Min(offspringGtStates[counter].PhasedGenotype.CopyNumberA + offspringGtStates[counter].PhasedGenotype.CopyNumberB,
                                 _callerParameters.MaximumCopyNumber - 1);
-                            currentLikelihood *= pedigreeInfo.TransitionMatrix[copyNumberParent1][offspringGtStates[counter].CopyNumberA] *
-                                                 pedigreeInfo.TransitionMatrix[copyNumberParent2][offspringGtStates[counter].CopyNumberB] *
+                            currentLikelihood *= pedigreeInfo.TransitionMatrix[copyNumberParent1][offspringGtStates[counter].PhasedGenotype.CopyNumberA] *
+                                                 pedigreeInfo.TransitionMatrix[copyNumberParent2][offspringGtStates[counter].PhasedGenotype.CopyNumberB] *
                                                  copyNumbersLikelihoods.SingleSampleLikelihoods[child][copyNumberChild];
                         }
 
@@ -345,8 +344,8 @@ namespace CanvasPedigreeCaller
             }
             return sampleCopyNumbers;
         }
-        
-        private static SampleMap<int> GetSampleCopyNumbers(PedigreeInfo pedigreeInfo, int copyNumberParent1, int copyNumberParent2, List<PhasedGenotype> offspringGtStates)
+
+        private static SampleMap<int> GetSampleCopyNumbers(PedigreeInfo pedigreeInfo, int copyNumberParent1, int copyNumberParent2, List<Genotype> offspringGtStates)
         {
             var sampleCopyNumbers = new SampleMap<int>
             {
@@ -356,7 +355,7 @@ namespace CanvasPedigreeCaller
             for (int counter = 0; counter < pedigreeInfo.OffspringIds.Count; counter++)
             {
                 sampleCopyNumbers.Add(pedigreeInfo.OffspringIds[counter],
-                    offspringGtStates[counter].CopyNumberA + offspringGtStates[counter].CopyNumberB);
+                    offspringGtStates[counter].PhasedGenotype.CopyNumberA + offspringGtStates[counter].PhasedGenotype.CopyNumberB);
             }
             return sampleCopyNumbers;
         }

@@ -34,7 +34,7 @@ namespace CanvasPedigreeCaller
                 ? JoinLikelihoods(GetGenotypeLikelihoods(canvasSegment, copyNumberModel, _PhasedGenotypes), coverageLikelihoods) 
                 : coverageLikelihoods;
             (var copyNumbers, var jointCoverageAndAlleleCountLikelihoods) = pedigreeInfo != null
-                ? CanvasPedigreeCaller.GetCopyNumbersWithPedigreeInfo(canvasSegment, pedigreeInfo, singleSampleCoverageAndAlleleCountLikelihoods, _callerParameters.DeNovoRate)
+                ? GetCopyNumbersWithPedigreeInfo(canvasSegment, pedigreeInfo, singleSampleCoverageAndAlleleCountLikelihoods, _callerParameters.DeNovoRate)
                 : CanvasPedigreeCaller.GetCopyNumbersNoPedigreeInfo(canvasSegment, singleSampleCoverageAndAlleleCountLikelihoods);
 
             AssignCNandScores(canvasSegment, samplesInfo, pedigreeInfo, singleSampleCoverageAndAlleleCountLikelihoods,
@@ -128,6 +128,83 @@ namespace CanvasPedigreeCaller
                 jointSampleLikelihoods.Add(sampleId, jointLikelihoods);
             }
             return jointSampleLikelihoods;
+        }
+
+        /// <summary>
+        /// Evaluate joint likelihood of all genotype combinations across samples. 
+        /// Return joint likelihood object and the copy number states with the highest likelihood 
+        /// </summary>
+        public static (ISampleMap<Genotype> copyNumbersGenotypes, JointLikelihoods jointLikelihood) GetCopyNumbersWithPedigreeInfo(ISampleMap<CanvasSegment> segments,
+            PedigreeInfo pedigreeInfo, ISampleMap<Dictionary<Genotype, double>> singleSampleLikelihoods, double deNovoRate)
+        {
+            // check if Genotype uses Phased Genotypes
+            var usePhasedGenotypes = singleSampleLikelihoods.Values.First().Keys.First().PhasedGenotype != null;
+            ISampleMap<Genotype> sampleCopyNumbersGenotypes = null;
+            var jointLikelihood = new JointLikelihoods();
+
+            foreach (var parent1GtStates in singleSampleLikelihoods[pedigreeInfo.ParentsIds.First()])
+            {
+                foreach (var parent2GtStates in singleSampleLikelihoods[pedigreeInfo.ParentsIds.Last()])
+                {
+                    foreach (var genotypes in usePhasedGenotypes ? pedigreeInfo.OffspringPhasedGenotypes : pedigreeInfo.OffspringTotalCopyNumberGenotypes)
+                    {
+
+                        double currentLikelihood = parent1GtStates.Value * parent2GtStates.Value;
+                        var offspringGtStates = new List<Genotype>();
+
+                        for (int index = 0; index < pedigreeInfo.OffspringIds.Count; index++)
+                        {
+                            var offspringId = pedigreeInfo.OffspringIds[index];
+                            double tmpLikelihood = singleSampleLikelihoods[offspringId][genotypes[index]];
+                            offspringGtStates.Add(genotypes[index]);
+
+                            currentLikelihood *= tmpLikelihood;
+                            currentLikelihood *= EstimateTransmissionProbability(parent1GtStates, parent2GtStates,
+                                new KeyValuePair<Genotype, double>(genotypes[index], tmpLikelihood), deNovoRate, pedigreeInfo);
+                        }
+                        currentLikelihood = Double.IsNaN(currentLikelihood) || Double.IsInfinity(currentLikelihood) ? 0 : currentLikelihood;
+                        var genotypesInPedigree = new SampleMap<Genotype>
+                        {
+                            {pedigreeInfo.ParentsIds.First(), parent1GtStates.Key},
+                            {pedigreeInfo.ParentsIds.Last(), parent2GtStates.Key}
+                        };
+                        pedigreeInfo.OffspringIds.Zip(offspringGtStates).ForEach(sampleIdGenotypeKvp => genotypesInPedigree.Add(sampleIdGenotypeKvp.Item1, sampleIdGenotypeKvp.Item2));
+                        jointLikelihood.AddJointLikelihood(genotypesInPedigree, currentLikelihood);
+
+                        if (currentLikelihood > jointLikelihood.MaximalLikelihood)
+                        {
+                            jointLikelihood.MaximalLikelihood = currentLikelihood;
+                            sampleCopyNumbersGenotypes = genotypesInPedigree;
+                        }
+                    }
+                }
+            }
+            if (sampleCopyNumbersGenotypes == null)
+                throw new IlluminaException("Maximal likelihood was not found");
+            return (copyNumbersGenotypes: sampleCopyNumbersGenotypes, jointLikelihood: jointLikelihood);
+        }
+
+        /// <summary>
+        /// Estimate Transmission probability for parental copy number genotypes.
+        /// Uses de novo rate when genotypes can be evaluated (segment with SNP).
+        /// </summary>
+        /// <param name="parent1GtStates"></param>
+        /// <param name="parent2GtStates"></param>
+        /// <param name="offspringGtState"></param>
+        /// <param name="deNovoRate"></param>
+        /// <param name="pedigreeInfo"></param>
+        /// <returns></returns>
+        private static double EstimateTransmissionProbability(KeyValuePair<Genotype, double> parent1GtStates, KeyValuePair<Genotype, double> parent2GtStates, KeyValuePair<Genotype, double> offspringGtState, double deNovoRate, PedigreeInfo pedigreeInfo)
+        {
+            if (parent1GtStates.Key.HasAlleleCopyNumbers && parent2GtStates.Key.HasAlleleCopyNumbers)
+                return parent1GtStates.Key.PhasedGenotype.ContainsSharedAlleles(offspringGtState.Key.PhasedGenotype) &&
+                       parent2GtStates.Key.PhasedGenotype.ContainsSharedAlleles(offspringGtState.Key.PhasedGenotype)
+                    ? 1.0
+                    : deNovoRate;
+            return pedigreeInfo.TransitionMatrix[parent1GtStates.Key.TotalCopyNumber][
+                       offspringGtState.Key.TotalCopyNumber] *
+                   pedigreeInfo.TransitionMatrix[parent2GtStates.Key.TotalCopyNumber][
+                       offspringGtState.Key.TotalCopyNumber];
         }
 
         private void AssignCNandScores(ISampleMap<CanvasSegment> canvasSegments, ISampleMap<SampleMetrics> pedigreeMembersInfo,

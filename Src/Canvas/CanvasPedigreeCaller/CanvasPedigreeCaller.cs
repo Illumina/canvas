@@ -256,10 +256,10 @@ namespace CanvasPedigreeCaller
         }
 
         private static bool IsIdenticalChromosomeNames(Dictionary<string, List<BedEntry>> commonRegions,
-            ICollection<string> chromsomeNames)
+            ICollection<string> chromosomeNames)
         {
-            var chromsomes = new HashSet<string>(chromsomeNames);
-            return commonRegions.Keys.Count(chromosome => chromsomes.Contains(chromosome)) == 0;
+            var chromosomes = new HashSet<string>(chromosomeNames);
+            return commonRegions.Keys.Count(chromosome => chromosomes.Contains(chromosome)) == 0;
         }
 
         public static int AggregateVariantCoverage(ref List<CanvasSegment> segments)
@@ -336,85 +336,6 @@ namespace CanvasPedigreeCaller
             return (copyNumbersGenotypes: sampleCopyNumbersGenotypes, jointLikelihood: jointLikelihood);
         }
 
-        /// <summary>
-        /// Evaluate joint likelihood of all genotype combinations across samples. 
-        /// Return joint likelihood object and the copy number states with the highest likelihood 
-        /// </summary>
-        public static (ISampleMap<Genotype> copyNumbersGenotypes, JointLikelihoods jointLikelihood) GetCopyNumbersWithPedigreeInfo(ISampleMap<CanvasSegment> segments,
-            PedigreeInfo pedigreeInfo, ISampleMap<Dictionary<Genotype, double>> singleSampleLikelihoods, double deNovoRate)
-        {
-            // check if Genotype uses Phased Genotypes
-            var usePhasedGenotypes = singleSampleLikelihoods.Values.First().Keys.First().PhasedGenotype != null;
-            ISampleMap<Genotype> sampleCopyNumbersGenotypes = null;
-            var jointLikelihood = new JointLikelihoods();
-
-            foreach (var parent1GtStates in singleSampleLikelihoods[pedigreeInfo.ParentsIds.First()])
-            {
-                foreach (var parent2GtStates in singleSampleLikelihoods[pedigreeInfo.ParentsIds.Last()])
-                {
-                    foreach (var genotypes in pedigreeInfo.OffspringGenotypes)
-                    {
-                        var enumerable = genotypes.ToList();
-
-                        double currentLikelihood = parent1GtStates.Value * parent2GtStates.Value;
-
-                        var offspringsGtStates = new List<PhasedGenotype>();
-
-                        for (int index = 0; index < pedigreeInfo.OffspringIds.Count; index++)
-                        {
-                            var offspringId = pedigreeInfo.OffspringIds[index];
-                            offspringsGtStates.Add(enumerable[index]);
-                            var offspringGtKey = usePhasedGenotypes ? Genotype.Create(enumerable[index]) : Genotype.Create(enumerable[index].CopyNumberA + enumerable[index].CopyNumberB);
-                            double ll = singleSampleLikelihoods[offspringId][offspringGtKey];
-                            currentLikelihood *= ll;
-                            currentLikelihood *= EstimateTransmissionProbability(parent1GtStates, parent2GtStates,
-                                new KeyValuePair<PhasedGenotype, double>(enumerable[index], ll), deNovoRate, pedigreeInfo);
-                        }
-                        currentLikelihood = Double.IsNaN(currentLikelihood) || Double.IsInfinity(currentLikelihood) ? 0 : currentLikelihood;
-                        var key = new SampleMap<Genotype>
-                        {
-                            {pedigreeInfo.ParentsIds.First(), parent1GtStates.Key},
-                            {pedigreeInfo.ParentsIds.Last(), parent2GtStates.Key}
-                        };
-                        
-                        pedigreeInfo.OffspringIds.Zip(offspringsGtStates).ForEach(x => key.Add(x.Item1, usePhasedGenotypes ? Genotype.Create(x.Item2) : Genotype.Create(x.Item2.CopyNumberA + x.Item2.CopyNumberB)));
-                        jointLikelihood.AddJointLikelihood(key, currentLikelihood);
-
-                        if (currentLikelihood > jointLikelihood.MaximalLikelihood)
-                        {
-                            jointLikelihood.MaximalLikelihood = currentLikelihood;
-                            sampleCopyNumbersGenotypes = key;
-                        }
-                    }
-                }
-            }
-            if (sampleCopyNumbersGenotypes == null)
-                throw new IlluminaException("Maximal likelihood was not found");
-            return (copyNumbersGenotypes: sampleCopyNumbersGenotypes, jointLikelihood: jointLikelihood);
-        }
-
-        /// <summary>
-        /// Estimate Transmission probability for parental copy number genotypes.
-        /// Uses de novo rate when genotypes can be evaluated (segment with SNP).
-        /// </summary>
-        /// <param name="parent1GtStates"></param>
-        /// <param name="parent2GtStates"></param>
-        /// <param name="offspringGtState"></param>
-        /// <param name="deNovoRate"></param>
-        /// <param name="pedigreeInfo"></param>
-        /// <returns></returns>
-        static double EstimateTransmissionProbability(KeyValuePair<Genotype, double> parent1GtStates, KeyValuePair<Genotype, double> parent2GtStates, KeyValuePair<PhasedGenotype, double> offspringGtState, double deNovoRate, PedigreeInfo pedigreeInfo)
-        {
-            if (parent1GtStates.Key.HasAlleleCopyNumbers && parent2GtStates.Key.HasAlleleCopyNumbers)
-                return parent1GtStates.Key.PhasedGenotype.ContainsSharedAlleles(offspringGtState.Key) &&
-                       parent2GtStates.Key.PhasedGenotype.ContainsSharedAlleles(offspringGtState.Key)
-                    ? 1.0
-                    : deNovoRate;
-            return pedigreeInfo.TransitionMatrix[parent1GtStates.Key.TotalCopyNumber][
-                       offspringGtState.Key.CopyNumberA] *
-                   pedigreeInfo.TransitionMatrix[parent2GtStates.Key.TotalCopyNumber][
-                       offspringGtState.Key.CopyNumberB];
-        }
         /// <summary>
         /// Generate all possible copy number combinations with the maximal number of copy numbers per segment set to maxAlleleNumber.
         /// </summary>

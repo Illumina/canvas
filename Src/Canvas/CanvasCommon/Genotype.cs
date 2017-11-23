@@ -42,9 +42,8 @@ namespace CanvasCommon
         }
         private bool Equals(Genotype obj)
         {
-            if (obj != null && obj.PhasedGenotype != null && PhasedGenotype != null)
-                return obj.TotalCopyNumber == TotalCopyNumber
-                   && obj.PhasedGenotype.CopyNumberA == PhasedGenotype.CopyNumberA &&
+            if (obj?.PhasedGenotype != null && PhasedGenotype != null)
+                return obj.TotalCopyNumber == TotalCopyNumber && obj.PhasedGenotype.CopyNumberA == PhasedGenotype.CopyNumberA &&
                    obj.PhasedGenotype.CopyNumberB == PhasedGenotype.CopyNumberB;
             return obj != null && obj.TotalCopyNumber == TotalCopyNumber;
         }
