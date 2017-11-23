@@ -96,7 +96,7 @@ namespace CanvasCommon
             {
                 writer.WriteLine($"##FORMAT=<ID=DQ,Number=1,Type=Float,Description=\"De novo quality. Threshold for passing de novo call: {denovoQualityThreshold}\">");
             }
-            writer.WriteLine("##FORMAT=<ID=FT,Number=1,Type=String,Description=\"Sample-level filter\">");
+            writer.WriteLine("##FORMAT=<ID=FT,Number=1,Type=String,Description=\"Sample filter, 'PASS' indicates that all filters have passed for this sample\">");
             var titleColumns = new List<string> { "#CHROM", "POS", "ID", "REF", "ALT", "QUAL", "FILTER", "INFO", "FORMAT" };
             titleColumns.AddRange(sampleNames);
             writer.WriteLine(string.Join("\t", titleColumns));
@@ -240,7 +240,7 @@ namespace CanvasCommon
         private static void WriteColumnsUntilInfoField(BgzipOrStreamWriter writer, CanvasSegment firstSampleSegment, CnvType sampleSetCnvType, string alternateAllele, string recordLevelFilter, bool isMultisample)
         {
             // From vcf 4.1 spec:
-            //     If any of the ALT alleles is a symbolic allele (an angle-bracketed ID String “<ID>”) then the padding base is required and POS denotes the 
+            //     If any of the ALT alleles is a symbolic allele (an angle-bracketed ID String Â“<ID>Â”) then the padding base is required and POS denotes the 
             //     coordinate of the base preceding the polymorphism.
             int position = (alternateAllele.StartsWith("<") && alternateAllele.EndsWith(">"))
                 ? firstSampleSegment.Begin
