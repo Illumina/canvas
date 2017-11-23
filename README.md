@@ -71,11 +71,9 @@ Options:
   -v, --version              print version and exit  
 
 #### Reference genome
-The required input files for Human reference genome builds GRCh37, hg19, and GRCh38 can be downloaded from S3 http://canvas-cnv-public.s3.amazonaws.com/. You can use the AWS CLI to download from S3:
+The required input files for Human reference genome builds GRCh37, hg19, and GRCh38 can be downloaded from S3 http://canvas-cnv-public.s3.amazonaws.com/. You can use wget to download any of the files listed there. For example, to download the hg19 GenomeSize.xml file run:
 
-http://docs.aws.amazon.com/cli/latest/userguide/installing.html
-
-http://docs.aws.amazon.com/cli/latest/reference/s3/sync.html
+wget http://canvas-cnv-public.s3.amazonaws.com/hg19/WholeGenomeFasta/GenomeSize.xml 
 
 When using a custom reference genome the equivalent files need to be created. Use the FlagUniqueKmers project to generate the annotated fasta file (kmer.fa) for a custom reference genome. 
 
