@@ -78,15 +78,31 @@ namespace CanvasPedigreeCaller
 
         public double GetCurrentGtLikelihood(List<Tuple<int, int>> gtObservedCounts, PhasedGenotype gtModelCount)
         {
-            double currentLikelihood = 0;
-            foreach (var gtCount in gtObservedCounts)
             {
-                int rowId = Math.Min(gtCount.Item1, _maxCoverage - 1);
-                int colId = Math.Min(gtCount.Item2, _maxCoverage - 1);
-                currentLikelihood += _alleleDistribution[gtModelCount.CopyNumberA][gtModelCount.CopyNumberB].Item1[rowId] *
-                                       _alleleDistribution[gtModelCount.CopyNumberA][gtModelCount.CopyNumberB].Item2[colId];
+                const double lohRefModelPenaltyTerm = 0.5;
+                double currentLikelihood = 0;
+                foreach (var gtCount in gtObservedCounts)
+                {
+                    int rowId = Math.Min(gtCount.Item1, _maxCoverage - 1);
+                    int colId = Math.Min(gtCount.Item2, _maxCoverage - 1);
+                    if (gtModelCount.CopyNumberA == 1 && gtModelCount.CopyNumberB == 1)
+                        currentLikelihood += new List<double>
+                        {
+                            _alleleDistribution[1][1].Item1[rowId] *
+                            _alleleDistribution[1][1].Item2[colId],
+                            _alleleDistribution[2][0].Item1[rowId] *
+                            _alleleDistribution[2][0].Item2[colId],
+                            _alleleDistribution[0][2].Item1[rowId] *
+                            _alleleDistribution[0][2].Item2[colId]
+                        }.Max() * lohRefModelPenaltyTerm;
+                    else
+                        currentLikelihood += _alleleDistribution[gtModelCount.CopyNumberA][gtModelCount.CopyNumberB]
+                                                 .Item1[rowId] *
+                                             _alleleDistribution[gtModelCount.CopyNumberA][gtModelCount.CopyNumberB]
+                                                 .Item2[colId];
+                }
+                return currentLikelihood;
             }
-            return currentLikelihood;
         }
     }
 }
