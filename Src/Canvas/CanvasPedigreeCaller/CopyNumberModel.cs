@@ -18,7 +18,7 @@ namespace CanvasPedigreeCaller
             double mafVariance = meanMafCoverage * 2.5;
             double variance = meanCoverage * 2.5;
             _maxCoverage = maxCoverage;
-            const double alleleStateZeroCorrector = 0.1; // prevent from using zero as a mean of model distribution
+            const double alleleStateZeroCorrector = 0.0; // prevent from using zero as a mean of model distribution
 
 
             for (int copyNumber = 0; copyNumber  < numCnStates; copyNumber ++)
@@ -90,7 +90,7 @@ namespace CanvasPedigreeCaller
                 {
                     int rowId = Math.Min(gtCount.Item1, _maxCoverage - 1);
                     int colId = Math.Min(gtCount.Item2, _maxCoverage - 1);
-                    if (gtModelCount.CopyNumberA == 1 && gtModelCount.CopyNumberB == 1)
+                    if (gtModelCount.CopyNumberA == 1000 && gtModelCount.CopyNumberB == 1)
                         currentLikelihood += new List<double>
                         {
                             _alleleDistribution[1][1].Item1[rowId] *
