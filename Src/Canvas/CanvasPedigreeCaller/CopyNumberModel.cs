@@ -18,6 +18,8 @@ namespace CanvasPedigreeCaller
             double mafVariance = meanMafCoverage * 2.5;
             double variance = meanCoverage * 2.5;
             _maxCoverage = maxCoverage;
+            const double alleleStateZeroCorrector = 0.1; // prevent from using zero as a mean of model distribution
+
 
             for (int copyNumber = 0; copyNumber  < numCnStates; copyNumber ++)
             {
@@ -44,9 +46,12 @@ namespace CanvasPedigreeCaller
             {
                 for (int gt2 = 0; gt2 < numCnStates; gt2++)
                 {
-                    var gt1Probabilities = DistributionUtilities.NegativeBinomialWrapper(haploidMafMean * gt1, mafVariance, maxCoverage);
-                    var gt2Probabilities = DistributionUtilities.NegativeBinomialWrapper(haploidMafMean * gt2, mafVariance, maxCoverage);
-                    _alleleDistribution[gt1][gt2] = new Tuple<List<double>, List<double>>(gt1Probabilities, gt2Probabilities);
+                    var gt1Probabilities =
+                        DistributionUtilities.NegativeBinomialWrapper(haploidMafMean * Math.Max(gt1, alleleStateZeroCorrector), mafVariance, maxCoverage);
+                    var gt2Probabilities =
+                        DistributionUtilities.NegativeBinomialWrapper(haploidMafMean * Math.Max(gt2, alleleStateZeroCorrector), mafVariance, maxCoverage);
+                    _alleleDistribution[gt1][gt2] =
+                        new Tuple<List<double>, List<double>>(gt1Probabilities, gt2Probabilities);
                 }
             }
         }
