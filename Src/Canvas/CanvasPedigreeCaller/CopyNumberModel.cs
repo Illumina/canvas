@@ -13,9 +13,12 @@ namespace CanvasPedigreeCaller
         private int _maxCoverage;
 
 
-        public void InitializeModel(int numCnStates, int maxCoverage, double haploidMean, double variance,
-            double haploidMafMean, double mafVariance)
+        public void InitializeModel(int numCnStates, int maxCoverage, double meanCoverage, double meanMafCoverage)
         {
+            double haploidMafMean = meanMafCoverage / 2.0;
+            double haploidMean = meanCoverage / 2.0;
+            double mafVariance = meanMafCoverage * 2.5;
+            double variance = meanCoverage * 2.5;
             _maxCoverage = maxCoverage;
             for (int copyNumber = 0; copyNumber < numCnStates; copyNumber++)
             {

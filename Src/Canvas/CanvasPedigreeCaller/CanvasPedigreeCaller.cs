@@ -63,8 +63,7 @@ namespace CanvasPedigreeCaller
                 segment.AddAlleles(CanvasIO.ReadFrequenciesWrapper(_logger, new FileLocation(variantFrequencyFiles[fileCounter]), segment.IntervalsByChromosome));
                 sampleSegments.Add(sampleId, segment);
                 var sampleInfo = SampleMetrics.GetSampleInfo(segment, ploidyBedPath, _callerParameters.NumberOfTrimmedBins, sampleId);
-                _copyNumberModel.InitializeModel(_callerParameters.MaximumCopyNumber, sampleInfo.MaxCoverage,
-                    sampleInfo.MeanCoverage, sampleInfo.Variance, sampleInfo.MeanMafCoverage, sampleInfo.MafVariance);
+                _copyNumberModel.InitializeModel(_callerParameters.MaximumCopyNumber, sampleInfo.MaxCoverage, sampleInfo.MeanCoverage, sampleInfo.MeanMafCoverage);
                 samplesInfo.Add(sampleId, sampleInfo);
                 copyNumberModels.Add(sampleId, _copyNumberModel);
                 variantFrequencyFilesSampleList.Add(sampleId, variantFrequencyFiles[fileCounter]);
