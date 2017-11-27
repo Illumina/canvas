@@ -167,8 +167,8 @@ namespace CanvasPedigreeCaller
                 var genomeMetadata = referenceGenome.GenomeMetadata;
                 var coverageBigWigWriter = new CoverageBigWigWriterFactory(logger, bigWigConverter, genomeMetadata).Create();
                 var copyNumberLikelihoodCalculator = new CopyNumberLikelihoodCalculator(callerParameters.MaximumCopyNumber);
-                IVariantCaller variantCaller = new HaplotypeVariantCaller(copyNumberLikelihoodCalculator, callerParameters, qScoreThreshold);
-                ICopyNumberModel copyNumberModel = new HaplotypeCopyNumberModel();
+                IVariantCaller variantCaller = new VariantCaller(copyNumberLikelihoodCalculator, callerParameters, qScoreThreshold);
+                ICopyNumberModel copyNumberModel = new CopyNumberModel();
                 var caller = new CanvasPedigreeCaller(logger, qScoreThreshold, dqScoreThreshold, callerParameters, copyNumberLikelihoodCalculator, variantCaller, coverageBigWigWriter, copyNumberModel);
 
                 var outVcf = outputDirectory.GetFileLocation("CNV.vcf.gz");
