@@ -31,7 +31,7 @@ namespace CanvasPedigreeCaller
             // if number and properties of SNPs in the segment are above threshold, calculate likelihood from SNPs and merge with
             // coverage likelihood to form merged likelihoods
             var singleSampleCoverageAndAlleleCountLikelihoods = UseAlleleCountsInformation(canvasSegment)
-                ? JoinLikelihoods(GetGenotypeLikelihoods(canvasSegment, copyNumberModel, _PhasedGenotypes), coverageLikelihoods) 
+                ? JoinLikelihoods(GetGenotypeLikelihoods(canvasSegment, copyNumberModel, _PhasedGenotypes), coverageLikelihoods)
                 : coverageLikelihoods;
             (var copyNumbers, var jointCoverageAndAlleleCountLikelihoods) = pedigreeInfo != null
                 ? GetCopyNumbersWithPedigreeInfo(canvasSegment, pedigreeInfo, singleSampleCoverageAndAlleleCountLikelihoods, _callerParameters.DeNovoRate)

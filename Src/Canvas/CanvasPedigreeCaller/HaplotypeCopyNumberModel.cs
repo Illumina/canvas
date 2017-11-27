@@ -9,7 +9,7 @@ namespace CanvasPedigreeCaller
     public class HaplotypeCopyNumberModel : ICopyNumberModel
     {
         private readonly List<List<double>> _cnDistribution = new List<List<double>>();
-        private Tuple<List<double>, List<double>> [][] _alleleDistribution;
+        private Tuple<List<double>, List<double>>[][] _alleleDistribution;
         private int _maxCoverage;
 
 
@@ -66,7 +66,6 @@ namespace CanvasPedigreeCaller
             return _cnDistribution.Select(x => x[Convert.ToInt32(dimension)]).ToList();
         }
 
-
         public double GetGtLikelihood(List<Tuple<int, int>> gtObservedCounts, PhasedGenotype gtModelCount)
         {
             {
@@ -76,7 +75,7 @@ namespace CanvasPedigreeCaller
                 {
                     int rowId = Math.Min(gtCount.Item1, _maxCoverage - 1);
                     int colId = Math.Min(gtCount.Item2, _maxCoverage - 1);
-                    if (gtModelCount.CopyNumberA == 1000 && gtModelCount.CopyNumberB == 1)
+                    if (gtModelCount.CopyNumberA == 1 && gtModelCount.CopyNumberB == 1)
                         currentLikelihood += new List<double>
                         {
                             _alleleDistribution[1][1].Item1[rowId] *
