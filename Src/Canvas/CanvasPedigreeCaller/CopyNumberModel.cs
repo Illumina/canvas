@@ -5,23 +5,19 @@ using CanvasCommon;
 
 namespace CanvasPedigreeCaller
 {
-    public class CopyNumberModel
+
+    public class CopyNumberModel : ICopyNumberModel
     {
         private readonly List<List<double>> _cnDistribution = new List<List<double>>();
-        private readonly Tuple<List<double>, List<double>> [][] _alleleDistribution;
-        private readonly int _maxCoverage;
+        private Tuple<List<double>, List<double>>[][] _alleleDistribution;
+        private int _maxCoverage;
 
-        public CopyNumberModel(int numCnStates, double meanMafCoverage, double meanCoverage, int maxCoverage)
+
+        public void InitializeModel(int numCnStates, int maxCoverage, double haploidMean, double variance,
+            double haploidMafMean, double mafVariance)
         {
-            double haploidMafMean = meanMafCoverage / 2.0;
-            double haploidMean = meanCoverage / 2.0;
-            double mafVariance = meanMafCoverage * 2.5;
-            double variance = meanCoverage * 2.5;
             _maxCoverage = maxCoverage;
-            const double alleleStateZeroCorrector = 0.0; // prevent from using zero as a mean of model distribution
-
-
-            for (int copyNumber = 0; copyNumber  < numCnStates; copyNumber ++)
+            for (int copyNumber = 0; copyNumber < numCnStates; copyNumber++)
             {
                 var multiplier = copyNumber * 1.0;
                 // lower haploid mean by 10% to offset FP CN=1 calls 
@@ -33,8 +29,8 @@ namespace CanvasPedigreeCaller
                 // increase triploid mean by 10% to offset FP CN=3 calls 
                 if (copyNumber == 3)
                     multiplier *= 1.1;
-                _cnDistribution.Add(DistributionUtilities.NegativeBinomialWrapper(haploidMean * multiplier, variance, maxCoverage, 
-                    adjustClumpingParameter: true));
+                _cnDistribution.Add(DistributionUtilities.NegativeBinomialWrapper(haploidMean * multiplier, variance,
+                    maxCoverage, adjustClumpingParameter: true));
             }
 
             _alleleDistribution = new Tuple<List<double>, List<double>>[numCnStates][];
@@ -46,16 +42,12 @@ namespace CanvasPedigreeCaller
             {
                 for (int gt2 = 0; gt2 < numCnStates; gt2++)
                 {
-                    var gt1Probabilities =
-                        DistributionUtilities.NegativeBinomialWrapper(haploidMafMean * Math.Max(gt1, alleleStateZeroCorrector), mafVariance, maxCoverage);
-                    var gt2Probabilities =
-                        DistributionUtilities.NegativeBinomialWrapper(haploidMafMean * Math.Max(gt2, alleleStateZeroCorrector), mafVariance, maxCoverage);
-                    _alleleDistribution[gt1][gt2] =
-                        new Tuple<List<double>, List<double>>(gt1Probabilities, gt2Probabilities);
+                    var gt1Probabilities = DistributionUtilities.NegativeBinomialWrapper(haploidMafMean * gt1, mafVariance, maxCoverage);
+                    var gt2Probabilities = DistributionUtilities.NegativeBinomialWrapper(haploidMafMean * gt1, mafVariance, maxCoverage);
+                    _alleleDistribution[gt1][gt2] = new Tuple<List<double>, List<double>>(gt1Probabilities, gt2Probabilities);
                 }
             }
         }
-
 
         public List<double> GetCnLikelihood(double dimension)
         {
@@ -69,7 +61,7 @@ namespace CanvasPedigreeCaller
             var gtModelCounter = 0;
             foreach (var gtModelCount in gtModelCounts)
             {
-                gtLikelihoods[gtModelCounter] = GetCurrentGtLikelihood(gtObservedCounts, gtModelCount);
+                gtLikelihoods[gtModelCounter] = GetGtLikelihood(gtObservedCounts, gtModelCount);
                 gtModelCounter++;
             }
             if (!selectedGtState.HasValue)
@@ -81,33 +73,17 @@ namespace CanvasPedigreeCaller
             return Double.IsNaN(gqscore) || Double.IsInfinity(gqscore) ? 0 : gqscore;
         }
 
-        public double GetCurrentGtLikelihood(List<Tuple<int, int>> gtObservedCounts, PhasedGenotype gtModelCount)
+        public double GetGtLikelihood(List<Tuple<int, int>> gtObservedCounts, PhasedGenotype gtModelCount)
         {
+            double currentLikelihood = 0;
+            foreach (var gtCount in gtObservedCounts)
             {
-                const double lohRefModelPenaltyTerm = 0.5;
-                double currentLikelihood = 0;
-                foreach (var gtCount in gtObservedCounts)
-                {
-                    int rowId = Math.Min(gtCount.Item1, _maxCoverage - 1);
-                    int colId = Math.Min(gtCount.Item2, _maxCoverage - 1);
-                    if (gtModelCount.CopyNumberA == 1000 && gtModelCount.CopyNumberB == 1)
-                        currentLikelihood += new List<double>
-                        {
-                            _alleleDistribution[1][1].Item1[rowId] *
-                            _alleleDistribution[1][1].Item2[colId],
-                            _alleleDistribution[2][0].Item1[rowId] *
-                            _alleleDistribution[2][0].Item2[colId],
-                            _alleleDistribution[0][2].Item1[rowId] *
-                            _alleleDistribution[0][2].Item2[colId]
-                        }.Max() * lohRefModelPenaltyTerm;
-                    else
-                        currentLikelihood += _alleleDistribution[gtModelCount.CopyNumberA][gtModelCount.CopyNumberB]
-                                                 .Item1[rowId] *
-                                             _alleleDistribution[gtModelCount.CopyNumberA][gtModelCount.CopyNumberB]
-                                                 .Item2[colId];
-                }
-                return currentLikelihood;
+                int rowId = Math.Min(gtCount.Item1, _maxCoverage - 1);
+                int colId = Math.Min(gtCount.Item2, _maxCoverage - 1);
+                currentLikelihood += _alleleDistribution[gtModelCount.CopyNumberA][gtModelCount.CopyNumberB].Item1[rowId] *
+                                     _alleleDistribution[gtModelCount.CopyNumberA][gtModelCount.CopyNumberB].Item2[colId];
             }
+            return currentLikelihood;
         }
     }
 }

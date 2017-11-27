@@ -162,13 +162,14 @@ namespace CanvasPedigreeCaller
                 {
                     bigWigConverter = new NullBedGraphToBigWigConverter(logger, "BedGraph to BigWig conversion unavailable on Windows.");
                 }
-                
+
                 var referenceGenome = new ReferenceGenomeFactory().GetReferenceGenome(new DirectoryLocation(referenceFolder));
                 var genomeMetadata = referenceGenome.GenomeMetadata;
                 var coverageBigWigWriter = new CoverageBigWigWriterFactory(logger, bigWigConverter, genomeMetadata).Create();
                 var copyNumberLikelihoodCalculator = new CopyNumberLikelihoodCalculator(callerParameters.MaximumCopyNumber);
-                IVariantCaller variantCaller = new VariantCaller(copyNumberLikelihoodCalculator, callerParameters, qScoreThreshold);
-                var caller = new CanvasPedigreeCaller(logger, qScoreThreshold, dqScoreThreshold, callerParameters, copyNumberLikelihoodCalculator, variantCaller, coverageBigWigWriter);
+                IVariantCaller variantCaller = new HaplotypeVariantCaller(copyNumberLikelihoodCalculator, callerParameters, qScoreThreshold);
+                ICopyNumberModel copyNumberModel = new HaplotypeCopyNumberModel();
+                var caller = new CanvasPedigreeCaller(logger, qScoreThreshold, dqScoreThreshold, callerParameters, copyNumberLikelihoodCalculator, variantCaller, coverageBigWigWriter, copyNumberModel);
 
                 var outVcf = outputDirectory.GetFileLocation("CNV.vcf.gz");
                 result = caller.CallVariants(variantFrequencyFiles, segmentFiles, outVcf, ploidyBedPath, referenceFolder, sampleNames, commonCnvsBedPath, sampleTypesEnum);

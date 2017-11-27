@@ -9,7 +9,7 @@ namespace CanvasPedigreeCaller
         /// Identify variant with the highest likelihood at a given setPosition and assign relevant scores
         /// </summary>
         void CallVariant(ISampleMap<CanvasSegment> canvasSegments, ISampleMap<SampleMetrics> samplesInfo,
-            ISampleMap<CopyNumberModel> copyNumberModel,
+            ISampleMap<ICopyNumberModel> copyNumberModel,
             PedigreeInfo pedigreeInfo);
     }
 }

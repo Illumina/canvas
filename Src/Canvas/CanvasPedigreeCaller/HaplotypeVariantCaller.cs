@@ -24,7 +24,7 @@ namespace CanvasPedigreeCaller
         }
 
         public void CallVariant(ISampleMap<CanvasSegment> canvasSegment, ISampleMap<SampleMetrics> samplesInfo,
-            ISampleMap<CopyNumberModel> copyNumberModel,
+            ISampleMap<ICopyNumberModel> copyNumberModel,
             PedigreeInfo pedigreeInfo)
         {
             var coverageLikelihoods = _copyNumberLikelihoodCalculator.GetCopyNumbersLikelihoods(canvasSegment, samplesInfo, copyNumberModel);
@@ -84,7 +84,7 @@ namespace CanvasPedigreeCaller
             return singleSampleLikelihoods;
         }
 
-        private static ISampleMap<Dictionary<PhasedGenotype, double>> GetGenotypeLikelihoods(ISampleMap<CanvasSegment> canvasSegments, ISampleMap<CopyNumberModel> copyNumberModel,
+        private static ISampleMap<Dictionary<PhasedGenotype, double>> GetGenotypeLikelihoods(ISampleMap<CanvasSegment> canvasSegments, ISampleMap<ICopyNumberModel> copyNumberModel,
             List<PhasedGenotype> genotypes)
         {
             var REF = new PhasedGenotype(1, 1);
@@ -94,7 +94,7 @@ namespace CanvasPedigreeCaller
             foreach (var sampleId in canvasSegments.SampleIds)
             {
                 var observedGenotypeCounts = canvasSegments[sampleId].Balleles.GetAlleleCounts();
-                var likelihoods = genotypes.Select(genotype => (genotype, copyNumberModel[sampleId].GetCurrentGtLikelihood(observedGenotypeCounts, genotype))).ToDictionary(kvp => kvp.Item1, kvp => kvp.Item2);
+                var likelihoods = genotypes.Select(genotype => (genotype, copyNumberModel[sampleId].GetGtLikelihood(observedGenotypeCounts, genotype))).ToDictionary(kvp => kvp.Item1, kvp => kvp.Item2);
                 if (likelihoods[REF] >= Math.Max(likelihoods[loh.First()], likelihoods[loh.Last()]))
                     likelihoods[loh.First()] = likelihoods[loh.Last()] = likelihoods.Values.Where(ll => ll > 0).Min();
                 singleSampleLikelihoods.Add(sampleId, likelihoods);

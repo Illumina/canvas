@@ -19,7 +19,7 @@ namespace CanvasPedigreeCaller
         /// Calculates maximal likelihood for segments without SNV allele ratios. Updated CanvasSegment CopyNumber only. 
         /// </summary>
         public ISampleMap<Dictionary<Genotype, double>> GetCopyNumbersLikelihoods(ISampleMap<CanvasSegment> canvasSegments, ISampleMap<SampleMetrics> samplesInfo,
-            ISampleMap<CopyNumberModel> copyNumberModel)
+            ISampleMap<ICopyNumberModel> copyNumberModel)
         {
             var genotypes = Enumerable.Range(0, _maximumCopyNumber).Select(Genotype.Create).ToList();
             const double maxCoverageMultiplier = 3.0;

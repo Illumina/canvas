@@ -29,9 +29,10 @@ namespace CanvasPedigreeCaller
         private readonly IVariantCaller _variantCaller;
         private readonly CopyNumberLikelihoodCalculator _copyNumberLikelihoodCalculator;
         private readonly ICoverageBigWigWriter _coverageBigWigWriter;
+        private readonly ICopyNumberModel _copyNumberModel;
         #endregion
 
-        public CanvasPedigreeCaller(ILogger logger, int qualityFilterThreshold, int deNovoQualityFilterThreshold, PedigreeCallerParameters callerParameters, CopyNumberLikelihoodCalculator copyNumberLikelihoodCalculator, IVariantCaller variantCaller, ICoverageBigWigWriter coverageBigWigWriter)
+        public CanvasPedigreeCaller(ILogger logger, int qualityFilterThreshold, int deNovoQualityFilterThreshold, PedigreeCallerParameters callerParameters, CopyNumberLikelihoodCalculator copyNumberLikelihoodCalculator, IVariantCaller variantCaller, ICoverageBigWigWriter coverageBigWigWriter, ICopyNumberModel copyNumberModel)
         {
             _logger = logger;
             _qualityFilterThreshold = qualityFilterThreshold;
@@ -40,6 +41,7 @@ namespace CanvasPedigreeCaller
             _copyNumberLikelihoodCalculator = copyNumberLikelihoodCalculator;
             _variantCaller = variantCaller;
             _coverageBigWigWriter = coverageBigWigWriter;
+            _copyNumberModel = copyNumberModel;
         }
 
         internal int CallVariants(List<string> variantFrequencyFiles, List<string> segmentFiles,
@@ -50,7 +52,7 @@ namespace CanvasPedigreeCaller
             var fileCounter = 0;
             var samplesInfo = new SampleMap<SampleMetrics>();
             var sampleSegments = new SampleMap<Segments>();
-            var copyNumberModels = new SampleMap<CopyNumberModel>();
+            var copyNumberModels = new SampleMap<ICopyNumberModel>();
             var variantFrequencyFilesSampleList = new SampleMap<string>();
             var kinships = new SampleMap<SampleType>();
 
@@ -61,9 +63,10 @@ namespace CanvasPedigreeCaller
                 segment.AddAlleles(CanvasIO.ReadFrequenciesWrapper(_logger, new FileLocation(variantFrequencyFiles[fileCounter]), segment.IntervalsByChromosome));
                 sampleSegments.Add(sampleId, segment);
                 var sampleInfo = SampleMetrics.GetSampleInfo(segment, ploidyBedPath, _callerParameters.NumberOfTrimmedBins, sampleId);
-                var copyNumberModel = new CopyNumberModel(_callerParameters.MaximumCopyNumber, sampleInfo.MeanMafCoverage, sampleInfo.MeanCoverage, sampleInfo.MaxCoverage);
+                _copyNumberModel.InitializeModel(_callerParameters.MaximumCopyNumber, sampleInfo.MaxCoverage,
+                    sampleInfo.MeanCoverage, sampleInfo.Variance, sampleInfo.MeanMafCoverage, sampleInfo.MafVariance);
                 samplesInfo.Add(sampleId, sampleInfo);
-                copyNumberModels.Add(sampleId, copyNumberModel);
+                copyNumberModels.Add(sampleId, _copyNumberModel);
                 variantFrequencyFilesSampleList.Add(sampleId, variantFrequencyFiles[fileCounter]);
                 kinships.Add(sampleId, sampleTypes[fileCounter]);
                 fileCounter++;
@@ -119,7 +122,7 @@ namespace CanvasPedigreeCaller
         }
 
         private IEnumerable<ISampleMap<CanvasSegment>> GetHighestLikelihoodSegments(IEnumerable<ISampleMap<OverlappingSegmentsRegion>> segmentSetsFromCommonCnvs,
-            ISampleMap<SampleMetrics> pedigreeMembersInfo, ISampleMap<CopyNumberModel> copyNumberModel)
+            ISampleMap<SampleMetrics> pedigreeMembersInfo, ISampleMap<ICopyNumberModel> copyNumberModel)
         {
             var updatedSegmentSets = segmentSetsFromCommonCnvs
                 .AsParallel()
@@ -272,7 +275,7 @@ namespace CanvasPedigreeCaller
         /// Identify variant with the highest likelihood at a given setPosition and assign relevant scores
         /// </summary>
         private void GetHighestLikelihoodSegmentsSet(ISampleMap<OverlappingSegmentsRegion> canvasSegmentsSet, ISampleMap<SampleMetrics> pedigreeMembersInfo,
-            ISampleMap<CopyNumberModel> model)
+            ISampleMap<ICopyNumberModel> model)
         {
             SegmentsSet segmentSet;
 
@@ -292,7 +295,7 @@ namespace CanvasPedigreeCaller
         }
 
         private double GetSegmentSetLikelihood(ISampleMap<OverlappingSegmentsRegion> canvasSegmentsSet, ISampleMap<SampleMetrics> samplesInfo,
-            ISampleMap<CopyNumberModel> copyNumberModel, SegmentsSet segmentsSet)
+            ISampleMap<ICopyNumberModel> copyNumberModel, SegmentsSet segmentsSet)
         {
             double segmentSetLikelihood = 0;
             foreach (var sampleId in canvasSegmentsSet.SampleIds)

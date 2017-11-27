@@ -153,7 +153,7 @@ namespace CanvasPedigreeCaller
         /// Identify variant with the highest likelihood at a given setPosition and assign relevant scores
         /// </summary>
         public void CallVariant(ISampleMap<CanvasSegment> canvasSegments, ISampleMap<SampleMetrics> samplesInfo,
-            ISampleMap<CopyNumberModel> copyNumberModel,
+            ISampleMap<ICopyNumberModel> copyNumberModel,
             PedigreeInfo pedigreeInfo)
         {
             var singleSampleLikelihoods = _copyNumberLikelihoodCalculator.GetCopyNumbersLikelihoods(canvasSegments, samplesInfo, copyNumberModel);
@@ -176,7 +176,7 @@ namespace CanvasPedigreeCaller
         /// Calculates maximal likelihood for segments with SNV allele counts given CopyNumber. Updated MajorChromosomeCount.
         /// </summary>   
         private void AssignMccNoPedigreeInfo(ISampleMap<CanvasSegment> canvasSegments,
-            ISampleMap<CopyNumberModel> model, Dictionary<int, List<PhasedGenotype>> genotypes)
+            ISampleMap<ICopyNumberModel> model, Dictionary<int, List<PhasedGenotype>> genotypes)
         {
             foreach (var sampleId in canvasSegments.SampleIds)
             {
@@ -201,7 +201,7 @@ namespace CanvasPedigreeCaller
         /// <summary>
         /// Calculates maximal likelihood for genotypes given a copy number call. Updated MajorChromosomeCount.
         /// </summary>
-        private void AssignMccWithPedigreeInfo(ISampleMap<CanvasSegment> canvasSegments, ISampleMap<CopyNumberModel> model, PedigreeInfo pedigreeInfo)
+        private void AssignMccWithPedigreeInfo(ISampleMap<CanvasSegment> canvasSegments, ISampleMap<ICopyNumberModel> model, PedigreeInfo pedigreeInfo)
         {
             double maximalLikelihood = Double.MinValue;
             int parent1CopyNumber = canvasSegments[pedigreeInfo.ParentsIds.First()].CopyNumber;
@@ -249,7 +249,7 @@ namespace CanvasPedigreeCaller
             }
         }
 
-        private double GetProbandLikelihood(CopyNumberModel copyNumberModel, int childCopyNumber, PhasedGenotype parent1GtStates, PhasedGenotype parent2GtStates, bool isInheritedCnv, CanvasSegment canvasSegment,
+        private double GetProbandLikelihood(ICopyNumberModel copyNumberModel, int childCopyNumber, PhasedGenotype parent1GtStates, PhasedGenotype parent2GtStates, bool isInheritedCnv, CanvasSegment canvasSegment,
             double bestLikelihood, ref PhasedGenotype bestGtState)
         {
             foreach (var childGtState in _genotypes[childCopyNumber])
@@ -258,7 +258,7 @@ namespace CanvasPedigreeCaller
                 if (IsGtPedigreeConsistent(parent1GtStates, childGtState) &&
                     IsGtPedigreeConsistent(parent2GtStates, childGtState)
                     && isInheritedCnv)
-                    currentChildLikelihood = copyNumberModel.GetCurrentGtLikelihood(canvasSegment.Balleles.GetAlleleCounts(), childGtState);
+                    currentChildLikelihood = copyNumberModel.GetGtLikelihood(canvasSegment.Balleles.GetAlleleCounts(), childGtState);
                 else
                     continue;
                 if (currentChildLikelihood > bestLikelihood)
@@ -278,7 +278,7 @@ namespace CanvasPedigreeCaller
             return false;
         }
         
-        private void AssignMcc(CanvasSegment canvasSegment, CopyNumberModel copyNumberModel,
+        private void AssignMcc(CanvasSegment canvasSegment, ICopyNumberModel copyNumberModel,
             PhasedGenotype gtStates, int copyNumber)
         {
             const int diploidCopyNumber = 2;
@@ -301,9 +301,9 @@ namespace CanvasPedigreeCaller
             }
         }
 
-        private static double GetCurrentGtLikelihood(CopyNumberModel copyNumberModel, CanvasSegment canvasSegment, PhasedGenotype gtStates)
+        private static double GetCurrentGtLikelihood(ICopyNumberModel copyNumberModel, CanvasSegment canvasSegment, PhasedGenotype gtStates)
         {
-            return copyNumberModel.GetCurrentGtLikelihood(canvasSegment.Balleles.GetAlleleCounts(), gtStates);
+            return copyNumberModel.GetGtLikelihood(canvasSegment.Balleles.GetAlleleCounts(), gtStates);
         }
 
         /// </summary>
