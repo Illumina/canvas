@@ -321,6 +321,23 @@ namespace CanvasPedigreeCaller
         }
 
         /// <summary>
+        /// Calculates maximal likelihood for copy numbers. Updated CanvasSegment CopyNumber only. 
+        /// </summary>
+        public static ISampleMap<int> GetCopyNumbersNoPedigreeInfo(ISampleMap<CanvasSegment> segments, CopyNumbersLikelihoods copyNumbersLikelihoods)
+        {
+            var sampleCopyNumbers = new SampleMap<int>();
+            double maximalLikelihood = 1;
+            foreach (var sampleId in segments.SampleIds)
+            {
+                var (copyNumber, maxSampleLikelihood) = copyNumbersLikelihoods.SingleSampleLikelihoods[sampleId].MaxBy(x => x.Value);
+                maximalLikelihood *= maxSampleLikelihood;
+                sampleCopyNumbers.Add(sampleId, copyNumber);
+            }
+            copyNumbersLikelihoods.MaximalLikelihood = maximalLikelihood;
+            return sampleCopyNumbers;
+        }
+
+        /// <summary>
         /// Evaluate joint likelihood of all genotype combinations across samples. 
         /// Return joint likelihood object and the copy number states with the highest likelihood 
         /// </summary>
