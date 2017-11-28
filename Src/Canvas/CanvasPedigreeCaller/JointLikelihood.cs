@@ -32,12 +32,10 @@ namespace CanvasPedigreeCaller
             return _jointLikelihoods[samplesGenotypes];
         }
 
-
         public double GetMarginalLikelihood(KeyValuePair<SampleId, Genotype> samplesGenotype)
         {
             return _jointLikelihoods.Where(kvp => Equals(kvp.Key[samplesGenotype.Key], samplesGenotype.Value)).Select(kvp => kvp.Value).Sum() / _totalLikelihood;
         }
-
 
         public double GetMarginalNonAltLikelihood(KeyValuePair<SampleId, Genotype> samplesGenotype)
         {

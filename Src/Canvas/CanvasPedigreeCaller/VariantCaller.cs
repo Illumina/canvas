@@ -153,11 +153,9 @@ namespace CanvasPedigreeCaller
         /// Identify variant with the highest likelihood at a given setPosition and assign relevant scores
         /// </summary>
         public void CallVariant(ISampleMap<CanvasSegment> canvasSegments, ISampleMap<SampleMetrics> samplesInfo,
-            ISampleMap<ICopyNumberModel> copyNumberModel,
-            PedigreeInfo pedigreeInfo)
+            ISampleMap<ICopyNumberModel> copyNumberModel, PedigreeInfo pedigreeInfo)
         {
             var singleSampleLikelihoods = _copyNumberLikelihoodCalculator.GetCopyNumbersLikelihoods(canvasSegments, samplesInfo, copyNumberModel);
-            /*
             var (copyNumbers, jointLikelihoods) = pedigreeInfo != null
                 ? GetCopyNumbersWithPedigreeInfo(canvasSegments, pedigreeInfo, singleSampleLikelihoods)
                 : CanvasPedigreeCaller.GetCopyNumbersNoPedigreeInfo(canvasSegments, singleSampleLikelihoods);
@@ -169,7 +167,6 @@ namespace CanvasPedigreeCaller
                 AssignMccWithPedigreeInfo(canvasSegments, copyNumberModel, pedigreeInfo);
             if (!UseMafInformation(canvasSegments) && pedigreeInfo == null)
                 AssignMccNoPedigreeInfo(canvasSegments, copyNumberModel, _genotypes);
-                */
         }
         
         /// <summary>
@@ -323,43 +320,48 @@ namespace CanvasPedigreeCaller
             return copyNumberModel.GetGenotypeLikelihood(canvasSegment.Balleles, gtStates);
         }
 
-        /// </summary>
-        private ISampleMap<int> GetCopyNumbersWithPedigreeInfo(ISampleMap<CanvasSegment> segments,
-            PedigreeInfo pedigreeInfo, CopyNumbersLikelihoods copyNumbersLikelihoods)
+        public (ISampleMap<Genotype> copyNumbersGenotypes, JointLikelihoods jointLikelihood) GetCopyNumbersWithPedigreeInfo(ISampleMap<CanvasSegment> segments,
+            PedigreeInfo pedigreeInfo, ISampleMap<Dictionary<Genotype, double>> copyNumbersLikelihoods)
         {
-            var sampleCopyNumbers = segments.SelectValues(value => 2);
-            var parent1Likelihood = copyNumbersLikelihoods.SingleSampleLikelihoods[pedigreeInfo.ParentsIds.First()];
-            var parent2Likelihood = copyNumbersLikelihoods.SingleSampleLikelihoods[pedigreeInfo.ParentsIds.Last()];
-            var copyNumbersRange = Enumerable.Range(0, _callerParameters.MaximumCopyNumber).ToList();
-            foreach (int copyNumberParent1 in copyNumbersRange)
+            ISampleMap<Genotype> sampleCopyNumbersGenotypes = null;
+            var jointLikelihood = new JointLikelihoods();
+            foreach (var copyNumberParent1 in copyNumbersLikelihoods[pedigreeInfo.ParentsIds.First()])
             {
-                foreach (int copyNumberParent2 in copyNumbersRange)
+                foreach (var copyNumberParent2 in copyNumbersLikelihoods[pedigreeInfo.ParentsIds.Last()])
                 {
                     foreach (var offspringGtStates in pedigreeInfo.OffspringPhasedGenotypes)
                     {
-                        double currentLikelihood = parent1Likelihood[copyNumberParent1] * parent2Likelihood[copyNumberParent2];
+                        double currentLikelihood = copyNumberParent1.Value * copyNumberParent2.Value;
                         for (var counter = 0; counter < pedigreeInfo.OffspringIds.Count; counter++)
                         {
                             var child = pedigreeInfo.OffspringIds[counter];
                             int copyNumberChild = Math.Min(offspringGtStates[counter].PhasedGenotype.CopyNumberA + offspringGtStates[counter].PhasedGenotype.CopyNumberB,
                                 _callerParameters.MaximumCopyNumber - 1);
-                            currentLikelihood *= pedigreeInfo.TransitionMatrix[copyNumberParent1][offspringGtStates[counter].PhasedGenotype.CopyNumberA] *
-                                                 pedigreeInfo.TransitionMatrix[copyNumberParent2][offspringGtStates[counter].PhasedGenotype.CopyNumberB] *
-                                                 copyNumbersLikelihoods.SingleSampleLikelihoods[child][copyNumberChild];
+                            currentLikelihood *= pedigreeInfo.TransitionMatrix[copyNumberParent1.Key.TotalCopyNumber][offspringGtStates[counter].PhasedGenotype.CopyNumberA] *
+                                                 pedigreeInfo.TransitionMatrix[copyNumberParent2.Key.TotalCopyNumber][offspringGtStates[counter].PhasedGenotype.CopyNumberB] *
+                                                 copyNumbersLikelihoods[child][Genotype.Create(copyNumberChild)];
                         }
 
                         currentLikelihood = Double.IsNaN(currentLikelihood) || Double.IsInfinity(currentLikelihood) ? 0 : currentLikelihood;
-                        copyNumbersLikelihoods.SetJointLikelihood(currentLikelihood, GetSampleCopyNumbers(pedigreeInfo, copyNumberParent1, copyNumberParent2, offspringGtStates));
-
-                        if (currentLikelihood > copyNumbersLikelihoods.MaximalLikelihood)
+                        var genotypesInPedigree = new SampleMap<Genotype>
                         {
-                            copyNumbersLikelihoods.MaximalLikelihood = currentLikelihood;
-                            sampleCopyNumbers = GetSampleCopyNumbers(pedigreeInfo, copyNumberParent1, copyNumberParent2, offspringGtStates);
+                            {pedigreeInfo.ParentsIds.First(), copyNumberParent1.Key},
+                            {pedigreeInfo.ParentsIds.Last(), copyNumberParent2.Key}
+                        };
+                        pedigreeInfo.OffspringIds.Zip(offspringGtStates).ForEach(sampleIdGenotypeKvp => genotypesInPedigree.Add(sampleIdGenotypeKvp.Item1, sampleIdGenotypeKvp.Item2));
+                        jointLikelihood.AddJointLikelihood(genotypesInPedigree, currentLikelihood);
+
+                        if (currentLikelihood > jointLikelihood.MaximalLikelihood)
+                        {
+                            jointLikelihood.MaximalLikelihood = currentLikelihood;
+                            sampleCopyNumbersGenotypes = genotypesInPedigree;
                         }
                     }
                 }
             }
-            return sampleCopyNumbers;
+            if (sampleCopyNumbersGenotypes == null)
+                throw new IlluminaException("Maximal likelihood was not found");
+            return (copyNumbersGenotypes: sampleCopyNumbersGenotypes, jointLikelihood: jointLikelihood);
         }
 
         private static SampleMap<int> GetSampleCopyNumbers(PedigreeInfo pedigreeInfo, int copyNumberParent1, int copyNumberParent2, List<Genotype> offspringGtStates)
