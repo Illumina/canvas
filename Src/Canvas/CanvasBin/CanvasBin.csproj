@@ -34,10 +34,10 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Illumina.Common" Version="4.14.1.359" />
-    <PackageReference Include="Isas.Framework" Version="7.16.4.769" />
-    <PackageReference Include="Isas.Manifests" Version="4.10.1.163" />
-    <PackageReference Include="Isas.SequencingFiles" Version="5.5.0.395" />
+    <PackageReference Include="Illumina.Common" Version="5.0.0.364" />
+    <PackageReference Include="Isas.Framework" Version="8.1.0.804" />
+    <PackageReference Include="Isas.Manifests" Version="5.0.0.168" />
+    <PackageReference Include="Isas.SequencingFiles" Version="6.0.0.402" />
     <PackageReference Include="protobuf-net" Version="2.3.2" />
   </ItemGroup>
 

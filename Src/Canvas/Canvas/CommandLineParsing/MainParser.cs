@@ -42,10 +42,10 @@ namespace Canvas.CommandLineParsing
             return result.Get(CommonOptionsParser);
         }
 
-        private IParsingResult<IModeLauncher> Parse(ILogger logger, ICheckpointRunner checkpointRunner, IWorkManager workManager, IWorkDoer workDoer, string[] args, TextWriter standardWriter, TextWriter errorWriter)
+        private IParsingResult<IModeLauncher> Parse(ILogger logger, ISettings settings, ICheckpointRunner checkpointRunner, IWorkManager workManager, IWorkDoer workDoer, string[] args, TextWriter standardWriter, TextWriter errorWriter)
         {
             var mode = _modeParsers[args[0]];
-            return mode.Parse(this, logger, checkpointRunner, workManager, workDoer, args, standardWriter, errorWriter);
+            return mode.Parse(this, logger, settings, checkpointRunner, workManager, workDoer, args, standardWriter, errorWriter);
         }
 
         private int Parse(string[] args, WriteLine standardWriter, WriteLine errorWriter)
@@ -222,7 +222,7 @@ namespace Canvas.CommandLineParsing
                         commonOptions.StopCheckpoint, checkpointer =>
                     {
                         var workManager = WorkManagerFactory.GetWorkManager(workDoer, logger, outFolder, settings);
-                        var result = Parse(logger, checkpointer, workManager, workDoer, args, standardOutput, standardError);
+                        var result = Parse(logger, settings, checkpointer, workManager, workDoer, args, standardOutput, standardError);
                         returnValue = result.Success ? result.Result.Launch() : -1;
                     });
                 });

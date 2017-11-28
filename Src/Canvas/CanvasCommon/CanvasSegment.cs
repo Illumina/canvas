@@ -6,6 +6,7 @@ using System.IO;
 using Illumina.Common;
 using Illumina.Common.FileSystem;
 using Isas.SequencingFiles;
+using Isas.SequencingFiles.Vcf;
 
 
 namespace CanvasCommon
@@ -265,24 +266,24 @@ namespace CanvasCommon
             new SortedList<double>(Counts.Select(Convert.ToDouble));
             return sorted.Median();
         }
-        public CnvType GetCnvType(int referenceCopyNumber)
-        {
-            if (CopyNumber < referenceCopyNumber)
-                return CnvType.Loss;
-            if (CopyNumber > referenceCopyNumber)
-                return CnvType.Gain;
-            if (referenceCopyNumber == 2 &&
-                MajorChromosomeCount.HasValue && MajorChromosomeCount == CopyNumber)
-                return CnvType.LossOfHeterozygosity;
-            return CnvType.Reference;
-        }
 
-        public string GetAltCopyNumbers(CnvType cnvType)
+        public (CnvType, int[]) GetCnvTypeAndAlleleCopyNumbers(int referenceCopyNumber)
         {
-            if (CnvTypeExtensions.IsReference(cnvType)) return ".";
-            if (!MajorChromosomeCount.HasValue) return $"<{CnvTypeExtensions.CnvTag}>";
-            var tagList = new[] { CopyNumber - MajorChromosomeCount, MajorChromosomeCount }.Where(x => x != 1).Select(x => $"<CN{x}>");
-            return string.Join(",", tagList);
+            if (CopyNumber == referenceCopyNumber)
+            {
+                if (referenceCopyNumber == 2 && MajorChromosomeCount.HasValue && MajorChromosomeCount == 2)
+                    return (CnvType.LossOfHeterozygosity, new[] { 0, 2 });
+                return (CnvType.Reference, Enumerable.Repeat(1, referenceCopyNumber).ToArray());
+            }
+            if (CopyNumber > referenceCopyNumber)
+            {
+                if (referenceCopyNumber == 1) return (CnvType.Gain, new[] { CopyNumber });
+                if (!MajorChromosomeCount.HasValue)
+                    return (CnvType.Gain, new[]
+                        {-1, Int32.MaxValue}); // use -1 for unknown allele copynum and MaxValue for <DUP> 
+                return (CnvType.Gain, new[] { CopyNumber - MajorChromosomeCount.Value, MajorChromosomeCount.Value });
+            }
+            return CopyNumber == 0 ? (CnvType.Loss, new int[referenceCopyNumber]) : (CnvType.Loss, new[] { 0, 1 });
         }
 
         /// <summary>
@@ -616,8 +617,8 @@ namespace CanvasCommon
                         // Find the most common major chromosome count, for the most common copy number:
                         var copyNumsSortedbyMajorChromCounts = copyNumberAndChromCount.Where(x => x.Key.CopyNum == majorCopyNumber)
                             .OrderByDescending(x => x.Value).ToList();
-                        var majorChromosomeCount = copyNumsSortedbyMajorChromCounts.IsNullOrEmpty() ? null : copyNumsSortedbyMajorChromCounts.First().Key.MajorChromCounts;                       
-                       
+                        var majorChromosomeCount = copyNumsSortedbyMajorChromCounts.IsNullOrEmpty() ? null : copyNumsSortedbyMajorChromCounts.First().Key.MajorChromCounts;
+
                         // Note allele frequency and coverage info, for all overlap segments that match (more or less)
                         // the most common copy number:
                         foreach (CanvasSegment segment in overlapSegments)
@@ -1046,6 +1047,7 @@ namespace CanvasCommon
             string sizeFilter = "L" + CanvasFilter.FormatCnvSizeWithSuffix(segmantSizeCutoff);
             foreach (var segment in segments)
             {
+                if (segment.Filter != null) throw new Exception($"Filter has already been set: {segment.Filter.ToVcfString()}");
                 var filterTags = new List<string>();
                 if (segment.QScore < qualityFilterThreshold) filterTags.Add(qualityFilter);
                 if (segment.End - segment.Begin < segmantSizeCutoff) filterTags.Add(sizeFilter);
