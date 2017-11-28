@@ -58,6 +58,32 @@ namespace CanvasPedigreeCaller
             return !lowAlleleCounts;
         }
 
+        private ISampleMap<Dictionary<Genotype, double>> GetCopyNumbersLikelihoods(ISampleMap<CanvasSegment> canvasSegments, ISampleMap<SampleMetrics> samplesInfo,
+            ISampleMap<CopyNumberModel> copyNumberModel, List<Genotype> genotypes)
+        {
+            const double maxCoverageMultiplier = 3.0;
+            var singleSampleLikelihoods = new SampleMap<Dictionary<Genotype, double>>();
+
+            foreach (var sampleId in canvasSegments.SampleIds)
+            {
+                var density = new Dictionary<Genotype, double>();
+
+                foreach (var genotypeCopyNumber in genotypes)
+                {
+                    double currentLikelihood =
+                        copyNumberModel[sampleId].GetTotalCopyNumberLikelihoods(
+                            Math.Min(canvasSegments[sampleId].MedianCount,
+                                samplesInfo[sampleId].MeanCoverage * maxCoverageMultiplier), genotypeCopyNumber);
+                    currentLikelihood = Double.IsNaN(currentLikelihood) || Double.IsInfinity(currentLikelihood)
+                        ? 0
+                        : currentLikelihood;
+                    density[genotypeCopyNumber] = currentLikelihood;
+                }
+                singleSampleLikelihoods.Add(sampleId, density);
+            }
+            return singleSampleLikelihoods;
+        }
+
         private static ISampleMap<Dictionary<PhasedGenotype, double>> GetGenotypeLikelihoods(ISampleMap<CanvasSegment> canvasSegments, ISampleMap<ICopyNumberModel> copyNumberModel,
             List<PhasedGenotype> genotypes)
         {
