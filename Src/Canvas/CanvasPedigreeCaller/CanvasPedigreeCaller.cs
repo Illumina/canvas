@@ -29,10 +29,10 @@ namespace CanvasPedigreeCaller
         private readonly IVariantCaller _variantCaller;
         private readonly CopyNumberLikelihoodCalculator _copyNumberLikelihoodCalculator;
         private readonly ICoverageBigWigWriter _coverageBigWigWriter;
-        private readonly ICopyNumberModel _copyNumberModel;
+        private readonly ICopyNumberModelFactory _copyNumberModelFactory;
         #endregion
 
-        public CanvasPedigreeCaller(ILogger logger, int qualityFilterThreshold, int deNovoQualityFilterThreshold, PedigreeCallerParameters callerParameters, CopyNumberLikelihoodCalculator copyNumberLikelihoodCalculator, IVariantCaller variantCaller, ICoverageBigWigWriter coverageBigWigWriter, ICopyNumberModel copyNumberModel)
+        public CanvasPedigreeCaller(ILogger logger, int qualityFilterThreshold, int deNovoQualityFilterThreshold, PedigreeCallerParameters callerParameters, CopyNumberLikelihoodCalculator copyNumberLikelihoodCalculator, IVariantCaller variantCaller, ICoverageBigWigWriter coverageBigWigWriter, ICopyNumberModelFactory copyNumberModelFactory)
         {
             _logger = logger;
             _qualityFilterThreshold = qualityFilterThreshold;
@@ -41,7 +41,7 @@ namespace CanvasPedigreeCaller
             _copyNumberLikelihoodCalculator = copyNumberLikelihoodCalculator;
             _variantCaller = variantCaller;
             _coverageBigWigWriter = coverageBigWigWriter;
-            _copyNumberModel = copyNumberModel;
+            _copyNumberModelFactory = copyNumberModelFactory;
         }
 
         internal int CallVariants(List<string> variantFrequencyFiles, List<string> segmentFiles,
@@ -63,9 +63,9 @@ namespace CanvasPedigreeCaller
                 segment.AddAlleles(CanvasIO.ReadFrequenciesWrapper(_logger, new FileLocation(variantFrequencyFiles[fileCounter]), segment.IntervalsByChromosome));
                 sampleSegments.Add(sampleId, segment);
                 var sampleInfo = SampleMetrics.GetSampleInfo(segment, ploidyBedPath, _callerParameters.NumberOfTrimmedBins, sampleId);
-                _copyNumberModel.InitializeModel(_callerParameters.MaximumCopyNumber, sampleInfo.MaxCoverage, sampleInfo.MeanCoverage, sampleInfo.MeanMafCoverage);
+                var copyNumberModel = _copyNumberModelFactory.CreateModel(_callerParameters.MaximumCopyNumber, sampleInfo.MaxCoverage, sampleInfo.MeanCoverage, sampleInfo.MeanMafCoverage);
                 samplesInfo.Add(sampleId, sampleInfo);
-                copyNumberModels.Add(sampleId, _copyNumberModel);
+                copyNumberModels.Add(sampleId, copyNumberModel);
                 variantFrequencyFilesSampleList.Add(sampleId, variantFrequencyFiles[fileCounter]);
                 kinships.Add(sampleId, sampleTypes[fileCounter]);
                 fileCounter++;

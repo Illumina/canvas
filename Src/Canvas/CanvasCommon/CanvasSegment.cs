@@ -91,7 +91,6 @@ namespace CanvasCommon
         public List<float> Frequencies => Range.Select(allele => allele.Frequency).ToList();
         public List<double> MaxFrequencies => Range.Select(allele => allele.GetMaxFrequency()).ToList();
 
-
         public List<Tuple<int, int>> GetAlleleCounts()
         {
             return Range.Select(allele => new Tuple<int, int>(allele.CountsA, allele.CountsB)).ToList();

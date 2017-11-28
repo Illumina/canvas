@@ -32,9 +32,9 @@ namespace CanvasPedigreeCaller
                 foreach (var genotypeCopyNumber in genotypes)
                 {
                     double currentLikelihood =
-                        copyNumberModel[sampleId].GetCnLikelihood(
+                        copyNumberModel[sampleId].GetTotalCopyNumberLikelihoods(
                             Math.Min(canvasSegments[sampleId].MedianCount,
-                                samplesInfo[sampleId].MeanCoverage * maxCoverageMultiplier))[genotypeCopyNumber.TotalCopyNumber];
+                                samplesInfo[sampleId].MeanCoverage * maxCoverageMultiplier), genotypeCopyNumber);
                     currentLikelihood = Double.IsNaN(currentLikelihood) || Double.IsInfinity(currentLikelihood)
                         ? 0
                         : currentLikelihood;

@@ -71,9 +71,9 @@ namespace CanvasPedigreeCaller
                 foreach (var genotypeCopyNumber in genotypes)
                 {
                     double currentLikelihood =
-                        copyNumberModel[sampleId].GetCnLikelihood(
+                        copyNumberModel[sampleId].GetTotalCopyNumberLikelihoods(
                             Math.Min(canvasSegments[sampleId].MedianCount,
-                                samplesInfo[sampleId].MeanCoverage * maxCoverageMultiplier))[genotypeCopyNumber.TotalCopyNumber];
+                                samplesInfo[sampleId].MeanCoverage * maxCoverageMultiplier), genotypeCopyNumber);
                     currentLikelihood = Double.IsNaN(currentLikelihood) || Double.IsInfinity(currentLikelihood)
                         ? 0
                         : currentLikelihood;
@@ -93,8 +93,7 @@ namespace CanvasPedigreeCaller
             var singleSampleLikelihoods = new SampleMap<Dictionary<PhasedGenotype, double>>();
             foreach (var sampleId in canvasSegments.SampleIds)
             {
-                var observedGenotypeCounts = canvasSegments[sampleId].Balleles.GetAlleleCounts();
-                var likelihoods = genotypes.Select(genotype => (genotype, copyNumberModel[sampleId].GetGtLikelihood(observedGenotypeCounts, genotype))).ToDictionary(kvp => kvp.Item1, kvp => kvp.Item2);
+                var likelihoods = genotypes.Select(genotype => (genotype, copyNumberModel[sampleId].GetGenotypeLikelihood(canvasSegments[sampleId].Balleles, genotype))).ToDictionary(kvp => kvp.Item1, kvp => kvp.Item2);
                 if (likelihoods[REF] >= Math.Max(likelihoods[loh.First()], likelihoods[loh.Last()]))
                     likelihoods[loh.First()] = likelihoods[loh.Last()] = likelihoods.Values.Where(ll => ll > 0).Min();
                 singleSampleLikelihoods.Add(sampleId, likelihoods);

@@ -188,8 +188,7 @@ namespace CanvasPedigreeCaller
                 }
                 var genotypeset = genotypes[copyNumber];
                 int? selectedGtState = null;
-                double gqscore = model[sampleId].GetGtLikelihoodScore(canvasSegments[sampleId].Balleles.GetAlleleCounts(),
-                    genotypeset, ref selectedGtState);
+                double gqscore = GetGtLikelihoodScore(canvasSegments[sampleId].Balleles, genotypeset, ref selectedGtState, model[sampleId]);
                 canvasSegments[sampleId].MajorChromosomeCountScore = gqscore;
                 if (selectedGtState.HasValue)
                     canvasSegments[sampleId].MajorChromosomeCount =
@@ -258,7 +257,7 @@ namespace CanvasPedigreeCaller
                 if (IsGtPedigreeConsistent(parent1GtStates, childGtState) &&
                     IsGtPedigreeConsistent(parent2GtStates, childGtState)
                     && isInheritedCnv)
-                    currentChildLikelihood = copyNumberModel.GetGtLikelihood(canvasSegment.Balleles.GetAlleleCounts(), childGtState);
+                    currentChildLikelihood = copyNumberModel.GetGenotypeLikelihood(canvasSegment.Balleles, childGtState);
                 else
                     continue;
                 if (currentChildLikelihood > bestLikelihood)
@@ -289,9 +288,8 @@ namespace CanvasPedigreeCaller
                 canvasSegment.MajorChromosomeCount =
                     Math.Max(gtStates.CopyNumberA, gtStates.CopyNumberB);
                 int? selectedGtState = _genotypes[copyNumber].IndexOf(gtStates);
-                canvasSegment.MajorChromosomeCountScore =
-                    copyNumberModel.GetGtLikelihoodScore(canvasSegment.Balleles.GetAlleleCounts(), _genotypes[copyNumber], ref selectedGtState);
-                copyNumberModel.GetGtLikelihoodScore(canvasSegment.Balleles.GetAlleleCounts(), _genotypes[copyNumber], ref selectedGtState);
+                canvasSegment.MajorChromosomeCountScore = GetGtLikelihoodScore(canvasSegment.Balleles, _genotypes[copyNumber], ref selectedGtState, copyNumberModel);
+                    GetGtLikelihoodScore(canvasSegment.Balleles, _genotypes[copyNumber], ref selectedGtState, copyNumberModel);
             }
             else
             {
@@ -301,9 +299,28 @@ namespace CanvasPedigreeCaller
             }
         }
 
+        public double GetGtLikelihoodScore(Balleles gtObservedCounts, List<PhasedGenotype> gtModelCounts, ref int? selectedGtState, ICopyNumberModel copyNumberModel)
+        {
+            const int maxGQscore = 60;
+            var gtLikelihoods = Enumerable.Repeat(0.0, gtModelCounts.Count).ToList();
+            var gtModelCounter = 0;
+            foreach (var gtModelCount in gtModelCounts)
+            {
+                gtLikelihoods[gtModelCounter] = copyNumberModel.GetGenotypeLikelihood(gtObservedCounts, gtModelCount);
+                gtModelCounter++;
+            }
+            if (!selectedGtState.HasValue)
+                selectedGtState = gtLikelihoods.IndexOf(gtLikelihoods.Max());
+            double normalizationConstant = gtLikelihoods.Sum();
+            double gqscore = -10.0 * Math.Log10((normalizationConstant - gtLikelihoods[selectedGtState.Value]) / normalizationConstant);
+            if (Double.IsInfinity(gqscore) | gqscore > maxGQscore)
+                gqscore = maxGQscore;
+            return Double.IsNaN(gqscore) || Double.IsInfinity(gqscore) ? 0 : gqscore;
+        }
+
         private static double GetCurrentGtLikelihood(ICopyNumberModel copyNumberModel, CanvasSegment canvasSegment, PhasedGenotype gtStates)
         {
-            return copyNumberModel.GetGtLikelihood(canvasSegment.Balleles.GetAlleleCounts(), gtStates);
+            return copyNumberModel.GetGenotypeLikelihood(canvasSegment.Balleles, gtStates);
         }
 
         /// </summary>

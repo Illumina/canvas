@@ -1,16 +1,16 @@
-﻿using System;
-using System.Collections.Generic;
-using CanvasCommon;
-using Isas.Framework.DataTypes.Maps;
+﻿using CanvasCommon;
 
 namespace CanvasPedigreeCaller
 {
     public interface ICopyNumberModel
     {
-        double GetGtLikelihood(List<Tuple<int, int>> gtObservedCounts, PhasedGenotype gtModelCount);
-        List<double> GetCnLikelihood(double dimension);
-        void InitializeModel(int numCnStates, int maxCoverage, double haploidMean, double haploidMafMean);
-
-        double GetGtLikelihoodScore(List<Tuple<int, int>> gtObservedCounts, List<PhasedGenotype> gtModelCounts, ref int? selectedGtState);
+        double GetGenotypeLikelihood(Balleles segmentAlleleReadCounts, PhasedGenotype phasedGenotype);
+        double GetTotalCopyNumberLikelihoods(double segmentMedianBinCoverage, Genotype totalCopyNumberGenotype);
     }
+
+    public interface ICopyNumberModelFactory
+    {
+        ICopyNumberModel CreateModel(int numCnStates, int maxCoverage, double haploidMean, double haploidMafMean);
+    }
+  
 }
