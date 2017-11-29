@@ -26,7 +26,10 @@ namespace CanvasCommon
 
         public bool ContainsSharedAlleles(Genotype genotype)
         {
-            return TotalCopyNumber == genotype.TotalCopyNumber;
+            if (PhasedGenotype == null | genotype.PhasedGenotype == null)
+                return TotalCopyNumber == genotype.TotalCopyNumber;
+            return PhasedGenotype.ContainsSharedAlleleA(genotype.PhasedGenotype) ||
+                   PhasedGenotype.ContainsSharedAlleleB(genotype.PhasedGenotype);
         }
 
         public override int GetHashCode()

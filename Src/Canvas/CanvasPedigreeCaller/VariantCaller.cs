@@ -5,10 +5,11 @@ using CanvasCommon;
 using Illumina.Common;
 using Isas.Framework.DataTypes;
 using Isas.Framework.DataTypes.Maps;
+[assembly: System.Runtime.CompilerServices.InternalsVisibleTo("CanvasTest")]
 
 namespace CanvasPedigreeCaller
 {
-    class VariantCaller : IVariantCaller
+    internal class VariantCaller : IVariantCaller
     {
         private readonly CopyNumberLikelihoodCalculator _copyNumberLikelihoodCalculator;
         private readonly PedigreeCallerParameters _callerParameters;
@@ -87,7 +88,7 @@ namespace CanvasPedigreeCaller
                 if (IsReferenceVariant(canvasSegments, samplesInfo, probandId))
                     continue;
                 // common variant
-                if (IsCommonCnv(canvasSegments, samplesInfo, parentIDs, probandId))
+                if (IsCommonCnv(canvasSegments, samplesInfo, parentIDs, probandId, _callerParameters.MaximumCopyNumber))
                     continue;
                 // other offsprings are ALT
                 if (!offspringIDs.Except(probandId.ToEnumerable()).All(id => IsReferenceVariant(canvasSegments, samplesInfo, id)))
@@ -119,11 +120,11 @@ namespace CanvasPedigreeCaller
             return canvasSegments[sampleId].QScore > _qualityFilterThreshold;
         }
 
-        private bool IsCommonCnv(ISampleMap<CanvasSegment> canvasSegments, ISampleMap<SampleMetrics> samplesInfo, List<SampleId> parentIDs, SampleId probandId)
+        public static bool IsCommonCnv(ISampleMap<CanvasSegment> canvasSegments, ISampleMap<SampleMetrics> samplesInfo, List<SampleId> parentIDs, SampleId probandId, int maximumCopyNumber)
         {
-            int parent1CopyNumber = GetCnState(canvasSegments, parentIDs.First(), _callerParameters.MaximumCopyNumber);
-            int parent2CopyNumber = GetCnState(canvasSegments, parentIDs.Last(), _callerParameters.MaximumCopyNumber);
-            int probandCopyNumber = GetCnState(canvasSegments, probandId, _callerParameters.MaximumCopyNumber);
+            int parent1CopyNumber = GetCnState(canvasSegments, parentIDs.First(), maximumCopyNumber);
+            int parent2CopyNumber = GetCnState(canvasSegments, parentIDs.Last(), maximumCopyNumber);
+            int probandCopyNumber = GetCnState(canvasSegments, probandId, maximumCopyNumber);
             var parent1Genotypes = CanvasPedigreeCaller.GenerateCnAlleles(parent1CopyNumber);
             var parent2Genotypes = CanvasPedigreeCaller.GenerateCnAlleles(parent2CopyNumber);
             var probandGenotypes = CanvasPedigreeCaller.GenerateCnAlleles(probandCopyNumber);
@@ -364,21 +365,6 @@ namespace CanvasPedigreeCaller
             if (sampleCopyNumbersGenotypes == null)
                 throw new IlluminaException("Maximal likelihood was not found");
             return (copyNumbersGenotypes: sampleCopyNumbersGenotypes, jointLikelihood: jointLikelihood);
-        }
-
-        private static SampleMap<int> GetSampleCopyNumbers(PedigreeInfo pedigreeInfo, int copyNumberParent1, int copyNumberParent2, List<Genotype> offspringGtStates)
-        {
-            var sampleCopyNumbers = new SampleMap<int>
-            {
-                {pedigreeInfo.ParentsIds.First(), copyNumberParent1},
-                {pedigreeInfo.ParentsIds.Last(), copyNumberParent2}
-            };
-            for (int counter = 0; counter < pedigreeInfo.OffspringIds.Count; counter++)
-            {
-                sampleCopyNumbers.Add(pedigreeInfo.OffspringIds[counter],
-                    offspringGtStates[counter].PhasedGenotype.CopyNumberA + offspringGtStates[counter].PhasedGenotype.CopyNumberB);
-            }
-            return sampleCopyNumbers;
         }
     }
 }

@@ -5,6 +5,7 @@ using CanvasCommon;
 using Illumina.Common;
 using Isas.Framework.DataTypes;
 using Isas.Framework.DataTypes.Maps;
+[assembly: System.Runtime.CompilerServices.InternalsVisibleTo("CanvasTest")]
 
 namespace CanvasPedigreeCaller
 {
@@ -196,8 +197,10 @@ namespace CanvasPedigreeCaller
         private static double EstimateTransmissionProbability(KeyValuePair<Genotype, double> parent1GtStates, KeyValuePair<Genotype, double> parent2GtStates, KeyValuePair<Genotype, double> offspringGtState, double deNovoRate, PedigreeInfo pedigreeInfo)
         {
             if (parent1GtStates.Key.HasAlleleCopyNumbers && parent2GtStates.Key.HasAlleleCopyNumbers)
-                return parent1GtStates.Key.PhasedGenotype.ContainsSharedAlleles(offspringGtState.Key.PhasedGenotype) &&
-                       parent2GtStates.Key.PhasedGenotype.ContainsSharedAlleles(offspringGtState.Key.PhasedGenotype)
+                return (offspringGtState.Key.PhasedGenotype.ContainsSharedAlleleA(parent1GtStates.Key.PhasedGenotype) ||
+                       offspringGtState.Key.PhasedGenotype.ContainsSharedAlleleA(parent2GtStates.Key.PhasedGenotype)) &&
+                       (offspringGtState.Key.PhasedGenotype.ContainsSharedAlleleB(parent1GtStates.Key.PhasedGenotype) ||
+                        offspringGtState.Key.PhasedGenotype.ContainsSharedAlleleB(parent2GtStates.Key.PhasedGenotype))
                     ? 1.0
                     : deNovoRate;
             return pedigreeInfo.TransitionMatrix[parent1GtStates.Key.TotalCopyNumber][
@@ -253,8 +256,7 @@ namespace CanvasPedigreeCaller
             return canvasSegments[sampleId].QScore > _qualityFilterThreshold;
         }
 
-        // TODO: add unit tests
-        private bool IsCommonCnv(ISampleMap<Genotype> copyNumberGenotypes, List<SampleId> parentIDs, SampleId probandId)
+        public static bool IsCommonCnv(ISampleMap<Genotype> copyNumberGenotypes, List<SampleId> parentIDs, SampleId probandId)
         {
             var proband = copyNumberGenotypes[probandId];
             var parent1 = copyNumberGenotypes[parentIDs.First()];
@@ -265,7 +267,10 @@ namespace CanvasPedigreeCaller
                        proband.TotalCopyNumber > 3 && parent1.TotalCopyNumber > 3 && parent2.TotalCopyNumber > 3 ||
                        proband.TotalCopyNumber == 0 && parent1.TotalCopyNumber == 1 && parent2.TotalCopyNumber == 1;
 
-            return proband.PhasedGenotype.ContainsSharedAlleles(parent1.PhasedGenotype) && proband.PhasedGenotype.ContainsSharedAlleles(parent2.PhasedGenotype);
+            return (proband.PhasedGenotype.ContainsSharedAlleleA(parent1.PhasedGenotype) ||
+                    proband.PhasedGenotype.ContainsSharedAlleleA(parent2.PhasedGenotype)) &&
+                   (proband.PhasedGenotype.ContainsSharedAlleleB(parent1.PhasedGenotype) ||
+                    proband.PhasedGenotype.ContainsSharedAlleleB(parent2.PhasedGenotype));
         }
 
         private bool IsReferenceVariant(ISampleMap<CanvasSegment> canvasSegments, ISampleMap<SampleMetrics> samplesInfo, SampleId sampleId)

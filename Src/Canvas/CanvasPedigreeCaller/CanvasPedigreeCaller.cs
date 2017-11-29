@@ -62,7 +62,7 @@ namespace CanvasPedigreeCaller
                 var segment = Segments.ReadSegments(_logger, new FileLocation(segmentFiles[fileCounter]));
                 segment.AddAlleles(CanvasIO.ReadFrequenciesWrapper(_logger, new FileLocation(variantFrequencyFiles[fileCounter]), segment.IntervalsByChromosome));
                 sampleSegments.Add(sampleId, segment);
-                var sampleInfo = SampleMetrics.GetSampleInfo(segment, ploidyBedPath, _callerParameters.NumberOfTrimmedBins, sampleId);
+                var sampleInfo = SampleMetrics.GetSampleInfo(segment.AllSegments, ploidyBedPath, _callerParameters.NumberOfTrimmedBins, sampleId);
                 var copyNumberModel = _copyNumberModelFactory.CreateModel(_callerParameters.MaximumCopyNumber, sampleInfo.MaxCoverage, sampleInfo.MeanCoverage, sampleInfo.MeanMafCoverage);
                 samplesInfo.Add(sampleId, sampleInfo);
                 copyNumberModels.Add(sampleId, copyNumberModel);

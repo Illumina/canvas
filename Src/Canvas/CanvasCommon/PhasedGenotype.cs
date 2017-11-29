@@ -18,9 +18,14 @@ namespace CanvasCommon
         /// </summary>
         /// <param name="phasedGenotype"></param>
         /// <returns></returns>
-        public bool ContainsSharedAlleles(PhasedGenotype phasedGenotype)
+        public bool ContainsSharedAlleleA(PhasedGenotype phasedGenotype)
         {
-            return CopyNumberA == phasedGenotype.CopyNumberA || CopyNumberA == phasedGenotype.CopyNumberB || CopyNumberB == phasedGenotype.CopyNumberA || CopyNumberB == phasedGenotype.CopyNumberB;
+            return CopyNumberA == phasedGenotype.CopyNumberA || CopyNumberA == phasedGenotype.CopyNumberB;
+        }
+
+        public bool ContainsSharedAlleleB(PhasedGenotype phasedGenotype)
+        {
+            return CopyNumberB == phasedGenotype.CopyNumberA || CopyNumberB == phasedGenotype.CopyNumberB;
         }
 
         public override int GetHashCode()

@@ -1,6 +1,6 @@
 namespace CanvasPedigreeCaller
 {
-    class PedigreeCallerParameters
+    public class PedigreeCallerParameters
     {
         public int MaximumCopyNumber { get; set; } = 5;
         public int MaxAlleleNumber { get; set; } = 3;
