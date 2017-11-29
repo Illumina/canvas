@@ -272,6 +272,7 @@ namespace CanvasCommon
         {
             if (CopyNumber == referenceCopyNumber)
             {
+                if (referenceCopyNumber == 0) return (CnvType.Reference, new[] { -1 }); // Reference is the default CNV type if no additional information given
                 if (referenceCopyNumber == 2 && MajorChromosomeCount.HasValue && MajorChromosomeCount == 2)
                     return (CnvType.LossOfHeterozygosity, new[] { 0, 2 });
                 return (CnvType.Reference, Enumerable.Repeat(1, referenceCopyNumber).ToArray());
