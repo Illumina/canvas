@@ -137,6 +137,8 @@ namespace CanvasCommon
                                             .ToVcfString();
                     var referenceCopyNumbers = currentSegments.Zip(ploidies,
                         (segment, ploidy) => ploidy?.GetReferenceCopyNumber(segment) ?? 2).ToList();
+                    // skip this segment if the reference copy number is zero in any of the samples
+                    if (referenceCopyNumbers.Any(x => x == 0)) continue;
                     var cnvTypes = new CnvType[nSamples];
                     var sampleSetAlleleCopyNumbers = new int[nSamples][];
                     for (int sampleIndex = 0; sampleIndex < nSamples; sampleIndex++)
@@ -207,23 +209,23 @@ namespace CanvasCommon
         private static void WriteFormatAndSampleFields(BgzipOrStreamWriter writer, CanvasSegment[] segments, string[] genotypes, bool reportDQ)
         {
             const string nullValue = ".";
-            writer.Write("\tGT:RC:BC:CN:MCC:MCCQ:QS:FT");
-            if (reportDQ)
-                writer.Write(":DQ");
+            string formatColumn = "GT:RC:BC:CN:MCC:MCCQ:QS:FT";
+            if (reportDQ) formatColumn += ":DQ";
+            var outputFields = new List<string> {formatColumn};
             for (int i = 0; i < segments.Length; i++)
             {
                 var segment = segments[i];
                 string mcc = segment.MajorChromosomeCount.HasValue ? segment.MajorChromosomeCount.ToString() : nullValue;
                 string mccq = segment.MajorChromosomeCountScore.HasValue ? $"{segment.MajorChromosomeCountScore.Value:F2}" : nullValue;
-       
-                writer.Write($"\t{genotypes[i]}:{segment.MedianCount:F2}:{segment.BinCount}:{segment.CopyNumber}:{mcc}:{mccq}:{segment.QScore:F2}:{segment.Filter.ToVcfString()}");
+                string sampleColumn = $"{genotypes[i]}:{segment.MedianCount:F2}:{segment.BinCount}:{segment.CopyNumber}:{mcc}:{mccq}:{segment.QScore:F2}:{segment.Filter.ToVcfString()}";
                 if (reportDQ)
                 {
                     string dqscore = segment.DqScore.HasValue ? $"{segment.DqScore.Value:F2}" : nullValue;
-                    writer.Write($":{dqscore}");
+                    sampleColumn += $":{dqscore}";
                 }
-                writer.WriteLine();
+                outputFields.Add(sampleColumn);
             }
+            writer.WriteLine("\t"+string.Join("\t",outputFields));
         }
 
 
