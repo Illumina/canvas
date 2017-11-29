@@ -137,8 +137,6 @@ namespace CanvasCommon
                                             .ToVcfString();
                     var referenceCopyNumbers = currentSegments.Zip(ploidies,
                         (segment, ploidy) => ploidy?.GetReferenceCopyNumber(segment) ?? 2).ToList();
-                    // skip this segment if the reference copy number is zero in any of the samples
-                    if (referenceCopyNumbers.Any(x => x == 0)) continue;
                     var cnvTypes = new CnvType[nSamples];
                     var sampleSetAlleleCopyNumbers = new int[nSamples][];
                     for (int sampleIndex = 0; sampleIndex < nSamples; sampleIndex++)
