@@ -201,10 +201,8 @@ namespace CanvasCommon
             return string.Join("/", genotypes.OrderBy(GenotypeToIntMapping));
         }
 
-        private static int GenotypeToIntMapping(string genotype)  // '.' first, then in numeric order
-        {
-            return genotype == "." ? -1 : int.Parse(genotype);
-        }
+        // '.' first, then in numeric order
+        private static int GenotypeToIntMapping(string genotype) =>  genotype == "." ? -1 : int.Parse(genotype);
 
         private static void WriteFormatAndSampleFields(BgzipOrStreamWriter writer, CanvasSegment[] segments, string[] genotypes, bool reportDQ)
         {
