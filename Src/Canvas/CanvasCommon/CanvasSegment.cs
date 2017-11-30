@@ -1049,7 +1049,6 @@ namespace CanvasCommon
             string sizeFilter = "L" + CanvasFilter.FormatCnvSizeWithSuffix(segmantSizeCutoff);
             foreach (var segment in segments)
             {
-                if (segment.Filter != null) throw new Exception($"Filter has already been set: {segment.Filter.ToVcfString()}");
                 var filterTags = new List<string>();
                 if (segment.QScore < qualityFilterThreshold) filterTags.Add(qualityFilter);
                 if (segment.End - segment.Begin < segmantSizeCutoff) filterTags.Add(sizeFilter);
