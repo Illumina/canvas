@@ -10,25 +10,24 @@ namespace CanvasTest
     public class TestUtilities
     {
         [Theory]
-        [InlineData("weightedaverage", CanvasNormalizeMode.WeightedAverage, false)]
-        [InlineData("WeightedAverage", CanvasNormalizeMode.WeightedAverage, false)]
-        [InlineData("bestlr2", CanvasNormalizeMode.BestLR2, false)]
-        [InlineData("BestLR2", CanvasNormalizeMode.BestLR2, false)]
-        [InlineData("pca", CanvasNormalizeMode.PCA, false)]
-        [InlineData("PCA", CanvasNormalizeMode.PCA, false)]
-        [InlineData("badmode", null, true)]
-        public void TestParseCanvasNormalizeMode(string modeStr, CanvasNormalizeMode expectedMode, bool expectException)
+        [InlineData("weightedaverage", CanvasNormalizeMode.WeightedAverage)]
+        [InlineData("WeightedAverage", CanvasNormalizeMode.WeightedAverage)]
+        [InlineData("bestlr2", CanvasNormalizeMode.BestLR2)]
+        [InlineData("BestLR2", CanvasNormalizeMode.BestLR2)]
+        [InlineData("pca", CanvasNormalizeMode.PCA)]
+        [InlineData("PCA", CanvasNormalizeMode.PCA)]
+        public void TestParseCanvasNormalizeMode(string modeStr, CanvasNormalizeMode expectedMode)
         {
-            if (expectException)
-            {
-                Exception ex = Assert.Throws<Exception>(() => Utilities.ParseCanvasNormalizeMode(modeStr));
-                Assert.Equal(String.Format("Invalid CanvasNormalize mode '{0}'", modeStr), ex.Message);
-            }
-            else
-            {
-                CanvasNormalizeMode mode = Utilities.ParseCanvasNormalizeMode(modeStr);
-                Assert.Equal(expectedMode, mode);
-            }
+            CanvasNormalizeMode mode = Utilities.ParseCanvasNormalizeMode(modeStr);
+            Assert.Equal(expectedMode, mode);
+        }
+
+        [Theory]
+        [InlineData("badmode")]
+        public void TestParseCanvasNormalizeMode_WithBadString(string modeStr)
+        {
+            Exception ex = Record.Exception(() => Utilities.ParseCanvasNormalizeMode(modeStr));
+            Assert.IsType<IlluminaException>(ex);
         }
 
         [Theory]

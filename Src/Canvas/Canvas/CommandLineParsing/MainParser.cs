@@ -6,7 +6,9 @@ using CanvasCommon.CommandLineParsing.CoreOptionTypes;
 using CanvasCommon.CommandLineParsing.OptionProcessing;
 using Illumina.Common;
 using Illumina.Common.FileSystem;
+using Isas.Framework.Checkpointing;
 using Isas.Framework.FrameworkFactory;
+using Isas.Framework.Logging;
 using Isas.Framework.Settings;
 using Isas.Framework.WorkManagement;
 using static CanvasCommon.CommandLineParsing.CoreOptionTypes.OptionExtensions;
@@ -40,10 +42,10 @@ namespace Canvas.CommandLineParsing
             return result.Get(CommonOptionsParser);
         }
 
-        private IParsingResult<IModeLauncher> Parse(FrameworkServices frameworkServices, string[] args, TextWriter standardWriter, TextWriter errorWriter)
+        private IParsingResult<IModeLauncher> Parse(ILogger logger, ISettings settings, ICheckpointRunner checkpointRunner, IWorkManager workManager, IWorkDoer workDoer, string[] args, TextWriter standardWriter, TextWriter errorWriter)
         {
             var mode = _modeParsers[args[0]];
-            return mode.Parse(this, frameworkServices, args, standardWriter, errorWriter);
+            return mode.Parse(this, logger, settings, checkpointRunner, workManager, workDoer, args, standardWriter, errorWriter);
         }
 
         private int Parse(string[] args, WriteLine standardWriter, WriteLine errorWriter)
@@ -207,17 +209,25 @@ namespace Canvas.CommandLineParsing
             var error = outFolder.GetFileLocation("CanvasError.txt");
             IDirectoryLocation genomeRoot = commonOptions.WholeGenomeFasta?.Parent?.Parent?.Parent?.Parent?.Parent;
             int returnValue = 0;
-            var settings = new SettingsProcessor();
-            var maximumMemoryGB = settings.GetSetting(WorkManagerFactory.SampleSheetSettings.MaximumMemoryGB);
-            var maximumHoursPerProcess = settings.GetSetting(WorkManagerFactory.SampleSheetSettings.MaximumHoursPerProcess);
-            var maximumThreadCount = settings.GetSetting(WorkManagerFactory.SampleSheetSettings.MaximumThreadCount);
-            IsasFrameworkFactory.RunWithIsasFramework(outFolder, log, error, commonOptions.StartCheckpoint, commonOptions.StopCheckpoint, maximumThreadCount,
-                maximumMemoryGB, maximumHoursPerProcess, true, false, true, genomeRoot,
-                frameworkServices =>
+
+            IsasFrameworkFactory.RunWithLogger(log, error, logger =>
+            {
+                ISettings settings = new ProgrammaticSettingsBuilder()
+                    .WithSetting(IsasConfigurationSettings.GenomeRepositoryPath, genomeRoot)
+                    .ToSettings();
+                settings = new NestedSettingsProcessor(settings, IsasConfigurationSettings.GetConfigSettings());
+                IsasFrameworkFactory.RunWithWorkDoer(logger, settings, outFolder, workDoer =>
                 {
-                    var result = Parse(frameworkServices, args, standardOutput, standardError);
-                    returnValue = result.Success ? result.Result.Launch() : -1;
+                    IsasFrameworkFactory.RunWithCheckpointer(logger, outFolder, settings, commonOptions.StartCheckpoint,
+                        commonOptions.StopCheckpoint, checkpointer =>
+                    {
+                        var workManager = WorkManagerFactory.GetWorkManager(workDoer, logger, outFolder, settings);
+                        var result = Parse(logger, settings, checkpointer, workManager, workDoer, args, standardOutput, standardError);
+                        returnValue = result.Success ? result.Result.Launch() : -1;
+                    });
                 });
+            });
+
             return returnValue;
         }
     }

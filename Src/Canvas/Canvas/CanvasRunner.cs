@@ -13,6 +13,7 @@ using Isas.Framework.Checkpointing;
 using Isas.Framework.Checkpointing.Legacy;
 using Isas.Framework.Logging;
 using Isas.Framework.WorkManagement;
+using Isas.Framework.WorkManagement.CommandBuilding;
 using Isas.Manifests.NexteraManifest;
 using Isas.SequencingFiles;
 
@@ -31,23 +32,27 @@ namespace Canvas
         private readonly int _countsPerBin;
         private readonly ILogger _logger;
         private readonly IWorkManager _workManager;
+        private readonly IWorkDoer _workDoer;
         private readonly ICheckpointRunner _checkpointRunner;
         private readonly bool _isSomatic;
         private readonly Dictionary<string, string> _customParameters = new Dictionary<string, string>();
-        private readonly IFileLocation _runtimeExecutable; // Path to either mono or dotnet
+        private readonly IFileLocation _runtimeExecutable;
+        private readonly Func<string, ICommandFactory> _runtimeCommandPrefix; // Path to either mono or dotnet
         #endregion
 
-        public CanvasRunner(ILogger logger, IWorkManager workManager, ICheckpointRunner checkpointRunner, IFileLocation runtimeExecutable, bool isSomatic, CanvasCoverageMode coverageMode,
+        public CanvasRunner(ILogger logger, IWorkManager workManager, IWorkDoer workDoer, ICheckpointRunner checkpointRunner, IFileLocation runtimeExecutable, Func<string, ICommandFactory> runtimeCommandPrefix, bool isSomatic, CanvasCoverageMode coverageMode,
             int countsPerBin, Dictionary<string, string> customParameters = null, string canvasFolder = null)
         {
             _logger = logger;
             _workManager = workManager;
+            _workDoer = workDoer;
             _checkpointRunner = checkpointRunner;
             _isSomatic = isSomatic;
             _canvasFolder = canvasFolder ?? DefaultCanvasFolder;
             _coverageMode = coverageMode;
             _countsPerBin = countsPerBin;
             _runtimeExecutable = runtimeExecutable;
+            _runtimeCommandPrefix = runtimeCommandPrefix;
             if (customParameters != null)
             {
                 _customParameters = new Dictionary<string, string>(customParameters, StringComparer.OrdinalIgnoreCase);
@@ -122,44 +127,39 @@ namespace Canvas
         private int GetBinSize(CanvasCallset callset, IFileLocation bamPath, IReadOnlyList<IFileLocation> intermediateDataPaths,
             string canvasReferencePath, string canvasBedPath)
         {
-            StringBuilder commandLine = new StringBuilder();
-            string executablePath = GetExecutablePath("CanvasBin", commandLine);
+            var command = _runtimeCommandPrefix("CanvasBin").GetNewCommandBuilder();
 
-            commandLine.AppendFormat("-b \"{0}\" ", bamPath);
-            commandLine.AppendFormat("-p "); // Paired-end input mode (Isaac or BWA output)
-            commandLine.AppendFormat("-r \"{0}\" ", canvasReferencePath);
+            command.AddArgument("-b", bamPath);
+            command.AddArgument("-p"); // Paired-end input mode (Isaac or BWA output)
+            command.AddArgument("-r", canvasReferencePath);
 
             foreach (var path in intermediateDataPaths)
             {
-                commandLine.AppendFormat("-i \"{0}\" ", path);
+                command.AddArgument("-i", path);
             }
 
-            commandLine.AppendFormat("-y "); // bin size only
+            command.AddArgument("-y"); // bin size only
 
             if (callset.IsEnrichment) // manifest
             {
                 if (!File.Exists(callset.TempManifestPath)) { NexteraManifestUtils.WriteNexteraManifests(callset.Manifest, callset.TempManifestPath); }
-                commandLine.AppendFormat("-t \"{0}\" ", callset.TempManifestPath);
+                command.AddArgument("-t", callset.TempManifestPath);
             }
 
-            string outputStub = Path.Combine(Path.GetDirectoryName(callset.SingleSampleCallset.BinSizePath),
-                Path.GetFileNameWithoutExtension(callset.SingleSampleCallset.BinSizePath));
-            commandLine.AppendFormat("-f \"{0}\" -d {1} -o \"{2}\"", canvasBedPath, _countsPerBin, outputStub);
+            IFileLocation binSizeFile = new FileLocation(callset.SingleSampleCallset.BinSizePath);
 
-            UnitOfWork binJob = new UnitOfWork()
-            {
-                ExecutablePath = executablePath,
-                LoggingStub = Path.GetFileNameWithoutExtension(callset.SingleSampleCallset.BinSizePath),
-                CommandLine = commandLine.ToString()
-            };
-            if (_customParameters.ContainsKey("CanvasBin"))
-            {
-                binJob.CommandLine = Isas.Framework.Settings.CommandOptionsUtilities.MergeCommandLineOptions(binJob.CommandLine, _customParameters["CanvasBin"], true);
-            }
-            _workManager.DoWorkSingleThread(binJob);
+            var outputFileNameStub = Path.GetFileNameWithoutExtension(binSizeFile.FullName);
+            var outputStub = binSizeFile.Directory.GetFileLocation(outputFileNameStub);
+            command.AddArgument("-f", canvasBedPath);
+            command.AddArgument("-d", _countsPerBin);
+            command.AddArgument("-o", outputStub);
+            
+            var result = _workDoer.DoWork(
+                WorkResourceRequest.CreateLinear(1, 5, 23, 1),
+                (workResources, jobLauncher) => new FileLocation(callset.SingleSampleCallset.BinSizePath)).Await();
 
             int binSize;
-            using (FileStream stream = new FileStream(callset.SingleSampleCallset.BinSizePath, FileMode.Open, FileAccess.Read))
+            using (var stream = result.OpenRead())
             using (StreamReader reader = new StreamReader(stream))
             {
                 binSize = int.Parse(reader.ReadLine());
@@ -619,7 +619,7 @@ namespace Canvas
         /// <summary>
         /// Invoke CanvasSNV on SmallPedigreeCallset callsets.  Return null if this fails and we need to abort CNV calling for this sample.
         /// </summary>
-        
+
         protected void InvokeCanvasSnv(SmallPedigreeCallset callsets)
         {
             foreach (PedigreeSample callset in callsets.PedigreeSample)
@@ -779,7 +779,7 @@ namespace Canvas
             }
 
             // CanvasSNV
-            var canvasSnvTask = _checkpointRunner.RunCheckpointAsync<IFileLocation>("CanvasSNV", () => _isSomatic ? 
+            var canvasSnvTask = _checkpointRunner.RunCheckpointAsync<IFileLocation>("CanvasSNV", () => _isSomatic ?
                 InvokeCanvasSnv(callset, isSomatic: _isSomatic) : InvokeCanvasSnv(callset));
 
             // Prepare ploidy file:
@@ -840,13 +840,6 @@ namespace Canvas
                     $"Error: Missing filter bed file required for CNV calling at '{canvasBedPath}'");
             }
 
-            // interim proband number restriction 
-            var numProbands = callset.PedigreeSample.Where(x => x.SampleType == SampleType.Proband).ToList().Count;
-            if (numProbands > 2)
-            {
-                throw new Illumina.Common.IlluminaException(
-                    $"Error: Cannot run Canvas with more than two probands");
-            }
             // CanvasSNV
             var canvasSnvTask = _checkpointRunner.RunCheckpointAsync("CanvasSNV", () => InvokeCanvasSnv(callset));
 
