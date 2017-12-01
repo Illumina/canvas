@@ -63,7 +63,7 @@ namespace CanvasPedigreeCaller
                 canvasSegments[sampleId].QScore = GetSingleSampleQualityScore(copyNumberLikelihoods.SingleSampleLikelihoods[sampleId], copyNumbers[sampleId]);
                 canvasSegments[sampleId].CopyNumber = copyNumbers[sampleId];
                 if (canvasSegments[sampleId].QScore < _qualityFilterThreshold)
-                    canvasSegments[sampleId].Filter = $"q{_qualityFilterThreshold}";
+                    canvasSegments[sampleId].Filter = CanvasFilter.Create(new[] {$"q{_qualityFilterThreshold}"});
             }
             if (pedigreeInfo != null)
                 SetDenovoQualityScores(canvasSegments, pedigreeMembersInfo, pedigreeInfo.ParentsIds, pedigreeInfo.OffspringIds, copyNumberLikelihoods);
@@ -129,7 +129,7 @@ namespace CanvasPedigreeCaller
 
         private bool IsPassVariant(ISampleMap<CanvasSegment> canvasSegments, SampleId sampleId)
         {
-            return canvasSegments[sampleId].QScore > _qualityFilterThreshold;
+            return canvasSegments[sampleId].QScore >= _qualityFilterThreshold;
         }
 
         private bool IsCommonCnv(ISampleMap<CanvasSegment> canvasSegments, ISampleMap<SampleMetrics> samplesInfo, List<SampleId> parentIDs, SampleId probandId)

@@ -286,7 +286,7 @@ namespace CanvasDiploidCaller
             {
                 Console.WriteLine("CanvasDiploidCaller: No segments loaded; no CNV calls will be made.");
                 CanvasSegmentWriter.WriteSegments(outFile, _allSegments, _model?.DiploidCoverage, referenceFolder,
-                    sampleName, null, null, QualityFilterThreshold, isPedigreeInfoSupplied: false);
+                    sampleName, null, null, QualityFilterThreshold, false, null, null);
                 return 0;
             }
             PloidyInfo ploidy = null;
@@ -338,8 +338,9 @@ namespace CanvasDiploidCaller
             // merging segments requires quality scores so we do it after quality scores have been assigned
             var mergedSegments = CanvasSegment.MergeSegments(_allSegments);
             // recalculating qscores after merging segments improves performance!
+
             CanvasSegment.AssignQualityScores(mergedSegments, CanvasSegment.QScoreMethod.LogisticGermline, _germlineScoreParameters);
-            CanvasSegment.FilterSegments(QualityFilterThreshold, mergedSegments);
+            CanvasSegment.SetFilterForSegments(QualityFilterThreshold, mergedSegments, CanvasFilter.SegmentSizeCutoff); 
 
             List<string> extraHeaders = new List<string>();
             var coverageOutputPath = SingleSampleCallset.GetCoverageAndVariantFrequencyOutputPath(outFile);
@@ -353,7 +354,7 @@ namespace CanvasDiploidCaller
             if (!string.IsNullOrEmpty(ploidy?.HeaderLine)) extraHeaders.Add(ploidy.HeaderLine);
 
             CanvasSegmentWriter.WriteSegments(outFile, mergedSegments, _model.DiploidCoverage, referenceFolder, sampleName,
-                extraHeaders, ploidy, QualityFilterThreshold, isPedigreeInfoSupplied: false);
+                extraHeaders, ploidy, QualityFilterThreshold, false, null, null);
             return 0;
         }
     }

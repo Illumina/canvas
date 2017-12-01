@@ -72,7 +72,10 @@ namespace CanvasPedigreeCaller
 
             var segmentsForVariantCalling = GetHighestLikelihoodSegments(segmentSetsFromCommonCnvs, samplesInfo, copyNumberModels).ToList();
             PedigreeInfo pedigreeInfo = null;
-            if (kinships.Values.Any(kin => kin == SampleType.Proband))
+            var haveChild = kinships.Values.Any(kin => kin == SampleType.Proband || kin == SampleType.Sibling);
+            var haveMother = kinships.Values.Any(kin => kin == SampleType.Mother);
+            var haveFather = kinships.Values.Any(kin => kin == SampleType.Father);
+            if (haveChild && haveMother && haveFather)
                 pedigreeInfo = PedigreeInfo.GetPedigreeInfo(kinships, _callerParameters);
             Parallel.ForEach(
                 segmentsForVariantCalling,
@@ -101,14 +104,14 @@ namespace CanvasPedigreeCaller
             var diploidCoverage = samplesInfo.Select(info => info.Value.MeanCoverage).ToList();
             var names = samplesInfo.SampleIds.Select(id => id.ToString()).ToList();
             CanvasSegmentWriter.WriteMultiSampleSegments(outVcfFile.FullName, mergedVariantCalledSegments, diploidCoverage, referenceFolder, names,
-                null, ploidies, _qualityFilterThreshold, isPedigreeInfoSupplied, denovoQualityThreshold);
+                null, ploidies, _qualityFilterThreshold, denovoQualityThreshold, null, isPedigreeInfoSupplied);
 
             foreach (var sampleId in samplesInfo.SampleIds)
             {
                 var outputVcfPath = SingleSampleCallset.GetSingleSamplePedigreeVcfOutput(outputFolder, sampleId.ToString());
                 CanvasSegmentWriter.WriteSegments(outputVcfPath.FullName, mergedVariantCalledSegments[sampleId],
                     samplesInfo[sampleId].MeanCoverage, referenceFolder, sampleId.ToString(), null,
-                    samplesInfo[sampleId].Ploidy, _qualityFilterThreshold, isPedigreeInfoSupplied, denovoQualityThreshold);
+                    samplesInfo[sampleId].Ploidy, _qualityFilterThreshold, isPedigreeInfoSupplied, denovoQualityThreshold, null);
 
                 var visualizationTemp = outputFolder.CreateSubdirectory($"VisualizationTemp{sampleId}");
                 var bigWig = _coverageBigWigWriter.Write(mergedVariantCalledSegments[sampleId], visualizationTemp);
@@ -165,7 +168,7 @@ namespace CanvasPedigreeCaller
         }
 
         /// <summary>
-        /// Create CanvasSegments from common CNVs bed file and overlap with CanvasPartition
+        /// CreatRecordLevelFilter CanvasSegments from common CNVs bed file and overlap with CanvasPartition
         /// segments to create SegmentHaplotypes
         /// </summary>
         private IEnumerable<ISampleMap<OverlappingSegmentsRegion>> CreateSegmentSetsFromCommonCnvs(ISampleMap<string> variantFrequencyFiles,

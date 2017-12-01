@@ -415,7 +415,7 @@ namespace CanvasSomaticCaller
                     Console.WriteLine("IsTrainingMode activated. Not calling any CNVs. Reason: {0}", e.Message);
                     _segments.Clear();
                     CanvasSegmentWriter.WriteSegments(outputVCFPath, _segments, _model.DiploidCoverage, referenceFolder, name, ExtraHeaders,
-                    ReferencePloidy, QualityFilterThreshold, isPedigreeInfoSupplied: false);
+                    ReferencePloidy, QualityFilterThreshold, false, null, CanvasFilter.SegmentSizeCutoff);
                     Environment.Exit(0);
                 }
                 else if (e is NotEnoughUsableSegementsException)
@@ -455,7 +455,7 @@ namespace CanvasSomaticCaller
 
             // recalculating quality scores doesn't seem to have any effect, but we do it for consistency with the diploid caller where it seems to matter
             CanvasSegment.AssignQualityScores(mergedSegments, CanvasSegment.QScoreMethod.Logistic, somaticCallerQscoreParameters);
-            CanvasSegment.FilterSegments(QualityFilterThreshold, mergedSegments);
+            CanvasSegment.SetFilterForSegments(QualityFilterThreshold, mergedSegments, CanvasFilter.SegmentSizeCutoff);
 
             if (_cnOracle != null)
             {
@@ -468,7 +468,7 @@ namespace CanvasSomaticCaller
 
             // Write out results.  Note that model may be null here, in training mode, if we hit an UncallableDataException:
             CanvasSegmentWriter.WriteSegments(outputVCFPath, mergedSegments, _model?.DiploidCoverage, referenceFolder, name, ExtraHeaders,
-                ReferencePloidy, QualityFilterThreshold, isPedigreeInfoSupplied: false);
+                ReferencePloidy, QualityFilterThreshold, false, null, CanvasFilter.SegmentSizeCutoff);
 
             return 0;
         }
@@ -2257,7 +2257,7 @@ namespace CanvasSomaticCaller
                     Array.Clear(baseCountByCopyNumber, 0, baseCountByCopyNumber.Length);
                     currentChromosome = segment.Chr;
                 }
-                if (segment.Filter != "PASS") continue;
+                if (!segment.Filter.IsPass) continue;
                 if (segment.CopyNumber == -1) continue;
                 baseCountByCopyNumber[Math.Min(segment.CopyNumber, somaticCallerParameters.MaximumCopyNumber)] += (segment.Length);
             }

@@ -83,7 +83,7 @@ namespace CanvasCommon
                 case "pca":
                     return CanvasNormalizeMode.PCA;
                 default:
-                    throw new Exception(string.Format("Invalid CanvasNormalize mode '{0}'", mode));
+                    throw new IlluminaException(string.Format("Invalid CanvasNormalize mode '{0}'", mode));
             }
         }
 

@@ -1,15 +1,11 @@
-﻿using Canvas.CommandLineParsing;
-using Illumina.Common.FileSystem;
+﻿using Illumina.Common.FileSystem;
 using Isas.Framework.Checkpointing;
-using Isas.Framework.FrameworkFactory;
 using Isas.Framework.Logging;
 using Isas.Framework.Settings;
 using Isas.Framework.WorkManagement;
-using Illumina.Common;
 using System;
-using System.IO;
-using System.Linq;
 using System.Collections.Generic;
+using Isas.Framework.WorkManagement.CommandBuilding;
 
 namespace Canvas
 {
@@ -20,20 +16,28 @@ namespace Canvas
 
     public interface IModeRunner
     {
-        void Run(ILogger logger, ICheckpointRunner checkpointRunner, IWorkManager workManager, IFileLocation runtimeExecutable);
+        void Run(ILogger logger, ICheckpointRunner checkpointRunner, IWorkManager workManager, IWorkDoer workDoer, IFileLocation runtimeExecutable, Func<string, ICommandFactory> runtimeCommandPrefix);
     }
 
     public class ModeLauncher : IModeLauncher
     {
-        private readonly FrameworkServices _frameworkServices;
+        private readonly ILogger _logger;
+        private readonly ISettings _settings;
+        private readonly ICheckpointRunner _checkpointRunner;
+        private readonly IWorkManager _workManager;
+        private readonly IWorkDoer _workDoer;
         private readonly IModeRunner _modeRunner;
         private readonly IEnumerable<string> _args;
         private readonly string _version;
         private readonly string _mode;
 
-        public ModeLauncher(FrameworkServices frameworkServices, IModeRunner modeRunner, IEnumerable<string> args, string version, string mode)
+        public ModeLauncher(ILogger logger, ISettings settings, ICheckpointRunner checkpointRunner, IWorkManager workManager, IWorkDoer workDoer, IModeRunner modeRunner, IEnumerable<string> args, string version, string mode)
         {
-            _frameworkServices = frameworkServices;
+            _logger = logger;
+            _settings = settings;
+            _checkpointRunner = checkpointRunner;
+            _workManager = workManager;
+            _workDoer = workDoer;
             _modeRunner = modeRunner;
             _args = args;
             _version = version;
@@ -42,19 +46,24 @@ namespace Canvas
 
         public int Launch()
         {
-            var logger = _frameworkServices.Logger;
             try
             {
-                var executableProcessor = new ExecutableProcessor(new SettingsProcessor(), logger);
+                var executableProcessor = new ExecutableProcessor(_settings, _logger);
                 var runtimeExecutable = new FileLocation(executableProcessor.GetEnvironmentExecutablePath("dotnet"));
-                _frameworkServices.Logger.Info($"Running Canvas {_mode} {_version}");
-                logger.Info($"Command-line arguments: {string.Join(" ", _args)}");
-                _modeRunner.Run(logger, _frameworkServices.Checkpointer, _frameworkServices.WorkManager, runtimeExecutable);
+
+                ICommandFactory GetDotnetCommand(string component)
+                {
+
+                    return new CommandManager(executableProcessor).GetDotnetCommandFactory($"{component}.dll",component);
+                }
+                _logger.Info($"Running Canvas {_mode} {_version}");
+                _logger.Info($"Command-line arguments: {string.Join(" ", _args)}");
+                _modeRunner.Run(_logger, _checkpointRunner, _workManager, _workDoer, runtimeExecutable, GetDotnetCommand);
                 return 0;
             }
             catch (Exception e)
             {
-                logger.Error($"Canvas workflow error: {e}");
+                _logger.Error($"Canvas workflow error: {e}");
                 return -1;
             }
         }

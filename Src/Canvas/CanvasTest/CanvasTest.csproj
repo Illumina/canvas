@@ -23,16 +23,16 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" />
 
   <ItemGroup>
-    <PackageReference Include="Castle.Core" Version="4.1.1" />
-    <PackageReference Include="Illumina.Common" Version="4.13.0.353" />
-    <PackageReference Include="Isas.Framework.UnitTestUtilities" Version="7.16.1.755" />
-    <PackageReference Include="Isas.SequencingFiles" Version="5.5.0.395" />
-    <PackageReference Include="JetBrains.Annotations" Version="11.0.0" />
-    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="15.3.0" />
+    <PackageReference Include="Castle.Core" Version="4.2.1" />
+    <PackageReference Include="Illumina.Common" Version="5.0.0.364" />
+    <PackageReference Include="Isas.Framework.UnitTestUtilities" Version="8.1.0.804" />
+    <PackageReference Include="Isas.SequencingFiles" Version="6.0.0.402" />
+    <PackageReference Include="JetBrains.Annotations" Version="11.1.0" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="15.5.0" />
     <PackageReference Include="NSubstitute" Version="2.0.3" />
     <PackageReference Include="protobuf-net" Version="2.3.2" />
-    <PackageReference Include="xunit" Version="2.3.0-beta5-build3769" />
-    <PackageReference Include="xunit.runner.visualstudio" Version="2.3.0-beta5-build3769" />
+    <PackageReference Include="xunit" Version="2.3.1" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.3.1" />
     <DotNetCliToolReference Include="dotnet-xunit" Version="2.3.0-beta5-build3769" />
   </ItemGroup>
 

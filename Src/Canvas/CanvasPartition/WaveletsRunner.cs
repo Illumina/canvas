@@ -79,7 +79,7 @@ namespace CanvasPartition
             {
                 var breakpoints = LaunchWavelets(segmentationInput.CoverageInfo.CoverageByChr, segmentationInput.CoverageInfo.StartByChr,
                     segmentationInput.CoverageInfo.EndByChr);
-                adjustedBreakpoints = AdjustBreakpoints(segmentationInput.CoverageInfo.CoverageByChr, segmentationInput, breakpoints, vafContainingBinsByChr: null);
+                adjustedBreakpoints = AdjustBreakpoints(segmentationInput.CoverageInfo.CoverageByChr, breakpoints, vafContainingBinsByChr: null);
             }
             else
             {
@@ -93,7 +93,7 @@ namespace CanvasPartition
                     vafByChr[chr] = WaveletMeanSmoother(tmpVaf);
                 }
                 var breakpoints = LaunchWavelets(vafByChr, segmentationInput.CoverageInfo.StartByChr, segmentationInput.CoverageInfo.EndByChr);
-                adjustedBreakpoints = AdjustBreakpoints(vafByChr, segmentationInput, breakpoints, vafContainingBinsByChr);
+                adjustedBreakpoints = AdjustBreakpoints(vafByChr, breakpoints, vafContainingBinsByChr);
             }
 
             var segments = new Dictionary<string, SegmentationInput.Segment[]>();
@@ -162,12 +162,10 @@ namespace CanvasPartition
             return breakpointsByChr;
         }
 
-        private Dictionary<string, List<int>> AdjustBreakpoints(Dictionary<string, double[]> binsByChr, SegmentationInput segmentationInput,
+        private Dictionary<string, List<int>> AdjustBreakpoints(Dictionary<string, double[]> binsByChr,
             Dictionary<string, List<int>> breakpoints, Dictionary<string, int[]> vafContainingBinsByChr)
         {
             var adjustedBreakpoints = new Dictionary<string, List<int>>(breakpoints);
-            // load common CNV segments
-            Dictionary<string, List<SampleGenomicBin>> commonCNVintervals = null;
 
             foreach (string chr in binsByChr.Keys)
             {
