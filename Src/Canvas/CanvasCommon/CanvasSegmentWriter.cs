@@ -199,31 +199,29 @@ namespace CanvasCommon
             return string.Join("/", genotypes.OrderBy(GenotypeToIntMapping));
         }
 
-        private static int GenotypeToIntMapping(string genotype)  // '.' first, then in numeric order
-        {
-            return genotype == "." ? -1 : int.Parse(genotype);
-        }
+        // '.' first, then in numeric order
+        private static int GenotypeToIntMapping(string genotype) =>  genotype == "." ? -1 : int.Parse(genotype);
 
         private static void WriteFormatAndSampleFields(BgzipOrStreamWriter writer, CanvasSegment[] segments, string[] genotypes, bool reportDQ)
         {
             const string nullValue = ".";
-            writer.Write("\tGT:RC:BC:CN:MCC:MCCQ:QS:FT");
-            if (reportDQ)
-                writer.Write(":DQ");
+            string formatColumn = "GT:RC:BC:CN:MCC:MCCQ:QS:FT";
+            if (reportDQ) formatColumn += ":DQ";
+            var outputFields = new List<string> {formatColumn};
             for (int i = 0; i < segments.Length; i++)
             {
                 var segment = segments[i];
                 string mcc = segment.MajorChromosomeCount.HasValue ? segment.MajorChromosomeCount.ToString() : nullValue;
                 string mccq = segment.MajorChromosomeCountScore.HasValue ? $"{segment.MajorChromosomeCountScore.Value:F2}" : nullValue;
-       
-                writer.Write($"\t{genotypes[i]}:{segment.MedianCount:F2}:{segment.BinCount}:{segment.CopyNumber}:{mcc}:{mccq}:{segment.QScore:F2}:{segment.Filter.ToVcfString()}");
+                string sampleColumn = $"{genotypes[i]}:{segment.MedianCount:F2}:{segment.BinCount}:{segment.CopyNumber}:{mcc}:{mccq}:{segment.QScore:F2}:{segment.Filter.ToVcfString()}";
                 if (reportDQ)
                 {
                     string dqscore = segment.DqScore.HasValue ? $"{segment.DqScore.Value:F2}" : nullValue;
-                    writer.Write($":{dqscore}");
+                    sampleColumn += $":{dqscore}";
                 }
-                writer.WriteLine();
+                outputFields.Add(sampleColumn);
             }
+            writer.WriteLine("\t"+string.Join("\t",outputFields));
         }
 
 

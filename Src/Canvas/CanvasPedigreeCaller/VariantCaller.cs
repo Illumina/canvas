@@ -117,7 +117,7 @@ namespace CanvasPedigreeCaller
 
         private bool IsPassVariant(ISampleMap<CanvasSegment> canvasSegments, SampleId sampleId)
         {
-            return canvasSegments[sampleId].QScore > _qualityFilterThreshold;
+            return canvasSegments[sampleId].QScore >= _qualityFilterThreshold;
         }
 
         public static bool IsCommonCnv(ISampleMap<CanvasSegment> canvasSegments, ISampleMap<SampleMetrics> samplesInfo, List<SampleId> parentIDs, SampleId probandId, int maximumCopyNumber)

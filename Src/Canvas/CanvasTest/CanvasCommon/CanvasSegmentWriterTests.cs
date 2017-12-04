@@ -32,11 +32,12 @@ namespace CanvasTest
                 new[] {1, 1 }, // Ref
                 new[] {0, 1 }, // Loss
                 new[] {1,2}, // Gain
-                new [] {0, 2} // LOH
+                new [] {0, 2}, // LOH
+                new [] {-1 } // Ploidy == 0
             };
             var (altAlleleString, sampleGenotypes) = CanvasSegmentWriter.GetAltAllelesAndGenotypes(alleleCopyNumbers);
 
-            string[] expectedGenotypes = { "./3", "0/0", "0/1", "0/2", "1/2" };
+            string[] expectedGenotypes = { "./3", "0/0", "0/1", "0/2", "1/2", "." };
             Assert.Equal("<CN0>,<CN2>,<DUP>", altAlleleString);
             Assert.Equal(expectedGenotypes, sampleGenotypes);
         }
@@ -68,8 +69,22 @@ namespace CanvasTest
 
             var (altAlleleString, sampleGenotypes) = CanvasSegmentWriter.GetAltAllelesAndGenotypes(alleleCopyNumbers);
 
-            string[] expectedGenotypes = { "1", "0", "2"};
+            string[] expectedGenotypes = { "1", "0", "2" };
             Assert.Equal("<CN0>,<CN2>", altAlleleString);
+            Assert.Equal(expectedGenotypes, sampleGenotypes);
+        }
+
+        [Fact]
+        public void GetAltAllelesAndGenotypes_one_sample_ploidy_zero()
+        {
+            int[][] alleleCopyNumbers =
+            {
+                new[] {-1 }
+            };
+            var (altAlleleString, sampleGenotypes) = CanvasSegmentWriter.GetAltAllelesAndGenotypes(alleleCopyNumbers);
+
+            string[] expectedGenotypes = { "." };
+            Assert.Equal(".", altAlleleString);
             Assert.Equal(expectedGenotypes, sampleGenotypes);
         }
     }

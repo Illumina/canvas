@@ -271,6 +271,7 @@ namespace CanvasCommon
         {
             if (CopyNumber == referenceCopyNumber)
             {
+                if (referenceCopyNumber == 0) return (CnvType.Reference, new[] { -1 }); // Reference is the default CNV type if no additional information given
                 if (referenceCopyNumber == 2 && MajorChromosomeCount.HasValue && MajorChromosomeCount == 2)
                     return (CnvType.LossOfHeterozygosity, new[] { 0, 2 });
                 return (CnvType.Reference, Enumerable.Repeat(1, referenceCopyNumber).ToArray());
@@ -1047,7 +1048,6 @@ namespace CanvasCommon
             string sizeFilter = "L" + CanvasFilter.FormatCnvSizeWithSuffix(segmantSizeCutoff);
             foreach (var segment in segments)
             {
-                if (segment.Filter != null) throw new Exception($"Filter has already been set: {segment.Filter.ToVcfString()}");
                 var filterTags = new List<string>();
                 if (segment.QScore < qualityFilterThreshold) filterTags.Add(qualityFilter);
                 if (segment.End - segment.Begin < segmantSizeCutoff) filterTags.Add(sizeFilter);
