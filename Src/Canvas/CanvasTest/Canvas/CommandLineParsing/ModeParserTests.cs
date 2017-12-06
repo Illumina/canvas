@@ -133,6 +133,31 @@ namespace CanvasTest.Canvas.CommandLineParsing
         }
 
         [Fact]
+        public void Parse_SomaticEnrichmentModeWithMissingRequiredArgument_DisplaysError()
+        {
+            string messageToDisplay = "required";
+            StringWriter standardWriter = new StringWriter();
+            StringWriter errorWriter = new StringWriter();
+
+            // arrange
+            var modeParser = new SomaticEnrichmentModeParser("Somatic-Enrichment", "Run Canvas from somatic enrichment data");
+            MainParser parser = GetMainParser(modeParser);
+            string[] modeArgs =
+            {
+                "Somatic-Enrichment"
+            };
+
+            // act
+            var result = parser.Run(modeArgs, standardWriter, errorWriter);
+            string errorOutput = errorWriter.ToString();
+
+            // assert
+            Assert.NotEqual(0, result);
+            Assert.Contains(messageToDisplay, errorOutput);
+            Assert.Empty(standardWriter.ToString());
+        }
+
+        [Fact]
         public void Parse_ModeWithVersion_ReturnsSuccessAndDisplaysVersion()
         {
             StringWriter standardWriter = new StringWriter();
