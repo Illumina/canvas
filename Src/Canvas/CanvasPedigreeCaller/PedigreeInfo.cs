@@ -12,14 +12,18 @@ namespace CanvasPedigreeCaller
     {
         public List<SampleId> ParentsIds { get; }
         public List<SampleId> OffspringIds { get; }
-        public List<List<Genotype>> OffspringGenotypes { get; }
+        public List<List<Genotype>> OffspringPhasedGenotypes { get; }
+        public List<List<Genotype>> OffspringTotalCopyNumberGenotypes { get; }
+
         public double[][] TransitionMatrix { get; }
 
-        private PedigreeInfo(List<SampleId> offspringIds, List<SampleId> parentsIds, List<List<Genotype>> offspringGenotypes, double[][] transitionMatrix)
+        private PedigreeInfo(List<SampleId> offspringIds, List<SampleId> parentsIds, List<List<Genotype>> offspringPhasedGenotypes,
+            List<List<Genotype>> offspringTotalCopyNumberGenotypes, double[][] transitionMatrix)
         {
             OffspringIds = offspringIds;
             ParentsIds = parentsIds;
-            OffspringGenotypes = offspringGenotypes;
+            OffspringPhasedGenotypes = offspringPhasedGenotypes;
+            OffspringTotalCopyNumberGenotypes = offspringTotalCopyNumberGenotypes;
             TransitionMatrix = transitionMatrix;
         }
 
@@ -29,41 +33,46 @@ namespace CanvasPedigreeCaller
                 .ToList();
             var offspringIds = kinships.Where(kin => kin.Value.Equals(SampleType.Proband) || kin.Value.Equals(SampleType.Sibling)).Select(kin => kin.Key)
                 .ToList();
-            var parentalGenotypes = GenerateParentalGenotypes(callerParameters.MaximumCopyNumber);
-            var offspringsGenotypes =
-                new List<List<Genotype>>(Convert.ToInt32(Math.Pow(parentalGenotypes.Count, offspringIds.Count)));
-            GenerateOffspringGenotypes(offspringsGenotypes, parentalGenotypes, offspringIds.Count, new List<Genotype>());
-            if (offspringsGenotypes.Count > callerParameters.MaxNumOffspringGenotypes)
-            {
-                offspringsGenotypes.Shuffle();
-                offspringsGenotypes = offspringsGenotypes.Take(callerParameters.MaxNumOffspringGenotypes).ToList();
-            }
+            var parentalPhasedGenotypes = GeneratePhasedGenotype(callerParameters.MaximumCopyNumber);
+            var parentalTotalCopyNumberGenotypes = Enumerable.Range(0, callerParameters.MaximumCopyNumber).Select(Genotype.Create).ToList();
+            var offspringPhasedGenotypes = GetOffspringGenotypes(callerParameters, parentalPhasedGenotypes, offspringIds);
+            var offspringTotalCopyNumberGenotypes = GetOffspringGenotypes(callerParameters, parentalTotalCopyNumberGenotypes, offspringIds);
             var transitionMatrix = GetTransitionMatrix(callerParameters.MaximumCopyNumber);
-            return new PedigreeInfo(offspringIds, parentsIds, offspringsGenotypes, transitionMatrix);
+            return new PedigreeInfo(offspringIds, parentsIds, offspringPhasedGenotypes, offspringTotalCopyNumberGenotypes, transitionMatrix);
         }
 
+        private static List<List<Genotype>> GetOffspringGenotypes(PedigreeCallerParameters callerParameters, List<Genotype> genotypes, List<SampleId> offspringIds)
+        {
+            var offspringGenotypes = new List<List<Genotype>>(Convert.ToInt32(Math.Pow(genotypes.Count, offspringIds.Count)));
+            GenerateOffspringGenotypes(offspringGenotypes, genotypes, offspringIds.Count, new List<Genotype>());
+            if (offspringGenotypes.Count > callerParameters.MaxNumOffspringGenotypes)
+            {
+                offspringGenotypes.Shuffle();
+                offspringGenotypes = offspringGenotypes.Take(callerParameters.MaxNumOffspringGenotypes).ToList();
+            }
+            return offspringGenotypes;
+        }
 
-        public static List<Genotype> GenerateParentalGenotypes(int numCnStates)
+        public static List<Genotype> GeneratePhasedGenotype(int numCnStates)
         {
             var genotypes = new List<Genotype>();
             for (int cn = 0; cn < numCnStates; cn++)
             {
                 for (int gt = 0; gt <= cn; gt++)
                 {
-                    genotypes.Add(new Genotype(gt, cn - gt));
+                    genotypes.Add(Genotype.Create(new PhasedGenotype(gt, cn - gt)));
                 }
             }
             return genotypes;
         }
 
-        public static void GenerateOffspringGenotypes(List<List<Genotype>> offspringGenotypes, List<Genotype> genotypeSet,
-            int nOffsprings, List<Genotype> partialGenotypes)
+        public static void GenerateOffspringGenotypes(List<List<Genotype>> offspringGenotypes, List<Genotype> genotypeSet, int nOffsprings, List<Genotype> partialGenotypes)
         {
             if (nOffsprings > 0)
             {
                 foreach (var genotype in genotypeSet)
                 {
-                    GenerateOffspringGenotypes(offspringGenotypes, genotypeSet, nOffsprings - 1,
+                    GenerateOffspringGenotypes(offspringGenotypes, genotypeSet, nOffsprings - 1, 
                         partialGenotypes.Concat(new List<Genotype> { genotype }).ToList());
                 }
             }

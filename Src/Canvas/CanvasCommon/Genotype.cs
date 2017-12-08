@@ -2,13 +2,53 @@ namespace CanvasCommon
 {
     public class Genotype
     {
-        public int CountsA { get; }
-        public int CountsB { get; }
-        
-        public Genotype(int countsA, int countsB)
+        public int TotalCopyNumber { get; }
+
+        public PhasedGenotype PhasedGenotype { get; }
+
+        private Genotype(int totalCopyNumber, PhasedGenotype phasedGenotype)
         {
-            CountsA = countsA;
-            CountsB = countsB;
+            TotalCopyNumber = totalCopyNumber;
+            PhasedGenotype = phasedGenotype;
+        }
+
+        public static Genotype Create(int totalCopyNumber)
+        {
+            return new Genotype(totalCopyNumber, null);
+        }
+
+        public static Genotype Create(PhasedGenotype phasedGenotype)
+        {
+            return new Genotype(phasedGenotype.CopyNumberA + phasedGenotype.CopyNumberB, phasedGenotype);
+        }
+
+        public bool HasAlleleCopyNumbers => PhasedGenotype != null;
+
+        public bool ContainsSharedAlleles(Genotype genotype)
+        {
+            if (PhasedGenotype == null | genotype.PhasedGenotype == null)
+                return TotalCopyNumber == genotype.TotalCopyNumber;
+            return PhasedGenotype.ContainsSharedAlleleA(genotype.PhasedGenotype) ||
+                   PhasedGenotype.ContainsSharedAlleleB(genotype.PhasedGenotype);
+        }
+
+        public override int GetHashCode()
+        {
+            if (PhasedGenotype != null)
+                return TotalCopyNumber * 100 + PhasedGenotype.GetHashCode();
+            return TotalCopyNumber;
+        }
+
+        public override bool Equals(object obj)
+        {
+            return Equals(obj as Genotype);
+        }
+        private bool Equals(Genotype obj)
+        {
+            if (obj?.PhasedGenotype != null && PhasedGenotype != null)
+                return obj.TotalCopyNumber == TotalCopyNumber && obj.PhasedGenotype.CopyNumberA == PhasedGenotype.CopyNumberA &&
+                   obj.PhasedGenotype.CopyNumberB == PhasedGenotype.CopyNumberB;
+            return obj != null && obj.TotalCopyNumber == TotalCopyNumber;
         }
     }
 }

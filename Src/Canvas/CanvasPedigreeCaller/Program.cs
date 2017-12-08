@@ -153,7 +153,8 @@ namespace CanvasPedigreeCaller
             {
                 var workManager = WorkManagerFactory.GetWorkManager(workDoer, logger, pedigreeCallerWorkDirectory, settings);
                 IBedGraphToBigWigConverter bigWigConverter;
-                if (CrossPlatform.IsThisLinux())
+
+                if (!CrossPlatform.IsThisLinux())
                 {
                     bigWigConverter = new FormatConverterFactory(logger, workManager, commandManager).GetBedGraphToBigWigConverter();
                 }
@@ -161,12 +162,14 @@ namespace CanvasPedigreeCaller
                 {
                     bigWigConverter = new NullBedGraphToBigWigConverter(logger, "BedGraph to BigWig conversion unavailable on Windows.");
                 }
+
                 var referenceGenome = new ReferenceGenomeFactory().GetReferenceGenome(new DirectoryLocation(referenceFolder));
                 var genomeMetadata = referenceGenome.GenomeMetadata;
                 var coverageBigWigWriter = new CoverageBigWigWriterFactory(logger, bigWigConverter, genomeMetadata).Create();
                 var copyNumberLikelihoodCalculator = new CopyNumberLikelihoodCalculator(callerParameters.MaximumCopyNumber);
-                IVariantCaller variantCaller = new VariantCaller(copyNumberLikelihoodCalculator, callerParameters, qScoreThreshold);
-                var caller = new CanvasPedigreeCaller(logger, qScoreThreshold, dqScoreThreshold, callerParameters, copyNumberLikelihoodCalculator, variantCaller, coverageBigWigWriter);
+                IVariantCaller variantCaller = new HaplotypeVariantCaller(copyNumberLikelihoodCalculator, callerParameters, qScoreThreshold);
+                var copyNumberModelFactory = new HaplotypeCopyNumberModelFactory();
+                var caller = new CanvasPedigreeCaller(logger, qScoreThreshold, dqScoreThreshold, callerParameters, copyNumberLikelihoodCalculator, variantCaller, coverageBigWigWriter, copyNumberModelFactory);
 
                 var outVcf = outputDirectory.GetFileLocation("CNV.vcf.gz");
                 result = caller.CallVariants(variantFrequencyFiles, segmentFiles, outVcf, ploidyBedPath, referenceFolder, sampleNames, commonCnvsBedPath, sampleTypesEnum);
