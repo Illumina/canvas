@@ -74,12 +74,7 @@ namespace CanvasPedigreeCaller
                 _callerParameters.DefaultReadCountsThreshold, commonCnvsBedPath, sampleSegments);
 
             var segmentsForVariantCalling = GetHighestLikelihoodSegments(segmentSetsFromCommonCnvs, samplesInfo, copyNumberModels).ToList();
-            PedigreeInfo pedigreeInfo = null;
-            var haveChild = kinships.Values.Any(kin => kin == SampleType.Proband || kin == SampleType.Sibling);
-            var haveMother = kinships.Values.Any(kin => kin == SampleType.Mother);
-            var haveFather = kinships.Values.Any(kin => kin == SampleType.Father);
-            if (haveChild && haveMother && haveFather)
-                pedigreeInfo = PedigreeInfo.GetPedigreeInfo(kinships, _callerParameters);
+            PedigreeInfo pedigreeInfo = PedigreeInfo.GetPedigreeInfo(kinships, _callerParameters);
             Parallel.ForEach(
                 segmentsForVariantCalling,
                 new ParallelOptions
@@ -101,7 +96,7 @@ namespace CanvasPedigreeCaller
                 CanvasSegment.WriteCoveragePlotData(mergedVariantCalledSegments[sampleId], samplesInfo[sampleId].MeanCoverage,
                     samplesInfo[sampleId].Ploidy, coverageOutputPath, referenceFolder);
             }
-            bool isPedigreeInfoSupplied = pedigreeInfo != null;
+            bool isPedigreeInfoSupplied = pedigreeInfo != null && pedigreeInfo.HasFullPedigree();
             var denovoQualityThreshold = isPedigreeInfoSupplied ? (int?)_deNovoQualityFilterThreshold : null;
             var ploidies = samplesInfo.Select(info => info.Value.Ploidy).ToList();
             var diploidCoverage = samplesInfo.Select(info => info.Value.MeanCoverage).ToList();

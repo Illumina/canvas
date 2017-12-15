@@ -24,21 +24,29 @@ namespace CanvasPedigreeCaller
             _qualityFilterThreshold = qualityFilterThreshold;
         }
 
-        public void CallVariant(ISampleMap<CanvasSegment> canvasSegment, ISampleMap<SampleMetrics> samplesInfo,
+        public void CallVariant(ISampleMap<CanvasSegment> canvasSegments, ISampleMap<SampleMetrics> samplesInfo,
             ISampleMap<ICopyNumberModel> copyNumberModel,
             PedigreeInfo pedigreeInfo)
         {
-            var coverageLikelihoods = _copyNumberLikelihoodCalculator.GetCopyNumbersLikelihoods(canvasSegment, samplesInfo, copyNumberModel);
+            var coverageLikelihoods = _copyNumberLikelihoodCalculator.GetCopyNumbersLikelihoods(canvasSegments, samplesInfo, copyNumberModel);
             // if number and properties of SNPs in the segment are above threshold, calculate likelihood from SNPs and merge with
             // coverage likelihood to form merged likelihoods
-            var singleSampleCoverageAndAlleleCountLikelihoods = UseAlleleCountsInformation(canvasSegment)
-                ? JoinLikelihoods(GetGenotypeLikelihoods(canvasSegment, copyNumberModel, _PhasedGenotypes), coverageLikelihoods)
+            var singleSampleCoverageAndAlleleCountLikelihoods = UseAlleleCountsInformation(canvasSegments)
+                ? JoinLikelihoods(GetGenotypeLikelihoods(canvasSegments, copyNumberModel, _PhasedGenotypes), coverageLikelihoods)
                 : coverageLikelihoods;
-            (var copyNumbers, var jointCoverageAndAlleleCountLikelihoods) = pedigreeInfo != null
-                ? GetCopyNumbersWithPedigreeInfo(canvasSegment, pedigreeInfo, singleSampleCoverageAndAlleleCountLikelihoods, _callerParameters.DeNovoRate)
-                : CanvasPedigreeCaller.GetCopyNumbersNoPedigreeInfo(canvasSegment, singleSampleCoverageAndAlleleCountLikelihoods);
+            (var copyNumbers, var jointCoverageAndAlleleCountLikelihoods) = pedigreeInfo.HasFullPedigree()
+                ? GetCopyNumbersWithPedigreeInfo(pedigreeInfo, singleSampleCoverageAndAlleleCountLikelihoods, _callerParameters.DeNovoRate)
+                : CanvasPedigreeCaller.GetCopyNumbersNoPedigreeInfo(canvasSegments, singleSampleCoverageAndAlleleCountLikelihoods);
 
-            AssignCNandScores(canvasSegment, samplesInfo, pedigreeInfo, singleSampleCoverageAndAlleleCountLikelihoods,
+            if (pedigreeInfo.HasFullPedigree() && pedigreeInfo.HasOther())
+            {
+                var tmpCanvasSegments = canvasSegments.Where(segment => pedigreeInfo.OtherIds.Contains(segment.SampleId)).ToSampleMap();
+                var tmpSingleSampleLikelihoods = singleSampleCoverageAndAlleleCountLikelihoods.Where(ll => pedigreeInfo.OtherIds.Contains(ll.SampleId)).ToSampleMap();
+                var (tmpCopyNumbers, tmpJointLikelihoods) = CanvasPedigreeCaller.GetCopyNumbersNoPedigreeInfo(tmpCanvasSegments, tmpSingleSampleLikelihoods);
+                tmpCopyNumbers.ForEach(tmpCopyNumber => copyNumbers.Append(tmpCopyNumber));
+            }
+
+            AssignCNandScores(canvasSegments, samplesInfo, pedigreeInfo, singleSampleCoverageAndAlleleCountLikelihoods,
                 jointCoverageAndAlleleCountLikelihoods, copyNumbers);
         }
 
@@ -134,8 +142,7 @@ namespace CanvasPedigreeCaller
         /// Evaluate joint likelihood of all genotype combinations across samples. 
         /// Return joint likelihood object and the copy number states with the highest likelihood 
         /// </summary>
-        public static (ISampleMap<Genotype> copyNumbersGenotypes, JointLikelihoods jointLikelihood) GetCopyNumbersWithPedigreeInfo(ISampleMap<CanvasSegment> segments,
-            PedigreeInfo pedigreeInfo, ISampleMap<Dictionary<Genotype, double>> singleSampleLikelihoods, double deNovoRate)
+        public static (ISampleMap<Genotype> copyNumbersGenotypes, JointLikelihoods jointLikelihood) GetCopyNumbersWithPedigreeInfo(PedigreeInfo pedigreeInfo, ISampleMap<Dictionary<Genotype, double>> singleSampleLikelihoods, double deNovoRate)
         {
             // check if Genotype uses Phased Genotypes
             var usePhasedGenotypes = singleSampleLikelihoods.Values.First().Keys.First().PhasedGenotype != null;

@@ -157,17 +157,23 @@ namespace CanvasPedigreeCaller
             ISampleMap<ICopyNumberModel> copyNumberModel, PedigreeInfo pedigreeInfo)
         {
             var singleSampleLikelihoods = _copyNumberLikelihoodCalculator.GetCopyNumbersLikelihoods(canvasSegments, samplesInfo, copyNumberModel);
-            var (copyNumbers, jointLikelihoods) = pedigreeInfo != null
-                ? GetCopyNumbersWithPedigreeInfo(canvasSegments, pedigreeInfo, singleSampleLikelihoods)
+            var (copyNumbers, jointLikelihoods) = pedigreeInfo.HasFullPedigree() 
+                ? GetCopyNumbersWithPedigreeInfo(pedigreeInfo, singleSampleLikelihoods)
                 : CanvasPedigreeCaller.GetCopyNumbersNoPedigreeInfo(canvasSegments, singleSampleLikelihoods);
-
+            if (pedigreeInfo.HasFullPedigree() && pedigreeInfo.HasOther())
+            {
+                var tmpCanvasSegments = canvasSegments.Where(segment => pedigreeInfo.OtherIds.Contains(segment.SampleId)).ToSampleMap();
+                var tmpSingleSampleLikelihoods = singleSampleLikelihoods.Where(ll => pedigreeInfo.OtherIds.Contains(ll.SampleId)).ToSampleMap();
+                var (tmpCopyNumbers, tmpJointLikelihoods) = CanvasPedigreeCaller.GetCopyNumbersNoPedigreeInfo(tmpCanvasSegments, tmpSingleSampleLikelihoods);
+                tmpCopyNumbers.ForEach(tmpCopyNumber=> copyNumbers.Append(tmpCopyNumber));
+            }
             EstimateQScores(canvasSegments, samplesInfo, pedigreeInfo, singleSampleLikelihoods, jointLikelihoods, copyNumbers);
 
             // TODO: this will be integrated with GetCopyNumbers* on a model level as a part of https://jira.illumina.com/browse/CANV-404
-            if (!UseMafInformation(canvasSegments) && pedigreeInfo != null)
+            if (!UseMafInformation(canvasSegments) && pedigreeInfo.HasFullPedigree())
                 AssignMccWithPedigreeInfo(canvasSegments, copyNumberModel, pedigreeInfo);
-            if (!UseMafInformation(canvasSegments) && pedigreeInfo == null)
-                AssignMccNoPedigreeInfo(canvasSegments, copyNumberModel, _genotypes);
+            if (!UseMafInformation(canvasSegments) && pedigreeInfo.HasOther())
+                AssignMccNoPedigreeInfo(canvasSegments.Where(segment=> pedigreeInfo.OtherIds.Contains(segment.SampleId)).ToSampleMap(), copyNumberModel, _genotypes);
         }
         
         /// <summary>
@@ -321,8 +327,7 @@ namespace CanvasPedigreeCaller
             return copyNumberModel.GetGenotypeLikelihood(canvasSegment.Balleles, gtStates);
         }
 
-        public (ISampleMap<Genotype> copyNumbersGenotypes, JointLikelihoods jointLikelihood) GetCopyNumbersWithPedigreeInfo(ISampleMap<CanvasSegment> segments,
-            PedigreeInfo pedigreeInfo, ISampleMap<Dictionary<Genotype, double>> copyNumbersLikelihoods)
+        public (ISampleMap<Genotype> copyNumbersGenotypes, JointLikelihoods jointLikelihood) GetCopyNumbersWithPedigreeInfo(PedigreeInfo pedigreeInfo, ISampleMap<Dictionary<Genotype, double>> copyNumbersLikelihoods)
         {
             ISampleMap<Genotype> sampleCopyNumbersGenotypes = null;
             var jointLikelihood = new JointLikelihoods();
