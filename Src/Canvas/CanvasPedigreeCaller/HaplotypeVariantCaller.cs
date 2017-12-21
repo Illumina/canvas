@@ -229,7 +229,7 @@ namespace CanvasPedigreeCaller
                 if (copyNumbers[sampleId].PhasedGenotype != null)
                     canvasSegments[sampleId].MajorChromosomeCount = Math.Max(copyNumbers[sampleId].PhasedGenotype.CopyNumberA, copyNumbers[sampleId].PhasedGenotype.CopyNumberB);
             }
-            if (pedigreeInfo != null)
+            if (pedigreeInfo.HasFullPedigree())
                 SetDenovoQualityScores(canvasSegments, pedigreeMembersInfo, pedigreeInfo.ParentsIds, pedigreeInfo.OffspringIds, jointLikelihoods, copyNumbers);
         }
 

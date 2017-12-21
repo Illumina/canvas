@@ -66,7 +66,7 @@ namespace CanvasPedigreeCaller
                 if (canvasSegments[sampleId].QScore < _qualityFilterThreshold)
                     canvasSegments[sampleId].Filter = CanvasFilter.Create(new[] {$"q{_qualityFilterThreshold}"});
             }
-            if (pedigreeInfo != null)
+            if (pedigreeInfo.HasFullPedigree())
                 SetDenovoQualityScores(canvasSegments, pedigreeMembersInfo, pedigreeInfo.ParentsIds, pedigreeInfo.OffspringIds, copyNumberLikelihoods, copyNumbers);
         }
 
@@ -165,7 +165,8 @@ namespace CanvasPedigreeCaller
                 var tmpCanvasSegments = canvasSegments.Where(segment => pedigreeInfo.OtherIds.Contains(segment.SampleId)).ToSampleMap();
                 var tmpSingleSampleLikelihoods = singleSampleLikelihoods.Where(ll => pedigreeInfo.OtherIds.Contains(ll.SampleId)).ToSampleMap();
                 var (tmpCopyNumbers, tmpJointLikelihoods) = CanvasPedigreeCaller.GetCopyNumbersNoPedigreeInfo(tmpCanvasSegments, tmpSingleSampleLikelihoods);
-                tmpCopyNumbers.ForEach(tmpCopyNumber=> copyNumbers.Append(tmpCopyNumber));
+                foreach (var tmpCopyNumber in tmpCopyNumbers)
+                    copyNumbers.Add(tmpCopyNumber.Key, tmpCopyNumber.Value);
             }
             EstimateQScores(canvasSegments, samplesInfo, pedigreeInfo, singleSampleLikelihoods, jointLikelihoods, copyNumbers);
 
@@ -327,9 +328,9 @@ namespace CanvasPedigreeCaller
             return copyNumberModel.GetGenotypeLikelihood(canvasSegment.Balleles, gtStates);
         }
 
-        public (ISampleMap<Genotype> copyNumbersGenotypes, JointLikelihoods jointLikelihood) GetCopyNumbersWithPedigreeInfo(PedigreeInfo pedigreeInfo, ISampleMap<Dictionary<Genotype, double>> copyNumbersLikelihoods)
+        public (SampleMap<Genotype> copyNumbersGenotypes, JointLikelihoods jointLikelihood) GetCopyNumbersWithPedigreeInfo(PedigreeInfo pedigreeInfo, ISampleMap<Dictionary<Genotype, double>> copyNumbersLikelihoods)
         {
-            ISampleMap<Genotype> sampleCopyNumbersGenotypes = null;
+            SampleMap<Genotype> sampleCopyNumbersGenotypes = null;
             var jointLikelihood = new JointLikelihoods();
             foreach (var copyNumberParent1 in copyNumbersLikelihoods[pedigreeInfo.ParentsIds.First()])
             {
