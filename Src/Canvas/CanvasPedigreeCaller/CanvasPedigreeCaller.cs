@@ -322,7 +322,7 @@ namespace CanvasPedigreeCaller
         /// Evaluate joint likelihood of all genotype combinations across samples. 
         /// Return joint likelihood object and the copy number states with the highest likelihood 
         /// </summary>
-        public static (ISampleMap<Genotype> copyNumbersGenotypes, JointLikelihoods jointLikelihood) GetCopyNumbersNoPedigreeInfo(ISampleMap<CanvasSegment> segments,
+        public static (SampleMap<Genotype> copyNumbersGenotypes, JointLikelihoods jointLikelihood) GetCopyNumbersNoPedigreeInfo(ISampleMap<CanvasSegment> segments,
             ISampleMap<Dictionary<Genotype, double>> singleSampleLikelihoods)
         {
             var jointLikelihood = new JointLikelihoods();

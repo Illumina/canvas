@@ -43,7 +43,8 @@ namespace CanvasPedigreeCaller
                 var tmpCanvasSegments = canvasSegments.Where(segment => pedigreeInfo.OtherIds.Contains(segment.SampleId)).ToSampleMap();
                 var tmpSingleSampleLikelihoods = singleSampleCoverageAndAlleleCountLikelihoods.Where(ll => pedigreeInfo.OtherIds.Contains(ll.SampleId)).ToSampleMap();
                 var (tmpCopyNumbers, tmpJointLikelihoods) = CanvasPedigreeCaller.GetCopyNumbersNoPedigreeInfo(tmpCanvasSegments, tmpSingleSampleLikelihoods);
-                tmpCopyNumbers.ForEach(tmpCopyNumber => copyNumbers.Append(tmpCopyNumber));
+                foreach (var tmpCopyNumber in tmpCopyNumbers)
+                    copyNumbers.Add(tmpCopyNumber.Key, tmpCopyNumber.Value);
             }
 
             AssignCNandScores(canvasSegments, samplesInfo, pedigreeInfo, singleSampleCoverageAndAlleleCountLikelihoods,
@@ -142,11 +143,11 @@ namespace CanvasPedigreeCaller
         /// Evaluate joint likelihood of all genotype combinations across samples. 
         /// Return joint likelihood object and the copy number states with the highest likelihood 
         /// </summary>
-        public static (ISampleMap<Genotype> copyNumbersGenotypes, JointLikelihoods jointLikelihood) GetCopyNumbersWithPedigreeInfo(PedigreeInfo pedigreeInfo, ISampleMap<Dictionary<Genotype, double>> singleSampleLikelihoods, double deNovoRate)
+        public static (SampleMap<Genotype> copyNumbersGenotypes, JointLikelihoods jointLikelihood) GetCopyNumbersWithPedigreeInfo(PedigreeInfo pedigreeInfo, ISampleMap<Dictionary<Genotype, double>> singleSampleLikelihoods, double deNovoRate)
         {
             // check if Genotype uses Phased Genotypes
             var usePhasedGenotypes = singleSampleLikelihoods.Values.First().Keys.First().PhasedGenotype != null;
-            ISampleMap<Genotype> sampleCopyNumbersGenotypes = null;
+            SampleMap<Genotype> sampleCopyNumbersGenotypes = null;
             var jointLikelihood = new JointLikelihoods();
 
             foreach (var parent1GtStates in singleSampleLikelihoods[pedigreeInfo.ParentsIds.First()])
