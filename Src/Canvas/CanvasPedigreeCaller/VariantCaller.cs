@@ -157,18 +157,20 @@ namespace CanvasPedigreeCaller
             ISampleMap<ICopyNumberModel> copyNumberModel, PedigreeInfo pedigreeInfo)
         {
             var singleSampleLikelihoods = _copyNumberLikelihoodCalculator.GetCopyNumbersLikelihoods(canvasSegments, samplesInfo, copyNumberModel);
-            var (copyNumbers, jointLikelihoods) = pedigreeInfo.HasFullPedigree() 
-                ? GetCopyNumbersWithPedigreeInfo(pedigreeInfo, singleSampleLikelihoods)
-                : CanvasPedigreeCaller.GetCopyNumbersNoPedigreeInfo(canvasSegments, singleSampleLikelihoods);
-            if (pedigreeInfo.HasFullPedigree() && pedigreeInfo.HasOther())
-            {
-                var tmpCanvasSegments = canvasSegments.Where(segment => pedigreeInfo.OtherIds.Contains(segment.SampleId)).ToSampleMap();
-                var tmpSingleSampleLikelihoods = singleSampleLikelihoods.Where(ll => pedigreeInfo.OtherIds.Contains(ll.SampleId)).ToSampleMap();
-                var (tmpCopyNumbers, tmpJointLikelihoods) = CanvasPedigreeCaller.GetCopyNumbersNoPedigreeInfo(tmpCanvasSegments, tmpSingleSampleLikelihoods);
-                foreach (var tmpCopyNumber in tmpCopyNumbers)
-                    copyNumbers.Add(tmpCopyNumber.Key, tmpCopyNumber.Value);
-            }
-            EstimateQScores(canvasSegments, samplesInfo, pedigreeInfo, singleSampleLikelihoods, jointLikelihoods, copyNumbers);
+            // get copy number and likelihoods for pedigree members
+            (var pedigreeMemberCopyNumbers, var pedigreeMemberLikelihoods) = pedigreeInfo.HasFullPedigree() ?
+                GetCopyNumbersWithPedigreeInfo(pedigreeInfo, singleSampleLikelihoods) :
+                (new SampleMap<Genotype>(), null);
+
+            // get copy number and likelihoods for non-pedigree members
+            var nonPedigreeMemberCopyNumbers = pedigreeInfo.HasOther()
+                ? CanvasPedigreeCaller.GetCopyNumbersNoPedigreeInfoWrapper(canvasSegments, pedigreeInfo,
+                    singleSampleLikelihoods) : new SampleMap<Genotype>();
+
+            // merge copy number and likelihoods for pedigree and non-pedigree members
+            var mergedCopyNumbers = CanvasPedigreeCaller.MergeCopyNumbers(nonPedigreeMemberCopyNumbers, pedigreeMemberCopyNumbers);
+
+            EstimateQScores(canvasSegments, samplesInfo, pedigreeInfo, singleSampleLikelihoods, pedigreeMemberLikelihoods, mergedCopyNumbers);
 
             // TODO: this will be integrated with GetCopyNumbers* on a model level as a part of https://jira.illumina.com/browse/CANV-404
             if (!UseMafInformation(canvasSegments) && pedigreeInfo.HasFullPedigree())

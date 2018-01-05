@@ -376,6 +376,24 @@ namespace CanvasPedigreeCaller
 
             return alleles;
         }
+
+        public static SampleMap<Genotype> MergeCopyNumbers(SampleMap<Genotype> nonPedigreeMemberCopyNumbers, SampleMap<Genotype> pedigreeMemberCopyNumbers)
+        {
+            foreach (var tmpCopyNumber in nonPedigreeMemberCopyNumbers)
+                pedigreeMemberCopyNumbers.Add(tmpCopyNumber.Key, tmpCopyNumber.Value);
+            return pedigreeMemberCopyNumbers;
+        }
+
+        public static SampleMap<Genotype> GetCopyNumbersNoPedigreeInfoWrapper(ISampleMap<CanvasSegment> canvasSegments, PedigreeInfo pedigreeInfo,
+            ISampleMap<Dictionary<Genotype, double>> singleSampleCoverageAndAlleleCountLikelihoods)
+        {
+            var tmpCanvasSegments = canvasSegments.Where(segment => pedigreeInfo.OtherIds.Contains(segment.SampleId))
+                .ToSampleMap();
+            var tmpSingleSampleLikelihoods = singleSampleCoverageAndAlleleCountLikelihoods
+                .Where(ll => pedigreeInfo.OtherIds.Contains(ll.SampleId)).ToSampleMap();
+            (var nonPedigreeMemberCopyNumbers, var likelihoods) = CanvasPedigreeCaller.GetCopyNumbersNoPedigreeInfo(tmpCanvasSegments, tmpSingleSampleLikelihoods);
+            return nonPedigreeMemberCopyNumbers;
+        }
     }
 }
 

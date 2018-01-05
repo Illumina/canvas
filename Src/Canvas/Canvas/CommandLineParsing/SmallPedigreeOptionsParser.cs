@@ -65,8 +65,6 @@ namespace Canvas.CommandLineParsing
             IParsingResult<SmallPedigreeOptions> failedResult;
             if (HasMoreThanOneSameSampleType(bams, out failedResult))
                 return failedResult;
-            if (HasUnavailableSampleTypeCombinations(bams, out failedResult))
-                return failedResult;
             return ParsingResult<SmallPedigreeOptions>.SuccessfulResult(new SmallPedigreeOptions(bams, commonCnvsBed, bAlleleSites.Result, bAlleleSites.MatchedOption.Equals(PopulationBAlleleSites), ploidyVcf));
         }
 

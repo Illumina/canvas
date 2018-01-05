@@ -40,11 +40,15 @@ namespace CanvasPedigreeCaller
 
         public static PedigreeInfo GetPedigreeInfo(ISampleMap<SampleType> kinships, PedigreeCallerParameters callerParameters)
         {
-            var parentsIds = kinships.Where(kin => kin.Value.Equals(SampleType.Father) || kin.Value.Equals(SampleType.Mother)).Select(kin => kin.Key)
-                .ToList();
-            var offspringIds = kinships.Where(kin => kin.Value.Equals(SampleType.Proband) || kin.Value.Equals(SampleType.Sibling)).Select(kin => kin.Key)
-                .ToList();
-            var otherIds = kinships.Where(kin => kin.Value.Equals(SampleType.Other)).Select(kin => kin.Key).ToList();
+            bool fullPedigree = kinships.Values.Count(x => x == SampleType.Father) == 1 &&
+                kinships.Values.Count(x => x == SampleType.Mother) == 1 &&
+                kinships.Values.Count(x => x == SampleType.Proband) == 1;
+            // do not populate parents and offspring fields for partial pedigrees 
+            var parentsIds = fullPedigree ? kinships.Where(kin => kin.Value.Equals(SampleType.Father) || kin.Value.Equals(SampleType.Mother)).Select(kin => kin.Key)
+                .ToList() : new List<SampleId>();
+            var offspringIds = fullPedigree ? kinships.Where(kin => kin.Value.Equals(SampleType.Proband) || kin.Value.Equals(SampleType.Sibling)).Select(kin => kin.Key)
+                .ToList() : new List<SampleId>();
+            var otherIds = fullPedigree ? kinships.Where(kin => kin.Value.Equals(SampleType.Other)).Select(kin => kin.Key).ToList() : kinships.SampleIds.ToList();
             var parentalPhasedGenotypes = GeneratePhasedGenotype(callerParameters.MaximumCopyNumber);
             var parentalTotalCopyNumberGenotypes = Enumerable.Range(0, callerParameters.MaximumCopyNumber).Select(Genotype.Create).ToList();
             var offspringPhasedGenotypes = GetOffspringGenotypes(callerParameters, parentalPhasedGenotypes, offspringIds);

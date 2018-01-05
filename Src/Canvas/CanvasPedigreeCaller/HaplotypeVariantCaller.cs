@@ -34,22 +34,24 @@ namespace CanvasPedigreeCaller
             var singleSampleCoverageAndAlleleCountLikelihoods = UseAlleleCountsInformation(canvasSegments)
                 ? JoinLikelihoods(GetGenotypeLikelihoods(canvasSegments, copyNumberModel, _PhasedGenotypes), coverageLikelihoods)
                 : coverageLikelihoods;
-            (var copyNumbers, var jointCoverageAndAlleleCountLikelihoods) = pedigreeInfo.HasFullPedigree()
-                ? GetCopyNumbersWithPedigreeInfo(pedigreeInfo, singleSampleCoverageAndAlleleCountLikelihoods, _callerParameters.DeNovoRate)
-                : CanvasPedigreeCaller.GetCopyNumbersNoPedigreeInfo(canvasSegments, singleSampleCoverageAndAlleleCountLikelihoods);
 
-            if (pedigreeInfo.HasFullPedigree() && pedigreeInfo.HasOther())
-            {
-                var tmpCanvasSegments = canvasSegments.Where(segment => pedigreeInfo.OtherIds.Contains(segment.SampleId)).ToSampleMap();
-                var tmpSingleSampleLikelihoods = singleSampleCoverageAndAlleleCountLikelihoods.Where(ll => pedigreeInfo.OtherIds.Contains(ll.SampleId)).ToSampleMap();
-                var (tmpCopyNumbers, tmpJointLikelihoods) = CanvasPedigreeCaller.GetCopyNumbersNoPedigreeInfo(tmpCanvasSegments, tmpSingleSampleLikelihoods);
-                foreach (var tmpCopyNumber in tmpCopyNumbers)
-                    copyNumbers.Add(tmpCopyNumber.Key, tmpCopyNumber.Value);
-            }
+            // get copy number and likelihoods for pedigree members
+            (var pedigreeMemberCopyNumbers, var pedigreeMemberLikelihoods) = pedigreeInfo.HasFullPedigree() ? 
+                GetCopyNumbersWithPedigreeInfo(pedigreeInfo, singleSampleCoverageAndAlleleCountLikelihoods, _callerParameters.DeNovoRate) :
+                (new SampleMap<Genotype>(), null);
+
+            // get copy number and likelihoods for non-pedigree members
+            var nonPedigreeMemberCopyNumbers = pedigreeInfo.HasOther()
+                ? CanvasPedigreeCaller.GetCopyNumbersNoPedigreeInfoWrapper(canvasSegments, pedigreeInfo,
+                    singleSampleCoverageAndAlleleCountLikelihoods) : new SampleMap<Genotype>();
+
+            // merge copy number and likelihoods for pedigree and non-pedigree members
+            var mergedCopyNumbers = CanvasPedigreeCaller.MergeCopyNumbers(nonPedigreeMemberCopyNumbers, pedigreeMemberCopyNumbers);
 
             AssignCNandScores(canvasSegments, samplesInfo, pedigreeInfo, singleSampleCoverageAndAlleleCountLikelihoods,
-                jointCoverageAndAlleleCountLikelihoods, copyNumbers);
+                pedigreeMemberLikelihoods, mergedCopyNumbers);
         }
+
 
         /// <summary>
         /// Derives metrics from b-allele counts within each segment and determines whereas to use them for calculating MCC
@@ -94,8 +96,8 @@ namespace CanvasPedigreeCaller
             return singleSampleLikelihoods;
         }
 
-        private static ISampleMap<Dictionary<PhasedGenotype, double>> GetGenotypeLikelihoods(ISampleMap<CanvasSegment> canvasSegments, ISampleMap<ICopyNumberModel> copyNumberModel,
-            List<PhasedGenotype> genotypes)
+        private static ISampleMap<Dictionary<PhasedGenotype, double>> GetGenotypeLikelihoods(ISampleMap<CanvasSegment> canvasSegments, 
+            ISampleMap<ICopyNumberModel> copyNumberModel, List<PhasedGenotype> genotypes)
         {
             var REF = new PhasedGenotype(1, 1);
             var loh = new List<PhasedGenotype> { new PhasedGenotype(0, 2), new PhasedGenotype(2, 0) };
