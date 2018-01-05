@@ -11,12 +11,14 @@ namespace CanvasPedigreeCaller
         private readonly List<List<double>> _cnDistribution;
         private readonly Tuple<List<double>, List<double>>[][] _alleleDistribution;
         private readonly int _maxCoverage;
+        private readonly double _lohRefModelPenaltyTerm;
 
-        public HaplotypeCopyNumberModel(List<List<double>> cnDistribution, Tuple<List<double>, List<double>>[][] alleleDistribution, int maxCoverage)
+        public HaplotypeCopyNumberModel(List<List<double>> cnDistribution, Tuple<List<double>, List<double>>[][] alleleDistribution, int maxCoverage, double lohRefModelPenaltyTerm)
         {
             _cnDistribution = cnDistribution;
             _alleleDistribution = alleleDistribution;
             _maxCoverage = maxCoverage;
+            _lohRefModelPenaltyTerm = lohRefModelPenaltyTerm;
         }
 
         public double GetTotalCopyNumberLikelihoods(double segmentMedianBinCoverage, Genotype totalCopyNumberGenotype)
@@ -27,7 +29,6 @@ namespace CanvasPedigreeCaller
         public double GetGenotypeLikelihood(Balleles gtObservedCounts, PhasedGenotype gtModelCount)
         {
             {
-                const double lohRefModelPenaltyTerm = 0.5;
                 double currentLikelihood = 0;
                 foreach (var gtCount in gtObservedCounts.GetAlleleCounts())
                 {
@@ -42,7 +43,7 @@ namespace CanvasPedigreeCaller
                             _alleleDistribution[2][0].Item2[colId],
                             _alleleDistribution[0][2].Item1[rowId] *
                             _alleleDistribution[0][2].Item2[colId]
-                        }.Max() * lohRefModelPenaltyTerm;
+                        }.Max() * _lohRefModelPenaltyTerm;
                     else
                         currentLikelihood += _alleleDistribution[gtModelCount.CopyNumberA][gtModelCount.CopyNumberB]
                                                  .Item1[rowId] *

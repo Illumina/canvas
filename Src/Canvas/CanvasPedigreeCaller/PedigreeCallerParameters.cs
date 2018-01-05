@@ -13,5 +13,7 @@ namespace CanvasPedigreeCaller
         public int MinimumCallSize { get; set; } = 2000;
         public int NumberOfTrimmedBins { get; set; } = 2;
         public int MaxCoreNumber { get; set; } = 30;
+        public double LohRefModelPenaltyTerm { get; set; } = 0.7;
+
     }
 }

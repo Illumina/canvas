@@ -53,6 +53,12 @@ namespace CanvasPedigreeCaller
 
     public class HaplotypeCopyNumberModelFactory : ICopyNumberModelFactory
     {
+        public double LohRefModelPenaltyTerm { get; }
+
+        public HaplotypeCopyNumberModelFactory(double lohRefModelPenaltyTerm)
+        {
+            LohRefModelPenaltyTerm = lohRefModelPenaltyTerm;
+        }
         public ICopyNumberModel CreateModel(int numCnStates, int maxCoverage, double meanCoverage, double meanMafCoverage)
         {
             var cnDistribution = new List<List<double>>();
@@ -98,7 +104,7 @@ namespace CanvasPedigreeCaller
                 }
             }
 
-            return new HaplotypeCopyNumberModel(cnDistribution, alleleDistribution, maxCoverage);
+            return new HaplotypeCopyNumberModel(cnDistribution, alleleDistribution, maxCoverage, this.LohRefModelPenaltyTerm);
         }
 
     }
