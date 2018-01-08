@@ -10,5 +10,5 @@
   "MinimumCallSize": 2000,
   "NumberOfTrimmedBins": 2,
   "MaxCoreNumber": 30,
-  "LohRefModelPenaltyTerm" :  0.7 
+  "LohRefModelPenaltyTerm" :  0.9 
 }

@@ -97,6 +97,10 @@ namespace CanvasPedigreeCaller
                 var likelihoods = genotypes.Select(genotype => (genotype, copyNumberModel[sampleId].GetGenotypeLikelihood(canvasSegments[sampleId].Balleles, genotype))).ToDictionary(kvp => kvp.Item1, kvp => kvp.Item2);
                 if (likelihoods[REF] >= Math.Max(likelihoods[loh.First()], likelihoods[loh.Last()]))
                     likelihoods[loh.First()] = likelihoods[loh.Last()] = likelihoods.Values.Where(ll => ll > 0).Min();
+                else if (likelihoods[loh.First()] > Math.Max(likelihoods[REF], likelihoods[loh.Last()]))
+                    likelihoods[REF] = likelihoods[loh.Last()] = likelihoods.Values.Where(ll => ll > 0).Min();
+                else if(likelihoods[loh.Last()] > Math.Max(likelihoods[loh.First()], likelihoods[REF]))
+                    likelihoods[REF] = likelihoods[loh.First()] = likelihoods.Values.Where(ll => ll > 0).Min();
                 singleSampleLikelihoods.Add(sampleId, likelihoods);
             }
             return singleSampleLikelihoods;
