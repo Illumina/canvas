@@ -46,7 +46,7 @@ namespace CanvasPedigreeCaller
                     singleSampleCoverageAndAlleleCountLikelihoods) : new SampleMap<Genotype>();
 
             // merge copy number and likelihoods for pedigree and non-pedigree members
-            var mergedCopyNumbers = CanvasPedigreeCaller.MergeCopyNumbers(nonPedigreeMemberCopyNumbers, pedigreeMemberCopyNumbers);
+            var mergedCopyNumbers = CanvasPedigreeCaller.MergeCopyNumbers(nonPedigreeMemberCopyNumbers, pedigreeMemberCopyNumbers, canvasSegments.SampleIds.ToList());
 
             AssignCNandScores(canvasSegments, samplesInfo, pedigreeInfo, singleSampleCoverageAndAlleleCountLikelihoods,
                 pedigreeMemberLikelihoods, mergedCopyNumbers);

@@ -377,11 +377,16 @@ namespace CanvasPedigreeCaller
             return alleles;
         }
 
-        public static SampleMap<Genotype> MergeCopyNumbers(SampleMap<Genotype> nonPedigreeMemberCopyNumbers, SampleMap<Genotype> pedigreeMemberCopyNumbers)
+        public static SampleMap<Genotype> MergeCopyNumbers(SampleMap<Genotype> nonPedigreeMemberCopyNumbers, SampleMap<Genotype> pedigreeMemberCopyNumbers, List<SampleId> sampleIds)
         {
             foreach (var tmpCopyNumber in nonPedigreeMemberCopyNumbers)
                 pedigreeMemberCopyNumbers.Add(tmpCopyNumber.Key, tmpCopyNumber.Value);
-            return pedigreeMemberCopyNumbers;
+            var mergedCopyNumbers = new SampleMap<Genotype>();
+            foreach (var sample in sampleIds)
+            {
+                mergedCopyNumbers.Add(sample, pedigreeMemberCopyNumbers[sample]);
+            }
+            return mergedCopyNumbers;
         }
 
         public static SampleMap<Genotype> GetCopyNumbersNoPedigreeInfoWrapper(ISampleMap<CanvasSegment> canvasSegments, PedigreeInfo pedigreeInfo,

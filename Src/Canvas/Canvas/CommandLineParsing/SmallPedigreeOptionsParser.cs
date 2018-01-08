@@ -68,35 +68,15 @@ namespace Canvas.CommandLineParsing
             return ParsingResult<SmallPedigreeOptions>.SuccessfulResult(new SmallPedigreeOptions(bams, commonCnvsBed, bAlleleSites.Result, bAlleleSites.MatchedOption.Equals(PopulationBAlleleSites), ploidyVcf));
         }
 
-        private bool HasUnavailableSampleTypeCombinations(List<SmallPedigreeSampleOptions> bams, out IParsingResult<SmallPedigreeOptions> failedResult)
-        {
-            failedResult = null;
-            bool haveProband = bams.Any(x => x.SampleType == CanvasCommon.SampleType.Proband);
-            bool haveMother = bams.Any(x => x.SampleType == CanvasCommon.SampleType.Mother);
-            bool haveFather = bams.Any(x => x.SampleType == CanvasCommon.SampleType.Father);
-            bool haveSibling = bams.Any(x => x.SampleType == CanvasCommon.SampleType.Sibling);
-
-            bool haveTrio = (haveProband || haveSibling) && haveMother && haveFather;
-            bool haveOther = bams.Any(x => x.SampleType == CanvasCommon.SampleType.Other);
-
-            if (haveTrio && haveOther)
-            {
-                failedResult = ParsingResult<SmallPedigreeOptions>.FailedResult("SampleType other with trio or quad is not currently supported");
-                return true;
-            }
-            return false;
-        }
-
-
-        private bool HasMoreThanOneSameSampleType(List<SmallPedigreeSampleOptions> bams, out IParsingResult<SmallPedigreeOptions> failedResult)
-        {
+       private bool HasMoreThanOneSameSampleType(List<SmallPedigreeSampleOptions> bams, out IParsingResult<SmallPedigreeOptions> failedResult)
+       {
             failedResult = null;
             if (HasMoreThanOne(bams, CanvasCommon.SampleType.Mother, out failedResult) ||
                 HasMoreThanOne(bams, CanvasCommon.SampleType.Father, out failedResult) ||
                 HasMoreThanOne(bams, CanvasCommon.SampleType.Proband, out failedResult))
                 return true;
             return false;
-        }
+       }
 
         private bool HasMoreThanOne(List<SmallPedigreeSampleOptions> bams, SampleType sampleType, out IParsingResult<SmallPedigreeOptions> failedResult)
         {
