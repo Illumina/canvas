@@ -310,7 +310,7 @@ namespace CanvasPedigreeCaller
             foreach (var canvasSegment in canvasSegments)
             {
                 var copyNumbersLikelihoods = _copyNumberLikelihoodCalculator.GetCopyNumbersLikelihoods(canvasSegment, samplesInfo, copyNumberModel);
-                var (sampleCopyNumbers, likelihoods) = GetCopyNumbersNoPedigreeInfo(canvasSegment, copyNumbersLikelihoods);
+                var (_, likelihoods) = GetCopyNumbersNoPedigreeInfo(canvasSegment, copyNumbersLikelihoods);
                 segmentSetLikelihood += likelihoods.MaximalLikelihood;
             }
 
@@ -377,26 +377,13 @@ namespace CanvasPedigreeCaller
             return alleles;
         }
 
-        public static SampleMap<Genotype> MergeCopyNumbers(SampleMap<Genotype> nonPedigreeMemberCopyNumbers, SampleMap<Genotype> pedigreeMemberCopyNumbers, List<SampleId> sampleIds)
+        public static SampleMap<Genotype> GetNonPedigreeCopyNumbers(ISampleMap<CanvasSegment> canvasSegments, PedigreeInfo pedigreeInfo,
+            ISampleMap<Dictionary<Genotype, double>> singleSampleCopyNumberLikelihoods)
         {
-            foreach (var tmpCopyNumber in nonPedigreeMemberCopyNumbers)
-                pedigreeMemberCopyNumbers.Add(tmpCopyNumber.Key, tmpCopyNumber.Value);
-            var mergedCopyNumbers = new SampleMap<Genotype>();
-            foreach (var sample in sampleIds)
-            {
-                mergedCopyNumbers.Add(sample, pedigreeMemberCopyNumbers[sample]);
-            }
-            return mergedCopyNumbers;
-        }
-
-        public static SampleMap<Genotype> GetCopyNumbersNoPedigreeInfoWrapper(ISampleMap<CanvasSegment> canvasSegments, PedigreeInfo pedigreeInfo,
-            ISampleMap<Dictionary<Genotype, double>> singleSampleCoverageAndAlleleCountLikelihoods)
-        {
-            var tmpCanvasSegments = canvasSegments.Where(segment => pedigreeInfo.OtherIds.Contains(segment.SampleId))
-                .ToSampleMap();
-            var tmpSingleSampleLikelihoods = singleSampleCoverageAndAlleleCountLikelihoods
-                .Where(ll => pedigreeInfo.OtherIds.Contains(ll.SampleId)).ToSampleMap();
-            (var nonPedigreeMemberCopyNumbers, var likelihoods) = CanvasPedigreeCaller.GetCopyNumbersNoPedigreeInfo(tmpCanvasSegments, tmpSingleSampleLikelihoods);
+            bool IsOther(SampleId sampleId) => pedigreeInfo.OtherIds.Contains(sampleId);
+            var nonPedigreeMemberSegments = canvasSegments.WhereSampleIds(IsOther);
+            var nonPedigreeMemberLikelihoods = singleSampleCopyNumberLikelihoods.WhereSampleIds(IsOther);
+            (var nonPedigreeMemberCopyNumbers, _) = GetCopyNumbersNoPedigreeInfo(nonPedigreeMemberSegments, nonPedigreeMemberLikelihoods);
             return nonPedigreeMemberCopyNumbers;
         }
     }
