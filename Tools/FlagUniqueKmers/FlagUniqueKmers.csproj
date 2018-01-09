@@ -22,7 +22,7 @@
 
   <ItemGroup>
     <PackageReference Include="Illumina.Common" Version="5.0.4.375" />
-    <PackageReference Include="Isas.Framework" Version="8.12.1.909" />
+    <PackageReference Include="Isas.Framework" Version="8.12.2.911" />
     <PackageReference Include="Isas.SequencingFiles" Version="6.0.0.402" />
     <PackageReference Include="protobuf-net" Version="2.3.2" />
   </ItemGroup>
