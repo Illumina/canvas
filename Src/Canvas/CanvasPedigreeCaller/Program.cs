@@ -154,7 +154,7 @@ namespace CanvasPedigreeCaller
                 var workManager = WorkManagerFactory.GetWorkManager(workDoer, logger, pedigreeCallerWorkDirectory, settings);
                 IBedGraphToBigWigConverter bigWigConverter;
 
-                if (!CrossPlatform.IsThisLinux())
+                if (CrossPlatform.IsThisLinux())
                 {
                     bigWigConverter = new FormatConverterFactory(logger, workManager, commandManager).GetBedGraphToBigWigConverter();
                 }

@@ -17,7 +17,8 @@ namespace CanvasPedigreeCaller
         public JointLikelihoods()
         {
             MaximalLikelihood = double.MinValue;
-            _jointLikelihoods = new Dictionary<ISampleMap<Genotype>, double>();
+            var comparer = new SampleGenotypeComparer();
+            _jointLikelihoods = new Dictionary<ISampleMap<Genotype>, double>(comparer);
             _totalLikelihood = 0;
         }
 
@@ -40,6 +41,19 @@ namespace CanvasPedigreeCaller
         public double GetMarginalNonAltLikelihood(KeyValuePair<SampleId, Genotype> samplesGenotype)
         {
             return _jointLikelihoods.Where(kvp => !Equals(kvp.Key[samplesGenotype.Key], samplesGenotype.Value)).Select(kvp => kvp.Value).Sum() / _totalLikelihood;
+        }
+
+        private class SampleGenotypeComparer : IEqualityComparer<ISampleMap<Genotype>>
+        {
+            public bool Equals(ISampleMap<Genotype> x, ISampleMap<Genotype> y)
+            {
+                return x.SequenceEqual(y);
+            }
+
+            public int GetHashCode(ISampleMap<Genotype> obj)
+            {
+                return obj.Aggregate(17, (hash, value) => hash + value.GetHashCode() * 31);
+            }
         }
     }
 }
