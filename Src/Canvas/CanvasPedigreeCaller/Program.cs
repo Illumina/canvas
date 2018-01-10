@@ -154,7 +154,7 @@ namespace CanvasPedigreeCaller
                 var workManager = WorkManagerFactory.GetWorkManager(workDoer, logger, pedigreeCallerWorkDirectory, settings);
                 IBedGraphToBigWigConverter bigWigConverter;
 
-                if (!CrossPlatform.IsThisLinux())
+                if (CrossPlatform.IsThisLinux())
                 {
                     bigWigConverter = new FormatConverterFactory(logger, workManager, commandManager).GetBedGraphToBigWigConverter();
                 }
@@ -167,8 +167,8 @@ namespace CanvasPedigreeCaller
                 var genomeMetadata = referenceGenome.GenomeMetadata;
                 var coverageBigWigWriter = new CoverageBigWigWriterFactory(logger, bigWigConverter, genomeMetadata).Create();
                 var copyNumberLikelihoodCalculator = new CopyNumberLikelihoodCalculator(callerParameters.MaximumCopyNumber);
-                IVariantCaller variantCaller = new HaplotypeVariantCaller(copyNumberLikelihoodCalculator, callerParameters, qScoreThreshold);
-                var copyNumberModelFactory = new HaplotypeCopyNumberModelFactory();
+                IVariantCaller variantCaller = new VariantCaller(copyNumberLikelihoodCalculator, callerParameters, qScoreThreshold);
+                var copyNumberModelFactory = new CopyNumberModelFactory();
                 var caller = new CanvasPedigreeCaller(logger, qScoreThreshold, dqScoreThreshold, callerParameters, copyNumberLikelihoodCalculator, variantCaller, coverageBigWigWriter, copyNumberModelFactory);
 
                 var outVcf = outputDirectory.GetFileLocation("CNV.vcf.gz");
