@@ -28,16 +28,16 @@ namespace CanvasPedigreeCaller
             ISampleMap<ICopyNumberModel> copyNumberModel,
             PedigreeInfo pedigreeInfo)
         {
-            int maxGt = pedigreeInfo != null && pedigreeInfo.OffspringIds.Count >= 2 ? 3 : _callerParameters.MaximumCopyNumber;
+            int nHighestLikelihoodGenotypes = pedigreeInfo != null && pedigreeInfo.OffspringIds.Count >= 2 ? 3 : _callerParameters.MaximumCopyNumber;
             var coverageLikelihoods = _copyNumberLikelihoodCalculator.GetCopyNumbersLikelihoods(canvasSegment, samplesInfo, copyNumberModel);
             // if number and properties of SNPs in the segment are above threshold, calculate likelihood from SNPs and merge with
             // coverage likelihood to form merged likelihoods
             var singleSampleCoverageAndAlleleCountLikelihoods = UseAlleleCountsInformation(canvasSegment)
                 ? JoinLikelihoods(GetGenotypeLikelihoods(canvasSegment, copyNumberModel, _PhasedGenotypes), coverageLikelihoods)
                 : coverageLikelihoods;
-            var sorted = singleSampleCoverageAndAlleleCountLikelihoods.SelectValues(l=>l.OrderByDescending(kvp=>kvp.Value).Take(maxGt).ToDictionary());
+            var nHighestLikelihoods = singleSampleCoverageAndAlleleCountLikelihoods.SelectValues(l=>l.OrderByDescending(kvp=>kvp.Value).Take(nHighestLikelihoodGenotypes).ToDictionary());
             (var copyNumbers, var jointCoverageAndAlleleCountLikelihoods) = pedigreeInfo != null
-                ? GetCopyNumbersWithPedigreeInfo(canvasSegment, pedigreeInfo, sorted, _callerParameters.DeNovoRate)
+                ? GetCopyNumbersWithPedigreeInfo(canvasSegment, pedigreeInfo, nHighestLikelihoods, _callerParameters.DeNovoRate)
                 : CanvasPedigreeCaller.GetCopyNumbersNoPedigreeInfo(canvasSegment, singleSampleCoverageAndAlleleCountLikelihoods);
 
             AssignCNandScores(canvasSegment, samplesInfo, pedigreeInfo, singleSampleCoverageAndAlleleCountLikelihoods,
