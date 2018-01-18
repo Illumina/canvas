@@ -28,7 +28,7 @@
     <PackageReference Include="Isas.Framework.UnitTestUtilities" Version="8.12.3.916" />
     <PackageReference Include="Isas.SequencingFiles" Version="6.1.1.409" />
     <PackageReference Include="JetBrains.Annotations" Version="11.1.0" />
-    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="15.5.0" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="15.6.0-preview-20180109-01" />
     <PackageReference Include="NSubstitute" Version="3.1.0" />
     <PackageReference Include="protobuf-net" Version="2.3.3" />
     <PackageReference Include="xunit" Version="2.3.1" />
