@@ -13,6 +13,7 @@ using Isas.Framework.Settings;
 using Isas.Framework.WorkManagement;
 using Isas.Framework.WorkManagement.CommandBuilding;
 using Isas.SequencingFiles;
+using System.Runtime.Serialization.Formatters;
 
 namespace CanvasPedigreeCaller
 {

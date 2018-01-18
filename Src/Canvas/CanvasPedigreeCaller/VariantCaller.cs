@@ -335,7 +335,9 @@ namespace CanvasPedigreeCaller
                 {
                     foreach (var offspringGtStates in pedigreeInfo.OffspringPhasedGenotypes)
                     {
-                        if (!pedigreeInfo.OffspringIds.All(id => copyNumbersLikelihoods[id].ContainsKey(offspringGtStates[pedigreeInfo.OffspringIds.IndexOf(id)])))
+                        if (!pedigreeInfo.OffspringIds.All(id => copyNumbersLikelihoods[id].ContainsKey(
+                            Genotype.Create(Math.Min(offspringGtStates[pedigreeInfo.OffspringIds.IndexOf(id)].PhasedGenotype.CopyNumberA + offspringGtStates[pedigreeInfo.OffspringIds.IndexOf(id)].PhasedGenotype.CopyNumberB,
+                                _callerParameters.MaximumCopyNumber - 1)))))
                         {
                             Console.WriteLine("{skipping offspring likelihood 1}");
                             continue;
