@@ -156,9 +156,12 @@ namespace CanvasPedigreeCaller
         public void CallVariant(ISampleMap<CanvasSegment> canvasSegments, ISampleMap<SampleMetrics> samplesInfo,
             ISampleMap<ICopyNumberModel> copyNumberModel, PedigreeInfo pedigreeInfo)
         {
+            int maxGt = pedigreeInfo != null && pedigreeInfo.OffspringIds.Count >= 2 ? 3 : _callerParameters.MaximumCopyNumber;
             var singleSampleLikelihoods = _copyNumberLikelihoodCalculator.GetCopyNumbersLikelihoods(canvasSegments, samplesInfo, copyNumberModel);
+            var sorted = singleSampleLikelihoods.SelectValues(l => l.OrderByDescending(kvp => kvp.Value).Take(maxGt).ToDictionary());
+
             var (copyNumbers, jointLikelihoods) = pedigreeInfo != null
-                ? GetCopyNumbersWithPedigreeInfo(canvasSegments, pedigreeInfo, singleSampleLikelihoods)
+                ? GetCopyNumbersWithPedigreeInfo(canvasSegments, pedigreeInfo, sorted)
                 : CanvasPedigreeCaller.GetCopyNumbersNoPedigreeInfo(canvasSegments, singleSampleLikelihoods);
 
             EstimateQScores(canvasSegments, samplesInfo, pedigreeInfo, singleSampleLikelihoods, jointLikelihoods, copyNumbers);
@@ -332,6 +335,13 @@ namespace CanvasPedigreeCaller
                 {
                     foreach (var offspringGtStates in pedigreeInfo.OffspringPhasedGenotypes)
                     {
+                        if (!pedigreeInfo.OffspringIds.All(id => copyNumbersLikelihoods[id].ContainsKey(
+                            Genotype.Create(Math.Min(offspringGtStates[pedigreeInfo.OffspringIds.IndexOf(id)].PhasedGenotype.CopyNumberA + offspringGtStates[pedigreeInfo.OffspringIds.IndexOf(id)].PhasedGenotype.CopyNumberB,
+                                _callerParameters.MaximumCopyNumber - 1)))))
+                        {
+                            Console.WriteLine("{skipping offspring likelihood 1}");
+                            continue;
+                        }
                         double currentLikelihood = copyNumberParent1.Value * copyNumberParent2.Value;
                         var totalCopyNumberGenotypes = new List<Genotype>();
                         for (var counter = 0; counter < pedigreeInfo.OffspringIds.Count; counter++)

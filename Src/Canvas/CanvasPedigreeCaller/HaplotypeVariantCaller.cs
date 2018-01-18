@@ -28,7 +28,7 @@ namespace CanvasPedigreeCaller
             ISampleMap<ICopyNumberModel> copyNumberModel,
             PedigreeInfo pedigreeInfo)
         {
-            int maxGt = pedigreeInfo != null && pedigreeInfo.OffspringIds.Count > 2 ? 3 : _callerParameters.MaximumCopyNumber;
+            int maxGt = pedigreeInfo != null && pedigreeInfo.OffspringIds.Count >= 2 ? 3 : _callerParameters.MaximumCopyNumber;
             var coverageLikelihoods = _copyNumberLikelihoodCalculator.GetCopyNumbersLikelihoods(canvasSegment, samplesInfo, copyNumberModel);
             // if number and properties of SNPs in the segment are above threshold, calculate likelihood from SNPs and merge with
             // coverage likelihood to form merged likelihoods
@@ -154,15 +154,22 @@ namespace CanvasPedigreeCaller
 
                         double currentLikelihood = parent1GtStates.Value * parent2GtStates.Value;
                         if (currentLikelihood * maxOffspringLikelihood <= jointLikelihood.MaximalLikelihood)
+                        {
+                            Console.WriteLine("{skipping offspring likelihood 1}");
                             continue;
-                        var offspringGtStates = new List<Genotype>();
+                        }
+                        if (!pedigreeInfo.OffspringIds.All(id => singleSampleLikelihoods[id].ContainsKey(genotypes[pedigreeInfo.OffspringIds.IndexOf(id)])))
+                        {
+                            Console.WriteLine("{skipping offspring likelihood 2}");
+                            continue;
+                        }
 
+                        var offspringGtStates = new List<Genotype>();
                         for (int index = 0; index < pedigreeInfo.OffspringIds.Count; index++)
                         {
                             var offspringId = pedigreeInfo.OffspringIds[index];
                             double tmpLikelihood = singleSampleLikelihoods[offspringId][genotypes[index]];
                             offspringGtStates.Add(genotypes[index]);
-
                             currentLikelihood *= tmpLikelihood;
                             currentLikelihood *= EstimateTransmissionProbability(parent1GtStates, parent2GtStates,
                                 new KeyValuePair<Genotype, double>(genotypes[index], tmpLikelihood), deNovoRate, pedigreeInfo);
