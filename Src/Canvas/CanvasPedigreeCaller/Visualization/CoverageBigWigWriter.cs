@@ -29,12 +29,12 @@ namespace CanvasPedigreeCaller.Visualization
             var benchmark = new Benchmark();
             var bedGraph = output.GetFileLocation("coverage.bedgraph");
             _writer.Write(segments, bedGraph);
-            _logger.Info($"Finished writing bedgraph file at '{output}'. Elapsed time: {benchmark.GetElapsedTime()}");
-            _logger.Info($"Begin conversion of '{output}' to bigwig file");
+            _logger.Info($"Finished writing bedgraph file at '{bedGraph}'. Elapsed time: {benchmark.GetElapsedTime()}");
+            _logger.Info($"Begin conversion of '{bedGraph}' to bigwig file");
             benchmark = new Benchmark();
             var bigWigConverterOutput = output.CreateSubdirectory("BigWigConverter");
             var bigwigFile = _converter.Convert(bedGraph, _genome, bigWigConverterOutput);
-            _logger.Info($"Finished conversion from bedgraph file at '{output}' to bigwig file at '{bigwigFile}'. Elapsed time: {benchmark.GetElapsedTime()}");
+            _logger.Info($"Finished conversion from bedgraph file at '{bedGraph}' to bigwig file at '{bigwigFile}'. Elapsed time: {benchmark.GetElapsedTime()}");
             return bigwigFile;
         }
     }
