@@ -6,7 +6,6 @@ namespace Canvas.CommandLineParsing
 {
     public class TumorNormalEnrichmentModeParser : ModeParser<TumorNormalEnrichmentInput>
     {
-        private static readonly CommonOptionsParser CommonOptionsParser = new CommonOptionsParser();
         private static readonly SingleSampleCommonOptionsParser SingleSampleCommonOptionsParser = new SingleSampleCommonOptionsParser();
         private static readonly TumorNormalOptionsParser TumorNormalOptionsParser = new TumorNormalOptionsParser();
         private static readonly FileOption NormalBam = FileOption.CreateRequired("normal sample .bam file", "normal-bam");
@@ -35,7 +34,7 @@ namespace Canvas.CommandLineParsing
         {
             return new OptionCollection<IModeLauncher>
             {
-                TumorNormalOptionsParser, NormalBam, Manifest, CommonOptionsParser, SingleSampleCommonOptionsParser
+                TumorNormalOptionsParser, NormalBam, Manifest, SingleSampleCommonOptionsParser
             };
         }
     }

@@ -18,30 +18,31 @@ namespace CanvasPedigreeCaller
         /// <summary>
         /// Calculates maximal likelihood for segments without SNV allele ratios. Updated CanvasSegment CopyNumber only. 
         /// </summary>
-        public CopyNumbersLikelihoods GetCopyNumbersLikelihoods(ISampleMap<CanvasSegment> canvasSegments, ISampleMap<SampleMetrics> samplesInfo,
-            ISampleMap<CopyNumberModel> copyNumberModel)
+        public ISampleMap<Dictionary<Genotype, double>> GetCopyNumbersLikelihoods(ISampleMap<CanvasSegment> canvasSegments, ISampleMap<SampleMetrics> samplesInfo,
+            ISampleMap<ICopyNumberModel> copyNumberModel)
         {
+            var genotypes = Enumerable.Range(0, _maximumCopyNumber).Select(Genotype.Create).ToList();
             const double maxCoverageMultiplier = 3.0;
-            var singleSampleLikelihoods = new SampleMap<Dictionary<int, double>>();
+            var singleSampleLikelihoods = new SampleMap<Dictionary<Genotype, double>>();
 
             foreach (var sampleId in canvasSegments.SampleIds)
             {
-                var density = new Dictionary<int, double>();
+                var density = new Dictionary<Genotype, double>();
 
-                foreach (int copyNumber in Enumerable.Range(0, _maximumCopyNumber))
+                foreach (var genotypeCopyNumber in genotypes)
                 {
                     double currentLikelihood =
-                        copyNumberModel[sampleId].GetCnLikelihood(
+                        copyNumberModel[sampleId].GetTotalCopyNumberLikelihoods(
                             Math.Min(canvasSegments[sampleId].MedianCount,
-                                samplesInfo[sampleId].MeanCoverage * maxCoverageMultiplier))[copyNumber];
+                                samplesInfo[sampleId].MeanCoverage * maxCoverageMultiplier), genotypeCopyNumber);
                     currentLikelihood = Double.IsNaN(currentLikelihood) || Double.IsInfinity(currentLikelihood)
                         ? 0
                         : currentLikelihood;
-                    density[copyNumber] = currentLikelihood;
+                    density[genotypeCopyNumber] = currentLikelihood;
                 }
                 singleSampleLikelihoods.Add(sampleId, density);
             }
-            return new CopyNumbersLikelihoods(singleSampleLikelihoods, _maximumCopyNumber);
+            return singleSampleLikelihoods;
         }
     }
 }
