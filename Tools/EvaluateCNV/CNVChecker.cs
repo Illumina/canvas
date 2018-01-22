@@ -53,23 +53,31 @@ namespace EvaluateCNV
 
     class CnvCall
     {
-        public string Chr;
-        public int Start; // 0-based inclusive
-        public int End; // 0-based exclusive
-        public int CN;
-        public string AltAllele;
-
-
         public int Length => End - Start;
 
-        public CnvCall(string chr, int start, int end, int cn, string altAllele)
+        public string Chr { get; }
+
+        public int Start { get; }
+
+        public int End { get; }
+
+        public int CN { get; }
+
+        public int RefPloidy { get; }
+
+        public string AltAllele { get; }
+
+        public CnvCall(string chr, int start, int end, int cn, int refPloidy, string altAllele)
         {
             Chr = chr;
             Start = start;
             End = end;
             CN = cn;
+            RefPloidy = refPloidy;
             AltAllele = altAllele;
         }
+
+        public bool IsAltVariant => CN != RefPloidy;
 
         public int Overlap(PloidyInterval ploidyInterval)
         {
@@ -325,6 +333,28 @@ namespace EvaluateCNV
             return CN;
         }
 
+        protected int GetRefPloidy(VcfVariant variant)
+        {
+            var genotype = variant.GenotypeColumns[variant.GenotypeColumns.Count - 1];
+            if (genotype.ContainsKey("GT"))
+            {
+                var splitReGT = genotype["GT"].Split('/', '|');
+                switch (splitReGT.Length)
+                {
+                    case 1:
+                        return 1;
+                    case 2:
+                        return 2;
+                    default:
+                        Console.WriteLine($"Warning: variant {variant.Identifier} does not contain GT flag. Using REF ploidy of 2 by default.");
+                        return 2;
+                }
+            }
+            else Console.WriteLine($"Warning: could not parse ploidy for {variant.Identifier}. Using REF ploidy of 2 by default.");
+            return 2;
+        }
+
+
         public void CountExcludedBasesInTruthSetIntervals()
         {
             foreach (string key in KnownCn.Keys)
@@ -396,6 +426,7 @@ namespace EvaluateCNV
 
                     int end;
                     int cn = GetCopyNumber(variant, out end);
+                    int refPloidy = GetRefPloidy(variant);
                     if (includePassingOnly && variant.Filters != "PASS") continue;
                     if (DQscoreThreshold.HasValue)
                     {
@@ -409,7 +440,7 @@ namespace EvaluateCNV
                         if (Double.Parse(genotypeColumn["DQ"]) < DQscoreThreshold.Value)
                             continue;
                     }
-                    yield return new CnvCall(variant.ReferenceName, variant.ReferencePosition, end, cn, variant.VariantAlleles.First());
+                    yield return new CnvCall(variant.ReferenceName, variant.ReferencePosition, end, cn, refPloidy, variant.VariantAlleles.First());
                 }
             }
         }
@@ -448,7 +479,7 @@ namespace EvaluateCNV
                         Console.WriteLine("Error: Failed to parse line: {0}", line);
                         continue;
                     }
-                    yield return new CnvCall(chr, start, end, cn, null);
+                    yield return new CnvCall(chr, start, end, cn, 2, null);
                 }
             }
         }
