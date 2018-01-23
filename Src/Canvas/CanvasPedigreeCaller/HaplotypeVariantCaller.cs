@@ -28,14 +28,16 @@ namespace CanvasPedigreeCaller
             ISampleMap<ICopyNumberModel> copyNumberModel,
             PedigreeInfo pedigreeInfo)
         {
+            int nHighestLikelihoodGenotypes = pedigreeInfo != null && pedigreeInfo.OffspringIds.Count >= 2 ? 3 : _callerParameters.MaximumCopyNumber;
             var coverageLikelihoods = _copyNumberLikelihoodCalculator.GetCopyNumbersLikelihoods(canvasSegment, samplesInfo, copyNumberModel);
             // if number and properties of SNPs in the segment are above threshold, calculate likelihood from SNPs and merge with
             // coverage likelihood to form merged likelihoods
             var singleSampleCoverageAndAlleleCountLikelihoods = UseAlleleCountsInformation(canvasSegment)
                 ? JoinLikelihoods(GetGenotypeLikelihoods(canvasSegment, copyNumberModel, _PhasedGenotypes), coverageLikelihoods)
                 : coverageLikelihoods;
+            var nHighestLikelihoods = singleSampleCoverageAndAlleleCountLikelihoods.SelectValues(l=>l.OrderByDescending(kvp=>kvp.Value).Take(nHighestLikelihoodGenotypes).ToDictionary());
             (var copyNumbers, var jointCoverageAndAlleleCountLikelihoods) = pedigreeInfo != null
-                ? GetCopyNumbersWithPedigreeInfo(canvasSegment, pedigreeInfo, singleSampleCoverageAndAlleleCountLikelihoods, _callerParameters.DeNovoRate)
+                ? GetCopyNumbersWithPedigreeInfo(canvasSegment, pedigreeInfo, nHighestLikelihoods, _callerParameters.DeNovoRate)
                 : CanvasPedigreeCaller.GetCopyNumbersNoPedigreeInfo(canvasSegment, singleSampleCoverageAndAlleleCountLikelihoods);
 
             AssignCNandScores(canvasSegment, samplesInfo, pedigreeInfo, singleSampleCoverageAndAlleleCountLikelihoods,
@@ -141,6 +143,7 @@ namespace CanvasPedigreeCaller
             var usePhasedGenotypes = singleSampleLikelihoods.Values.First().Keys.First().PhasedGenotype != null;
             ISampleMap<Genotype> sampleCopyNumbersGenotypes = null;
             var jointLikelihood = new JointLikelihoods();
+            double maxOffspringLikelihood = pedigreeInfo.OffspringIds.Select(key => singleSampleLikelihoods[key].Select(kvp=>kvp.Value).Max()).Aggregate(1.0, (acc, val) => acc * val);
 
             foreach (var parent1GtStates in singleSampleLikelihoods[pedigreeInfo.ParentsIds.First()])
             {
@@ -150,14 +153,23 @@ namespace CanvasPedigreeCaller
                     {
 
                         double currentLikelihood = parent1GtStates.Value * parent2GtStates.Value;
-                        var offspringGtStates = new List<Genotype>();
+                        if (currentLikelihood * maxOffspringLikelihood <= jointLikelihood.MaximalLikelihood)
+                        {
+                            Console.WriteLine("{skipping offspring likelihood 1}");
+                            continue;
+                        }
+                        if (!pedigreeInfo.OffspringIds.All(id => singleSampleLikelihoods[id].ContainsKey(genotypes[pedigreeInfo.OffspringIds.IndexOf(id)])))
+                        {
+                            Console.WriteLine("{skipping offspring likelihood 2}");
+                            continue;
+                        }
 
+                        var offspringGtStates = new List<Genotype>();
                         for (int index = 0; index < pedigreeInfo.OffspringIds.Count; index++)
                         {
                             var offspringId = pedigreeInfo.OffspringIds[index];
                             double tmpLikelihood = singleSampleLikelihoods[offspringId][genotypes[index]];
                             offspringGtStates.Add(genotypes[index]);
-
                             currentLikelihood *= tmpLikelihood;
                             currentLikelihood *= EstimateTransmissionProbability(parent1GtStates, parent2GtStates,
                                 new KeyValuePair<Genotype, double>(genotypes[index], tmpLikelihood), deNovoRate, pedigreeInfo);

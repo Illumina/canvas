@@ -43,6 +43,7 @@ namespace CanvasCommon
         {
             return Equals(obj as Genotype);
         }
+
         private bool Equals(Genotype obj)
         {
             if (obj?.PhasedGenotype != null && PhasedGenotype != null)
