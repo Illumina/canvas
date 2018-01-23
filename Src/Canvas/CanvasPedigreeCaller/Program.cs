@@ -33,6 +33,20 @@ namespace CanvasPedigreeCaller
 
         private static int Main(string[] args)
         {
+            try
+            {
+                int exitCode = Run(args);
+                return exitCode;
+            }
+            catch (Exception e)
+            {
+                Console.Error.WriteLine(e);
+                return -1;
+            }
+        }
+
+        private static int Run(string[] args)
+        {
             Utilities.LogCommandLine(args);
             string outDir = null;
             var segmentFiles = new List<string>();
@@ -167,8 +181,8 @@ namespace CanvasPedigreeCaller
                 var genomeMetadata = referenceGenome.GenomeMetadata;
                 var coverageBigWigWriter = new CoverageBigWigWriterFactory(logger, bigWigConverter, genomeMetadata).Create();
                 var copyNumberLikelihoodCalculator = new CopyNumberLikelihoodCalculator(callerParameters.MaximumCopyNumber);
-                IVariantCaller variantCaller = new HaplotypeVariantCaller(copyNumberLikelihoodCalculator, callerParameters, qScoreThreshold);
-                var copyNumberModelFactory = new HaplotypeCopyNumberModelFactory();
+                IVariantCaller variantCaller = new VariantCaller(copyNumberLikelihoodCalculator, callerParameters, qScoreThreshold);
+                var copyNumberModelFactory = new CopyNumberModelFactory();
                 var caller = new CanvasPedigreeCaller(logger, qScoreThreshold, dqScoreThreshold, callerParameters, copyNumberLikelihoodCalculator, variantCaller, coverageBigWigWriter, copyNumberModelFactory);
 
                 var outVcf = outputDirectory.GetFileLocation("CNV.vcf.gz");
