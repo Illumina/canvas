@@ -20,8 +20,8 @@ namespace CanvasPedigreeCaller.Visualization
         public ICoverageBigWigWriter Create()
         {
             var calculator = new NormalizedCoverageCalculator();
-            var bedGraphWriter = new NormalizedCoverageBedGraphWriter(calculator, 4);
-            var bedGraphWriterFacade = new NormalizedCoverageWriterFacade(bedGraphWriter);
+            var roundingCalculator = new RoundingBedGraphCalculator(calculator, 4);
+            var bedGraphWriterFacade = new BedGraphWriterFacade(roundingCalculator);
             return new CoverageBigWigWriter(_logger, bedGraphWriterFacade, _converter, _genome);
         }
     }
