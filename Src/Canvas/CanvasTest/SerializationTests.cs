@@ -21,7 +21,7 @@ namespace CanvasTest
             _tempDirectory.Dispose();
         }
 
-        [Fact(Skip = "reason")]
+        [Fact]
         public void CanSerializeFailedParsingResult()
         {
             var parsingResult = ParsingResult<SmallPedigreeInput>.FailedResult("error");
@@ -31,7 +31,7 @@ namespace CanvasTest
             Assert.Equal("error", serializedResult.ErrorMessage);
         }
 
-        [Fact(Skip = "reason")]
+        [Fact]
         public void CanSerializeSuccessfulParsingResult()
         {
             var parsingResult = ParsingResult<string>.SuccessfulResult("success");

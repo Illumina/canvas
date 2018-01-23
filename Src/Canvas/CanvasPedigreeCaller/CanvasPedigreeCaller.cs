@@ -118,7 +118,7 @@ namespace CanvasPedigreeCaller
 
                 var visualizationTemp = outputFolder.CreateSubdirectory($"VisualizationTemp{sampleId}");
                 var bigWig = _coverageBigWigWriter.Write(mergedVariantCalledSegments[sampleId], visualizationTemp);
-                //bigWig?.MoveTo(SingleSampleCallset.GetSingleSamplePedigreeCoverageBigWig(outputFolder, sampleId.ToString()));
+                bigWig?.MoveTo(SingleSampleCallset.GetSingleSamplePedigreeCoverageBigWig(outputFolder, sampleId.ToString()));
             }
             return 0;
         }
