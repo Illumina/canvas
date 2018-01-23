@@ -30,9 +30,7 @@ namespace EvaluateCNV
                 ShowHelp(optionsParser, Console.Out);
                 return 0;
             }
-
-            CNVChecker checker = new CNVChecker(options.DQscoreThreshold);
-            checker.Evaluate(args[0], args[1], args[2], args[3], options);
+            CNVChecker.Evaluate(args[0], args[1], args[2], args[3], options);
             return 0;
         }
 

@@ -12,7 +12,7 @@ using Isas.Framework.Common_Statistics;
 
 namespace EvaluateCNV
 {
-    internal class BaseCounter
+    public class BaseCounter
     {
         public int TotalVariants { get; set; }
         public long TotalVariantBases { get; set; }
@@ -20,6 +20,7 @@ namespace EvaluateCNV
         public double MedianAccuracy { get; set; }
         public int MinSize { get; }
         public int MaxSize { get; }
+        // 3D array stores 
         public long[,,] BaseCount;
         public long[,,] RoiBaseCount;
 
@@ -34,11 +35,11 @@ namespace EvaluateCNV
         }
     }
 
-    class CnvEvaluator
+    public class CnvEvaluator
     {
         private readonly CNVChecker _cnvChecker;
         #region Members
-        private const int MaxCn = 10; // Currently the max copynum is 5 
+        private const int MaxCn = 5; // Currently the max copynum is 5 
 
         #endregion
 
@@ -47,12 +48,12 @@ namespace EvaluateCNV
             _cnvChecker = cnvChecker;
         }
 
-        public void ComputeAccuracy(string truthSetPath, string cnvCallsPath, string outputPath, PloidyInfo ploidyInfo, bool includePassingOnly,
+        public void ComputeAccuracy(Dictionary<string, List<CNInterval>> knownCN, string cnvCallsPath, string outputPath, PloidyInfo ploidyInfo, bool includePassingOnly,
             EvaluateCnvOptions options)
         {
             // Make a note of how many bases in the truth set are not *actually* considered to be known bases, using
             // the "cnaqc" exclusion set:
-            _cnvChecker.InitializeIntervalMetrics();
+            _cnvChecker.InitializeIntervalMetrics(knownCN);
             bool regionsOfInterest = _cnvChecker.RegionsOfInterest != null;
             var baseCounters = new List<BaseCounter> { new BaseCounter(MaxCn, 0, Int32.MaxValue, regionsOfInterest) };
             if (options.SplitBySize)
@@ -64,14 +65,13 @@ namespace EvaluateCNV
                 baseCounters.Add(new BaseCounter(MaxCn, 500000, int.MaxValue, regionsOfInterest));
             }
 
-            _cnvChecker.CountExcludedBasesInTruthSetIntervals();
-            if (_cnvChecker.DQscoreThreshold.HasValue && !Path.GetFileName(cnvCallsPath).ToLower().Contains("vcf"))
-                throw new ArgumentException("CNV.vcf must be in a vcf format when --dqscore option is used");
+            _cnvChecker.CountExcludedBasesInTruthSetIntervals(knownCN);
             var calls = _cnvChecker.GetCnvCallsFromVcf(cnvCallsPath, includePassingOnly);
 
             foreach (var baseCounter in baseCounters)
             {
-                CalculateMetrics(ploidyInfo, calls, baseCounter, options.SkipDiploid);
+                var metrics = CalculateMetrics(ploidyInfo, knownCN, calls, baseCounter, options.SkipDiploid);
+
                 string fileName = $"{options.BaseFileName}";
                 if (options.DQscoreThreshold.HasValue)
                 {
@@ -91,43 +91,36 @@ namespace EvaluateCNV
                 using (StreamWriter outputWriter = new StreamWriter(stream))
                 {
                     outputWriter.NewLine = "\n";
-                    WriteResults(cnvCallsPath, outputWriter, baseCounter, includePassingOnly);
+                    WriteResults(cnvCallsPath, outputWriter, baseCounter, includePassingOnly, metrics);
                 }
             }
         }
 
-        private void CalculateMetrics(PloidyInfo ploidyInfo, IEnumerable<CnvCall> calls, BaseCounter baseCounter, bool optionsSkipDiploid)
+        public MetricsCalculator CalculateMetrics(PloidyInfo ploidyInfo, Dictionary<string, List<CNInterval>> knownCN, Dictionary<string, List<CnvCall>> calls, BaseCounter baseCounter, bool optionsSkipDiploid)
         {
-            ploidyInfo.MakeChromsomeNameAgnosticWithAllChromosomes(calls.Select(call => call.Chr));
-            foreach (CnvCall call in calls)
+            ploidyInfo.MakeChromsomeNameAgnosticWithAllChromosomes(calls.Keys);
+            foreach (CNInterval interval in knownCN.Values.SelectMany(x=>x))
             {
-                int CN = call.CN;
-                if (CN < 0 || call.End < 0) continue; // Not a CNV call, apparently
-                if (call.AltAllele == "." && optionsSkipDiploid) continue;
+                if (!(interval.Length >= baseCounter.MinSize && interval.Length <= baseCounter.MaxSize)) continue;
 
-                if (call.IsAltVariant)
+                foreach (CnvCall call in calls[interval.Chromosome])
                 {
-                    baseCounter.TotalVariantBases += call.Length;
-                    baseCounter.TotalVariants++;
-                }
+                    int CN = call.CN;
+                    if (CN < 0 || call.End < 0) continue; // Not a CNV call, apparently
+                    if (call.AltAllele == "." && optionsSkipDiploid) continue;
 
-                if (CN > MaxCn) CN = MaxCn;
-                string chr = call.Chr;
-                if (!_cnvChecker.KnownCn.ContainsKey(chr)) chr = call.Chr.Replace("chr", "");
-                if (!_cnvChecker.KnownCn.ContainsKey(chr)) chr = "chr" + call.Chr;
-                if (!_cnvChecker.KnownCn.ContainsKey(chr))
-                {
-                    Console.WriteLine("Error: Skipping variant call for chromosome {0} with no truth data", call.Chr);
-                    continue;
-                }
-                foreach (CNInterval interval in _cnvChecker.KnownCn[chr])
-                {
-                    if (!(interval.Length >= baseCounter.MinSize && interval.Length <= baseCounter.MaxSize)) continue;
-
+                    if (call.IsAltVariant)
+                    {
+                        baseCounter.TotalVariantBases += call.Length;
+                        baseCounter.TotalVariants++;
+                    }
+                    if (CN > MaxCn) CN = MaxCn;
+                    string chr = call.Chr;
                     int overlapStart = Math.Max(call.Start, interval.Start);
                     int overlapEnd = Math.Min(call.End, interval.End);
                     if (overlapStart >= overlapEnd) continue;
                     int overlapBases = overlapEnd - overlapStart;
+
                     // We've got an overlap interval.  Kill off some bases from this interval, if it happens
                     // to overlap with an excluded interval:
                     if (_cnvChecker.ExcludeIntervals.ContainsKey(chr))
@@ -144,8 +137,11 @@ namespace EvaluateCNV
                     int knownCn = interval.Cn;
                     if (knownCn > MaxCn) knownCn = MaxCn;
                     // BasesCovered does not model ploidy-specific information, adjust CN ploidy instead 
-
-                    baseCounter.BaseCount[knownCn, CN, call.RefPloidy] += overlapBases;
+                    if (overlapBases > 0 && call.RefPloidy != interval.ReferenceCopyNumber)
+                        throw new ArgumentException($"Reference ploidies for truth variant {interval.Chromosome}:{interval.Start}-{interval.End} and " +
+                                                    $"Canvas call {call.Chr}:{call.Start}-{call.End} are not equal. Check that your truth set and/or Canvas " +
+                                                    $"calls are correct!");
+                    baseCounter.BaseCount[knownCn, CN, interval.ReferenceCopyNumber] += overlapBases;
                     interval.BasesCovered += overlapBases;
                     if (knownCn == CN)
                     {
@@ -164,15 +160,14 @@ namespace EvaluateCNV
                             int roiOverlapEnd = Math.Min(roiInterval.End, overlapEnd);
                             if (roiOverlapStart >= roiOverlapEnd) continue;
                             int roiOverlapBases = roiOverlapEnd - roiOverlapStart;
-                            baseCounter.RoiBaseCount[knownCn, CN, call.RefPloidy] += roiOverlapBases;
+                            baseCounter.RoiBaseCount[knownCn, CN, interval.ReferenceCopyNumber] += roiOverlapBases;
                         }
                     }
                 }
             }
 
-            CalculateMedianAndMeanAccuracies(baseCounter);
-
-            var allIntervals = _cnvChecker.KnownCn.SelectMany(kvp => kvp.Value).ToList();
+            CalculateMedianAndMeanAccuracies(baseCounter, knownCN);
+            var allIntervals = knownCN.SelectMany(kvp => kvp.Value).ToList();
 
             // find truth interval with highest number of false negatives (hurts recall)
             var variantIntervals = allIntervals.Where(interval => interval.Cn != interval.ReferenceCopyNumber).ToList();
@@ -188,20 +183,22 @@ namespace EvaluateCNV
                 var intervalMaxFalsePositives = refIntervals.MaxBy(interval => interval.BasesCalledIncorrectly);
                 Console.WriteLine($"Truth interval with most false positives (hurts precision): {intervalMaxFalsePositives}");
             }
+            return MetricsCalculator.CalculateMetrics(baseCounter, MaxCn, 2);
+
         }
 
         /// <summary>
         /// For each CNV calls in the truth set, compute the fraction of bases assigned correct copy number
         /// </summary>
         /// <param name="baseCounter"></param>
-        private void CalculateMedianAndMeanAccuracies(BaseCounter baseCounter)
+        private void CalculateMedianAndMeanAccuracies(BaseCounter baseCounter, Dictionary<string, List<CNInterval>> knownCN)
         {
             baseCounter.MeanAccuracy = 0;
             baseCounter.MedianAccuracy = 0;
             var eventAccuracies = new List<double>();
-            foreach (string chr in _cnvChecker.KnownCn.Keys)
+            foreach (string chr in knownCN.Keys)
             {
-                foreach (var interval in _cnvChecker.KnownCn[chr])
+                foreach (var interval in knownCN[chr])
                 {
                     if (interval.Cn == 2) continue;
                     int basecount = interval.Length - interval.BasesExcluded;
@@ -221,13 +218,11 @@ namespace EvaluateCNV
                               $" for variants sizes {baseCounter.MinSize} to {baseCounter.MaxSize}");
         }
 
-        private void WriteResults(string cnvCallsPath, StreamWriter outputWriter, BaseCounter baseCounter, bool includePassingOnly)
+        private void WriteResults(string cnvCallsPath, StreamWriter outputWriter, BaseCounter baseCounter, bool includePassingOnly, MetricsCalculator metrics)
         {
-           
+
             // load and append VCF header information 
             _cnvChecker.HandleVcfHeaderInfo(outputWriter, new FileLocation(cnvCallsPath));
-            var metrics = MetricsCalculator.CalculateMetrics(baseCounter, MaxCn, 2);
-
             // Report stats:
             outputWriter.WriteLine(includePassingOnly ? "Results for PASSing variants" : "Results for all variants");
             outputWriter.WriteLine("Accuracy\t{0:F4}", metrics.Accuracy);

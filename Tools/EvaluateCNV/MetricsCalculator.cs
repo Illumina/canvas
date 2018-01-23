@@ -4,7 +4,7 @@ using System.Text;
 
 namespace EvaluateCNV
 {
-    class MetricsCalculator
+    public class MetricsCalculator
     {
         // Compute overall stats:
 
@@ -121,7 +121,7 @@ namespace EvaluateCNV
                             long bases = baseCounter.RoiBaseCount[trueCn, callCn, ploidy];
                             roiBases += bases;
                             if (trueCn == callCn) roiBasesCorrect += bases;
-                            if (trueCn < 2 && callCn < 2 || trueCn == 2 && callCn == 2 || trueCn > 2 && callCn > 2)
+                            if (trueCn < ploidy && callCn < ploidy || trueCn == ploidy && callCn == ploidy || trueCn > ploidy && callCn > ploidy)
                                 roiBasesCorrectDirection += bases;
                         }
                     }
