@@ -157,7 +157,7 @@ namespace CanvasPedigreeCaller
             ISampleMap<ICopyNumberModel> copyNumberModel, PedigreeInfo pedigreeInfo)
         {
             var singleSampleLikelihoods = _copyNumberLikelihoodCalculator.GetCopyNumbersLikelihoods(canvasSegments, samplesInfo, copyNumberModel);
-
+            
             (var pedigreeCopyNumbers, var pedigreeLikelihoods) = GetPedigreeCopyNumbers(pedigreeInfo, singleSampleLikelihoods);
 
             var nonPedigreeCopyNumbers = CanvasPedigreeCaller.GetNonPedigreeCopyNumbers(canvasSegments, pedigreeInfo, singleSampleLikelihoods);
@@ -300,7 +300,7 @@ namespace CanvasPedigreeCaller
             }
         }
 
-        public double GetGtLikelihoodScore(Balleles gtObservedCounts, List<PhasedGenotype> gtModelCounts, ref int? selectedGtState, ICopyNumberModel copyNumberModel)
+        private double GetGtLikelihoodScore(Balleles gtObservedCounts, List<PhasedGenotype> gtModelCounts, ref int? selectedGtState, ICopyNumberModel copyNumberModel)
         {
             const int maxGQscore = 60;
             var gtLikelihoods = Enumerable.Repeat(0.0, gtModelCounts.Count).ToList();
@@ -326,6 +326,9 @@ namespace CanvasPedigreeCaller
 
         private (ISampleMap<Genotype> copyNumbersGenotypes, JointLikelihoods jointLikelihood) GetPedigreeCopyNumbers(PedigreeInfo pedigreeInfo, ISampleMap<Dictionary<Genotype, double>> copyNumbersLikelihoods)
         {
+            int nHighestLikelihoodGenotypes = pedigreeInfo != null && pedigreeInfo.OffspringIds.Count >= 2 ? 3 : _callerParameters.MaximumCopyNumber;
+            copyNumbersLikelihoods = copyNumbersLikelihoods.SelectValues(l => l.OrderByDescending(kvp => kvp.Value).Take(nHighestLikelihoodGenotypes).ToDictionary());
+
             var sampleCopyNumbersGenotypes = new SampleMap<Genotype>();
             var jointLikelihood = new JointLikelihoods();
             if (!pedigreeInfo.HasFullPedigree())
@@ -336,6 +339,13 @@ namespace CanvasPedigreeCaller
                 {
                     foreach (var offspringGtStates in pedigreeInfo.OffspringPhasedGenotypes)
                     {
+                        if (!pedigreeInfo.OffspringIds.All(id => copyNumbersLikelihoods[id].ContainsKey(
+                            Genotype.Create(Math.Min(offspringGtStates[pedigreeInfo.OffspringIds.IndexOf(id)].PhasedGenotype.CopyNumberA + offspringGtStates[pedigreeInfo.OffspringIds.IndexOf(id)].PhasedGenotype.CopyNumberB,
+                                _callerParameters.MaximumCopyNumber - 1)))))
+                        {
+                            Console.WriteLine("{skipping offspring likelihood 1}");
+                            continue;
+                        }
                         double currentLikelihood = copyNumberParent1.Value * copyNumberParent2.Value;
                         var totalCopyNumberGenotypes = new List<Genotype>();
                         for (var counter = 0; counter < pedigreeInfo.OffspringIds.Count; counter++)

@@ -89,7 +89,7 @@ namespace CanvasPedigreeCaller
             return singleSampleLikelihoods;
         }
 
-        private static ISampleMap<Dictionary<PhasedGenotype, double>> GetGenotypeLikelihoods(ISampleMap<CanvasSegment> canvasSegments, 
+        private static ISampleMap<Dictionary<PhasedGenotype, double>> GetGenotypeLikelihoods(ISampleMap<CanvasSegment> canvasSegments,
             ISampleMap<ICopyNumberModel> copyNumberModel, List<PhasedGenotype> genotypes)
         {
             var REF = new PhasedGenotype(1, 1);
@@ -140,12 +140,16 @@ namespace CanvasPedigreeCaller
         /// </summary>
         private (SampleMap<Genotype> copyNumbersGenotypes, JointLikelihoods jointLikelihood) GetPedigreeCopyNumbers(PedigreeInfo pedigreeInfo, ISampleMap<Dictionary<Genotype, double>> singleSampleLikelihoods)
         {
+            int nHighestLikelihoodGenotypes = pedigreeInfo != null && pedigreeInfo.OffspringIds.Count >= 2 ? 3 : _callerParameters.MaximumCopyNumber;
+            singleSampleLikelihoods = singleSampleLikelihoods.SelectValues(l => l.OrderByDescending(kvp => kvp.Value).Take(nHighestLikelihoodGenotypes).ToDictionary());
+
             var sampleCopyNumbersGenotypes = new SampleMap<Genotype>();
             var jointLikelihood = new JointLikelihoods();
             if (!pedigreeInfo.HasFullPedigree())
                 return (sampleCopyNumbersGenotypes, jointLikelihood);
-
             var usePhasedGenotypes = singleSampleLikelihoods.Values.First().Keys.First().PhasedGenotype != null;
+            double maxOffspringLikelihood = pedigreeInfo.OffspringIds.Select(key => singleSampleLikelihoods[key].Select(kvp => kvp.Value).Max()).Aggregate(1.0, (acc, val) => acc * val);
+
             foreach (var parent1GtStates in singleSampleLikelihoods[pedigreeInfo.ParentsIds.First()])
             {
                 foreach (var parent2GtStates in singleSampleLikelihoods[pedigreeInfo.ParentsIds.Last()])
@@ -154,14 +158,23 @@ namespace CanvasPedigreeCaller
                     {
 
                         double currentLikelihood = parent1GtStates.Value * parent2GtStates.Value;
-                        var offspringGtStates = new List<Genotype>();
+                        if (currentLikelihood * maxOffspringLikelihood <= jointLikelihood.MaximalLikelihood)
+                        {
+                            Console.WriteLine("{skipping offspring likelihood 1}");
+                            continue;
+                        }
+                        if (!pedigreeInfo.OffspringIds.All(id => singleSampleLikelihoods[id].ContainsKey(genotypes[pedigreeInfo.OffspringIds.IndexOf(id)])))
+                        {
+                            Console.WriteLine("{skipping offspring likelihood 2}");
+                            continue;
+                        }
 
+                        var offspringGtStates = new List<Genotype>();
                         for (int index = 0; index < pedigreeInfo.OffspringIds.Count; index++)
                         {
                             var offspringId = pedigreeInfo.OffspringIds[index];
                             double tmpLikelihood = singleSampleLikelihoods[offspringId][genotypes[index]];
                             offspringGtStates.Add(genotypes[index]);
-
                             currentLikelihood *= tmpLikelihood;
                             currentLikelihood *= EstimateTransmissionProbability(parent1GtStates, parent2GtStates,
                                 new KeyValuePair<Genotype, double>(genotypes[index], tmpLikelihood), _callerParameters.DeNovoRate, pedigreeInfo);
