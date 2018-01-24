@@ -23,8 +23,8 @@ namespace EvaluateCNV
         public long RoiBasesCorrect { get; }
         public long RoiBasesCorrectDirection { get; }
 
-        public double Precision => 100 * (IsGainBasesCorrect + IsLossBasesCorrect) / (double)(CallGainBases + CallLossBases);
-        public double Recall => 100 * (IsGainBasesCorrect + IsLossBasesCorrect) / (double)(IsGainBases + IsLossBases);
+        public double Precision => (IsGainBasesCorrect + IsLossBasesCorrect) / (double)(CallGainBases + CallLossBases);
+        public double Recall => (IsGainBasesCorrect + IsLossBasesCorrect) / (double)(IsGainBases + IsLossBases);
         public double F1Score => 2 * Precision * Recall / (Precision + Recall);
         public double Accuracy => TotalBasesRight / (double)TotalBases;
         // SK: I felt the direction based performance metrices make more sense

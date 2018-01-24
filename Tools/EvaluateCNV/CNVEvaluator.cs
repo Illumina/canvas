@@ -101,7 +101,10 @@ namespace EvaluateCNV
         {
             calls.Values.SelectMany(x => x).ForEach(call =>
             {
-                if (!(call.IsAltVariant && call.Length >= baseCounter.MinSize && call.Length <= baseCounter.MaxSize)) return;
+                if (!(call.IsAltVariant && call.Length >= baseCounter.MinSize && call.Length <= baseCounter.MaxSize))
+                    return;
+                if (includePassingOnly && !call.PassFilter)
+                    return;
                 baseCounter.TotalVariantBases += call.Length;
                 baseCounter.TotalVariants++;
             });
@@ -260,9 +263,9 @@ namespace EvaluateCNV
             // SK: I felt the direction based performance metrices make more sense
             outputWriter.WriteLine("DirectionAccuracy\t{0:F4}", metrics.DirectionAccuracy);
             outputWriter.WriteLine("F-score\t{0:F4}", metrics.F1Score);
-            outputWriter.WriteLine("Recall\t{0:F4}", metrics.Recall);
+            outputWriter.WriteLine("Recall\t{0:F4}", 100 * metrics.Recall);
             outputWriter.WriteLine("DirectionRecall\t{0:F4}", metrics.DirectionRecall);
-            outputWriter.WriteLine("Precision\t{0:F4}", metrics.Precision);
+            outputWriter.WriteLine("Precision\t{0:F4}", 100 * metrics.Precision);
             outputWriter.WriteLine("DirectionPrecision\t{0:F4}", metrics.DirectionPrecision);
             outputWriter.WriteLine("GainRecall\t{0:F4}", metrics.GainRecall);
             outputWriter.WriteLine("GainDirectionRecall\t{0:F4}", metrics.GainDirectionRecall);
