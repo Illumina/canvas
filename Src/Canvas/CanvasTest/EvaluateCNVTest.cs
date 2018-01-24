@@ -40,7 +40,7 @@ namespace CanvasTest
                 }
             };
             var metrics = cnvEvaluator.CalculateMetrics(knownCN, calls, baseCounter, optionsSkipDiploid: false, includePassingOnly: true);
-            Assert.Equal(100, Convert.ToInt32(metrics.Recall));
+            Assert.Equal(100, Convert.ToInt32(metrics.Recall * 100));
         }
 
         [Fact]
@@ -73,7 +73,7 @@ namespace CanvasTest
                 }
             };
             var metrics = cnvEvaluator.CalculateMetrics(knownCN, calls, baseCounter, optionsSkipDiploid: false, includePassingOnly: true);
-            Assert.Equal(33, Convert.ToInt32(metrics.Recall));
+            Assert.Equal(33, Convert.ToInt32(metrics.Recall * 100));
         }
     }
 }
