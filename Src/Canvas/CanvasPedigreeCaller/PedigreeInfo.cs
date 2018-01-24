@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using CanvasCommon;
+using Illumina.Common;
 using Isas.Framework.DataTypes;
 using Isas.Framework.DataTypes.Maps;
 using MathNet.Numerics.Distributions;
@@ -10,6 +11,7 @@ namespace CanvasPedigreeCaller
 {
     class PedigreeInfo
     {
+        public IReadOnlyList<SampleId> AllSampleIds { get; }
         public List<SampleId> ParentsIds { get; }
         public List<SampleId> OffspringIds { get; }
         public List<SampleId> OtherIds { get; }
@@ -27,9 +29,11 @@ namespace CanvasPedigreeCaller
             return OtherIds.Count >= 1;
         }
 
-        private PedigreeInfo(List<SampleId> offspringIds, List<SampleId> parentsIds, List<SampleId> otherIds, List<List<Genotype>> offspringPhasedGenotypes,
+        private PedigreeInfo(IReadOnlyList<SampleId> allSampleIds, List<SampleId> offspringIds,
+            List<SampleId> parentsIds, List<SampleId> otherIds, List<List<Genotype>> offspringPhasedGenotypes,
             List<List<Genotype>> offspringTotalCopyNumberGenotypes, double[][] transitionMatrix)
         {
+            AllSampleIds = allSampleIds;
             OffspringIds = offspringIds;
             ParentsIds = parentsIds;
             OtherIds = otherIds;
@@ -40,6 +44,7 @@ namespace CanvasPedigreeCaller
 
         public static PedigreeInfo GetPedigreeInfo(ISampleMap<SampleType> kinships, PedigreeCallerParameters callerParameters)
         {
+            var allSampleIds = kinships.SampleIds.ToReadOnlyList();
             bool fullPedigree = kinships.Values.Count(x => x == SampleType.Father) == 1 &&
                 kinships.Values.Count(x => x == SampleType.Mother) == 1 &&
                 kinships.Values.Count(x => x == SampleType.Proband) == 1;
@@ -52,7 +57,7 @@ namespace CanvasPedigreeCaller
             var offspringPhasedGenotypes = GetOffspringGenotypes(callerParameters, parentalPhasedGenotypes, offspringIds);
             var offspringTotalCopyNumberGenotypes = GetOffspringGenotypes(callerParameters, parentalTotalCopyNumberGenotypes, offspringIds);
             var transitionMatrix = GetTransitionMatrix(callerParameters.MaximumCopyNumber);
-            return new PedigreeInfo(offspringIds, parentsIds, otherIds, offspringPhasedGenotypes, offspringTotalCopyNumberGenotypes, transitionMatrix);
+            return new PedigreeInfo(allSampleIds, offspringIds, parentsIds, otherIds, offspringPhasedGenotypes, offspringTotalCopyNumberGenotypes, transitionMatrix);
         }
 
         private static List<List<Genotype>> GetOffspringGenotypes(PedigreeCallerParameters callerParameters, List<Genotype> genotypes, List<SampleId> offspringIds)
@@ -86,7 +91,7 @@ namespace CanvasPedigreeCaller
             {
                 foreach (var genotype in genotypeSet)
                 {
-                    GenerateOffspringGenotypes(offspringGenotypes, genotypeSet, nOffsprings - 1, 
+                    GenerateOffspringGenotypes(offspringGenotypes, genotypeSet, nOffsprings - 1,
                         partialGenotypes.Concat(new List<Genotype> { genotype }).ToList());
                 }
             }

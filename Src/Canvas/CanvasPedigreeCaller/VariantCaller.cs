@@ -82,6 +82,8 @@ namespace CanvasPedigreeCaller
         private void SetDenovoQualityScores(ISampleMap<CanvasSegment> canvasSegments, ISampleMap<SampleMetrics> samplesInfo, List<SampleId> parentIDs, List<SampleId> offspringIDs,
             JointLikelihoods copyNumbersLikelihoods, ISampleMap<Genotype> copyNumbers)
         {
+            var pedigreeCopyNumbers = copyNumbers.WhereSampleIds(sampleId =>
+                parentIDs.Contains(sampleId) || offspringIDs.Contains(sampleId));
             foreach (var probandId in offspringIDs)
             {
                 // targeted proband is REF
@@ -97,7 +99,7 @@ namespace CanvasPedigreeCaller
                 if (parentIDs.Concat(probandId).Any(id => !IsPassVariant(canvasSegments, id)))
                     continue;
 
-                double deNovoQualityScore = GetConditionalDeNovoQualityScore(copyNumbersLikelihoods, probandId, copyNumbers);
+                double deNovoQualityScore = GetConditionalDeNovoQualityScore(copyNumbersLikelihoods, probandId, pedigreeCopyNumbers);
                 if (Double.IsInfinity(deNovoQualityScore) | deNovoQualityScore > _callerParameters.MaxQscore)
                     deNovoQualityScore = _callerParameters.MaxQscore;
                 canvasSegments[probandId].DqScore = deNovoQualityScore;
@@ -366,6 +368,7 @@ namespace CanvasPedigreeCaller
                             {pedigreeInfo.ParentsIds.Last(), copyNumberParent2.Key}
                         };
                         pedigreeInfo.OffspringIds.Zip(totalCopyNumberGenotypes).ForEach(sampleIdGenotypeKvp => genotypesInPedigree.Add(sampleIdGenotypeKvp.Item1, sampleIdGenotypeKvp.Item2));
+                        genotypesInPedigree = genotypesInPedigree.OrderBy(pedigreeInfo.AllSampleIds);
                         jointLikelihood.AddJointLikelihood(genotypesInPedigree, currentLikelihood);
 
                         if (currentLikelihood > jointLikelihood.MaximalLikelihood)
