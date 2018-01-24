@@ -69,15 +69,18 @@ namespace EvaluateCNV
 
         public int RefPloidy { get; }
 
+        public bool PassFilter { get; }
+
         public string AltAllele { get; }
 
-        public CnvCall(string chr, int start, int end, int cn, int refPloidy, string altAllele)
+        public CnvCall(string chr, int start, int end, int cn, int refPloidy, bool passFilter, string altAllele)
         {
             Chr = chr;
             Start = start;
             End = end;
             CN = cn;
             RefPloidy = refPloidy;
+            PassFilter = passFilter;
             AltAllele = altAllele;
         }
 
@@ -95,7 +98,7 @@ namespace EvaluateCNV
     public class CNVChecker
     {
         #region Members
-        public Dictionary<string, List<CNInterval>> RegionsOfInterest = new Dictionary<string, List<CNInterval>> ();
+        public Dictionary<string, List<CNInterval>> RegionsOfInterest = new Dictionary<string, List<CNInterval>>();
         public Dictionary<string, List<CNInterval>> ExcludeIntervals = new Dictionary<string, List<CNInterval>>();
         public double? DQscoreThreshold { get; }
 
@@ -410,7 +413,7 @@ namespace EvaluateCNV
             HandleHeaderLine(outputWriter, headerLines, "OverallPloidy", LogPloidy);
         }
 
-        public Dictionary<string, List<CnvCall>> GetCnvCallsFromVcf(string vcfPath, bool includePassingOnly)
+        public Dictionary<string, List<CnvCall>> GetCnvCallsFromVcf(string vcfPath)
         {
             var calls = new Dictionary<string, List<CnvCall>>();
             using (VcfReader reader = new VcfReader(vcfPath, false))
@@ -428,7 +431,7 @@ namespace EvaluateCNV
                     int end;
                     int cn = GetCopyNumber(variant, out end);
                     int refPloidy = GetRefPloidy(variant);
-                    if (includePassingOnly && variant.Filters != "PASS") continue;
+                    var passFilter =  variant.Filters == "PASS";
                     if (DQscoreThreshold.HasValue)
                     {
                         var genotypeColumn = variant.GenotypeColumns.Single();
@@ -441,7 +444,8 @@ namespace EvaluateCNV
                         if (Double.Parse(genotypeColumn["DQ"]) < DQscoreThreshold.Value)
                             continue;
                     }
-                    calls[variant.ReferenceName].Add(new CnvCall(variant.ReferenceName, variant.ReferencePosition, end, cn, refPloidy, variant.VariantAlleles.First()));
+                    calls[variant.ReferenceName].Add(new CnvCall(variant.ReferenceName, variant.ReferencePosition, 
+                        end, cn, refPloidy, passFilter, variant.VariantAlleles.First()));
                 }
             }
             return calls;
@@ -484,7 +488,7 @@ namespace EvaluateCNV
                     }
                     if (!calls.ContainsKey(chr)) calls[chr] = new List<CnvCall>();
 
-                    calls[chr].Add(new CnvCall(chr, start, end, cn, 2, null));
+                    calls[chr].Add(new CnvCall(chr, start, end, cn, 2, true, null));
                 }
             }
             return calls;
@@ -494,11 +498,7 @@ namespace EvaluateCNV
         public static void Evaluate(string truthSetPath, string cnvCallsPath, string excludedBed, string outputPath, EvaluateCnvOptions options)
         {
             double heterogeneityFraction = options.HeterogeneityFraction;
-            var cnvCallsFile = new FileLocation(cnvCallsPath);
-            var ploidyInfo = LoadPloidy(options.PloidyFile, cnvCallsFile);
             var kownCn = LoadKnownCn(truthSetPath, heterogeneityFraction);
-            ploidyInfo.MakeChromsomeNameAgnosticWithAllChromosomes(kownCn.Keys);
-            SetTruthsetReferencePloidy(ploidyInfo, kownCn);
 
             // LoadRegionsOfInterest(options.RoiBed?.FullName);
             if (!string.IsNullOrEmpty(excludedBed))
@@ -520,7 +520,9 @@ namespace EvaluateCNV
 
             if (checker.DQscoreThreshold.HasValue && !Path.GetFileName(cnvCallsPath).ToLower().Contains("vcf"))
                 throw new ArgumentException("CNV.vcf must be in a vcf format when --dqscore option is used");
-            cneEvaluator.ComputeAccuracy(kownCn, cnvCallsPath, outputPath, ploidyInfo, includePassingOnly, options);
+            cneEvaluator.ComputeAccuracy(kownCn, cnvCallsPath, outputPath, includePassingOnly, options);
+            if (includePassingOnly)
+                cneEvaluator.ComputeAccuracy(kownCn, cnvCallsPath, outputPath, false, options);
             Console.WriteLine(">>>Done - results written to {0}", outputPath);
         }
 
