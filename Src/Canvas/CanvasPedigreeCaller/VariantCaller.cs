@@ -345,7 +345,6 @@ namespace CanvasPedigreeCaller
                             Genotype.Create(Math.Min(offspringGtStates[pedigreeInfo.OffspringIds.IndexOf(id)].PhasedGenotype.CopyNumberA + offspringGtStates[pedigreeInfo.OffspringIds.IndexOf(id)].PhasedGenotype.CopyNumberB,
                                 _callerParameters.MaximumCopyNumber - 1)))))
                         {
-                            Console.WriteLine("{skipping offspring likelihood 1}");
                             continue;
                         }
                         double currentLikelihood = copyNumberParent1.Value * copyNumberParent2.Value;

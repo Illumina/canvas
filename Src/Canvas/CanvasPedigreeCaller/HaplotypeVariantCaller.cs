@@ -160,12 +160,10 @@ namespace CanvasPedigreeCaller
                         double currentLikelihood = parent1GtStates.Value * parent2GtStates.Value;
                         if (currentLikelihood * maxOffspringLikelihood <= jointLikelihood.MaximalLikelihood)
                         {
-                            Console.WriteLine("{skipping offspring likelihood 1}");
                             continue;
                         }
                         if (!pedigreeInfo.OffspringIds.All(id => singleSampleLikelihoods[id].ContainsKey(genotypes[pedigreeInfo.OffspringIds.IndexOf(id)])))
                         {
-                            Console.WriteLine("{skipping offspring likelihood 2}");
                             continue;
                         }
 

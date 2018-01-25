@@ -50,7 +50,7 @@ namespace CanvasPedigreeCaller
                 kinships.Values.Count(x => x == SampleType.Proband) == 1;
             // do not populate parents and offspring fields for partial pedigrees 
             var parentsIds = fullPedigree ? kinships.WhereValues(value => value == SampleType.Father || value == SampleType.Mother).SampleIds.ToList() : new List<SampleId>();
-            var offspringIds = fullPedigree ? kinships.WhereValues(value => value == SampleType.Proband).SampleIds.ToList() : new List<SampleId>();
+            var offspringIds = fullPedigree ? kinships.WhereValues(value => value == SampleType.Proband || value == SampleType.Sibling).SampleIds.ToList() : new List<SampleId>();
             var otherIds = fullPedigree ? kinships.WhereValues(value => value == SampleType.Other).SampleIds.ToList() : kinships.SampleIds.ToList();
             var parentalPhasedGenotypes = GeneratePhasedGenotype(callerParameters.MaximumCopyNumber);
             var parentalTotalCopyNumberGenotypes = Enumerable.Range(0, callerParameters.MaximumCopyNumber).Select(Genotype.Create).ToList();
