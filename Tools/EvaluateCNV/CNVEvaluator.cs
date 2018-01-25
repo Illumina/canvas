@@ -113,7 +113,6 @@ namespace EvaluateCNV
                 int nonOverlapBases = interval.Length;
                 int totalOverlapBases = 0;
                 var totalIntervalRefPloidy = new List<(int ploidy, int length)>();
-                int excludeIntervalBases = 0;
                 string chromosome = interval.Chromosome;
                 if (!calls.ContainsKey(chromosome)) chromosome = chromosome.Replace("chr", "");
                 if (!calls.ContainsKey(chromosome)) chromosome = "chr" + chromosome;
@@ -122,23 +121,6 @@ namespace EvaluateCNV
                     Console.WriteLine($"Error: Skipping truth variant for chromosome {interval.Chromosome} with no Canvas calls");
                     continue;
                 }
-
-                if (_cnvChecker.ExcludeIntervals.ContainsKey(chromosome))
-                {
-                    foreach (CNInterval excludeInterval in _cnvChecker.ExcludeIntervals[chromosome])
-                    {
-                        int excludeOverlapStart = Math.Max(excludeInterval.Start, interval.Start);
-                        int excludeOverlapEnd = Math.Min(excludeInterval.End, interval.End);
-                        if (excludeOverlapStart >= excludeOverlapEnd) continue;
-                        excludeIntervalBases += excludeOverlapEnd - excludeOverlapStart;
-                    }
-                }
-                if (interval.Length - excludeIntervalBases < 5000)
-                {
-                    Console.WriteLine($"Error: Skipping truth variant {interval.Chromosome}:{interval.Start}-{interval.End} that overlaps Canvas excluded regions!");
-                    continue;
-                }
-
 
                 int knownCn = interval.Cn;
                 if (knownCn > MaxCn) knownCn = MaxCn;
