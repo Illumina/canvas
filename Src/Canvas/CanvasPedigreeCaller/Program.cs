@@ -33,6 +33,20 @@ namespace CanvasPedigreeCaller
 
         private static int Main(string[] args)
         {
+            try
+            {
+                int exitCode = Run(args);
+                return exitCode;
+            }
+            catch (Exception e)
+            {
+                Console.Error.WriteLine(e);
+                return -1;
+            }
+        }
+
+        private static int Run(string[] args)
+        {
             Utilities.LogCommandLine(args);
             string outDir = null;
             var segmentFiles = new List<string>();
