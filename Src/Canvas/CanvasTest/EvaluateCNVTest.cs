@@ -13,7 +13,7 @@ namespace CanvasTest
         [Fact]
         public void TestAllosomes()
         {
-            var cnvEvaluator = new CnvEvaluator(new CNVChecker(null));
+            var cnvEvaluator = new CnvEvaluator(new CNVChecker(null, new Dictionary<string, List<CNInterval>>()));
 
             var baseCounter = new BaseCounter(5, 0, 4999);
             const string chr = "1";
@@ -40,13 +40,13 @@ namespace CanvasTest
                 }
             };
             var metrics = cnvEvaluator.CalculateMetrics(knownCN, calls, baseCounter, optionsSkipDiploid: false, includePassingOnly: true);
-            Assert.Equal(100, Convert.ToInt32(metrics.Recall * 100));
+            Assert.Equal(100, Convert.ToInt32(metrics.Recall));
         }
 
         [Fact]
         public void TestFalseNegatives()
         {
-            var cnvEvaluator = new CnvEvaluator(new CNVChecker(null));
+            var cnvEvaluator = new CnvEvaluator(new CNVChecker(null, new Dictionary<string, List<CNInterval>>()));
 
             var baseCounter = new BaseCounter(5, 0, 4999);
             const string chr = "1";
@@ -73,7 +73,7 @@ namespace CanvasTest
                 }
             };
             var metrics = cnvEvaluator.CalculateMetrics(knownCN, calls, baseCounter, optionsSkipDiploid: false, includePassingOnly: true);
-            Assert.Equal(33, Convert.ToInt32(metrics.Recall * 100));
+            Assert.Equal(33, Convert.ToInt32(metrics.Recall));
         }
     }
 }

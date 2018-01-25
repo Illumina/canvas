@@ -48,8 +48,7 @@ namespace EvaluateCNV
             _cnvChecker = cnvChecker;
         }
 
-        public void ComputeAccuracy(Dictionary<string, List<CNInterval>> knownCN, string cnvCallsPath, string outputPath, bool includePassingOnly,
-            EvaluateCnvOptions options)
+        public void ComputeAccuracy(Dictionary<string, List<CNInterval>> knownCN, string cnvCallsPath, string outputPath, bool includePassingOnly, EvaluateCnvOptions options, Dictionary<string, List<CnvCall>> calls)
         {
             // Make a note of how many bases in the truth set are not *actually* considered to be known bases, using
             // the "cnaqc" exclusion set:
@@ -66,7 +65,6 @@ namespace EvaluateCNV
             }
 
             _cnvChecker.CountExcludedBasesInTruthSetIntervals(knownCN);
-            var calls = _cnvChecker.GetCnvCallsFromVcf(cnvCallsPath);
 
             foreach (var baseCounter in baseCounters)
             {
@@ -187,16 +185,21 @@ namespace EvaluateCNV
                             baseCounter.RoiBaseCount[knownCn, CN, call.RefPloidy] += roiOverlapBases;
                     }
                 }
+
                 nonOverlapBases -= totalOverlapBases;
                 if (totalIntervalRefPloidy.Empty())
                 {
-                    Console.WriteLine($"Error: Skipping truth variant for chromosome {interval.Chromosome}  start {interval.Start} with no overlapping " +
+                    throw new InvalidDataException($"Truth variant {interval.Chromosome}:{interval.Start}-{interval.End} with no overlapping " +
                                       $"Canvas calls. Ploidy cannot be determined!");
-                    continue;
                 }
                 int ploidy = Convert.ToInt32(Math.Round(Utilities.WeightedMean(totalIntervalRefPloidy.Select(x => (double) x.ploidy).ToList(),
                     totalIntervalRefPloidy.Select(x => (double) x.length).ToList())));
-                baseCounter.BaseCount[knownCn, ploidy, ploidy] += Math.Max(nonOverlapBases, 0);
+                interval.ReferenceCopyNumber = ploidy;
+                if (nonOverlapBases < 0)
+                {
+                    throw new InvalidDataException($"Truth variant {interval.Chromosome}:{interval.Start}-{interval.End} has negative non-overlap bases");
+                }
+                baseCounter.BaseCount[knownCn, ploidy, ploidy] += nonOverlapBases;
 
             }
 
@@ -234,7 +237,7 @@ namespace EvaluateCNV
             {
                 foreach (var interval in knownCN[chr])
                 {
-                    if (interval.Cn == 2) continue;
+                    if (interval.Cn == interval.ReferenceCopyNumber) continue;
                     int basecount = interval.Length - interval.BasesExcluded;
                     if (basecount <= 0) continue;
                     double accuracy = interval.BasesCalledCorrectly / (double)basecount;
@@ -263,9 +266,9 @@ namespace EvaluateCNV
             // SK: I felt the direction based performance metrices make more sense
             outputWriter.WriteLine("DirectionAccuracy\t{0:F4}", metrics.DirectionAccuracy);
             outputWriter.WriteLine("F-score\t{0:F4}", metrics.F1Score);
-            outputWriter.WriteLine("Recall\t{0:F4}", 100 * metrics.Recall);
+            outputWriter.WriteLine("Recall\t{0:F4}", metrics.Recall);
             outputWriter.WriteLine("DirectionRecall\t{0:F4}", metrics.DirectionRecall);
-            outputWriter.WriteLine("Precision\t{0:F4}", 100 * metrics.Precision);
+            outputWriter.WriteLine("Precision\t{0:F4}", metrics.Precision);
             outputWriter.WriteLine("DirectionPrecision\t{0:F4}", metrics.DirectionPrecision);
             outputWriter.WriteLine("GainRecall\t{0:F4}", metrics.GainRecall);
             outputWriter.WriteLine("GainDirectionRecall\t{0:F4}", metrics.GainDirectionRecall);

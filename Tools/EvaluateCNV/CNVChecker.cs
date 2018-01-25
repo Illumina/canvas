@@ -99,12 +99,13 @@ namespace EvaluateCNV
     {
         #region Members
         public Dictionary<string, List<CNInterval>> RegionsOfInterest = new Dictionary<string, List<CNInterval>>();
-        public Dictionary<string, List<CNInterval>> ExcludeIntervals = new Dictionary<string, List<CNInterval>>();
+        public Dictionary<string, List<CNInterval>> ExcludeIntervals;
         public double? DQscoreThreshold { get; }
 
-        public CNVChecker(double? dQscoreThreshold)
+        public CNVChecker(double? dQscoreThreshold, Dictionary<string, List<CNInterval>> excludeIntervals)
         {
             DQscoreThreshold = dQscoreThreshold;
+            ExcludeIntervals = excludeIntervals;
         }
         #endregion
 
@@ -154,7 +155,6 @@ namespace EvaluateCNV
             Console.WriteLine(">>>Loaded {0} CN intervals ({1} bases)", count, totalBases);
             return bedIntervals;
         }
-
 
         protected static Dictionary<string, List<CNInterval>> LoadKnownCNVCF(string oracleVcfPath)
         {
@@ -262,7 +262,6 @@ namespace EvaluateCNV
                     interval.InitializeInterval();
         }
 
-
         protected static void SummarizeTruthSetStatistics(Dictionary<string, List<CNInterval>>  knownCn)
         {
             List<long> eventSizes = new List<long>();
@@ -308,7 +307,7 @@ namespace EvaluateCNV
                 Console.WriteLine("Median size: {0}", eventSizes[eventSizes.Count / 2]);
         }
 
-        protected int GetCopyNumber(VcfVariant variant, out int end)
+        protected static int GetCopyNumber(VcfVariant variant, out int end)
         {
             int CN = -1;
             end = -1;
@@ -336,7 +335,7 @@ namespace EvaluateCNV
             return CN;
         }
 
-        protected int GetRefPloidy(VcfVariant variant)
+        protected static int GetRefPloidy(VcfVariant variant)
         {
             var genotype = variant.GenotypeColumns[variant.GenotypeColumns.Count - 1];
             if (genotype.ContainsKey("GT"))
@@ -413,12 +412,12 @@ namespace EvaluateCNV
             HandleHeaderLine(outputWriter, headerLines, "OverallPloidy", LogPloidy);
         }
 
-        public Dictionary<string, List<CnvCall>> GetCnvCallsFromVcf(string vcfPath)
+        public static Dictionary<string, List<CnvCall>> GetCnvCallsFromVcf(string vcfPath, double? dQscoreThreshold)
         {
             var calls = new Dictionary<string, List<CnvCall>>();
             using (VcfReader reader = new VcfReader(vcfPath, false))
             {
-                if (DQscoreThreshold.HasValue)
+                if (dQscoreThreshold.HasValue)
                 {
                     var match = reader.HeaderLines.FirstOrDefault(stringToCheck => stringToCheck.Contains("DQ"));
                     if (match == null)
@@ -432,7 +431,7 @@ namespace EvaluateCNV
                     int cn = GetCopyNumber(variant, out end);
                     int refPloidy = GetRefPloidy(variant);
                     var passFilter =  variant.Filters == "PASS";
-                    if (DQscoreThreshold.HasValue)
+                    if (dQscoreThreshold.HasValue)
                     {
                         var genotypeColumn = variant.GenotypeColumns.Single();
                         if (!genotypeColumn.Keys.Contains("DQ"))
@@ -441,7 +440,7 @@ namespace EvaluateCNV
                             continue;
                         if (genotypeColumn["DQ"] == ".")
                             continue;
-                        if (Double.Parse(genotypeColumn["DQ"]) < DQscoreThreshold.Value)
+                        if (Double.Parse(genotypeColumn["DQ"]) < dQscoreThreshold.Value)
                             continue;
                     }
                     calls[variant.ReferenceName].Add(new CnvCall(variant.ReferenceName, variant.ReferencePosition, 
@@ -499,42 +498,41 @@ namespace EvaluateCNV
         {
             double heterogeneityFraction = options.HeterogeneityFraction;
             var kownCn = LoadKnownCn(truthSetPath, heterogeneityFraction);
+            var calls = GetCnvCallsFromVcf(cnvCallsPath, options.DQscoreThreshold);
 
             // LoadRegionsOfInterest(options.RoiBed?.FullName);
+            var excludeIntervals = new Dictionary<string, List<CNInterval>>();
             if (!string.IsNullOrEmpty(excludedBed))
             {
-                var excludeIntervals = LoadIntervalsFromBed(excludedBed, false, 1.0);
-                // cheesy logic to handle different chromosome names:
-                List<string> keys = excludeIntervals.Keys.ToList();
+                var excludeIntervalsTmp = LoadIntervalsFromBed(excludedBed, false, 1.0);
+                List<string> keys = excludeIntervalsTmp.Keys.ToList();
                 foreach (string key in keys)
                 {
-                    excludeIntervals[key.Replace("chr", "")] = excludeIntervals[key];
+                    string chr = key;
+                    if (!calls.ContainsKey(chr)) chr = key.Replace("chr", "");
+                    if (!calls.ContainsKey(chr)) chr = "chr" + key;
+                    if (!calls.ContainsKey(chr))
+                    {
+                        Console.WriteLine($"Error: Skipping exclude intervals for chromosome {chr} with no truth data." +
+                                          $"Check that chromosome names are spelled correctly for exclude intervals");
+                        continue;
+                    }
+                    excludeIntervals[chr] = excludeIntervalsTmp[key];
                 }
             }
             Console.WriteLine("TruthSet\t{0}", truthSetPath);
             Console.WriteLine("CNVCalls\t{0}", cnvCallsPath);
 
             bool includePassingOnly = Path.GetFileName(cnvCallsPath).ToLower().Contains("vcf");
-            var checker = new CNVChecker(options.DQscoreThreshold);
+            var checker = new CNVChecker(options.DQscoreThreshold, excludeIntervals);
             var cneEvaluator = new CnvEvaluator(checker);
 
             if (checker.DQscoreThreshold.HasValue && !Path.GetFileName(cnvCallsPath).ToLower().Contains("vcf"))
                 throw new ArgumentException("CNV.vcf must be in a vcf format when --dqscore option is used");
-            cneEvaluator.ComputeAccuracy(kownCn, cnvCallsPath, outputPath, includePassingOnly, options);
+            cneEvaluator.ComputeAccuracy(kownCn, cnvCallsPath, outputPath, includePassingOnly, options, calls);
             if (includePassingOnly)
-                cneEvaluator.ComputeAccuracy(kownCn, cnvCallsPath, outputPath, false, options);
+                cneEvaluator.ComputeAccuracy(kownCn, cnvCallsPath, outputPath, false, options, calls);
             Console.WriteLine(">>>Done - results written to {0}", outputPath);
-        }
-
-        private static PloidyInfo LoadPloidy(IFileLocation ploidyFile, IFileLocation cnvCalls)
-        {
-            if (ploidyFile == null) return new PloidyInfo();
-            if (!ploidyFile.FullName.EndsWith(".vcf") && !ploidyFile.FullName.EndsWith(".vcf.gz"))
-            {
-                throw new NotSupportedException("Ploidy information must be provided in VCF format.");
-            }
-            var sampleId = GetSampleIdFromVcfHeader(cnvCalls);
-            return PloidyInfo.LoadPloidyFromVcfFile(ploidyFile.FullName, sampleId);
         }
 
         private static string GetSampleIdFromVcfHeader(IFileLocation cnvCallsPath)
@@ -542,28 +540,6 @@ namespace EvaluateCNV
             using (var reader = new VcfReader(cnvCallsPath.FullName))
             {
                 return reader.Samples.Single();
-            }
-        }
-
-        private static void SetTruthsetReferencePloidy(PloidyInfo ploidyInfo, Dictionary<string, List<CNInterval>> knownCn)
-        {
-            foreach (string chromosome in knownCn.Keys)
-            {
-                foreach (var truthInterval in knownCn[chromosome])
-                {
-                    foreach (var ploidyRegion in ploidyInfo.PloidyByChromosome[chromosome])
-                    {
-                        // truth interval must be completely contained within the ploidy region
-                        if (truthInterval.End >= ploidyRegion.Start && truthInterval.Start <= ploidyRegion.End)
-                        {
-                            truthInterval.ReferenceCopyNumber = ploidyRegion.Ploidy;
-                            break;
-                        }
-                        if (truthInterval.Start >= ploidyRegion.Start && truthInterval.Start <= ploidyRegion.End ||
-                            truthInterval.End >= ploidyRegion.Start && truthInterval.End <= ploidyRegion.End)
-                            throw new Illumina.Common.IlluminaException($"Truth interval {truthInterval} crosses reference ploidy region {ploidyRegion}. Update truth interval");
-                    }
-                }
             }
         }
     }
