@@ -7,7 +7,7 @@ using Isas.SequencingFiles.Bed;
 
 namespace CanvasPedigreeCaller.Visualization
 {
-    public class NormalizedCoverageCalculator
+    public class NormalizedCoverageCalculator : IBedGraphCalculator
     {
         public IEnumerable<BedGraphEntry> Calculate(IReadOnlyList<CanvasSegment> segments)
         {

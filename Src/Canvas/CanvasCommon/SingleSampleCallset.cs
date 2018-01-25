@@ -106,5 +106,10 @@ namespace CanvasCommon
         {
             return GetSampleOutputFolder(analysisOutputFolder, sampleName).GetFileLocation("coverage.bigWig");
         }
+
+        public static IFileLocation GetSingleSamplePedigreeCopyNumberBedGraph(IDirectoryLocation analysisOutputFolder, string sampleName)
+        {
+            return GetSampleOutputFolder(analysisOutputFolder, sampleName).GetFileLocation("copynumber.bedgraph");
+        }
     }
 }

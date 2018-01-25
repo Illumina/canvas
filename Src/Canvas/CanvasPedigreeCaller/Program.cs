@@ -183,7 +183,8 @@ namespace CanvasPedigreeCaller
                 var copyNumberLikelihoodCalculator = new CopyNumberLikelihoodCalculator(callerParameters.MaximumCopyNumber);
                 IVariantCaller variantCaller = new VariantCaller(copyNumberLikelihoodCalculator, callerParameters, qScoreThreshold);
                 var copyNumberModelFactory = new CopyNumberModelFactory();
-                var caller = new CanvasPedigreeCaller(logger, qScoreThreshold, dqScoreThreshold, callerParameters, copyNumberLikelihoodCalculator, variantCaller, coverageBigWigWriter, copyNumberModelFactory);
+                var copyNumberBedGraphWriter = new CopyNumberBedGraphWriter(new CopyNumberBedGraphCalculator());
+                var caller = new CanvasPedigreeCaller(logger, qScoreThreshold, dqScoreThreshold, callerParameters, copyNumberLikelihoodCalculator, variantCaller, coverageBigWigWriter, copyNumberModelFactory, copyNumberBedGraphWriter);
 
                 var outVcf = outputDirectory.GetFileLocation("CNV.vcf.gz");
                 result = caller.CallVariants(variantFrequencyFiles, segmentFiles, outVcf, ploidyBedPath, referenceFolder, sampleNames, commonCnvsBedPath, sampleTypesEnum);

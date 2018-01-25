@@ -30,9 +30,11 @@ namespace CanvasPedigreeCaller
         private readonly CopyNumberLikelihoodCalculator _copyNumberLikelihoodCalculator;
         private readonly ICoverageBigWigWriter _coverageBigWigWriter;
         private readonly ICopyNumberModelFactory _copyNumberModelFactory;
+        private readonly ICopyNumberBedGraphWriter _copyNumbeBedGraphWriter;
+
         #endregion
 
-        public CanvasPedigreeCaller(ILogger logger, int qualityFilterThreshold, int deNovoQualityFilterThreshold, PedigreeCallerParameters callerParameters, CopyNumberLikelihoodCalculator copyNumberLikelihoodCalculator, IVariantCaller variantCaller, ICoverageBigWigWriter coverageBigWigWriter, ICopyNumberModelFactory copyNumberModelFactory)
+        public CanvasPedigreeCaller(ILogger logger, int qualityFilterThreshold, int deNovoQualityFilterThreshold, PedigreeCallerParameters callerParameters, CopyNumberLikelihoodCalculator copyNumberLikelihoodCalculator, IVariantCaller variantCaller, ICoverageBigWigWriter coverageBigWigWriter, ICopyNumberModelFactory copyNumberModelFactory, ICopyNumberBedGraphWriter copyNumbeBedGraphWriter)
         {
             _logger = logger;
             _qualityFilterThreshold = qualityFilterThreshold;
@@ -42,6 +44,7 @@ namespace CanvasPedigreeCaller
             _variantCaller = variantCaller;
             _coverageBigWigWriter = coverageBigWigWriter;
             _copyNumberModelFactory = copyNumberModelFactory;
+            _copyNumbeBedGraphWriter = copyNumbeBedGraphWriter;
         }
 
         internal int CallVariants(List<string> variantFrequencyFiles, List<string> segmentFiles,
@@ -107,13 +110,17 @@ namespace CanvasPedigreeCaller
             foreach (var sampleId in samplesInfo.SampleIds)
             {
                 var outputVcfPath = SingleSampleCallset.GetSingleSamplePedigreeVcfOutput(outputFolder, sampleId.ToString());
-                CanvasSegmentWriter.WriteSegments(outputVcfPath.FullName, mergedVariantCalledSegments[sampleId],
-                    samplesInfo[sampleId].MeanCoverage, referenceFolder, sampleId.ToString(), null,
-                    samplesInfo[sampleId].Ploidy, _qualityFilterThreshold, isPedigreeInfoSupplied, denovoQualityThreshold, null);
+                var sampleMetrics = samplesInfo[sampleId];
+                var segments = mergedVariantCalledSegments[sampleId];
+                CanvasSegmentWriter.WriteSegments(outputVcfPath.FullName, segments,
+                    sampleMetrics.MeanCoverage, referenceFolder, sampleId.ToString(), null,
+                    sampleMetrics.Ploidy, _qualityFilterThreshold, isPedigreeInfoSupplied, denovoQualityThreshold, null);
 
                 var visualizationTemp = outputFolder.CreateSubdirectory($"VisualizationTemp{sampleId}");
-                var bigWig = _coverageBigWigWriter.Write(mergedVariantCalledSegments[sampleId], visualizationTemp);
+                var bigWig = _coverageBigWigWriter.Write(segments, visualizationTemp);
                 bigWig?.MoveTo(SingleSampleCallset.GetSingleSamplePedigreeCoverageBigWig(outputFolder, sampleId.ToString()));
+                var copyNumberBedGraph = SingleSampleCallset.GetSingleSamplePedigreeCopyNumberBedGraph(outputFolder, sampleId.ToString());
+                _copyNumbeBedGraphWriter.Write(segments, sampleMetrics.Ploidy, copyNumberBedGraph);
             }
             return 0;
         }
