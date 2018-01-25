@@ -66,7 +66,7 @@ namespace CanvasPedigreeCaller
                 if (canvasSegments[sampleId].QScore < _qualityFilterThreshold)
                     canvasSegments[sampleId].Filter = CanvasFilter.Create(new[] {$"q{_qualityFilterThreshold}"});
             }
-            if (pedigreeInfo != null)
+            if (pedigreeInfo.HasFullPedigree())
                 SetDenovoQualityScores(canvasSegments, pedigreeMembersInfo, pedigreeInfo.ParentsIds, pedigreeInfo.OffspringIds, copyNumberLikelihoods, copyNumbers);
         }
 
@@ -82,6 +82,8 @@ namespace CanvasPedigreeCaller
         private void SetDenovoQualityScores(ISampleMap<CanvasSegment> canvasSegments, ISampleMap<SampleMetrics> samplesInfo, List<SampleId> parentIDs, List<SampleId> offspringIDs,
             JointLikelihoods copyNumbersLikelihoods, ISampleMap<Genotype> copyNumbers)
         {
+            var pedigreeCopyNumbers = copyNumbers.WhereSampleIds(sampleId =>
+                parentIDs.Contains(sampleId) || offspringIDs.Contains(sampleId));
             foreach (var probandId in offspringIDs)
             {
                 // targeted proband is REF
@@ -97,7 +99,7 @@ namespace CanvasPedigreeCaller
                 if (parentIDs.Concat(probandId).Any(id => !IsPassVariant(canvasSegments, id)))
                     continue;
 
-                double deNovoQualityScore = GetConditionalDeNovoQualityScore(copyNumbersLikelihoods, probandId, copyNumbers);
+                double deNovoQualityScore = GetConditionalDeNovoQualityScore(copyNumbersLikelihoods, probandId, pedigreeCopyNumbers);
                 if (Double.IsInfinity(deNovoQualityScore) | deNovoQualityScore > _callerParameters.MaxQscore)
                     deNovoQualityScore = _callerParameters.MaxQscore;
                 canvasSegments[probandId].DqScore = deNovoQualityScore;
@@ -156,21 +158,21 @@ namespace CanvasPedigreeCaller
         public void CallVariant(ISampleMap<CanvasSegment> canvasSegments, ISampleMap<SampleMetrics> samplesInfo,
             ISampleMap<ICopyNumberModel> copyNumberModel, PedigreeInfo pedigreeInfo)
         {
-            int nHighestLikelihoodGenotypes = pedigreeInfo != null && pedigreeInfo.OffspringIds.Count >= 2 ? 3 : _callerParameters.MaximumCopyNumber;
             var singleSampleLikelihoods = _copyNumberLikelihoodCalculator.GetCopyNumbersLikelihoods(canvasSegments, samplesInfo, copyNumberModel);
-            var nHighestLikelihoods = singleSampleLikelihoods.SelectValues(l => l.OrderByDescending(kvp => kvp.Value).Take(nHighestLikelihoodGenotypes).ToDictionary());
+            
+            (var pedigreeCopyNumbers, var pedigreeLikelihoods) = GetPedigreeCopyNumbers(pedigreeInfo, singleSampleLikelihoods);
 
-            var (copyNumbers, jointLikelihoods) = pedigreeInfo != null
-                ? GetCopyNumbersWithPedigreeInfo(canvasSegments, pedigreeInfo, nHighestLikelihoods)
-                : CanvasPedigreeCaller.GetCopyNumbersNoPedigreeInfo(canvasSegments, singleSampleLikelihoods);
+            var nonPedigreeCopyNumbers = CanvasPedigreeCaller.GetNonPedigreeCopyNumbers(canvasSegments, pedigreeInfo, singleSampleLikelihoods);
 
-            EstimateQScores(canvasSegments, samplesInfo, pedigreeInfo, singleSampleLikelihoods, jointLikelihoods, copyNumbers);
+            var mergedCopyNumbers = pedigreeCopyNumbers.Concat(nonPedigreeCopyNumbers).OrderBy(canvasSegments.SampleIds);
+
+            EstimateQScores(canvasSegments, samplesInfo, pedigreeInfo, singleSampleLikelihoods, pedigreeLikelihoods, mergedCopyNumbers);
 
             // TODO: this will be integrated with GetCopyNumbers* on a model level as a part of https://jira.illumina.com/browse/CANV-404
-            if (!UseMafInformation(canvasSegments) && pedigreeInfo != null)
+            if (!UseMafInformation(canvasSegments) && pedigreeInfo.HasFullPedigree())
                 AssignMccWithPedigreeInfo(canvasSegments, copyNumberModel, pedigreeInfo);
-            if (!UseMafInformation(canvasSegments) && pedigreeInfo == null)
-                AssignMccNoPedigreeInfo(canvasSegments, copyNumberModel, _genotypes);
+            if (!UseMafInformation(canvasSegments) && pedigreeInfo.HasOther())
+                AssignMccNoPedigreeInfo(canvasSegments.Where(segment=> pedigreeInfo.OtherIds.Contains(segment.SampleId)).ToSampleMap(), copyNumberModel, _genotypes);
         }
         
         /// <summary>
@@ -300,7 +302,7 @@ namespace CanvasPedigreeCaller
             }
         }
 
-        public double GetGtLikelihoodScore(Balleles gtObservedCounts, List<PhasedGenotype> gtModelCounts, ref int? selectedGtState, ICopyNumberModel copyNumberModel)
+        private double GetGtLikelihoodScore(Balleles gtObservedCounts, List<PhasedGenotype> gtModelCounts, ref int? selectedGtState, ICopyNumberModel copyNumberModel)
         {
             const int maxGQscore = 60;
             var gtLikelihoods = Enumerable.Repeat(0.0, gtModelCounts.Count).ToList();
@@ -324,11 +326,15 @@ namespace CanvasPedigreeCaller
             return copyNumberModel.GetGenotypeLikelihood(canvasSegment.Balleles, gtStates);
         }
 
-        public (ISampleMap<Genotype> copyNumbersGenotypes, JointLikelihoods jointLikelihood) GetCopyNumbersWithPedigreeInfo(ISampleMap<CanvasSegment> segments,
-            PedigreeInfo pedigreeInfo, ISampleMap<Dictionary<Genotype, double>> copyNumbersLikelihoods)
+        private (ISampleMap<Genotype> copyNumbersGenotypes, JointLikelihoods jointLikelihood) GetPedigreeCopyNumbers(PedigreeInfo pedigreeInfo, ISampleMap<Dictionary<Genotype, double>> copyNumbersLikelihoods)
         {
-            ISampleMap<Genotype> sampleCopyNumbersGenotypes = null;
+            int nHighestLikelihoodGenotypes = pedigreeInfo != null && pedigreeInfo.OffspringIds.Count >= 2 ? 3 : _callerParameters.MaximumCopyNumber;
+            copyNumbersLikelihoods = copyNumbersLikelihoods.SelectValues(l => l.OrderByDescending(kvp => kvp.Value).Take(nHighestLikelihoodGenotypes).ToDictionary());
+
+            var sampleCopyNumbersGenotypes = new SampleMap<Genotype>();
             var jointLikelihood = new JointLikelihoods();
+            if (!pedigreeInfo.HasFullPedigree())
+                return (sampleCopyNumbersGenotypes, jointLikelihood);
             foreach (var copyNumberParent1 in copyNumbersLikelihoods[pedigreeInfo.ParentsIds.First()])
             {
                 foreach (var copyNumberParent2 in copyNumbersLikelihoods[pedigreeInfo.ParentsIds.Last()])
@@ -339,7 +345,6 @@ namespace CanvasPedigreeCaller
                             Genotype.Create(Math.Min(offspringGtStates[pedigreeInfo.OffspringIds.IndexOf(id)].PhasedGenotype.CopyNumberA + offspringGtStates[pedigreeInfo.OffspringIds.IndexOf(id)].PhasedGenotype.CopyNumberB,
                                 _callerParameters.MaximumCopyNumber - 1)))))
                         {
-                            Console.WriteLine("{skipping offspring likelihood 1}");
                             continue;
                         }
                         double currentLikelihood = copyNumberParent1.Value * copyNumberParent2.Value;
@@ -362,6 +367,7 @@ namespace CanvasPedigreeCaller
                             {pedigreeInfo.ParentsIds.Last(), copyNumberParent2.Key}
                         };
                         pedigreeInfo.OffspringIds.Zip(totalCopyNumberGenotypes).ForEach(sampleIdGenotypeKvp => genotypesInPedigree.Add(sampleIdGenotypeKvp.Item1, sampleIdGenotypeKvp.Item2));
+                        genotypesInPedigree = genotypesInPedigree.OrderBy(pedigreeInfo.AllSampleIds);
                         jointLikelihood.AddJointLikelihood(genotypesInPedigree, currentLikelihood);
 
                         if (currentLikelihood > jointLikelihood.MaximalLikelihood)
@@ -372,9 +378,9 @@ namespace CanvasPedigreeCaller
                     }
                 }
             }
-            if (sampleCopyNumbersGenotypes == null)
+            if (sampleCopyNumbersGenotypes.Empty())
                 throw new IlluminaException("Maximal likelihood was not found");
-            return (copyNumbersGenotypes: sampleCopyNumbersGenotypes, jointLikelihood: jointLikelihood);
+            return (sampleCopyNumbersGenotypes, jointLikelihood);
         }
     }
 }
