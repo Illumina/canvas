@@ -171,7 +171,7 @@ namespace EvaluateCNV
 
                     totalIntervalRefPloidy.Add((call.RefPloidy, overlapBases));
 
-                    if (!call.PassFilter && includePassingOnly)
+                    if (!call.PassFilter && includePassingOnly && knownCn != call.RefPloidy)
                         // assign no call (CN=ploidy) by default
                         baseCounter.BaseCount[knownCn, call.RefPloidy, call.RefPloidy] += overlapBases;
                     else
