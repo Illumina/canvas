@@ -1,7 +1,7 @@
 using Illumina.Common.FileSystem;
 using Isas.Framework.DataTypes;
 
-namespace CanvasPedigreeCaller.Visualization
+namespace Canvas.Visualization
 {
     public interface IBAlleleBedGraphWriter
     {

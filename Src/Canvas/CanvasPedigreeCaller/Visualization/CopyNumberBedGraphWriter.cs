@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using CanvasCommon;
+using CanvasCommon.Visualization;
 using Isas.Framework.DataTypes;
 
 namespace CanvasPedigreeCaller.Visualization

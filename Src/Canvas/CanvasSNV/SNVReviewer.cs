@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Reflection.Metadata.Ecma335;
 using Illumina.Common;
 using Illumina.Common.CSV;
 using Isas.SequencingFiles;
@@ -105,7 +104,7 @@ namespace CanvasSNV
                     countThisChromosome++;
                     // Single-allele SNVs only:
                     if (variant.VariantAlleles.Length != 1 || variant.VariantAlleles[0].Length != 1 || variant.ReferenceAllele.Length != 1) continue;
- 
+
                     if (variant.GenotypeColumns != null && variant.GenotypeColumns.Any()) // not available if we use a dbSNP VCF file
                     {
                         if (!PassedAllFilters(variant, sampleIndex) ||   // PF variants only (FILTER may not say PASS for a dbSNP VCF file)
@@ -332,7 +331,7 @@ namespace CanvasSNV
             return variant.Filters == "PASS" &&
                     (!variant.GenotypeColumns[sampleIndex].ContainsKey("FT") ||
                      variant.GenotypeColumns[sampleIndex]["FT"] == "PASS"
-                    ); 
+                    );
         }
 
         private static bool SomaticNotHetSnv(bool isSomatic, VcfVariant variant)

@@ -4,7 +4,7 @@ using System.Linq;
 using Illumina.Common.FileSystem;
 using Isas.SequencingFiles.Bed;
 
-namespace CanvasPedigreeCaller.Visualization
+namespace CanvasCommon.Visualization
 {
 
     public class RoundingBedGraphWriter : IBedGraphWriter

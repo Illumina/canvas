@@ -4,10 +4,10 @@ using System.IO;
 using Newtonsoft.Json;
 using System.Linq;
 using CanvasCommon;
+using CanvasCommon.Visualization;
 using CanvasPedigreeCaller.Visualization;
 using Illumina.Common;
 using Illumina.Common.FileSystem;
-using Isas.ClassicBioinfoTools.KentUtils;
 using Isas.ClassicBioinfoTools.Tabix;
 using Isas.Framework.Logging;
 using Isas.Framework.Settings;
@@ -184,11 +184,8 @@ namespace CanvasPedigreeCaller
                 var tabixWrapper = TabixWrapperFactory.GetTabixWrapper(logger, workDoer, commandManager);
                 var bgzfBedGraphWriter = new BgzfBedGraphWriter(new BedGraphWriterFacade(), tabixWrapper);
                 var copyNumberBedGraphWriter = new CopyNumberBedGraphWriter(bgzfBedGraphWriter, new CopyNumberBedGraphCalculator());
-
-                var roundingBgzfBedGraphWriter = new BgzfBedGraphWriter(roundingBedGraphWriter, tabixWrapper);
-                var bAlleleBedGraphWriter = new BAlleleBedGraphWriter(roundingBgzfBedGraphWriter);
-
-                var caller = new CanvasPedigreeCaller(logger, qScoreThreshold, dqScoreThreshold, callerParameters, copyNumberLikelihoodCalculator, variantCaller, coverageBigWigWriter, copyNumberModelFactory, copyNumberBedGraphWriter, bAlleleBedGraphWriter);
+                
+                var caller = new CanvasPedigreeCaller(logger, qScoreThreshold, dqScoreThreshold, callerParameters, copyNumberLikelihoodCalculator, variantCaller, coverageBigWigWriter, copyNumberModelFactory, copyNumberBedGraphWriter);
 
                 var outVcf = outputDirectory.GetFileLocation("CNV.vcf.gz");
                 result = caller.CallVariants(variantFrequencyFiles, segmentFiles, outVcf, ploidyBedPath, referenceFolder, sampleNames, commonCnvsBedPath, sampleTypesEnum);

@@ -1,3 +1,4 @@
+using CanvasCommon.Visualization;
 using Illumina.Common;
 using Isas.ClassicBioinfoTools.KentUtils;
 using Isas.Framework.Logging;

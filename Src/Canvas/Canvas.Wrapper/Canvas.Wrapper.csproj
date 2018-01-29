@@ -28,7 +28,7 @@
 
   <ItemGroup>
     <PackageReference Include="Illumina.Common" Version="5.0.6.381" />
-    <PackageReference Include="ClassicBioinfoTools" Version="2.6.0-O00231TabixBgzfFile" />
+    <PackageReference Include="ClassicBioinfoTools" Version="2.6.0.232" />
     <PackageReference Include="Isas.Framework" Version="8.13.0.935" />
     <PackageReference Include="Isas.Manifests" Version="5.1.0.173" />
     <PackageReference Include="Isas.Ploidy" Version="3.0.0.92" />

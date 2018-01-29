@@ -27,6 +27,7 @@ namespace CanvasCommon
         public string BinSizePath => Path.Combine(SampleOutputFolder.FullName, $"{SampleName}.binsize");
         public string VfSummaryPath => GetVfSummaryPath(_analysisOutputFolder, SampleName).FullName;
         public string VfSummaryBafPath => GetVfSummaryBafPath(_analysisOutputFolder, SampleName).FullName;
+        public BgzfFile BAlleleCoverageBedGraph => GetSingleSamplePedigreeBAlleleBedGraph(_analysisOutputFolder, SampleName);
         public string NormalBinnedPath => Path.Combine(SampleOutputFolder.FullName, $"{SampleName}.normal.binned");
         public IFileLocation PartitionedPath => GetPartitionedPath(_analysisOutputFolder, SampleName);
 

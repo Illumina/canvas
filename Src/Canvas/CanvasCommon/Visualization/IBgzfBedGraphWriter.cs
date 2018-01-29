@@ -2,7 +2,7 @@ using System.Collections.Generic;
 using Isas.Framework.DataTypes;
 using Isas.SequencingFiles.Bed;
 
-namespace CanvasPedigreeCaller.Visualization
+namespace CanvasCommon.Visualization
 {
     public interface IBgzfBedGraphWriter
     {

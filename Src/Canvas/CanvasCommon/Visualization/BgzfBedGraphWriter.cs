@@ -3,7 +3,7 @@ using Isas.ClassicBioinfoTools.Tabix;
 using Isas.Framework.DataTypes;
 using Isas.SequencingFiles.Bed;
 
-namespace CanvasPedigreeCaller.Visualization
+namespace CanvasCommon.Visualization
 {
     public class BgzfBedGraphWriter : IBgzfBedGraphWriter
     {

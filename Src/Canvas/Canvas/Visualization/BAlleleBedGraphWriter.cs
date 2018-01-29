@@ -1,13 +1,14 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using CanvasCommon.Visualization;
 using Illumina.Common.CSV;
 using Illumina.Common.FileSystem;
 using Isas.Framework.DataTypes;
 using Isas.SequencingFiles;
 using Isas.SequencingFiles.Bed;
 
-namespace CanvasPedigreeCaller.Visualization
+namespace Canvas.Visualization
 {
     public class BAlleleBedGraphWriter : IBAlleleBedGraphWriter
     {

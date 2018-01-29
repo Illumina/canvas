@@ -1,9 +1,8 @@
 using System.Collections.Generic;
-using CanvasCommon;
 using Illumina.Common.FileSystem;
 using Isas.SequencingFiles.Bed;
 
-namespace CanvasPedigreeCaller.Visualization
+namespace CanvasCommon.Visualization
 {
     public interface IBedGraphWriter
     {
