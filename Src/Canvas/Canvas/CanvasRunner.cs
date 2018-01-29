@@ -34,7 +34,7 @@ namespace Canvas
         private readonly CanvasCoverageMode _coverageMode = CanvasCoverageMode.TruncatedDynamicRange;
         private readonly CanvasNormalizeMode _normalizeMode = CanvasNormalizeMode.WeightedAverage;
         private readonly int _countsPerBin;
-        private readonly ILogger _logger;
+        public ILogger Logger { get; }
         private readonly IWorkManager _workManager;
         private readonly IWorkDoer _workDoer;
         private readonly ICheckpointRunner _checkpointRunner;
@@ -46,10 +46,13 @@ namespace Canvas
 
         #endregion
 
-        public CanvasRunner(ILogger logger, IWorkManager workManager, IWorkDoer workDoer, ICheckpointRunner checkpointRunner, IFileLocation runtimeExecutable, Func<string, ICommandFactory> runtimeCommandPrefix, bool isSomatic, CanvasCoverageMode coverageMode,
-            int countsPerBin, Dictionary<string, string> customParameters = null, string canvasFolder = null)
+        public CanvasRunner(ILogger logger, IWorkManager workManager, IWorkDoer workDoer,
+            ICheckpointRunner checkpointRunner, IFileLocation runtimeExecutable,
+            Func<string, ICommandFactory> runtimeCommandPrefix, bool isSomatic, CanvasCoverageMode coverageMode,
+            int countsPerBin, IBAlleleBedGraphWriter bAlleleBedGraphWriter,
+            Dictionary<string, string> customParameters = null, string canvasFolder = null)
         {
-            _logger = logger;
+            Logger = logger;
             _workManager = workManager;
             _workDoer = workDoer;
             _checkpointRunner = checkpointRunner;
@@ -57,10 +60,7 @@ namespace Canvas
             _canvasFolder = canvasFolder ?? DefaultCanvasFolder;
             _coverageMode = coverageMode;
             _countsPerBin = countsPerBin;
-            var settings = IsasConfigurationSettings.GetConfigSettings();
-            var commandManager = new CommandManager(new ExecutableProcessor(settings, logger, new DirectoryLocation(canvasFolder)));
-            var tabixWrapper = TabixWrapperFactory.GetTabixWrapper(_logger, _workDoer, commandManager);
-            _bAlleleBedGraphWriter = new BAlleleBedGraphWriter(new BgzfBedGraphWriter(new RoundingBedGraphWriter(new BedGraphWriterFacade(), 4), tabixWrapper));
+            _bAlleleBedGraphWriter = bAlleleBedGraphWriter;
             _runtimeExecutable = runtimeExecutable;
             _runtimeCommandPrefix = runtimeCommandPrefix;
             if (customParameters != null)
@@ -691,10 +691,10 @@ namespace Canvas
 
             var bafFile = new FileLocation(callset.SingleSampleCallset.VfSummaryBafPath);
             var fileConversionMessage = $"converting '{bafFile}' to '{callset.SingleSampleCallset.BAlleleCoverageBedGraph.FileLocation}'";
-            _logger.Info($"Begin {fileConversionMessage}");
+            Logger.Info($"Begin {fileConversionMessage}");
             var benchmark = new Benchmark();
             _bAlleleBedGraphWriter.Write(bafFile, callset.SingleSampleCallset.BAlleleCoverageBedGraph);
-            _logger.Info($"Finished {fileConversionMessage}. Elapsed time: {benchmark.GetElapsedTime()}");
+            Logger.Info($"Finished {fileConversionMessage}. Elapsed time: {benchmark.GetElapsedTime()}");
             return new FileLocation(callset.SingleSampleCallset.VfSummaryPath);
         }
 
@@ -783,6 +783,7 @@ namespace Canvas
         /// </summary>
         private async Task CallSampleInternal(CanvasCallset callset)
         {
+            Logger.Info($"Normal Vcf path: {callset.SingleSampleCallset.NormalVcfPath}");
             Directory.CreateDirectory(callset.SingleSampleCallset.SampleOutputFolder.FullName);
             string canvasReferencePath = callset.AnalysisDetails.KmerFasta.FullName;
             string canvasBedPath = callset.AnalysisDetails.FilterBed.FullName;
@@ -1075,7 +1076,7 @@ namespace Canvas
                 }
                 else
                 {
-                    _logger.Info("Note: SD file not found at '{0}'", ffpePath);
+                    Logger.Info("Note: SD file not found at '{0}'", ffpePath);
                 }
             }
 
