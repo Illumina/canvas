@@ -1,11 +1,11 @@
 using System.Collections.Generic;
 using CanvasCommon;
-using Illumina.Common.FileSystem;
+using Isas.Framework.DataTypes;
 
 namespace CanvasPedigreeCaller.Visualization
 {
     public interface ICopyNumberBedGraphWriter
     {
-        void Write(IReadOnlyList<CanvasSegment> segments, PloidyInfo ploidyInfo, IFileLocation location);
+        void Write(IReadOnlyList<CanvasSegment> segments, PloidyInfo ploidyInfo, BgzfFile location);
     }
 }

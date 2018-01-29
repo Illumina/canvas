@@ -31,10 +31,11 @@ namespace CanvasPedigreeCaller
         private readonly ICoverageBigWigWriter _coverageBigWigWriter;
         private readonly ICopyNumberModelFactory _copyNumberModelFactory;
         private readonly ICopyNumberBedGraphWriter _copyNumbeBedGraphWriter;
+        private readonly IBAlleleBedGraphWriter _bAlleleBedGraphWriter;
 
         #endregion
 
-        public CanvasPedigreeCaller(ILogger logger, int qualityFilterThreshold, int deNovoQualityFilterThreshold, PedigreeCallerParameters callerParameters, CopyNumberLikelihoodCalculator copyNumberLikelihoodCalculator, IVariantCaller variantCaller, ICoverageBigWigWriter coverageBigWigWriter, ICopyNumberModelFactory copyNumberModelFactory, ICopyNumberBedGraphWriter copyNumbeBedGraphWriter)
+        public CanvasPedigreeCaller(ILogger logger, int qualityFilterThreshold, int deNovoQualityFilterThreshold, PedigreeCallerParameters callerParameters, CopyNumberLikelihoodCalculator copyNumberLikelihoodCalculator, IVariantCaller variantCaller, ICoverageBigWigWriter coverageBigWigWriter, ICopyNumberModelFactory copyNumberModelFactory, ICopyNumberBedGraphWriter copyNumbeBedGraphWriter, IBAlleleBedGraphWriter bAlleleBedGraphWriter)
         {
             _logger = logger;
             _qualityFilterThreshold = qualityFilterThreshold;
@@ -45,6 +46,7 @@ namespace CanvasPedigreeCaller
             _coverageBigWigWriter = coverageBigWigWriter;
             _copyNumberModelFactory = copyNumberModelFactory;
             _copyNumbeBedGraphWriter = copyNumbeBedGraphWriter;
+            _bAlleleBedGraphWriter = bAlleleBedGraphWriter;
         }
 
         internal int CallVariants(List<string> variantFrequencyFiles, List<string> segmentFiles,
@@ -121,6 +123,9 @@ namespace CanvasPedigreeCaller
                 bigWig?.MoveTo(SingleSampleCallset.GetSingleSamplePedigreeCoverageBigWig(outputFolder, sampleId.ToString()));
                 var copyNumberBedGraph = SingleSampleCallset.GetSingleSamplePedigreeCopyNumberBedGraph(outputFolder, sampleId.ToString());
                 _copyNumbeBedGraphWriter.Write(segments, sampleMetrics.Ploidy, copyNumberBedGraph);
+                var bafFile = SingleSampleCallset.GetVfSummaryBafPath(outputFolder, sampleId.ToString());
+                var bAlelleBedGraph = SingleSampleCallset.GetSingleSamplePedigreeBAlleleBedGraph(outputFolder, sampleId.ToString());
+                _bAlleleBedGraphWriter.Write(bafFile, bAlelleBedGraph);
             }
             return 0;
         }

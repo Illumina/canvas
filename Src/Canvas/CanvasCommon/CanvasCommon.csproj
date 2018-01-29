@@ -33,7 +33,7 @@
 
   <ItemGroup>
     <PackageReference Include="Illumina.Common" Version="5.0.6.381" />
-    <PackageReference Include="Isas.Framework" Version="8.12.4.925" />
+    <PackageReference Include="Isas.Framework" Version="8.13.0.935" />
     <PackageReference Include="Isas.SequencingFiles" Version="6.1.1.409" />
     <PackageReference Include="MathNet.Numerics.Core" Version="3.17.0" />
     <PackageReference Include="protobuf-net" Version="2.3.2" />

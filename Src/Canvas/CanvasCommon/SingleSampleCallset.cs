@@ -107,9 +107,14 @@ namespace CanvasCommon
             return GetSampleOutputFolder(analysisOutputFolder, sampleName).GetFileLocation("coverage.bigWig");
         }
 
-        public static IFileLocation GetSingleSamplePedigreeCopyNumberBedGraph(IDirectoryLocation analysisOutputFolder, string sampleName)
+        public static BgzfFile GetSingleSamplePedigreeCopyNumberBedGraph(IDirectoryLocation analysisOutputFolder, string sampleName)
         {
-            return GetSampleOutputFolder(analysisOutputFolder, sampleName).GetFileLocation("copynumber.bedgraph");
+            return new BgzfFile(GetSampleOutputFolder(analysisOutputFolder, sampleName).GetFileLocation("copynumber.bedgraph.gz"));
+        }
+
+        public static BgzfFile GetSingleSamplePedigreeBAlleleBedGraph(IDirectoryLocation analysisOutputFolder, string sampleName)
+        {
+            return new BgzfFile(GetSampleOutputFolder(analysisOutputFolder, sampleName).GetFileLocation("ballele.bedgraph.gz"));
         }
     }
 }
