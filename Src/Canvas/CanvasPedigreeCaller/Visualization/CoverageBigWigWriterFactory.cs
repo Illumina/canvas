@@ -13,7 +13,6 @@ namespace CanvasPedigreeCaller.Visualization
         private readonly ILogger _logger;
         private readonly IWorkDoer _workDoer;
         private readonly ICommandManager _commandManager;
-        private readonly IBedGraphToBigWigConverter _converter;
         private readonly GenomeMetadata _genome;
 
         public CoverageBigWigWriterFactory(ILogger logger, IWorkDoer workDoer, ICommandManager commandManager, GenomeMetadata genome)
@@ -28,7 +27,7 @@ namespace CanvasPedigreeCaller.Visualization
         {
             var calculator = new NormalizedCoverageCalculator();
             var bedGraphWriterFacade = new CoverageBedGraphWriter(bedGraphWriter, calculator);
-            return new CoverageBigWigWriter(_logger, bedGraphWriterFacade, _converter, _genome);
+            return new CoverageBigWigWriter(_logger, bedGraphWriterFacade, GetConverter(), _genome);
         }
 
 
