@@ -98,7 +98,7 @@ namespace CanvasPedigreeCaller
                 }
             }
 
-            return new HaplotypeCopyNumberModel(cnDistribution, alleleDistribution, maxCoverage);
+            return new HaplotypeCopyNumberModel(cnDistribution, alleleDistribution, Convert.ToInt32(meanMafCoverage * 2.5));
         }
 
     }
