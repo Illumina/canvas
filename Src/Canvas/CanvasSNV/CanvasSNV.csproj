@@ -33,17 +33,10 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="ClassicBioinfoTools" Version="2.6.0.232" />
     <PackageReference Include="Illumina.Common" Version="5.0.6.381" />
     <PackageReference Include="Isas.Framework" Version="8.13.0.935" />
     <PackageReference Include="Isas.SequencingFiles" Version="6.1.1.409" />
     <PackageReference Include="protobuf-net" Version="2.3.2" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Reference Include="ClassicBioinfoTools">
-      <HintPath>..\..\..\..\..\..\Users\eroller\.nuget\packages\classicbioinfotools\2.4.0.206\lib\netstandard1.5\ClassicBioinfoTools.dll</HintPath>
-    </Reference>
   </ItemGroup>
 
 </Project>
