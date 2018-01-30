@@ -61,6 +61,7 @@ namespace CanvasPedigreeCaller
             double mafVariance = meanMafCoverage * 2.5;
             double variance = meanCoverage * 2.5;
             const double alleleStateZeroCorrector = 0.1; // prevent from using zero as a mean of model distribution
+            double coverageCeiling = meanMafCoverage * 3;
             for (int copyNumber = 0; copyNumber < numCnStates; copyNumber++)
             {
                 var multiplier = copyNumber * 1.0;
@@ -74,8 +75,7 @@ namespace CanvasPedigreeCaller
                 if (copyNumber == 3)
                     multiplier *= 1.1;
                 cnDistribution.Add(DistributionUtilities.NegativeBinomialWrapper(haploidMean * multiplier, variance,
-                    maxCoverage,
-                    adjustClumpingParameter: true));
+                    maxCoverage, adjustClumpingParameter: true));
             }
 
             var alleleDistribution = new Tuple<List<double>, List<double>>[numCnStates][];
@@ -97,8 +97,9 @@ namespace CanvasPedigreeCaller
                         new Tuple<List<double>, List<double>>(gt1Probabilities, gt2Probabilities);
                 }
             }
-
-            return new HaplotypeCopyNumberModel(cnDistribution, alleleDistribution, Convert.ToInt32(meanMafCoverage * 2.5));
+            // meanMafCoverage * 3 will cap the coverage at 6 CN, which corresponds to 0-5 CN range captured by the model
+            // this will prevent a read stacking scenario with high depth (i.e. > 1000) returning likelihoods of 0 for all models 
+            return new HaplotypeCopyNumberModel(cnDistribution, alleleDistribution, Convert.ToInt32(coverageCeiling));
         }
 
     }
