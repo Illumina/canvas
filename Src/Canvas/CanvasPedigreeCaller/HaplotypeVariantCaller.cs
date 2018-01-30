@@ -224,21 +224,30 @@ namespace CanvasPedigreeCaller
                        offspringGtState.Key.TotalCopyNumber];
         }
 
-        private void AssignCNandScores(ISampleMap<CanvasSegment> canvasSegments, ISampleMap<SampleMetrics> pedigreeMembersInfo,
-            PedigreeInfo pedigreeInfo, ISampleMap<Dictionary<Genotype, double>> singleSampleLikelihoods, JointLikelihoods jointLikelihoods, ISampleMap<Genotype> copyNumbers)
+        private void AssignCNandScores(ISampleMap<CanvasSegment> canvasSegments,
+            ISampleMap<SampleMetrics> pedigreeMembersInfo,
+            PedigreeInfo pedigreeInfo, ISampleMap<Dictionary<Genotype, double>> singleSampleLikelihoods,
+            JointLikelihoods jointLikelihoods, ISampleMap<Genotype> copyNumbers)
         {
             foreach (var sampleId in canvasSegments.SampleIds)
             {
-                canvasSegments[sampleId].QScore = GetSingleSampleQualityScore(singleSampleLikelihoods[sampleId], copyNumbers[sampleId]);
+                canvasSegments[sampleId].QScore =
+                    GetSingleSampleQualityScore(singleSampleLikelihoods[sampleId], copyNumbers[sampleId]);
                 canvasSegments[sampleId].CopyNumber = copyNumbers[sampleId].TotalCopyNumber;
                 if (canvasSegments[sampleId].QScore < _qualityFilterThreshold)
-                    canvasSegments[sampleId].Filter = CanvasFilter.Create(new[] { $"q{_qualityFilterThreshold}" });
+                    canvasSegments[sampleId].Filter = CanvasFilter.Create(new[] {$"q{_qualityFilterThreshold}"});
                 if (copyNumbers[sampleId].PhasedGenotype != null)
-                    canvasSegments[sampleId].MajorChromosomeCount = Math.Max(copyNumbers[sampleId].PhasedGenotype.CopyNumberA, copyNumbers[sampleId].PhasedGenotype.CopyNumberB);
+                    canvasSegments[sampleId].MajorChromosomeCount =
+                        Math.Max(copyNumbers[sampleId].PhasedGenotype.CopyNumberA,
+                            copyNumbers[sampleId].PhasedGenotype.CopyNumberB);
             }
             if (pedigreeInfo.HasFullPedigree())
-                SetDenovoQualityScores(canvasSegments, pedigreeMembersInfo, pedigreeInfo.ParentsIds, pedigreeInfo.OffspringIds, jointLikelihoods, copyNumbers);
-        }
+            {
+                var pedigreeMembers = pedigreeInfo.ParentsIds.Concat(pedigreeInfo.OffspringIds).ToList();
+                var pedigreeMemberCopyNumbers = copyNumbers.OrderBy(x => pedigreeMembers.IndexOf(x.Key)).ToSampleMap();
+                SetDenovoQualityScores(canvasSegments, pedigreeMembersInfo, pedigreeInfo.ParentsIds, pedigreeInfo.OffspringIds, jointLikelihoods, pedigreeMemberCopyNumbers);
+            }
+    }
 
         private void SetDenovoQualityScores(ISampleMap<CanvasSegment> canvasSegments, ISampleMap<SampleMetrics> samplesInfo, List<SampleId> parentIDs, List<SampleId> offspringIDs,
             JointLikelihoods jointLikelihoods, ISampleMap<Genotype> copyNumbers)
