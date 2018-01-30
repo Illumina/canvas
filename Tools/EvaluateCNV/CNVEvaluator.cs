@@ -20,7 +20,7 @@ namespace EvaluateCNV
         public double MedianAccuracy { get; set; }
         public int MinSize { get; }
         public int MaxSize { get; }
-        // 3D array stores 
+        // 3D array stores knownCn, CN call and REF ploidy
         public long[,,] BaseCount;
         public long[,,] RoiBaseCount;
 
@@ -112,6 +112,7 @@ namespace EvaluateCNV
                 if (!(interval.Length >= baseCounter.MinSize && interval.Length <= baseCounter.MaxSize)) continue;
                 int nonOverlapBases = interval.Length;
                 int totalOverlapBases = 0;
+                int excludeIntervalBases = 0;
                 var totalIntervalRefPloidy = new List<(int ploidy, int length)>();
                 string chromosome = interval.Chromosome;
                 if (!calls.ContainsKey(chromosome)) chromosome = chromosome.Replace("chr", "");
@@ -137,7 +138,6 @@ namespace EvaluateCNV
                     int overlapEnd = Math.Min(call.End, interval.End);
                     if (overlapStart >= overlapEnd) continue;
                     int overlapBases = overlapEnd - overlapStart;
-
                     // We've got an overlap interval.  Kill off some bases from this interval, if it happens
                     // to overlap with an excluded interval:
                     if (_cnvChecker.ExcludeIntervals.ContainsKey(chr))
@@ -147,6 +147,7 @@ namespace EvaluateCNV
                             int excludeOverlapStart = Math.Max(excludeInterval.Start, overlapStart);
                             int excludeOverlapEnd = Math.Min(excludeInterval.End, overlapEnd);
                             if (excludeOverlapStart >= excludeOverlapEnd) continue;
+                            excludeIntervalBases += excludeOverlapEnd - excludeOverlapStart;
                             overlapBases -= excludeOverlapEnd - excludeOverlapStart;
                         }
                     }
@@ -186,14 +187,14 @@ namespace EvaluateCNV
                     }
                 }
 
-                nonOverlapBases -= totalOverlapBases;
+                nonOverlapBases -= (totalOverlapBases + excludeIntervalBases);
                 if (totalIntervalRefPloidy.Empty())
                 {
                     Console.WriteLine($"Error: Truth variant {interval.Chromosome}:{interval.Start}-{interval.End} with no overlapping " +
                                       $"Canvas calls. Ploidy cannot be determined!");
                 }
                 int ploidy = Convert.ToInt32(Math.Round(Utilities.WeightedMean(totalIntervalRefPloidy.Select(x => (double) x.ploidy).ToList(),
-                    totalIntervalRefPloidy.Select(x => (double) x.length).ToList())));
+                    totalIntervalRefPloidy.Select(x => (double) Math.Max(x.length,1)).ToList())));
                 interval.ReferenceCopyNumber = ploidy;
                 if (nonOverlapBases < 0)
                 {
