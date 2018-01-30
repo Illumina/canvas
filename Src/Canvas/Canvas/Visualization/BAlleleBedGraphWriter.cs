@@ -27,7 +27,7 @@ namespace Canvas.Visualization
 
         private IEnumerable<BedGraphEntry> GetAlleleFrequencies(IFileLocation bafFile)
         {
-            return File.ReadLines(bafFile.FullName).Select(GetAlleleFrequencyEntry);
+            return File.ReadLines(bafFile.FullName).Skip(1).Select(GetAlleleFrequencyEntry);
         }
 
         private BedGraphEntry GetAlleleFrequencyEntry(string bafLine)
