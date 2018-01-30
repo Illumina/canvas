@@ -33,6 +33,20 @@ namespace CanvasPedigreeCaller
 
         private static int Main(string[] args)
         {
+            try
+            {
+                int exitCode = Run(args);
+                return exitCode;
+            }
+            catch (Exception e)
+            {
+                Console.Error.WriteLine(e);
+                return -1;
+            }
+        }
+
+        private static int Run(string[] args)
+        {
             Utilities.LogCommandLine(args);
             string outDir = null;
             var segmentFiles = new List<string>();
@@ -154,7 +168,7 @@ namespace CanvasPedigreeCaller
                 var workManager = WorkManagerFactory.GetWorkManager(workDoer, logger, pedigreeCallerWorkDirectory, settings);
                 IBedGraphToBigWigConverter bigWigConverter;
 
-                if (!CrossPlatform.IsThisLinux())
+                if (CrossPlatform.IsThisLinux())
                 {
                     bigWigConverter = new FormatConverterFactory(logger, workManager, commandManager).GetBedGraphToBigWigConverter();
                 }
@@ -169,7 +183,8 @@ namespace CanvasPedigreeCaller
                 var copyNumberLikelihoodCalculator = new CopyNumberLikelihoodCalculator(callerParameters.MaximumCopyNumber);
                 IVariantCaller variantCaller = new HaplotypeVariantCaller(copyNumberLikelihoodCalculator, callerParameters, qScoreThreshold);
                 var copyNumberModelFactory = new HaplotypeCopyNumberModelFactory(callerParameters.LohRefModelPenaltyTerm);
-                var caller = new CanvasPedigreeCaller(logger, qScoreThreshold, dqScoreThreshold, callerParameters, copyNumberLikelihoodCalculator, variantCaller, coverageBigWigWriter, copyNumberModelFactory);
+                var copyNumberBedGraphWriter = new CopyNumberBedGraphWriter(new CopyNumberBedGraphCalculator());
+                var caller = new CanvasPedigreeCaller(logger, qScoreThreshold, dqScoreThreshold, callerParameters, copyNumberLikelihoodCalculator, variantCaller, coverageBigWigWriter, copyNumberModelFactory, copyNumberBedGraphWriter);
 
                 var outVcf = outputDirectory.GetFileLocation("CNV.vcf.gz");
                 result = caller.CallVariants(variantFrequencyFiles, segmentFiles, outVcf, ploidyBedPath, referenceFolder, sampleNames, commonCnvsBedPath, sampleTypesEnum);

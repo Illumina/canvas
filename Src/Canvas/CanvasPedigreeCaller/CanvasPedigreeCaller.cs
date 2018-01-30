@@ -30,9 +30,11 @@ namespace CanvasPedigreeCaller
         private readonly CopyNumberLikelihoodCalculator _copyNumberLikelihoodCalculator;
         private readonly ICoverageBigWigWriter _coverageBigWigWriter;
         private readonly ICopyNumberModelFactory _copyNumberModelFactory;
+        private readonly ICopyNumberBedGraphWriter _copyNumbeBedGraphWriter;
+
         #endregion
 
-        public CanvasPedigreeCaller(ILogger logger, int qualityFilterThreshold, int deNovoQualityFilterThreshold, PedigreeCallerParameters callerParameters, CopyNumberLikelihoodCalculator copyNumberLikelihoodCalculator, IVariantCaller variantCaller, ICoverageBigWigWriter coverageBigWigWriter, ICopyNumberModelFactory copyNumberModelFactory)
+        public CanvasPedigreeCaller(ILogger logger, int qualityFilterThreshold, int deNovoQualityFilterThreshold, PedigreeCallerParameters callerParameters, CopyNumberLikelihoodCalculator copyNumberLikelihoodCalculator, IVariantCaller variantCaller, ICoverageBigWigWriter coverageBigWigWriter, ICopyNumberModelFactory copyNumberModelFactory, ICopyNumberBedGraphWriter copyNumbeBedGraphWriter)
         {
             _logger = logger;
             _qualityFilterThreshold = qualityFilterThreshold;
@@ -42,6 +44,7 @@ namespace CanvasPedigreeCaller
             _variantCaller = variantCaller;
             _coverageBigWigWriter = coverageBigWigWriter;
             _copyNumberModelFactory = copyNumberModelFactory;
+            _copyNumbeBedGraphWriter = copyNumbeBedGraphWriter;
         }
 
         internal int CallVariants(List<string> variantFrequencyFiles, List<string> segmentFiles,
@@ -74,12 +77,7 @@ namespace CanvasPedigreeCaller
                 _callerParameters.DefaultReadCountsThreshold, commonCnvsBedPath, sampleSegments);
 
             var segmentsForVariantCalling = GetHighestLikelihoodSegments(segmentSetsFromCommonCnvs, samplesInfo, copyNumberModels).ToList();
-            PedigreeInfo pedigreeInfo = null;
-            var haveChild = kinships.Values.Any(kin => kin == SampleType.Proband || kin == SampleType.Sibling);
-            var haveMother = kinships.Values.Any(kin => kin == SampleType.Mother);
-            var haveFather = kinships.Values.Any(kin => kin == SampleType.Father);
-            if (haveChild && haveMother && haveFather)
-                pedigreeInfo = PedigreeInfo.GetPedigreeInfo(kinships, _callerParameters);
+            PedigreeInfo pedigreeInfo = PedigreeInfo.GetPedigreeInfo(kinships, _callerParameters);
             Parallel.ForEach(
                 segmentsForVariantCalling,
                 new ParallelOptions
@@ -101,7 +99,7 @@ namespace CanvasPedigreeCaller
                 CanvasSegment.WriteCoveragePlotData(mergedVariantCalledSegments[sampleId], samplesInfo[sampleId].MeanCoverage,
                     samplesInfo[sampleId].Ploidy, coverageOutputPath, referenceFolder);
             }
-            bool isPedigreeInfoSupplied = pedigreeInfo != null;
+            bool isPedigreeInfoSupplied = pedigreeInfo != null && pedigreeInfo.HasFullPedigree();
             var denovoQualityThreshold = isPedigreeInfoSupplied ? (int?)_deNovoQualityFilterThreshold : null;
             var ploidies = samplesInfo.Select(info => info.Value.Ploidy).ToList();
             var diploidCoverage = samplesInfo.Select(info => info.Value.MeanCoverage).ToList();
@@ -112,13 +110,17 @@ namespace CanvasPedigreeCaller
             foreach (var sampleId in samplesInfo.SampleIds)
             {
                 var outputVcfPath = SingleSampleCallset.GetSingleSamplePedigreeVcfOutput(outputFolder, sampleId.ToString());
-                CanvasSegmentWriter.WriteSegments(outputVcfPath.FullName, mergedVariantCalledSegments[sampleId],
-                    samplesInfo[sampleId].MeanCoverage, referenceFolder, sampleId.ToString(), null,
-                    samplesInfo[sampleId].Ploidy, _qualityFilterThreshold, isPedigreeInfoSupplied, denovoQualityThreshold, null);
+                var sampleMetrics = samplesInfo[sampleId];
+                var segments = mergedVariantCalledSegments[sampleId];
+                CanvasSegmentWriter.WriteSegments(outputVcfPath.FullName, segments,
+                    sampleMetrics.MeanCoverage, referenceFolder, sampleId.ToString(), null,
+                    sampleMetrics.Ploidy, _qualityFilterThreshold, isPedigreeInfoSupplied, denovoQualityThreshold, null);
 
                 var visualizationTemp = outputFolder.CreateSubdirectory($"VisualizationTemp{sampleId}");
-                var bigWig = _coverageBigWigWriter.Write(mergedVariantCalledSegments[sampleId], visualizationTemp);
+                var bigWig = _coverageBigWigWriter.Write(segments, visualizationTemp);
                 bigWig?.MoveTo(SingleSampleCallset.GetSingleSamplePedigreeCoverageBigWig(outputFolder, sampleId.ToString()));
+                var copyNumberBedGraph = SingleSampleCallset.GetSingleSamplePedigreeCopyNumberBedGraph(outputFolder, sampleId.ToString());
+                _copyNumbeBedGraphWriter.Write(segments, sampleMetrics.Ploidy, copyNumberBedGraph);
             }
             return 0;
         }
@@ -315,7 +317,7 @@ namespace CanvasPedigreeCaller
             foreach (var canvasSegment in canvasSegments)
             {
                 var copyNumbersLikelihoods = _copyNumberLikelihoodCalculator.GetCopyNumbersLikelihoods(canvasSegment, samplesInfo, copyNumberModel);
-                var (sampleCopyNumbers, likelihoods) = GetCopyNumbersNoPedigreeInfo(canvasSegment, copyNumbersLikelihoods);
+                var (_, likelihoods) = GetCopyNumbersNoPedigreeInfo(canvasSegment, copyNumbersLikelihoods);
                 segmentSetLikelihood += likelihoods.MaximalLikelihood;
             }
 
@@ -327,7 +329,7 @@ namespace CanvasPedigreeCaller
         /// Evaluate joint likelihood of all genotype combinations across samples. 
         /// Return joint likelihood object and the copy number states with the highest likelihood 
         /// </summary>
-        public static (ISampleMap<Genotype> copyNumbersGenotypes, JointLikelihoods jointLikelihood) GetCopyNumbersNoPedigreeInfo(ISampleMap<CanvasSegment> segments,
+        public static (SampleMap<Genotype> copyNumbersGenotypes, JointLikelihoods jointLikelihood) GetCopyNumbersNoPedigreeInfo(ISampleMap<CanvasSegment> segments,
             ISampleMap<Dictionary<Genotype, double>> singleSampleLikelihoods)
         {
             var jointLikelihood = new JointLikelihoods();
@@ -380,6 +382,16 @@ namespace CanvasPedigreeCaller
                 alleles.Add(allele);
 
             return alleles;
+        }
+
+        public static SampleMap<Genotype> GetNonPedigreeCopyNumbers(ISampleMap<CanvasSegment> canvasSegments, PedigreeInfo pedigreeInfo,
+            ISampleMap<Dictionary<Genotype, double>> singleSampleCopyNumberLikelihoods)
+        {
+            bool IsOther(SampleId sampleId) => pedigreeInfo.OtherIds.Contains(sampleId);
+            var nonPedigreeMemberSegments = canvasSegments.WhereSampleIds(IsOther);
+            var nonPedigreeMemberLikelihoods = singleSampleCopyNumberLikelihoods.WhereSampleIds(IsOther);
+            (var nonPedigreeMemberCopyNumbers, _) = GetCopyNumbersNoPedigreeInfo(nonPedigreeMemberSegments, nonPedigreeMemberLikelihoods);
+            return nonPedigreeMemberCopyNumbers;
         }
     }
 }

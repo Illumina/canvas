@@ -6,21 +6,22 @@ using Isas.SequencingFiles.Bed;
 
 namespace CanvasPedigreeCaller.Visualization
 {
-    public class NormalizedCoverageBedGraphWriter
+
+    public class RoundingBedGraphCalculator : IBedGraphCalculator
     {
-        private readonly NormalizedCoverageCalculator _normalizedCoverageCalculator;
+        private readonly IBedGraphCalculator _calculator;
         private readonly int _fractionalDigits;
 
-        public NormalizedCoverageBedGraphWriter(NormalizedCoverageCalculator normalizedCoverageCalculator, int fractionalDigits)
+        public RoundingBedGraphCalculator(IBedGraphCalculator calculator, int fractionalDigits)
         {
-            _normalizedCoverageCalculator = normalizedCoverageCalculator;
+            _calculator = calculator;
             _fractionalDigits = fractionalDigits;
         }
-        public void Write(IReadOnlyList<CanvasSegment> segments, BedGraphWriter bedGraphWriter)
+
+        public IEnumerable<BedGraphEntry> Calculate(IReadOnlyList<CanvasSegment> segments)
         {
-            var entries = _normalizedCoverageCalculator.Calculate(segments);
-            entries = entries.Select(GetRoundedBedGraphEntry);
-            bedGraphWriter.WriteLines(entries);
+            var entries = _calculator.Calculate(segments);
+            return entries.Select(GetRoundedBedGraphEntry);
         }
 
         private BedGraphEntry GetRoundedBedGraphEntry(BedGraphEntry entry)
