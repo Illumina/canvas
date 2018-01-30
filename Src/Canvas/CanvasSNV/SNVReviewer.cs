@@ -87,7 +87,7 @@ namespace CanvasSNV
                 else
                 {
                     if (reader.Samples.Count > 1)
-                        throw new ArgumentException($"File '{vcfPath}' conatins >1 samples, name for a sample of interest must be provided");
+                        throw new ArgumentException($"File '{vcfPath}' contains >1 samples, name for a sample of interest must be provided");
                 }
 
                 while (true)
@@ -107,9 +107,16 @@ namespace CanvasSNV
 
                     if (variant.GenotypeColumns != null && variant.GenotypeColumns.Any()) // not available if we use a dbSNP VCF file
                     {
-                        if (!PassedAllFilters(variant, sampleIndex) ||   // PF variants only (FILTER may not say PASS for a dbSNP VCF file)
-                            !variant.GenotypeColumns[sampleIndex].ContainsKey("GT") || //no genotype - we don't know if it's a het SNV.
-                            SomaticNotHetSnv(isSomatic, variant)) continue; // somatic but not a het SNV
+                        if (!PassedAllFilters(variant, sampleIndex)) continue; // PF variants only (FILTER may not say PASS for a dbSNP VCF file)
+                        if (!variant.GenotypeColumns[sampleIndex].ContainsKey("GT")) continue; //no genotype - we don't know if it's a het SNV.
+                        if (isSomatic)
+                        {
+                            if (!HasHetSnv(variant)) continue; // somatic but not a het SNV. for tumor analysis we care about deviations from the expected 0.5 b-allele frequency in the normal
+                        }
+                        else
+                        {
+                            if (!HasHetOrHomSnv(variant)) continue; // exclude hom ref. Only hom alt calls should be used as evidence for ROH in normal samples
+                        }
                     }
                     // Note: Let's NOT require the variant be in dbSNP.  Maybe we didn't do annotation, either because
                     // we chose not to or because we're on a reference without annotation available.
@@ -334,16 +341,31 @@ namespace CanvasSNV
                     );
         }
 
-        private static bool SomaticNotHetSnv(bool isSomatic, VcfVariant variant)
+        private static bool HasHetSnv(VcfVariant variant)
         {
-            if (isSomatic)
-            {
-                string genotype = variant.GenotypeColumns[0]["GT"];
-                if (genotype != "0/1" && genotype != "1/0" && genotype != "0|1" && genotype != "1|0")
-                    return true;
-            }
-            return false;
+            string genotype = variant.GenotypeColumns[0]["GT"];
+            return genotype == "0/1" || genotype == "1/0" || genotype == "0|1" || genotype == "1|0";
         }
 
+        private static bool HasHetSnv(string genotype)
+        {
+            return genotype == "0/1" || genotype == "1/0" || genotype == "0|1" || genotype == "1|0";
+        }
+
+        private static bool HasHetOrHomSnv(VcfVariant variant)
+        {
+            string genotype = GetGenotype(variant);
+            return HasHetOrHomSnv(genotype);
+        }
+
+        private static bool HasHetOrHomSnv(string genotype)
+        {
+            return HasHetSnv(genotype) || genotype == "1/1" || genotype == "1|1";
+        }
+
+        private static string GetGenotype(VcfVariant variant)
+        {
+            return variant.GenotypeColumns[0]["GT"];
+        }
     }
 }
