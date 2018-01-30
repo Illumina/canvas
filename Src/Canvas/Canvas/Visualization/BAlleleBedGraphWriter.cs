@@ -35,7 +35,7 @@ namespace Canvas.Visualization
             var bafFields = CSVReader.ParseCommaDelimitedLine(bafLine);
             var chromosome = bafFields[0];
             var oneBasedPosition = int.Parse(bafFields[1]);
-            var alleleFrequency = decimal.Parse(bafFields[2]);
+            var alleleFrequency = (decimal)double.Parse(bafFields[2]);
             var bedPosition = new BedInterval(oneBasedPosition - 1, oneBasedPosition);
             return new BedGraphEntry(chromosome, bedPosition, alleleFrequency);
         }
