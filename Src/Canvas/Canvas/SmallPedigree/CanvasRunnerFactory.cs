@@ -34,14 +34,16 @@ namespace Canvas.SmallPedigree
         }
 
         public CanvasRunner Create(bool isSomatic, CanvasCoverageMode coverageMode,
-            int countsPerBin, Dictionary<string, string> customParameters = null, string canvasFolder = null)
+            int countsPerBin, Dictionary<string, string> customParameters)
         {
             var settings = IsasConfigurationSettings.GetConfigSettings();
-            var commandManager = new CommandManager(new ExecutableProcessor(settings, _logger, new DirectoryLocation(canvasFolder)));
+            var canvasFolder = new DirectoryLocation(Isas.Framework.Utilities.Utilities.GetAssemblyFolder(typeof(CanvasRunner)));
+
+            var commandManager = new CommandManager(new ExecutableProcessor(settings, _logger, canvasFolder));
             var tabixWrapper = TabixWrapperFactory.GetTabixWrapper(_logger, _workDoer, commandManager);
             var bAlleleBedGraphWriter = new BAlleleBedGraphWriter(new BgzfBedGraphWriter(new RoundingBedGraphWriter(new BedGraphWriterFacade(), 4), tabixWrapper));
 
-            return new CanvasRunner(_logger, _workManager, _workDoer, _checkpointRunner, _runtimeExecutable, _runtimeCommandPrefix, isSomatic, coverageMode, countsPerBin, bAlleleBedGraphWriter, customParameters, canvasFolder);
+            return new CanvasRunner(_logger, _workManager, _workDoer, _checkpointRunner, _runtimeExecutable, _runtimeCommandPrefix, isSomatic, coverageMode, countsPerBin, bAlleleBedGraphWriter, customParameters, canvasFolder.FullName);
         }
     }
 }

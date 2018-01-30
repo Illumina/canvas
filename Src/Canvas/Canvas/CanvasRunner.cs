@@ -28,7 +28,6 @@ namespace Canvas
     /// </summary>
     public class CanvasRunner
     {
-        private static readonly string DefaultCanvasFolder = Path.Combine(Isas.Framework.Utilities.Utilities.GetAssemblyFolder(typeof(CanvasRunner)));
         #region Members
         private readonly string _canvasFolder;
         private readonly CanvasCoverageMode _coverageMode = CanvasCoverageMode.TruncatedDynamicRange;
@@ -43,21 +42,20 @@ namespace Canvas
         private readonly IFileLocation _runtimeExecutable;
         private readonly Func<string, ICommandFactory> _runtimeCommandPrefix; // Path to either mono or dotnet
         private readonly IBAlleleBedGraphWriter _bAlleleBedGraphWriter;
-
         #endregion
 
         public CanvasRunner(ILogger logger, IWorkManager workManager, IWorkDoer workDoer,
             ICheckpointRunner checkpointRunner, IFileLocation runtimeExecutable,
             Func<string, ICommandFactory> runtimeCommandPrefix, bool isSomatic, CanvasCoverageMode coverageMode,
             int countsPerBin, IBAlleleBedGraphWriter bAlleleBedGraphWriter,
-            Dictionary<string, string> customParameters = null, string canvasFolder = null)
+            Dictionary<string, string> customParameters, string canvasFolder)
         {
             Logger = logger;
             _workManager = workManager;
             _workDoer = workDoer;
             _checkpointRunner = checkpointRunner;
             _isSomatic = isSomatic;
-            _canvasFolder = canvasFolder ?? DefaultCanvasFolder;
+            _canvasFolder = canvasFolder;
             _coverageMode = coverageMode;
             _countsPerBin = countsPerBin;
             _bAlleleBedGraphWriter = bAlleleBedGraphWriter;
