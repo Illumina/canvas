@@ -39,8 +39,9 @@ namespace CanvasSNV
                 { "b|bamPath=",        "bam file",                                                                                       v => bamPath = v },
                 { "o|outputPath=",     "name of output directory",                                                                       v => outputPath = v },
                 { "n|sampleName=",     "sample name for output VCF header (optional)",                                                   v => sampleName = v},
-                { "i|isDbSnpVcf=",     "flag to specify if vcf file contains dbSNP variants (optional)",                                 v => isDbSnpVcf = v != null },
-                { "q|minMapQ=",        "mapQ threshold for vcf file (optional)",                                                         v => minMapQ = int.Parse(v)},
+                { "i|isDbSnpVcf",      "flag to specify if vcf file contains dbSNP variants (optional)",                                 v => isDbSnpVcf = v != null },
+                { "q|minMapQ=",        "mapQ threshold for reads in bam file (optional). " +
+                                       "Default is 0 and means reads with mapQ <= 0 are not counted)",                                   v => minMapQ = int.Parse(v)},
                 { "s|isSomatic",       "flag to specify if Canvas workflow is somatic (optional)",                                       v => isSomatic = v != null },
                 { "h|help",            "show this message and exit",                                                                     v => needHelp = v != null },
             };
