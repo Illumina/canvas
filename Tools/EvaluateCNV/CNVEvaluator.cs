@@ -195,6 +195,7 @@ namespace EvaluateCNV
                 {
                     Console.WriteLine($"Error: Truth variant {interval.Chromosome}:{interval.Start}-{interval.End} with no overlapping " +
                                       $"Canvas calls. Ploidy cannot be determined!");
+                    continue;
                 }
                 int ploidy = Convert.ToInt32(Math.Round(Utilities.WeightedMean(totalIntervalRefPloidy.Select(x => (double) x.ploidy).ToList(),
                     totalIntervalRefPloidy.Select(x => (double) Math.Max(x.length,1)).ToList())));
