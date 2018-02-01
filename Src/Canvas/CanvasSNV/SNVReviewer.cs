@@ -65,18 +65,19 @@ namespace CanvasSNV
             this.ProcessBamFile(BamPath);
             var bAlleles = Variants
                 .Select((variant, variantIndex) => (Variant: variant, ReferenceAlleleCount: ReferenceCounts[variantIndex], VariantAlleleCount: VariantCounts[variantIndex]))
-                .Where(IsVariant);
+                .Where(IsVariantSite);
 
             WriteResults(bAlleles.ToList(), OutputPath);
             return 0;
         }
 
-        private bool IsVariant((VcfVariant Variant, int ReferenceAlleleCount, int VariantAlleleCount) bAllele)
+        private bool IsVariantSite((VcfVariant Variant, int ReferenceAlleleCount, int VariantAlleleCount) bAllele)
         {
-            if (!IsDbSnpVcf) return true; //we already know this is a PASSing variant site according to sample-matched vcf (either het or hom alt)
-            if (bAllele.VariantAlleleCount > 0) // given a population variant site we require at least some evidence of that variant in this sample
-                return true;
-            return false;
+            var totalAlleleCount = bAllele.VariantAlleleCount + bAllele.ReferenceAlleleCount;
+            if (totalAlleleCount == 0) return false; // undefined frequency
+            if (IsDbSnpVcf && bAllele.VariantAlleleCount == 0)
+                return false; // given a population variant site we require at least some evidence of that variant in this sample
+            return true;
         }
 
         /// <summary>
