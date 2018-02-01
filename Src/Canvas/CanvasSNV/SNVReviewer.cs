@@ -63,8 +63,20 @@ namespace CanvasSNV
             ReferenceCounts = new int[Variants.Count];
             VariantCounts = new int[Variants.Count];
             this.ProcessBamFile(BamPath);
-            this.WriteResults(OutputPath);
+            var bAlleles = Variants
+                .Select((variant, variantIndex) => (Variant: variant, ReferenceAlleleCount: ReferenceCounts[variantIndex], VariantAlleleCount: VariantCounts[variantIndex]))
+                .Where(IsVariant);
+
+            WriteResults(bAlleles.ToList(), OutputPath);
             return 0;
+        }
+
+        private bool IsVariant((VcfVariant Variant, int ReferenceAlleleCount, int VariantAlleleCount) bAllele)
+        {
+            if (!IsDbSnpVcf) return true; //we already know this is a PASSing variant site according to sample-matched vcf (either het or hom alt)
+            if (bAllele.VariantAlleleCount > 0) // given a population variant site we require at least some evidence of that variant in this sample
+                return true;
+            return false;
         }
 
         /// <summary>
@@ -107,15 +119,19 @@ namespace CanvasSNV
 
                     if (variant.GenotypeColumns != null && variant.GenotypeColumns.Any()) // not available if we use a dbSNP VCF file
                     {
-                        if (!PassedAllFilters(variant, sampleIndex)) continue; // PF variants only (FILTER may not say PASS for a dbSNP VCF file)
-                        if (!variant.GenotypeColumns[sampleIndex].ContainsKey("GT")) continue; //no genotype - we don't know if it's a het SNV.
+                        if (!PassedAllFilters(variant, sampleIndex))
+                            continue; // PF variants only (FILTER may not say PASS for a dbSNP VCF file)
+                        if (!variant.GenotypeColumns[sampleIndex].ContainsKey("GT"))
+                            continue; //no genotype - we don't know if it's a het SNV.
                         if (isSomatic)
                         {
-                            if (!HasHetSnv(variant)) continue; // somatic but not a het SNV. for tumor analysis we care about deviations from the expected 0.5 b-allele frequency in the normal
+                            if (!HasHetSnv(variant))
+                                continue; // somatic but not a het SNV. for tumor analysis we care about deviations from the expected 0.5 b-allele frequency in the normal
                         }
                         else
                         {
-                            if (!HasHetOrHomSnv(variant)) continue; // exclude hom ref. Only hom alt calls should be used as evidence for ROH in normal samples
+                            if (!HasHetOrHomSnv(variant))
+                                continue; // exclude hom ref. Only hom alt calls should be used as evidence for ROH in normal samples
                         }
                     }
                     // Note: Let's NOT require the variant be in dbSNP.  Maybe we didn't do annotation, either because
@@ -239,42 +255,39 @@ namespace CanvasSNV
         /// <summary>
         /// Step 3: Summarize results to a simple tab-delimited file and a CSV file.
         /// </summary>
-        protected void WriteResults(string outputPath)
+        private static void WriteResults(
+            List<(VcfVariant Variant, int ReferenceAlleleCount, int VariantAlleleCount)> bAlleles, string outputPath)
         {
-            WriteAlleleCounts(outputPath);
-            WriteBAlleleFrequencies(outputPath + ".baf");
+            WriteAlleleCounts(bAlleles, outputPath);
+            WriteBAlleleFrequencies(bAlleles, outputPath + ".baf");
         }
 
-        protected void WriteAlleleCounts(string outputPath)
+        private static void WriteAlleleCounts(
+            List<(VcfVariant Variant, int ReferenceAlleleCount, int VariantAlleleCount)> bAlleles, string outputPath)
         {
             using (GzipWriter writer = new GzipWriter(outputPath))
             {
                 writer.WriteLine("#Chromosome\tPosition\tRef\tAlt\tCountRef\tCountAlt");
-                for (int index = 0; index < this.Variants.Count; index++)
+                foreach (var (variant, referenceAlleleCount, variantAlleleCount) in bAlleles)
                 {
-                    VcfVariant variant = this.Variants[index];
-                    // skip HOM REF positions 
-                    if (this.VariantCounts[index] > 5)
-                    {
-                        writer.WriteLine(string.Format("{0}\t{1}\t{2}\t{3}\t{4}\t{5}", variant.ReferenceName, variant.ReferencePosition,
-                        variant.ReferenceAllele, variant.VariantAlleles[0], this.ReferenceCounts[index],
-                        this.VariantCounts[index]));
-                    }
+                    writer.WriteLine(string.Format("{0}\t{1}\t{2}\t{3}\t{4}\t{5}", variant.ReferenceName, variant.ReferencePosition,
+                    variant.ReferenceAllele, variant.VariantAlleles[0], referenceAlleleCount,
+                    variantAlleleCount));
                 }
             }
             Console.WriteLine("{0} Results written to {1}", DateTime.Now, outputPath);
         }
 
-        protected void WriteBAlleleFrequencies(string outputPath)
+        private static void WriteBAlleleFrequencies(
+            List<(VcfVariant Variant, int ReferenceAlleleCount, int VariantAlleleCount)> bAlleles, string outputPath)
         {
             using (FileStream stream = new FileStream(outputPath, FileMode.Create, FileAccess.Write))
             using (StreamWriter writer = new StreamWriter(stream))
             {
                 writer.WriteLine(CSVWriter.GetLine("Chromosome", "Position", "BAF"));
-                for (int index = 0; index < this.Variants.Count; index++)
+                foreach (var (variant, referenceAlleleCount, variantAlleleCount) in bAlleles)
                 {
-                    VcfVariant variant = this.Variants[index];
-                    double? baf = GetBAlleleFrequency(variant, this.ReferenceCounts[index], this.VariantCounts[index]);
+                    double? baf = GetBAlleleFrequency(variant, referenceAlleleCount, variantAlleleCount);
                     if (!baf.HasValue)
                         continue;
                     writer.WriteLine(CSVWriter.GetLine(variant.ReferenceName, variant.ReferencePosition.ToString(),
