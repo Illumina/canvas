@@ -184,12 +184,14 @@ namespace CanvasPedigreeCaller
                             {pedigreeInfo.ParentsIds.Last(), parent2GtStates.Key}
                         };
                         pedigreeInfo.OffspringIds.Zip(offspringGtStates).ForEach(sampleIdGenotypeKvp => genotypesInPedigree.Add(sampleIdGenotypeKvp.Item1, sampleIdGenotypeKvp.Item2));
-                        jointLikelihood.AddJointLikelihood(genotypesInPedigree, currentLikelihood);
+                        // return to SampleId ordering 
+                        var orderedGenotypesInPedigree = genotypesInPedigree.OrderBy(x => singleSampleLikelihoods.SampleIds.ToList().IndexOf(x.Key)).ToSampleMap();
+                        jointLikelihood.AddJointLikelihood(orderedGenotypesInPedigree, currentLikelihood);
 
                         if (currentLikelihood > jointLikelihood.MaximalLikelihood)
                         {
                             jointLikelihood.MaximalLikelihood = currentLikelihood;
-                            sampleCopyNumbersGenotypes = genotypesInPedigree;
+                            sampleCopyNumbersGenotypes = orderedGenotypesInPedigree;
                         }
                     }
                 }
@@ -244,7 +246,7 @@ namespace CanvasPedigreeCaller
             if (pedigreeInfo.HasFullPedigree())
             {
                 var pedigreeMembers = pedigreeInfo.ParentsIds.Concat(pedigreeInfo.OffspringIds).ToList();
-                var pedigreeMemberCopyNumbers = copyNumbers.OrderBy(x => pedigreeMembers.IndexOf(x.Key)).ToSampleMap();
+                var pedigreeMemberCopyNumbers = copyNumbers.WhereSampleIds(sampleId => pedigreeMembers.Contains(sampleId));
                 SetDenovoQualityScores(canvasSegments, pedigreeMembersInfo, pedigreeInfo.ParentsIds, pedigreeInfo.OffspringIds, jointLikelihoods, pedigreeMemberCopyNumbers);
             }
     }
