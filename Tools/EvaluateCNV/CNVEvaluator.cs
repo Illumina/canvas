@@ -149,6 +149,9 @@ namespace EvaluateCNV
                             if (excludeOverlapStart >= excludeOverlapEnd) continue;
                             excludeIntervalBases += excludeOverlapEnd - excludeOverlapStart;
                             overlapBases -= excludeOverlapEnd - excludeOverlapStart;
+                            // if majority of the region is in exclude intervals, don't consider any overlap
+                            if (overlapBases / Math.Max(excludeOverlapEnd - excludeOverlapStart, 1) < 0.1)
+                                overlapBases = 0;
                         }
                     }
 
