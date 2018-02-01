@@ -4,7 +4,7 @@ using Illumina.Common;
 
 namespace CanvasSNV
 {
-    class Program
+    internal class Program
     {
         /// <summary>
         /// Command line help message.
@@ -19,10 +19,24 @@ namespace CanvasSNV
             p.WriteOptionDescriptions(Console.Out);
         }
 
-        static int Main(string[] args)
+        private static int Main(string[] args)
+        {
+            try
+            {
+                int exitCode = Run(args);
+                return exitCode;
+            }
+            catch (Exception e)
+            {
+                Console.Error.WriteLine(e);
+                return -1;
+            }
+        }
+
+        static int Run(string[] args)
         {
             CanvasCommon.Utilities.LogCommandLine(args);
-            string chromosome = null; 
+            string chromosome = null;
             string vcfPath = null;
             string bamPath = null;
             string outputPath = null;

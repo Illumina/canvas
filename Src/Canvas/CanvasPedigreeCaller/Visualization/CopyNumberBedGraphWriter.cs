@@ -1,42 +1,25 @@
 using System.Collections.Generic;
 using CanvasCommon;
-using Illumina.Common.FileSystem;
-using Isas.SequencingFiles.Bed;
+using CanvasCommon.Visualization;
+using Isas.Framework.DataTypes;
 
 namespace CanvasPedigreeCaller.Visualization
 {
     public class CopyNumberBedGraphWriter : ICopyNumberBedGraphWriter
     {
+        private readonly IBgzfBedGraphWriter _writer;
         private readonly CopyNumberBedGraphCalculator _calculator;
 
-        public CopyNumberBedGraphWriter(CopyNumberBedGraphCalculator calculator)
+        public CopyNumberBedGraphWriter(IBgzfBedGraphWriter writer, CopyNumberBedGraphCalculator calculator)
         {
+            _writer = writer;
             _calculator = calculator;
         }
 
-        public void Write(IReadOnlyList<CanvasSegment> segments, PloidyInfo ploidyInfo, IFileLocation location)
+        public void Write(IReadOnlyList<CanvasSegment> segments, PloidyInfo ploidyInfo, BgzfFile location)
         {
-            _calculator.Calculate(segments, ploidyInfo);
-            var calculator = new CopyNumberCalculatorAdapter(_calculator, ploidyInfo);
-            var writer = new BedGraphWriterFacade(calculator);
-            writer.Write(segments, location);
-        }
-
-        private class CopyNumberCalculatorAdapter : IBedGraphCalculator
-        {
-            private readonly CopyNumberBedGraphCalculator _calculator;
-            private readonly PloidyInfo _ploidyInfo;
-
-            public CopyNumberCalculatorAdapter(CopyNumberBedGraphCalculator calculator, PloidyInfo ploidyInfo)
-            {
-                _calculator = calculator;
-                _ploidyInfo = ploidyInfo;
-            }
-
-            public IEnumerable<BedGraphEntry> Calculate(IReadOnlyList<CanvasSegment> segments)
-            {
-                return _calculator.Calculate(segments, _ploidyInfo);
-            }
+            var entries = _calculator.Calculate(segments, ploidyInfo);
+            _writer.Write(entries, location);
         }
     }
 }

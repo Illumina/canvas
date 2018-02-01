@@ -1,27 +1,27 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using CanvasCommon;
+using Illumina.Common.FileSystem;
 using Isas.SequencingFiles.Bed;
 
-namespace CanvasPedigreeCaller.Visualization
+namespace CanvasCommon.Visualization
 {
 
-    public class RoundingBedGraphCalculator : IBedGraphCalculator
+    public class RoundingBedGraphWriter : IBedGraphWriter
     {
-        private readonly IBedGraphCalculator _calculator;
+        private readonly IBedGraphWriter _bedGraphWriter;
         private readonly int _fractionalDigits;
 
-        public RoundingBedGraphCalculator(IBedGraphCalculator calculator, int fractionalDigits)
+        public RoundingBedGraphWriter(IBedGraphWriter bedGraphWriter, int fractionalDigits)
         {
-            _calculator = calculator;
+            _bedGraphWriter = bedGraphWriter;
             _fractionalDigits = fractionalDigits;
         }
 
-        public IEnumerable<BedGraphEntry> Calculate(IReadOnlyList<CanvasSegment> segments)
+        public void Write(IEnumerable<BedGraphEntry> bedGraphEntries, IFileLocation location)
         {
-            var entries = _calculator.Calculate(segments);
-            return entries.Select(GetRoundedBedGraphEntry);
+            var roundedEntries = bedGraphEntries.Select(GetRoundedBedGraphEntry);
+            _bedGraphWriter.Write(roundedEntries, location);
         }
 
         private BedGraphEntry GetRoundedBedGraphEntry(BedGraphEntry entry)
