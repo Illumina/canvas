@@ -27,6 +27,7 @@ namespace CanvasCommon
         public string BinSizePath => Path.Combine(SampleOutputFolder.FullName, $"{SampleName}.binsize");
         public string VfSummaryPath => GetVfSummaryPath(_analysisOutputFolder, SampleName).FullName;
         public string VfSummaryBafPath => GetVfSummaryBafPath(_analysisOutputFolder, SampleName).FullName;
+        public BgzfFile BAlleleCoverageBedGraph => GetSingleSamplePedigreeBAlleleBedGraph(_analysisOutputFolder, SampleName);
         public string NormalBinnedPath => Path.Combine(SampleOutputFolder.FullName, $"{SampleName}.normal.binned");
         public IFileLocation PartitionedPath => GetPartitionedPath(_analysisOutputFolder, SampleName);
 
@@ -105,6 +106,16 @@ namespace CanvasCommon
         public static IFileLocation GetSingleSamplePedigreeCoverageBigWig(IDirectoryLocation analysisOutputFolder, string sampleName)
         {
             return GetSampleOutputFolder(analysisOutputFolder, sampleName).GetFileLocation("coverage.bigWig");
+        }
+
+        public static BgzfFile GetSingleSamplePedigreeCopyNumberBedGraph(IDirectoryLocation analysisOutputFolder, string sampleName)
+        {
+            return new BgzfFile(GetSampleOutputFolder(analysisOutputFolder, sampleName).GetFileLocation("copynumber.bedgraph.gz"));
+        }
+
+        public static BgzfFile GetSingleSamplePedigreeBAlleleBedGraph(IDirectoryLocation analysisOutputFolder, string sampleName)
+        {
+            return new BgzfFile(GetSampleOutputFolder(analysisOutputFolder, sampleName).GetFileLocation("ballele.bedgraph.gz"));
         }
     }
 }
