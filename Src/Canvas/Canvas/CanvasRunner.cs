@@ -4,14 +4,18 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using Canvas.CommandLineParsing;
 using Canvas.SmallPedigree;
+using Canvas.Visualization;
 using CanvasCommon;
+using CanvasCommon.Visualization;
 using Illumina.Common;
 using Illumina.Common.FileSystem;
+using Isas.ClassicBioinfoTools.Tabix;
 using Isas.Framework.Checkpointing;
 using Isas.Framework.Checkpointing.Legacy;
 using Isas.Framework.Logging;
+using Isas.Framework.Settings;
+using Isas.Framework.Utilities;
 using Isas.Framework.WorkManagement;
 using Isas.Framework.WorkManagement.CommandBuilding;
 using Isas.Manifests.NexteraManifest;
@@ -24,13 +28,12 @@ namespace Canvas
     /// </summary>
     public class CanvasRunner
     {
-        private static readonly string DefaultCanvasFolder = Path.Combine(Isas.Framework.Utilities.Utilities.GetAssemblyFolder(typeof(CanvasRunner)));
         #region Members
         private readonly string _canvasFolder;
         private readonly CanvasCoverageMode _coverageMode = CanvasCoverageMode.TruncatedDynamicRange;
         private readonly CanvasNormalizeMode _normalizeMode = CanvasNormalizeMode.WeightedAverage;
         private readonly int _countsPerBin;
-        private readonly ILogger _logger;
+        public ILogger Logger { get; }
         private readonly IWorkManager _workManager;
         private readonly IWorkDoer _workDoer;
         private readonly ICheckpointRunner _checkpointRunner;
@@ -38,19 +41,24 @@ namespace Canvas
         private readonly Dictionary<string, string> _customParameters = new Dictionary<string, string>();
         private readonly IFileLocation _runtimeExecutable;
         private readonly Func<string, ICommandFactory> _runtimeCommandPrefix; // Path to either mono or dotnet
+        private readonly IBAlleleBedGraphWriter _bAlleleBedGraphWriter;
         #endregion
 
-        public CanvasRunner(ILogger logger, IWorkManager workManager, IWorkDoer workDoer, ICheckpointRunner checkpointRunner, IFileLocation runtimeExecutable, Func<string, ICommandFactory> runtimeCommandPrefix, bool isSomatic, CanvasCoverageMode coverageMode,
-            int countsPerBin, Dictionary<string, string> customParameters = null, string canvasFolder = null)
+        public CanvasRunner(ILogger logger, IWorkManager workManager, IWorkDoer workDoer,
+            ICheckpointRunner checkpointRunner, IFileLocation runtimeExecutable,
+            Func<string, ICommandFactory> runtimeCommandPrefix, bool isSomatic, CanvasCoverageMode coverageMode,
+            int countsPerBin, IBAlleleBedGraphWriter bAlleleBedGraphWriter,
+            Dictionary<string, string> customParameters, string canvasFolder)
         {
-            _logger = logger;
+            Logger = logger;
             _workManager = workManager;
             _workDoer = workDoer;
             _checkpointRunner = checkpointRunner;
             _isSomatic = isSomatic;
-            _canvasFolder = canvasFolder ?? DefaultCanvasFolder;
+            _canvasFolder = canvasFolder;
             _coverageMode = coverageMode;
             _countsPerBin = countsPerBin;
+            _bAlleleBedGraphWriter = bAlleleBedGraphWriter;
             _runtimeExecutable = runtimeExecutable;
             _runtimeCommandPrefix = runtimeCommandPrefix;
             if (customParameters != null)
@@ -153,7 +161,7 @@ namespace Canvas
             command.AddArgument("-f", canvasBedPath);
             command.AddArgument("-d", _countsPerBin);
             command.AddArgument("-o", outputStub);
-            
+
             var result = _workDoer.DoWork(
                 WorkResourceRequest.CreateLinear(1, 5, 23, 1),
                 (workResources, jobLauncher) => new FileLocation(callset.SingleSampleCallset.BinSizePath)).Await();
@@ -678,6 +686,13 @@ namespace Canvas
             // Concatenate CanvasSNV results:
             ConcatenateCanvasSNVResults(callset.SingleSampleCallset.VfSummaryPath, outputPaths);
             ConcatenateCanvasSNVBafResults(callset.SingleSampleCallset.VfSummaryBafPath, outputPaths.Select(path => path + ".baf"));
+
+            var bafFile = new FileLocation(callset.SingleSampleCallset.VfSummaryBafPath);
+            var fileConversionMessage = $"converting '{bafFile}' to '{callset.SingleSampleCallset.BAlleleCoverageBedGraph.FileLocation}'";
+            Logger.Info($"Begin {fileConversionMessage}");
+            var benchmark = new Benchmark();
+            _bAlleleBedGraphWriter.Write(bafFile, callset.SingleSampleCallset.BAlleleCoverageBedGraph);
+            Logger.Info($"Finished {fileConversionMessage}. Elapsed time: {benchmark.GetElapsedTime()}");
             return new FileLocation(callset.SingleSampleCallset.VfSummaryPath);
         }
 
@@ -766,6 +781,7 @@ namespace Canvas
         /// </summary>
         private async Task CallSampleInternal(CanvasCallset callset)
         {
+            Logger.Info($"Normal Vcf path: {callset.SingleSampleCallset.NormalVcfPath}");
             Directory.CreateDirectory(callset.SingleSampleCallset.SampleOutputFolder.FullName);
             string canvasReferencePath = callset.AnalysisDetails.KmerFasta.FullName;
             string canvasBedPath = callset.AnalysisDetails.FilterBed.FullName;
@@ -1058,7 +1074,7 @@ namespace Canvas
                 }
                 else
                 {
-                    _logger.Info("Note: SD file not found at '{0}'", ffpePath);
+                    Logger.Info("Note: SD file not found at '{0}'", ffpePath);
                 }
             }
 

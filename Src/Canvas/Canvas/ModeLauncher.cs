@@ -5,6 +5,7 @@ using Isas.Framework.Settings;
 using Isas.Framework.WorkManagement;
 using System;
 using System.Collections.Generic;
+using Canvas.SmallPedigree;
 using Isas.Framework.WorkManagement.CommandBuilding;
 
 namespace Canvas
@@ -16,7 +17,7 @@ namespace Canvas
 
     public interface IModeRunner
     {
-        void Run(ILogger logger, ICheckpointRunner checkpointRunner, IWorkManager workManager, IWorkDoer workDoer, IFileLocation runtimeExecutable, Func<string, ICommandFactory> runtimeCommandPrefix);
+        void Run(CanvasRunnerFactory canvasRunnerFactory);
     }
 
     public class ModeLauncher : IModeLauncher
@@ -58,7 +59,8 @@ namespace Canvas
                 }
                 _logger.Info($"Running Canvas {_mode} {_version}");
                 _logger.Info($"Command-line arguments: {string.Join(" ", _args)}");
-                _modeRunner.Run(_logger, _checkpointRunner, _workManager, _workDoer, runtimeExecutable, GetDotnetCommand);
+                var runnerFactory = new CanvasRunnerFactory(_logger, _checkpointRunner, _workManager, _workDoer, runtimeExecutable, GetDotnetCommand);
+                _modeRunner.Run(runnerFactory);
                 return 0;
             }
             catch (Exception e)
