@@ -233,6 +233,8 @@ namespace CanvasPedigreeCaller
             PedigreeInfo pedigreeInfo, ISampleMap<Dictionary<Genotype, double>> singleSampleLikelihoods,
             JointLikelihoods jointLikelihoods, ISampleMap<Genotype> copyNumbers)
         {
+            var s = canvasSegments.Values.ToList()[0].End;
+
             foreach (var sampleId in canvasSegments.SampleIds)
             {
                 canvasSegments[sampleId].QScore =
@@ -321,7 +323,9 @@ namespace CanvasPedigreeCaller
         private double GetSingleSampleQualityScore(Dictionary<Genotype, double> copyNumbersLikelihoods, Genotype selectedGenotype)
         {
             double normalizationConstant = copyNumbersLikelihoods.Select(ll => ll.Value).Sum();
-            double qscore = -10.0 * Math.Log10((normalizationConstant - copyNumbersLikelihoods[selectedGenotype]) / normalizationConstant);
+            var selectedGenotypes = copyNumbersLikelihoods.Keys.Where(gt => gt.TotalCopyNumber == selectedGenotype.TotalCopyNumber);
+            var altLikelihood = copyNumbersLikelihoods.SelectKeys(selectedGenotypes).Select(ll => ll.Value).Sum();
+            double qscore = -10.0 * Math.Log10((normalizationConstant - altLikelihood) / normalizationConstant);
             if (Double.IsInfinity(qscore) | qscore > _callerParameters.MaxQscore)
                 qscore = _callerParameters.MaxQscore;
             return qscore;

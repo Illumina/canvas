@@ -31,8 +31,8 @@ namespace CanvasPedigreeCaller
             {
                 int rowId = Math.Min(gtCount.Item1, _maxCoverage - 1);
                 int colId = Math.Min(gtCount.Item2, _maxCoverage - 1);
-                currentLikelihood += _alleleDistribution[gtModelCount.CopyNumberA][gtModelCount.CopyNumberB].Item1[rowId] *
-                                     _alleleDistribution[gtModelCount.CopyNumberA][gtModelCount.CopyNumberB].Item2[colId];
+                currentLikelihood += Math.Log10(_alleleDistribution[gtModelCount.CopyNumberA][gtModelCount.CopyNumberB].Item1[rowId] *
+                                     _alleleDistribution[gtModelCount.CopyNumberA][gtModelCount.CopyNumberB].Item2[colId]);
             }
             return currentLikelihood;
         }
