@@ -28,7 +28,7 @@ namespace EvaluateCNV
         public double Precision => FractionalPrecision * 100;
         public double Recall => FractionalRecall * 100;
         public double F1Score => 2 * FractionalPrecision * FractionalRecall / (FractionalPrecision + FractionalRecall);
-        public double Accuracy => TotalBasesRight / (double)TotalBases;
+        public double Accuracy => 100 * TotalBasesRight / (double)TotalBases;
         // SK: I felt the direction based performance metrices make more sense
         public double DirectionAccuracy => 100 * TotalBasesRightDirection / (double)TotalBases;
 

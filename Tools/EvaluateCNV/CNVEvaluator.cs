@@ -149,6 +149,9 @@ namespace EvaluateCNV
                             if (excludeOverlapStart >= excludeOverlapEnd) continue;
                             excludeIntervalBases += excludeOverlapEnd - excludeOverlapStart;
                             overlapBases -= excludeOverlapEnd - excludeOverlapStart;
+                            // if majority of the region is in exclude intervals, don't consider any overlap
+                            if (overlapBases / Math.Max(excludeOverlapEnd - excludeOverlapStart, 1) < 0.1)
+                                overlapBases = 0;
                         }
                     }
 
@@ -192,6 +195,7 @@ namespace EvaluateCNV
                 {
                     Console.WriteLine($"Error: Truth variant {interval.Chromosome}:{interval.Start}-{interval.End} with no overlapping " +
                                       $"Canvas calls. Ploidy cannot be determined!");
+                    continue;
                 }
                 int ploidy = Convert.ToInt32(Math.Round(Utilities.WeightedMean(totalIntervalRefPloidy.Select(x => (double) x.ploidy).ToList(),
                     totalIntervalRefPloidy.Select(x => (double) Math.Max(x.length,1)).ToList())));
