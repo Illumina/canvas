@@ -1,5 +1,6 @@
 ﻿using System;
 using Canvas.CommandLineParsing;
+using Canvas.SmallPedigree;
 using CanvasCommon;
 using Illumina.Common.FileSystem;
 using Isas.Framework.Checkpointing;
@@ -27,10 +28,10 @@ namespace Canvas
             SingleSampleCommonOptions = input.SingleSampleCommonOptions;
         }
 
-        public void Run(ILogger logger, ICheckpointRunner checkpointRunner, IWorkManager workManager, IWorkDoer workDoer, IFileLocation runtimeExecutable, Func<string, ICommandFactory> runtimeCommandPrefix)
+        public void Run(CanvasRunnerFactory runnerFactory)
         {
-            CanvasRunner runner = new CanvasRunner(logger, workManager, workDoer, checkpointRunner, runtimeExecutable, runtimeCommandPrefix, true, CanvasCoverageMode.GCContentWeighted, 300, CommonOptions.CustomParams);
-            var callset = GetCallset(logger);
+            var runner = runnerFactory.Create(true, CanvasCoverageMode.GCContentWeighted, 300, CommonOptions.CustomParams);
+            var callset = GetCallset(runner.Logger);
             runner.CallSample(callset);
         }
 
