@@ -1,13 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using Canvas.CommandLineParsing;
 using CanvasCommon;
-using Illumina.Common.FileSystem;
-using Isas.Framework.Checkpointing;
 using Isas.Framework.DataTypes;
-using Isas.Framework.Logging;
-using Isas.Framework.WorkManagement;
-using Isas.Framework.WorkManagement.CommandBuilding;
 
 namespace Canvas.SmallPedigree
 {
@@ -16,15 +10,16 @@ namespace Canvas.SmallPedigree
         public CommonOptions CommonOptions { get; }
         public SmallPedigreeOptions SmallPedigreeOptions { get; }
 
-        public SmallPedigreeWgsRunner(SmallPedigreeInput input )
+        public SmallPedigreeWgsRunner(SmallPedigreeInput input)
         {
             SmallPedigreeOptions = input.SmallPedigreeOptions;
             CommonOptions = input.CommonOptions;
         }
 
-        public void Run(ILogger logger, ICheckpointRunner checkpointRunner, IWorkManager workManager, IWorkDoer workDoer, IFileLocation runtimeExecutable, Func<string, ICommandFactory> runtimeCommandPrefix)
+        public void Run(CanvasRunnerFactory canvasRunnerFactory)
         {
-            CanvasRunner runner = new CanvasRunner(logger, workManager, workDoer, checkpointRunner, runtimeExecutable, runtimeCommandPrefix, false, CanvasCoverageMode.TruncatedDynamicRange, 100, CommonOptions.CustomParams);
+            var runner = canvasRunnerFactory.Create(false, CanvasCoverageMode.TruncatedDynamicRange, 100,
+                CommonOptions.CustomParams);
             var callset = GetCallset();
             var spwWorkflow = new SmallPedigreeWorkflow(runner);
             spwWorkflow.CallPedigree(callset);

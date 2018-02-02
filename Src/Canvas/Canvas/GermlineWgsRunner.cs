@@ -1,12 +1,8 @@
-﻿using System;
-using System.Linq;
+﻿using System.Linq;
 using Canvas.CommandLineParsing;
+using Canvas.SmallPedigree;
 using CanvasCommon;
 using Illumina.Common.FileSystem;
-using Isas.Framework.Checkpointing;
-using Isas.Framework.Logging;
-using Isas.Framework.WorkManagement;
-using Isas.Framework.WorkManagement.CommandBuilding;
 
 namespace Canvas
 {
@@ -19,11 +15,10 @@ namespace Canvas
             _input = input;
         }
 
-        public void Run(ILogger logger, ICheckpointRunner checkpointRunner, IWorkManager workManager, IWorkDoer workDoer, IFileLocation runtimeExecutable, Func<string, ICommandFactory> runtimeCommandPrefix)
+        public void Run(CanvasRunnerFactory runnerFactory)
         {
-            CanvasRunner runner = new CanvasRunner(logger, workManager, workDoer, checkpointRunner, runtimeExecutable, runtimeCommandPrefix, false, CanvasCoverageMode.TruncatedDynamicRange, 100, _input.CommonOptions.CustomParams);
+            var runner = runnerFactory.Create(false, CanvasCoverageMode.TruncatedDynamicRange, 100, _input.CommonOptions.CustomParams);
             var callset = GetCallset();
-            logger.Info($"Normal Vcf path: {callset.SingleSampleCallset.NormalVcfPath}");
             runner.CallSample(callset);
         }
 

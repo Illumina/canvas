@@ -4,10 +4,11 @@ using System.IO;
 using Newtonsoft.Json;
 using System.Linq;
 using CanvasCommon;
+using CanvasCommon.Visualization;
 using CanvasPedigreeCaller.Visualization;
 using Illumina.Common;
 using Illumina.Common.FileSystem;
-using Isas.ClassicBioinfoTools.KentUtils;
+using Isas.ClassicBioinfoTools.Tabix;
 using Isas.Framework.Logging;
 using Isas.Framework.Settings;
 using Isas.Framework.WorkManagement;
@@ -166,24 +167,24 @@ namespace CanvasPedigreeCaller
             WorkDoerFactory.RunWithWorkDoer(logger, settings, pedigreeCallerWorkDirectory, workDoer =>
             {
                 var workManager = WorkManagerFactory.GetWorkManager(workDoer, logger, pedigreeCallerWorkDirectory, settings);
-                IBedGraphToBigWigConverter bigWigConverter;
 
-                if (CrossPlatform.IsThisLinux())
-                {
-                    bigWigConverter = new FormatConverterFactory(logger, workManager, commandManager).GetBedGraphToBigWigConverter();
-                }
-                else
-                {
-                    bigWigConverter = new NullBedGraphToBigWigConverter(logger, "BedGraph to BigWig conversion unavailable on Windows.");
-                }
-
-                var referenceGenome = new ReferenceGenomeFactory().GetReferenceGenome(new DirectoryLocation(referenceFolder));
-                var genomeMetadata = referenceGenome.GenomeMetadata;
-                var coverageBigWigWriter = new CoverageBigWigWriterFactory(logger, bigWigConverter, genomeMetadata).Create();
                 var copyNumberLikelihoodCalculator = new CopyNumberLikelihoodCalculator(callerParameters.MaximumCopyNumber);
                 IVariantCaller variantCaller = new VariantCaller(copyNumberLikelihoodCalculator, callerParameters, qScoreThreshold);
                 var copyNumberModelFactory = new CopyNumberModelFactory();
-                var copyNumberBedGraphWriter = new CopyNumberBedGraphWriter(new CopyNumberBedGraphCalculator());
+
+
+                var referenceGenome = new ReferenceGenomeFactory().GetReferenceGenome(new DirectoryLocation(referenceFolder));
+                var genomeMetadata = referenceGenome.GenomeMetadata;
+
+                var coverageBigWigWriterFactory =
+                    new CoverageBigWigWriterFactory(logger, workDoer, commandManager, genomeMetadata);
+                var roundingBedGraphWriter = new RoundingBedGraphWriter(new BedGraphWriterFacade(), 4);
+                var coverageBigWigWriter = coverageBigWigWriterFactory.Create(roundingBedGraphWriter);
+
+                var tabixWrapper = TabixWrapperFactory.GetTabixWrapper(logger, workDoer, commandManager);
+                var bgzfBedGraphWriter = new BgzfBedGraphWriter(new BedGraphWriterFacade(), tabixWrapper);
+                var copyNumberBedGraphWriter = new CopyNumberBedGraphWriter(bgzfBedGraphWriter, new CopyNumberBedGraphCalculator());
+                
                 var caller = new CanvasPedigreeCaller(logger, qScoreThreshold, dqScoreThreshold, callerParameters, copyNumberLikelihoodCalculator, variantCaller, coverageBigWigWriter, copyNumberModelFactory, copyNumberBedGraphWriter);
 
                 var outVcf = outputDirectory.GetFileLocation("CNV.vcf.gz");
