@@ -58,7 +58,7 @@ namespace CanvasTest.CanvasPedigreeCaller
         public void haplotypeCopyNumberModelTester_PhasedGenotype_LossOfHeterozygosity()
         {
             var copyNumberModelFactory = new HaplotypeCopyNumberModelFactory(0.99);
-            var copyNumberModel = copyNumberModelFactory.CreateModel(numCnStates: 5, maxCoverage: 200, meanCoverage: 100, meanMafCoverage: 50.0);
+            var copyNumberModel = copyNumberModelFactory.CreateModel(numCnStates: 5, maxCoverage: 200, meanCoverage: 100, diploidAlleleMeanCounts: 50.0);
             var bAlleles = new Balleles(new List<Ballele>
             {
                 new Ballele(1, 50, 1),
