@@ -1,5 +1,13 @@
+using Newtonsoft.Json;
+using Newtonsoft.Json.Converters;
+
 namespace CanvasPedigreeCaller
 {
+    public enum CallerType
+    {
+        VariantCaller,
+        HaplotypeVariantCaller
+    }
     public class PedigreeCallerParameters
     {
         public int MaximumCopyNumber { get; set; } = 5;
@@ -14,6 +22,8 @@ namespace CanvasPedigreeCaller
         public int NumberOfTrimmedBins { get; set; } = 2;
         public int MaxCoreNumber { get; set; } = 30;
         public double LohRefModelPenaltyTerm { get; set; } = 0.9;
-
+        [JsonProperty("DefaultCaller")]
+        [JsonConverter(typeof(StringEnumConverter))]
+        public CallerType DefaultCaller { get; set; } = CallerType.VariantCaller;
     }
 }

@@ -233,8 +233,6 @@ namespace CanvasPedigreeCaller
             PedigreeInfo pedigreeInfo, ISampleMap<Dictionary<Genotype, double>> singleSampleLikelihoods,
             JointLikelihoods jointLikelihoods, ISampleMap<Genotype> copyNumbers)
         {
-            var s = canvasSegments.Values.ToList()[0].End;
-
             foreach (var sampleId in canvasSegments.SampleIds)
             {
                 canvasSegments[sampleId].QScore =
