@@ -54,12 +54,6 @@ namespace CanvasPedigreeCaller
 
     public class HaplotypeCopyNumberModelFactory : ICopyNumberModelFactory
     {
-        public double LohRefModelPenaltyTerm { get; }
-
-        public HaplotypeCopyNumberModelFactory(double lohRefModelPenaltyTerm)
-        {
-            LohRefModelPenaltyTerm = lohRefModelPenaltyTerm;
-        }
         /// <summary>
         /// 
         /// </summary>
@@ -114,7 +108,7 @@ namespace CanvasPedigreeCaller
             // meanMafCoverage * 3 will cap the coverage at 6 CN, which corresponds to 0-5 CN range captured by the model
             // this will prevent a read stacking scenario with high depth (i.e. > 1000) returning likelihoods of 0 for all models 
             double coverageCeiling = diploidAlleleMeanCounts * 3;
-            return new HaplotypeCopyNumberModel(cnDistribution, alleleDistribution, Convert.ToInt32(coverageCeiling), LohRefModelPenaltyTerm);
+            return new HaplotypeCopyNumberModel(cnDistribution, alleleDistribution, Convert.ToInt32(coverageCeiling));
         }
 
     }

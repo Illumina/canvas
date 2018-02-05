@@ -13,12 +13,11 @@ namespace CanvasPedigreeCaller
         private readonly int _maxCoverage;
         private readonly double _lohRefModelPenaltyTerm;
 
-        public HaplotypeCopyNumberModel(List<List<double>> cnDistribution, Tuple<List<double>, List<double>>[][] alleleDistribution, int maxCoverage, double lohRefModelPenaltyTerm)
+        public HaplotypeCopyNumberModel(List<List<double>> cnDistribution, Tuple<List<double>, List<double>>[][] alleleDistribution, int maxCoverage)
         {
             _cnDistribution = cnDistribution;
             _alleleDistribution = alleleDistribution;
             _maxCoverage = maxCoverage;
-            _lohRefModelPenaltyTerm = lohRefModelPenaltyTerm;
         }
 
         public double GetTotalCopyNumberLikelihoods(double segmentMedianBinCoverage, Genotype totalCopyNumberGenotype)
@@ -28,7 +27,7 @@ namespace CanvasPedigreeCaller
 
         public double GetGenotypeLikelihood(Balleles gtObservedCounts, PhasedGenotype gtModelCount)
         {
-            {
+                double minLogLikelihood = Math.Log(1.0 / Double.MaxValue);
                 double currentLikelihood = 0;
                 foreach (var gtCount in gtObservedCounts.GetAlleleCounts())
                 {
@@ -37,21 +36,19 @@ namespace CanvasPedigreeCaller
                     if (gtModelCount.CopyNumberA == 1 && gtModelCount.CopyNumberB == 1)
                         currentLikelihood += new List<double>
                         {
-                            _alleleDistribution[1][1].Item1[rowId] *
-                            _alleleDistribution[1][1].Item2[colId],
-                            _alleleDistribution[2][0].Item1[rowId] *
-                            _alleleDistribution[2][0].Item2[colId],
-                            _alleleDistribution[0][2].Item1[rowId] *
-                            _alleleDistribution[0][2].Item2[colId]
-                        }.Max() * _lohRefModelPenaltyTerm;
+                            Math.Max(minLogLikelihood, Math.Log(_alleleDistribution[1][1].Item1[rowId] *
+                            _alleleDistribution[1][1].Item2[colId] * 1.0 / 3.0)),
+                            Math.Max(minLogLikelihood, Math.Log(_alleleDistribution[2][0].Item1[rowId] *
+                            _alleleDistribution[2][0].Item2[colId] * 1.0 / 3.0)),
+                            Math.Max(minLogLikelihood, Math.Log(_alleleDistribution[0][2].Item1[rowId] *
+                            _alleleDistribution[0][2].Item2[colId] * 1.0 / 3.0))
+                        }.Max();
                     else
-                        currentLikelihood += _alleleDistribution[gtModelCount.CopyNumberA][gtModelCount.CopyNumberB]
-                                                 .Item1[rowId] *
-                                             _alleleDistribution[gtModelCount.CopyNumberA][gtModelCount.CopyNumberB]
-                                                 .Item2[colId];
+                        currentLikelihood += Math.Max(minLogLikelihood, Math.Log(_alleleDistribution[gtModelCount.CopyNumberA][gtModelCount.CopyNumberB]
+                                                 .Item1[rowId] * _alleleDistribution[gtModelCount.CopyNumberA][gtModelCount.CopyNumberB]
+                                                 .Item2[colId]));
                 }
                 return currentLikelihood;
-            }
         }
     }
 }

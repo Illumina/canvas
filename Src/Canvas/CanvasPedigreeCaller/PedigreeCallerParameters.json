@@ -10,6 +10,5 @@
   "MinimumCallSize": 2000,
   "NumberOfTrimmedBins": 2,
   "MaxCoreNumber": 30,
-  "LohRefModelPenaltyTerm": 0.9,
-  "DefaultCaller": "HaplotypeVariantCaller"
+  "DefaultCaller": "VariantCaller"
 }

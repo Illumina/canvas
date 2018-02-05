@@ -27,12 +27,13 @@ namespace CanvasPedigreeCaller
         public double GetGenotypeLikelihood(Balleles gtObservedCounts, PhasedGenotype gtModelCount)
         {
             double currentLikelihood = 0;
+            double minLogLikelihood = Math.Log(1.0/Double.MaxValue);
             foreach (var gtCount in gtObservedCounts.GetAlleleCounts())
             {
                 int rowId = Math.Min(gtCount.Item1, _maxCoverage - 1);
                 int colId = Math.Min(gtCount.Item2, _maxCoverage - 1);
-                currentLikelihood += _alleleDistribution[gtModelCount.CopyNumberA][gtModelCount.CopyNumberB].Item1[rowId] *
-                                     _alleleDistribution[gtModelCount.CopyNumberA][gtModelCount.CopyNumberB].Item2[colId];
+                currentLikelihood += Math.Max(minLogLikelihood, Math.Log(_alleleDistribution[gtModelCount.CopyNumberA][gtModelCount.CopyNumberB].Item1[rowId]*
+                                     _alleleDistribution[gtModelCount.CopyNumberA][gtModelCount.CopyNumberB].Item2[colId]));
             }
             return currentLikelihood;
         }
