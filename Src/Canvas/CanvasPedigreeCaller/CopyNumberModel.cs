@@ -24,7 +24,7 @@ namespace CanvasPedigreeCaller
             return _cnDistribution.Select(x => x[Convert.ToInt32(segmentMedianBinCoverage)]).ElementAt(totalCopyNumberGenotype.TotalCopyNumber);
         }
 
-        public double GetGenotypeLikelihood(Balleles gtObservedCounts, PhasedGenotype gtModelCount)
+        public double GetGenotypeLogLikelihood(Balleles gtObservedCounts, PhasedGenotype gtModelCount)
         {
             double currentLikelihood = 0;
             double minLogLikelihood = Math.Log(1.0/Double.MaxValue);
@@ -32,8 +32,13 @@ namespace CanvasPedigreeCaller
             {
                 int rowId = Math.Min(gtCount.Item1, _maxCoverage - 1);
                 int colId = Math.Min(gtCount.Item2, _maxCoverage - 1);
-                currentLikelihood += Math.Max(minLogLikelihood, Math.Log(_alleleDistribution[gtModelCount.CopyNumberA][gtModelCount.CopyNumberB].Item1[rowId]*
-                                     _alleleDistribution[gtModelCount.CopyNumberA][gtModelCount.CopyNumberB].Item2[colId]));
+                // CopyNumberModel does not account for allele CN, aggregate into MCC
+                double aAllele = Math.Log(_alleleDistribution[gtModelCount.CopyNumberA][gtModelCount.CopyNumberB]
+                                                  .Item1[rowId] * _alleleDistribution[gtModelCount.CopyNumberA][gtModelCount.CopyNumberB].Item2[colId]);
+                double bAllele = Math.Log(_alleleDistribution[gtModelCount.CopyNumberB][gtModelCount.CopyNumberA]
+                                                  .Item1[rowId] * _alleleDistribution[gtModelCount.CopyNumberB][gtModelCount.CopyNumberA].Item2[colId]);
+                currentLikelihood += Math.Max(minLogLikelihood, Math.Max(aAllele, bAllele));
+                
             }
             return currentLikelihood;
         }

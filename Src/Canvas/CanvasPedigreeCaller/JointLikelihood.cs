@@ -8,13 +8,13 @@ using Isas.Framework.DataTypes.Maps;
 
 namespace CanvasPedigreeCaller
 {
-    internal class JointLikelihoods
+    internal class JointLogLikelihoods
     {
         public double MaximalLikelihood;
         private readonly Dictionary<ISampleMap<Genotype>, double> _jointLikelihoods;
         private double _totalLikelihood;
 
-        public JointLikelihoods()
+        public JointLogLikelihoods()
         {
             MaximalLikelihood = double.MinValue;
             var comparer = new SampleGenotypeComparer();

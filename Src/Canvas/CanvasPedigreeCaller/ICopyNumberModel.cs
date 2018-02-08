@@ -4,7 +4,7 @@ namespace CanvasPedigreeCaller
 {
     public interface ICopyNumberModel
     {
-        double GetGenotypeLikelihood(Balleles segmentAlleleReadCounts, PhasedGenotype phasedGenotype);
+        double GetGenotypeLogLikelihood(Balleles segmentAlleleReadCounts, PhasedGenotype phasedGenotype);
         double GetTotalCopyNumberLikelihoods(double segmentMedianBinCoverage, Genotype totalCopyNumberGenotype);
     }
 
