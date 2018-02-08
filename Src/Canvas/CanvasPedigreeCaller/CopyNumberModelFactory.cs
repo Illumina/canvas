@@ -107,8 +107,21 @@ namespace CanvasPedigreeCaller
             }
             // meanMafCoverage * 3 will cap the coverage at 6 CN, which corresponds to 0-5 CN range captured by the model
             // this will prevent a read stacking scenario with high depth (i.e. > 1000) returning likelihoods of 0 for all models 
-            double coverageCeiling = diploidAlleleMeanCounts * 3;
-            return new HaplotypeCopyNumberModel(cnDistribution, alleleDistribution, Convert.ToInt32(coverageCeiling));
+            int coverageCeiling = Convert.ToInt32(diploidAlleleMeanCounts * 3);
+            
+            // also compute distributions for total reads as a function of total copy number,
+            // so we can compute likelihoods for homozygous loci
+            int maxTtlCoverage = 2 * maxCoverage;
+            int numTtlCnStates = 2 * numCnStates;
+            var readDepthDistribution = new List<double>[numTtlCnStates];
+            for (int gt1 = 0; gt1 < numTtlCnStates; gt1++)
+            {
+                readDepthDistribution[gt1] = DistributionUtilities.NegativeBinomialWrapper(haploidAlleleMeanCounts * gt1,
+                    mafVariance, maxTtlCoverage);
+            }
+
+            return new HaplotypeCopyNumberModel(cnDistribution, alleleDistribution, coverageCeiling, readDepthDistribution, maxTtlCoverage);
+
         }
 
     }

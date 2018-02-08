@@ -31,9 +31,9 @@ namespace CanvasTest.CanvasPedigreeCaller
                 new Ballele(400, 1, 50),
                 new Ballele(500, 25, 25)
             });
-            double diploidHet = copyNumberModel.GetGenotypeLikelihood(bAlleles, new PhasedGenotype(1, 1));
-            double lohB = copyNumberModel.GetGenotypeLikelihood(bAlleles, new PhasedGenotype(0, 2));
-            double lohA = copyNumberModel.GetGenotypeLikelihood(bAlleles, new PhasedGenotype(2, 0));
+            double diploidHet = copyNumberModel.GetGenotypeLogLikelihood(bAlleles, new PhasedGenotype(1, 1));
+            double lohB = copyNumberModel.GetGenotypeLogLikelihood(bAlleles, new PhasedGenotype(0, 2));
+            double lohA = copyNumberModel.GetGenotypeLogLikelihood(bAlleles, new PhasedGenotype(2, 0));
             Assert.True(diploidHet > lohB);
             Assert.True(diploidHet > lohA);
 
@@ -46,9 +46,9 @@ namespace CanvasTest.CanvasPedigreeCaller
                 new Ballele(400, 48, 2),
                 new Ballele(500, 53, 0)
             });
-            diploidHet = copyNumberModel.GetGenotypeLikelihood(bAllelesLohWithNoise, new PhasedGenotype(1, 1));
-            lohB = copyNumberModel.GetGenotypeLikelihood(bAllelesLohWithNoise, new PhasedGenotype(0, 2));
-            lohA = copyNumberModel.GetGenotypeLikelihood(bAllelesLohWithNoise, new PhasedGenotype(2, 0));
+            diploidHet = copyNumberModel.GetGenotypeLogLikelihood(bAllelesLohWithNoise, new PhasedGenotype(1, 1));
+            lohB = copyNumberModel.GetGenotypeLogLikelihood(bAllelesLohWithNoise, new PhasedGenotype(0, 2));
+            lohA = copyNumberModel.GetGenotypeLogLikelihood(bAllelesLohWithNoise, new PhasedGenotype(2, 0));
             Assert.True(diploidHet > lohB);
             Assert.True(diploidHet < lohA);
         }

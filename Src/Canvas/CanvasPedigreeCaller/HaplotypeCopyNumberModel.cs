@@ -11,15 +11,20 @@ namespace CanvasPedigreeCaller
         private readonly List<List<double>> _cnDistribution;
         private readonly Tuple<List<double>, List<double>>[][] _alleleDistribution;
         private readonly int _maxCoverage;
-        private readonly double _lohRefModelPenaltyTerm;
+        private readonly List<double>[] _readDepthDistribution;
+        private readonly int _maxTtlCoverage;
         private readonly List<double> _logFactorial;
 
 
-        public HaplotypeCopyNumberModel(List<List<double>> cnDistribution, Tuple<List<double>, List<double>>[][] alleleDistribution, int maxCoverage)
+        public HaplotypeCopyNumberModel(List<List<double>> cnDistribution, Tuple<List<double>, List<double>>[][] alleleDistribution,
+            int maxCoverage, List<double>[] readDepthDistribution, int maxTtlCoverage)
         {
             _cnDistribution = cnDistribution;
             _alleleDistribution = alleleDistribution;
             _maxCoverage = maxCoverage;
+            _readDepthDistribution = readDepthDistribution;
+            _maxTtlCoverage = maxTtlCoverage;
+
             _logFactorial = new List<double>();
             _logFactorial.Add(0.0);
             _logFactorial.Add(0.0);
@@ -74,7 +79,7 @@ namespace CanvasPedigreeCaller
                         int ttlCN = gtModelCount.CopyNumberA + gtModelCount.CopyNumberB;
                         // Split the likelihood into two parts:
                         // First, the probability of getting the observed total number of reads, given the total copy number
-                        double probTtlReadDepth = _cnDistribution[ttlCN][ttlReads];
+                        double probTtlReadDepth = _readDepthDistribution[ttlCN][ttlReads];
                         // Second, the probability of the observed per-allele read counts assuming one of the alleles is an error.
                         // The calculation here is simply binomial, in log space
                         double logProbCountAErrors = LogCombinations(rowId, colId) + rowId * logErrorProb + colId * logNoErrorProb;
@@ -88,7 +93,7 @@ namespace CanvasPedigreeCaller
                         // if copy number is 0, any reads must be mismappings, all bets are off ... just return a constant;
                         // that constant might as well be 1 -- returning 0
                         likelihoodThisLocus = 1;
-                   }
+                    }
 
                     likelihoodThisLocus = Math.Max(minLogLikelihood, likelihoodThisLocus);
                     currentLogLikelihood += Math.Log(likelihoodThisLocus);
