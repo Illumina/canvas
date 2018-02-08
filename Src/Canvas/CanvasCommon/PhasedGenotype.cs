@@ -12,6 +12,10 @@ namespace CanvasCommon
             CopyNumberA = copyNumberA;
             CopyNumberB = copyNumberB;
         }
+        public PhasedGenotype GenotypeTranspose()
+        {
+            return new PhasedGenotype(CopyNumberB, CopyNumberA);
+        }
 
         /// <summary>
         /// Returns true when condition is satisfied and allele copy numbers are present

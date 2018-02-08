@@ -39,7 +39,7 @@ namespace CanvasPedigreeCaller
             double variance = Utilities.Variance(segments.Select(x => x.TruncatedMedianCount(numberOfTrimmedBins)).ToList());
             double mafVariance = Utilities.Variance(segments.Where(x => x.Balleles.TotalCoverage.Count > 0)
                 .Select(x => x.Balleles.TotalCoverage.Average()).ToList());
-            double meanCoverage = segments.SelectMany(x => x.Counts).Average();
+            double meanCoverage = new SortedList<float>(segments.SelectMany(x => x.Counts).Select(x=>x)).Median();
             int maxCoverage = Convert.ToInt16(segments.Select(x => x.TruncatedMedianCount(numberOfTrimmedBins)).Max()) + 10;
             var ploidy = new PloidyInfo();
             if (!ploidyBedPath.IsNullOrEmpty() && File.Exists(ploidyBedPath))
