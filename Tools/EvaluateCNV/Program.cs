@@ -1,7 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
-using CanvasCommon;
 using CanvasCommon.CommandLineParsing.CoreOptionTypes;
 using CanvasCommon.CommandLineParsing.OptionProcessing;
 using Illumina.Common.FileSystem;
@@ -33,7 +31,6 @@ namespace EvaluateCNV
                 ShowHelp(optionsParser, Console.Out);
                 return 0;
             }
-
             CNVChecker.Evaluate(args[0], args[1], args[2], args[3], options);
             return 0;
         }

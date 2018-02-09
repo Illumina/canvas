@@ -154,7 +154,7 @@ namespace EvaluateCNV
                         }
                     }
 
-                    totalIntervalRefPloidy.Add((call.RefPloidy.Value, overlapBases));
+                    totalIntervalRefPloidy.Add((refPloidy, overlapBases));
 
                     if (!call.PassFilter && includePassingOnly && knownCn != call.RefPloidy)
                         // assign no call (CN=ploidy) by default

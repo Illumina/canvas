@@ -23,14 +23,14 @@ namespace EvaluateCNV
         public int Start; // 0-based inclusive
         public int End; // 0-based exclusive
         public int Cn;
-        public int? ReferenceCopyNumber; // updated based on ploidy bed
+        public int ReferenceCopyNumber; // set based on ploidy from GT fields or command line parameter
         public int BasesCovered;
         public int BasesExcluded;
         public int BasesCalledCorrectly;
 
         public int BasesNotCalled => Length - BasesExcluded - BasesCalledCorrectly - BasesCalledIncorrectly;
 
-        public CNInterval(string chromosome, int start, int end, int cn, int referenceCopyNumber)
+        public CNInterval(string chromosome, int start, int end, int cn)
         {
             Chromosome = chromosome;
             Start = start;
