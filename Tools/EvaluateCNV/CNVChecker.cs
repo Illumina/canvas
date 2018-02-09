@@ -545,7 +545,6 @@ namespace EvaluateCNV
         private static bool TryGetPloidyForCall(CnvCall call, List<PloidyInterval> ploidyRegions,
             out PloidyInterval ploidyRegion)
         {
-            ploidyRegion = null;
             foreach (var currentPloidyRegion in ploidyRegions)
             {
                 // interval must be completely contained within the ploidy region	
@@ -558,6 +557,7 @@ namespace EvaluateCNV
                     call.End >= currentPloidyRegion.Start && call.End <= currentPloidyRegion.End)
                     throw new IlluminaException($"Call '{call}' crosses reference ploidy region {currentPloidyRegion}. Update truth interval");
             }
+            ploidyRegion = null;
             return false;
         }
     }

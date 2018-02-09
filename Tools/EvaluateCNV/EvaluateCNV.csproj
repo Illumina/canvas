@@ -32,10 +32,4 @@
     <PackageReference Include="protobuf-net" Version="2.3.2" />
   </ItemGroup>
 
-  <ItemGroup>
-    <Reference Include="Isas.Ploidy">
-      <HintPath>..\..\..\..\..\Users\eroller\.nuget\packages\isas.ploidy\3.0.0.92\lib\netstandard1.5\Isas.Ploidy.dll</HintPath>
-    </Reference>
-  </ItemGroup>
-
 </Project>
