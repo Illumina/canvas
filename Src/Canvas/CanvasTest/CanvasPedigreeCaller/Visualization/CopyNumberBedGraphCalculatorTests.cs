@@ -105,7 +105,7 @@ namespace CanvasTest
                     Filter = CanvasFilter.PassFilter
                 }
             };
-            var ploidyInfo = new PloidyInfo { PloidyByChromosome = ("chr1", new PloidyInterval("chr1") { Start = 0, End = 1, Ploidy = 1 }.Yield().ToList()).Yield().ToDictionary() };
+            var ploidyInfo = new PloidyInfo { PloidyByChromosome = ("chr1", new PloidyInterval("chr1") { Start = 1, End = 1, Ploidy = 1 }.Yield().ToList()).Yield().ToDictionary() };
             
             var results = calculator.Calculate(segments, ploidyInfo).ToList();
 

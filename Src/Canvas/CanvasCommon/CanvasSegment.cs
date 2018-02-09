@@ -6,7 +6,6 @@ using System.IO;
 using Illumina.Common;
 using Illumina.Common.FileSystem;
 using Isas.SequencingFiles;
-using Isas.SequencingFiles.Vcf;
 
 
 namespace CanvasCommon
@@ -689,7 +688,7 @@ namespace CanvasCommon
                             {
                                 foreach (var interval in referencePloidy.PloidyByChromosome[chromosome.Name])
                                 {
-                                    if (interval.Start <= pointEndPos && interval.End >= pointStartPos)
+                                    if (interval.Start - 1 <= pointEndPos && interval.End >= pointStartPos)
                                     {
                                         refPloidy = interval.Ploidy;
                                     }

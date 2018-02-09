@@ -255,7 +255,7 @@ namespace CanvasTest.Canvas.CommandLineParsing
             var option1 = StringOption.CreateRequired("value1 option", "value1");
             var option2 = StringOption.CreateRequired("value2 option", "value2");
             var option3 = StringOption.CreateRequired("value3 option", "value2");
-            var multiStringOption = new PositionalOption<string, string, string, Tuple<string, string, string>>(parse, true, option1, option2, option3, "positional-option");
+            var multiStringOption = new PositionalOption<string, string, string, Tuple<string, string, string>>(parse, true, true, "", option1, option2, option3, "positional-option");
             string[] stringInputArgument =
             {
                 "--positional-option", inputArgument1, inputArgument2, inputArgument3
@@ -281,7 +281,7 @@ namespace CanvasTest.Canvas.CommandLineParsing
             var option1 = StringOption.CreateRequired("value1 option", "value1");
             var option2 = StringOption.CreateRequired("value2 option", "value2");
             var option3 = StringOption.Create("value3 option", "value2");
-            var multiStringOption = new PositionalOption<string, string, string, Tuple<string, string, string>>(parse, true, option1, option2, option3, "positional-option");
+            var multiStringOption = new PositionalOption<string, string, string, Tuple<string, string, string>>(parse, true, true, "", option1, option2, option3, "positional-option");
             string[] stringInputArgument =
             {
                 "--positional-option", inputArgument1, inputArgument2
@@ -306,7 +306,7 @@ namespace CanvasTest.Canvas.CommandLineParsing
             var option1 = StringOption.CreateRequired("value1 option", "value1");
             var option2 = StringOption.CreateRequired("value2 option", "value2");
             var option3 = StringOption.Create("value3 option", "value2");
-            var multiStringOption = new PositionalOption<string, string, string, Tuple<string, string, string>>(parse, true, option1, option2, option3, "positional-option");
+            var multiStringOption = new PositionalOption<string, string, string, Tuple<string, string, string>>(parse, true, true, "", option1, option2, option3, "positional-option");
             string[] stringInputArgument =
             {
                 "--positional-option", inputArgument1
@@ -326,7 +326,7 @@ namespace CanvasTest.Canvas.CommandLineParsing
             var option1 = StringOption.Create("value1 option", "value1");
             var option2 = StringOption.Create("value2 option", "value2");
             var option3 = StringOption.Create("value3 option", "value2");
-            var multiStringOption = new PositionalOption<string, string, string, Tuple<string, string, string>>(parse, true, option1, option2, option3, "positional-option");
+            var multiStringOption = new PositionalOption<string, string, string, Tuple<string, string, string>>(parse, true, true, "", option1, option2, option3, "positional-option");
             string[] stringInputArgument =
             {
             };
@@ -345,7 +345,7 @@ namespace CanvasTest.Canvas.CommandLineParsing
             var option1 = StringOption.Create("value1 option", "value1");
             var option2 = StringOption.Create("value2 option", "value2");
             var option3 = StringOption.Create("value3 option", "value2");
-            var multiStringOption = new PositionalOption<string, string, string, Tuple<string, string, string>>(parse, true, option1, option2, option3, "positional-option");
+            var multiStringOption = new PositionalOption<string, string, string, Tuple<string, string, string>>(parse, true, true, "", option1, option2, option3, "positional-option");
             OptionCollection<Tuple<Tuple<string, string, string>, string>> collection = new OptionCollection<Tuple<Tuple<string, string, string>, string>>();
             collection.Add(multiStringOption);
             collection.Add(option1);

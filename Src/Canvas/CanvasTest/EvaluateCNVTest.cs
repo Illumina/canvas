@@ -14,7 +14,7 @@ namespace CanvasTest
         [Fact]
         public void TestAllosomes()
         {
-            var cnvEvaluator = new CnvEvaluator(new CNVChecker(null, new Dictionary<string, List<CNInterval>>()));
+            var cnvEvaluator = new CnvEvaluator(new CNVChecker(null, new Dictionary<string, List<CNInterval>>(), null));
 
             var baseCounter = new BaseCounter(5, 0, 4999);
             const string chr = "1";
@@ -48,7 +48,7 @@ namespace CanvasTest
         [Fact]
         public void TestFalseNegatives()
         {
-            var cnvEvaluator = new CnvEvaluator(new CNVChecker(null, new Dictionary<string, List<CNInterval>>()));
+            var cnvEvaluator = new CnvEvaluator(new CNVChecker(null, new Dictionary<string, List<CNInterval>>(), null));
 
             var baseCounter = new BaseCounter(5, 0, 4999);
             const string chr = "1";
@@ -91,7 +91,7 @@ namespace CanvasTest
                     new CNInterval(chr) {Start = 4001, End = 5000},
                 }
             };
-            var cnvEvaluator = new CnvEvaluator(new CNVChecker(null, excludedRegions));
+            var cnvEvaluator = new CnvEvaluator(new CNVChecker(null, excludedRegions, null));
 
             var baseCounter = new BaseCounter(5, 0, 4999);
             var calls = new Dictionary<string, List<CnvCall>>

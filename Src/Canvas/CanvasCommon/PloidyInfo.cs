@@ -61,7 +61,7 @@ namespace CanvasCommon
             foreach (PloidyInterval interval in PloidyByChromosome[segment.Chr])
             {
                 if (interval.Ploidy == 2) continue;
-                int overlapStart = Math.Max(segment.Begin, interval.Start);
+                int overlapStart = Math.Max(segment.Begin, interval.Start -1);
                 if (overlapStart > segment.End) continue;
                 int overlapEnd = Math.Min(segment.End, interval.End);
                 int overlapBases = overlapEnd - overlapStart;
@@ -154,8 +154,8 @@ namespace CanvasCommon
     public class PloidyInterval
     {
         public string Chromosome { get; }
-        public int Start;
-        public int End;
+        public int Start; //one-based start position from vcf
+        public int End; //one-based end position from vcf
         public int Ploidy;
 
         public PloidyInterval(string chromosome)
@@ -165,7 +165,7 @@ namespace CanvasCommon
 
         public override string ToString()
         {
-            return $"{Chromosome}:{Start + 1}-{End}";
+            return $"{Chromosome}:{Start}-{End}";
         }
     }
 

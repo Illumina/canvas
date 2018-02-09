@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using CanvasCommon.CommandLineParsing.OptionProcessing;
 using Illumina.Common;
 using System.Linq;
+using System.Net.Http.Headers;
 
 namespace CanvasCommon.CommandLineParsing.CoreOptionTypes
 {
@@ -15,14 +16,14 @@ namespace CanvasCommon.CommandLineParsing.CoreOptionTypes
         private bool _required;
 
         public OptionInfo<List<List<string>>> Info { get; }
-        public PositionalOption(Func<T1, T2, T3, IParsingResult<TOut>> parse, bool required, ValueOption<T1> option1, ValueOption<T2> option2, ValueOption<T3> option3, params string[] names)
+        public PositionalOption(Func<T1, T2, T3, IParsingResult<TOut>> parse, bool isMultiValue, bool required, string overallDescription, ValueOption<T1> option1, ValueOption<T2> option2, ValueOption<T3> option3, params string[] names)
         {
             _required = required;
             _parse = parse;
             _option1 = option1;
             _option2 = option2;
             _option3 = option3;
-            Info = new PositionalOptionInfo(required, new IOptionInfo[] { option1.Info, option2.Info, option3.Info }, names);
+            Info = new PositionalOptionInfo(required, isMultiValue, overallDescription, new IOptionInfo[] { option1.Info, option2.Info, option3.Info }, names);
         }
 
         public override IParsingResult<List<TOut>> Parse(SuccessfulResultCollection input)
@@ -66,17 +67,18 @@ namespace CanvasCommon.CommandLineParsing.CoreOptionTypes
         public int MaxNumValues { get; }
         private readonly bool _required;
 
-        public PositionalOptionInfo(bool required, string description, int maxNumValues, params string[] names) : base(description, names)
+        public PositionalOptionInfo(bool required, bool isMultiValue, string description, int maxNumValues, params string[] names) : base(description, names)
         {
             MaxNumValues = maxNumValues;
             _required = required;
         }
 
-        public PositionalOptionInfo(bool required, IOptionInfo[] optionsInfos, params string[] names) : this(false, GetDescription(required, optionsInfos), optionsInfos.Length, names)
+        public PositionalOptionInfo(bool required, bool isMultiValue, string overallDescription, IOptionInfo[] optionsInfos, params string[] names) : this(required, isMultiValue, GetDescription(overallDescription, isMultiValue, required, optionsInfos), optionsInfos.Length, names)
         {
         }
 
-        private static string GetDescription(bool required, params IOptionInfo[] optionsInfos)
+        private static string GetDescription(string overallDescription, bool isMultiValue, bool required,
+            params IOptionInfo[] optionsInfos)
         {
             var names = string.Join(" ", optionsInfos.Select(info =>
             {
@@ -85,13 +87,16 @@ namespace CanvasCommon.CommandLineParsing.CoreOptionTypes
                 return $"[{info.Name}]";
             }));
 
+            names += overallDescription;
+
             var descriptions = "";
             foreach (var option in optionsInfos)
             {
                 if (descriptions.Length == 0) descriptions += " ";
                 descriptions += $"{option.Name}: {option.Description}\n\n";
             }
-            names += " Option can be specified multiple times.";
+            if (isMultiValue)
+                names += " Option can be specified multiple times.";
             if (required)
                 names += " (required)";
             return names + "\n\n" + descriptions.Trim();

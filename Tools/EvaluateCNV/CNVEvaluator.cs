@@ -90,7 +90,7 @@ namespace EvaluateCNV
             }
         }
 
-        public MetricsCalculator CalculateMetrics(Dictionary<string, List<CNInterval>> knownCN, Dictionary<string, List<CnvCall>> calls, 
+        public MetricsCalculator CalculateMetrics(Dictionary<string, List<CNInterval>> knownCN, Dictionary<string, List<CnvCall>> calls,
             BaseCounter baseCounter, bool optionsSkipDiploid, bool includePassingOnly)
         {
             calls.Values.SelectMany(x => x).ForEach(call =>
@@ -103,7 +103,7 @@ namespace EvaluateCNV
                 baseCounter.TotalVariants++;
             });
 
-            foreach (CNInterval interval in knownCN.Values.SelectMany(x=>x))
+            foreach (CNInterval interval in knownCN.Values.SelectMany(x => x))
             {
                 if (!(interval.Length >= baseCounter.MinSize && interval.Length <= baseCounter.MaxSize)) continue;
                 int nonOverlapBases = interval.Length;
@@ -124,6 +124,9 @@ namespace EvaluateCNV
 
                 foreach (CnvCall call in calls[chromosome])
                 {
+                    if (!call.RefPloidy.HasValue)
+                        throw new IlluminaException($"Could not determine reference ploidy for call '{call}'. Please provide ploidy information via command line option.");
+                    int refPloidy = call.RefPloidy.Value;
                     int CN = call.CN;
                     if (CN < 0 || call.End < 0) continue; // Not a CNV call, apparently
                     if (call.AltAllele == "." && optionsSkipDiploid) continue;
@@ -151,15 +154,15 @@ namespace EvaluateCNV
                         }
                     }
 
-                    totalIntervalRefPloidy.Add((call.RefPloidy, overlapBases));
+                    totalIntervalRefPloidy.Add((call.RefPloidy.Value, overlapBases));
 
                     if (!call.PassFilter && includePassingOnly && knownCn != call.RefPloidy)
                         // assign no call (CN=ploidy) by default
-                        baseCounter.BaseCount[knownCn, call.RefPloidy, call.RefPloidy] += overlapBases;
+                        baseCounter.BaseCount[knownCn, refPloidy, refPloidy] += overlapBases;
                     else
                     {
                         totalOverlapBases += overlapBases;
-                        baseCounter.BaseCount[knownCn, CN, call.RefPloidy] += overlapBases;
+                        baseCounter.BaseCount[knownCn, CN, refPloidy] += overlapBases;
                     }
 
                     interval.BasesCovered += overlapBases;
@@ -180,9 +183,9 @@ namespace EvaluateCNV
                         int roiOverlapBases = roiOverlapEnd - roiOverlapStart;
                         if (!call.PassFilter && includePassingOnly)
                             // assign no call (CN=ploidy) by default
-                            baseCounter.RoiBaseCount[knownCn, call.RefPloidy, call.RefPloidy] += roiOverlapBases;
+                            baseCounter.RoiBaseCount[knownCn, refPloidy, refPloidy] += roiOverlapBases;
                         else
-                            baseCounter.RoiBaseCount[knownCn, CN, call.RefPloidy] += roiOverlapBases;
+                            baseCounter.RoiBaseCount[knownCn, CN, refPloidy] += roiOverlapBases;
                     }
                 }
 
@@ -193,8 +196,8 @@ namespace EvaluateCNV
                                       $"Canvas calls. Ploidy cannot be determined!");
                     continue;
                 }
-                int ploidy = Convert.ToInt32(Math.Round(Utilities.WeightedMean(totalIntervalRefPloidy.Select(x => (double) x.ploidy).ToList(),
-                    totalIntervalRefPloidy.Select(x => (double) Math.Max(x.length,1)).ToList())));
+                int ploidy = Convert.ToInt32(Math.Round(Utilities.WeightedMean(totalIntervalRefPloidy.Select(x => (double)x.ploidy).ToList(),
+                    totalIntervalRefPloidy.Select(x => (double)Math.Max(x.length, 1)).ToList())));
                 interval.ReferenceCopyNumber = ploidy;
                 if (nonOverlapBases < 0)
                 {

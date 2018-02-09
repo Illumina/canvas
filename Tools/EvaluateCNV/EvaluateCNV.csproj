@@ -26,9 +26,16 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Illumina.Common" Version="5.0.6.381" />
+    <PackageReference Include="Illumina.Common" Version="5.1.0.384" />
+    <PackageReference Include="Isas.Ploidy" Version="3.0.0.92" />
     <PackageReference Include="Isas.SequencingFiles" Version="6.1.1.409" />
     <PackageReference Include="protobuf-net" Version="2.3.2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="Isas.Ploidy">
+      <HintPath>..\..\..\..\..\Users\eroller\.nuget\packages\isas.ploidy\3.0.0.92\lib\netstandard1.5\Isas.Ploidy.dll</HintPath>
+    </Reference>
   </ItemGroup>
 
 </Project>
