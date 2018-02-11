@@ -49,7 +49,7 @@ namespace CanvasTest.CanvasPedigreeCaller
             diploidHet = copyNumberModel.GetGenotypeLogLikelihood(bAllelesLohWithNoise, new PhasedGenotype(1, 1));
             lohB = copyNumberModel.GetGenotypeLogLikelihood(bAllelesLohWithNoise, new PhasedGenotype(0, 2));
             lohA = copyNumberModel.GetGenotypeLogLikelihood(bAllelesLohWithNoise, new PhasedGenotype(2, 0));
-            Assert.True(diploidHet > lohB);
+            Assert.True(diploidHet < lohB);
             Assert.True(diploidHet < lohA);
         }
     }

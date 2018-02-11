@@ -170,7 +170,7 @@ namespace CanvasPedigreeCaller
 
                 var copyNumberLikelihoodCalculator = new CopyNumberLikelihoodCalculator(callerParameters.MaximumCopyNumber);
                 var variantCaller = callerParameters.DefaultCaller == CallerType.VariantCaller ?
-                (IVariantCaller) new VariantCaller(copyNumberLikelihoodCalculator, callerParameters, qScoreThreshold):
+                (IVariantCaller) new HaplotypeVariantCaller(copyNumberLikelihoodCalculator, callerParameters, qScoreThreshold):
                 new HaplotypeVariantCaller(copyNumberLikelihoodCalculator, callerParameters, qScoreThreshold);
 
                 var copyNumberModelFactory = new HaplotypeCopyNumberModelFactory();

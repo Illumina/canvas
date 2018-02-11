@@ -318,7 +318,7 @@ namespace CanvasPedigreeCaller
             {
                 var copyNumbersLikelihoods = _copyNumberLikelihoodCalculator.GetCopyNumbersLikelihoods(canvasSegment, samplesInfo, copyNumberModel);
                 var (_, likelihoods) = GetCopyNumbersNoPedigreeInfo(canvasSegment, copyNumbersLikelihoods);
-                segmentSetLikelihood += likelihoods.MaximalLikelihood;
+                segmentSetLikelihood += likelihoods.MaximalLogLikelihood;
             }
 
             segmentSetLikelihood /= nSegments;
@@ -337,7 +337,7 @@ namespace CanvasPedigreeCaller
             foreach (var sampleId in segments.SampleIds)
             {
                 var (copyNumber, maxSampleLikelihood) = singleSampleLikelihoods[sampleId].MaxBy(x => x.Value);
-                jointLikelihood.MaximalLikelihood *= maxSampleLikelihood;
+                jointLikelihood.MaximalLogLikelihood += maxSampleLikelihood;
                 sampleCopyNumbersGenotypes.Add(sampleId, copyNumber);
             }
             return (copyNumbersGenotypes: sampleCopyNumbersGenotypes, jointLikelihood: jointLikelihood);
@@ -385,11 +385,11 @@ namespace CanvasPedigreeCaller
         }
 
         public static SampleMap<Genotype> GetNonPedigreeCopyNumbers(ISampleMap<CanvasSegment> canvasSegments, PedigreeInfo pedigreeInfo,
-            ISampleMap<Dictionary<Genotype, double>> singleSampleCopyNumberLikelihoods)
+            ISampleMap<Dictionary<Genotype, double>> singleSampleCopyNumberLogLikelihoods)
         {
             bool IsOther(SampleId sampleId) => pedigreeInfo.OtherIds.Contains(sampleId);
             var nonPedigreeMemberSegments = canvasSegments.WhereSampleIds(IsOther);
-            var nonPedigreeMemberLikelihoods = singleSampleCopyNumberLikelihoods.WhereSampleIds(IsOther);
+            var nonPedigreeMemberLikelihoods = singleSampleCopyNumberLogLikelihoods.WhereSampleIds(IsOther);
             (var nonPedigreeMemberCopyNumbers, _) = GetCopyNumbersNoPedigreeInfo(nonPedigreeMemberSegments, nonPedigreeMemberLikelihoods);
             return nonPedigreeMemberCopyNumbers;
         }

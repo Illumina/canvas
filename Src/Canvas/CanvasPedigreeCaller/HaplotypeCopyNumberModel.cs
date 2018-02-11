@@ -11,19 +11,19 @@ namespace CanvasPedigreeCaller
         private readonly List<List<double>> _cnDistribution;
         private readonly Tuple<List<double>, List<double>>[][] _alleleDistribution;
         private readonly int _maxCoverage;
-        private readonly List<double>[] _readDepthDistribution;
-        private readonly int _maxTtlCoverage;
+        private readonly List<double>[] _totalAlleleCountsDistribution;
+        private readonly int _maxAlleleCounts;
         private readonly List<double> _logFactorial;
 
 
         public HaplotypeCopyNumberModel(List<List<double>> cnDistribution, Tuple<List<double>, List<double>>[][] alleleDistribution,
-            int maxCoverage, List<double>[] readDepthDistribution, int maxTtlCoverage)
+            int maxCoverage, List<double>[] totalAlleleCountsDistribution, int maxAlleleCounts)
         {
             _cnDistribution = cnDistribution;
             _alleleDistribution = alleleDistribution;
             _maxCoverage = maxCoverage;
-            _readDepthDistribution = readDepthDistribution;
-            _maxTtlCoverage = maxTtlCoverage;
+            _totalAlleleCountsDistribution = totalAlleleCountsDistribution;
+            _maxAlleleCounts = maxAlleleCounts;
 
             _logFactorial = new List<double>();
             _logFactorial.Add(0.0);
@@ -75,17 +75,17 @@ namespace CanvasPedigreeCaller
                         // Of course, if only one haplotype has non-zero depth, it must be hom.
                         double priorFactorHom = numHapsNonZero == 2 ? 1.0 / 3.0 : 1.0;
                         // limit ttlReads to maxTotalDepth as that is all we have _readDepth probabilities for
-                        int ttlReads = Math.Min(rowId + colId, _maxCoverage);
+                        int ttlReads = Math.Min(rowId + colId, _maxAlleleCounts);
                         int ttlCN = gtModelCount.CopyNumberA + gtModelCount.CopyNumberB;
                         // Split the likelihood into two parts:
                         // First, the probability of getting the observed total number of reads, given the total copy number
-                        double probTtlReadDepth = _readDepthDistribution[ttlCN][ttlReads];
+                        double probTtlReadDepth = _totalAlleleCountsDistribution[ttlCN][ttlReads];
                         // Second, the probability of the observed per-allele read counts assuming one of the alleles is an error.
                         // The calculation here is simply binomial, in log space
                         double logProbCountAErrors = LogCombinations(rowId, colId) + rowId * logErrorProb + colId * logNoErrorProb;
                         double logProbCountBErrors = LogCombinations(rowId, colId) + colId * logErrorProb + rowId * logNoErrorProb;
 
-                        likelihoodThisLocus += 0.5 * priorFactorHom * probTtlReadDepth * (
+                        likelihoodThisLocus += priorFactorHom * probTtlReadDepth * (
                                                    Math.Exp(logProbCountAErrors) + Math.Exp(logProbCountBErrors));
                     }
                     else
@@ -98,7 +98,7 @@ namespace CanvasPedigreeCaller
                     likelihoodThisLocus = Math.Max(minLogLikelihood, likelihoodThisLocus);
                     currentLogLikelihood += Math.Log(likelihoodThisLocus);
             }
-                return currentLogLikelihood;
+            return currentLogLikelihood;
         }
         private double LogCombinations(int a, int b)
         {

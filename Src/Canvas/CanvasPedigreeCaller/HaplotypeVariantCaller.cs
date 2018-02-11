@@ -30,8 +30,9 @@ namespace CanvasPedigreeCaller
             var coverageLikelihoods = _copyNumberLikelihoodCalculator.GetCopyNumbersLikelihoods(canvasSegments, samplesInfo, copyNumberModel);
             // if number and properties of SNPs in the segment are above threshold, calculate likelihood from SNPs and merge with
             // coverage likelihood to form merged likelihoods
+            var nBalleles = canvasSegments.Values.First().Balleles.Size();
             var singleSampleLikelihoods = UseAlleleCountsInformation(canvasSegments)
-                ? JoinLikelihoods(GetGenotypeLogLikelihoods(canvasSegments, copyNumberModel, _PhasedGenotypes), coverageLikelihoods)
+                ? JoinLikelihoods(GetGenotypeLogLikelihoods(canvasSegments, copyNumberModel, _PhasedGenotypes), coverageLikelihoods, nBalleles)
                 : coverageLikelihoods;
 
             (var pedigreeCopyNumbers, var pedigreeLikelihoods) = GetPedigreeCopyNumbers(pedigreeInfo, singleSampleLikelihoods);
@@ -113,23 +114,22 @@ namespace CanvasPedigreeCaller
         /// <param name="copyNumberLikelihoods"></param>
         /// <returns></returns>
         private ISampleMap<Dictionary<Genotype, double>> JoinLikelihoods(ISampleMap<Dictionary<PhasedGenotype, double>> genotypeLikelihoods,
-            ISampleMap<Dictionary<Genotype, double>> copyNumberLikelihoods)
+            ISampleMap<Dictionary<Genotype, double>> copyNumberLikelihoods, int nBalleles)
         {
             double minLogLikelihood = Math.Log(1.0 / Double.MaxValue);
             var jointSampleLogLikelihoods = new SampleMap<Dictionary<Genotype, double>>();
+
             foreach (var sampleId in genotypeLikelihoods.SampleIds)
             {
                 var jointLogLikelihoods = new Dictionary<Genotype, double>();
-                // since both likelihoods use negative binomial counts, area under the curve should be 
-                // similar except for b-allele range vs median point estimate used for depth
-                double areaGt = genotypeLikelihoods[sampleId].Values.Sum();
-                double areaCn = copyNumberLikelihoods[sampleId].Values.Where(ll => !Double.IsInfinity(Math.Exp(ll))).Sum(ll => Math.Exp(ll));
+                // since both likelihoods use negative binomial distribution, area under the curve should be 
+                // similar except for b-allele range vs median point estimate used for depth so correct for this
+                // by using total allele counts 
                 foreach (var genotypeLikelihood in genotypeLikelihoods[sampleId])
                 {
-                    double scaler = areaGt > areaCn ? areaCn / areaGt : areaGt / areaCn;
                     int totalCopyNumber = genotypeLikelihood.Key.CopyNumberA + genotypeLikelihood.Key.CopyNumberB;
-                    double jointLogLikelihood = Math.Max(Math.Log(genotypeLikelihood.Value), minLogLikelihood) * scaler *
-                                             copyNumberLikelihoods[sampleId][Genotype.Create(totalCopyNumber)];
+                    double jointLogLikelihood = genotypeLikelihood.Value / nBalleles +
+                        Math.Max(minLogLikelihood, Math.Log(copyNumberLikelihoods[sampleId][Genotype.Create(totalCopyNumber)]));
                     jointLogLikelihoods[Genotype.Create(genotypeLikelihood.Key)] = jointLogLikelihood;
                 }
                 jointSampleLogLikelihoods.Add(sampleId, jointLogLikelihoods);
@@ -161,7 +161,7 @@ namespace CanvasPedigreeCaller
                     {
 
                         double currentLikelihood = parent1GtStates.Value + parent2GtStates.Value;
-                        if (currentLikelihood + maxOffspringLikelihood <= jointLogLikelihood.MaximalLikelihood)
+                        if (currentLikelihood + maxOffspringLikelihood <= jointLogLikelihood.MaximalLogLikelihood)
                         {
                             continue;
                         }
@@ -191,9 +191,9 @@ namespace CanvasPedigreeCaller
                         var orderedGenotypesInPedigree = genotypesInPedigree.OrderBy(x => singleSampleLogLikelihoods.SampleIds.ToList().IndexOf(x.Key)).ToSampleMap();
                         jointLogLikelihood.AddJointLikelihood(orderedGenotypesInPedigree, currentLikelihood);
 
-                        if (currentLikelihood > jointLogLikelihood.MaximalLikelihood)
+                        if (currentLikelihood > jointLogLikelihood.MaximalLogLikelihood)
                         {
-                            jointLogLikelihood.MaximalLikelihood = currentLikelihood;
+                            jointLogLikelihood.MaximalLogLikelihood = currentLikelihood;
                             sampleCopyNumbersGenotypes = orderedGenotypesInPedigree;
                         }
                     }
@@ -321,9 +321,12 @@ namespace CanvasPedigreeCaller
 
         private double GetSingleSampleQualityScore(Dictionary<Genotype, double> copyNumbersLikelihoods, Genotype selectedGenotype)
         {
-            double normalizationConstant = copyNumbersLikelihoods.Select(ll => ll.Value).Sum();
-            var selectedGenotypes = copyNumbersLikelihoods.Keys.Where(gt => gt.TotalCopyNumber == selectedGenotype.TotalCopyNumber);
-            var altLikelihood = copyNumbersLikelihoods.SelectKeys(selectedGenotypes).Select(ll => ll.Value).Sum();
+            int diploidCN = 2;
+            double maxLogLikelihood = copyNumbersLikelihoods.Max(ll => ll.Value);
+            double normalizationConstant = copyNumbersLikelihoods.Sum(ll => Math.Exp(ll.Value - maxLogLikelihood));
+            var selectedCn = copyNumbersLikelihoods.Keys.Where(gt => gt.TotalCopyNumber == 
+            selectedGenotype.TotalCopyNumber);
+            double altLikelihood = copyNumbersLikelihoods.SelectKeys(selectedCn).Sum(ll => Math.Exp(ll.Value - maxLogLikelihood));
             double qscore = -10.0 * Math.Log10((normalizationConstant - altLikelihood) / normalizationConstant);
             if (Double.IsInfinity(qscore) | qscore > _callerParameters.MaxQscore)
                 qscore = _callerParameters.MaxQscore;

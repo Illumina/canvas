@@ -10,37 +10,37 @@ namespace CanvasPedigreeCaller
 {
     internal class JointLogLikelihoods
     {
-        public double MaximalLikelihood;
-        private readonly Dictionary<ISampleMap<Genotype>, double> _jointLikelihoods;
-        private double _totalLikelihood;
+        public double MaximalLogLikelihood;
+        private readonly Dictionary<ISampleMap<Genotype>, double> _jointLogLikelihoods;
+        private double _totalLogLikelihood;
 
         public JointLogLikelihoods()
         {
-            MaximalLikelihood = double.MinValue;
+            MaximalLogLikelihood = double.MinValue;
             var comparer = new SampleGenotypeComparer();
-            _jointLikelihoods = new Dictionary<ISampleMap<Genotype>, double>(comparer);
-            _totalLikelihood = 0;
+            _jointLogLikelihoods = new Dictionary<ISampleMap<Genotype>, double>(comparer);
+            _totalLogLikelihood = 0;
         }
 
         public void AddJointLikelihood(ISampleMap<Genotype> samplesGenotypes, double likelihood)
         {
-            _jointLikelihoods[samplesGenotypes] = likelihood;
-            _totalLikelihood += likelihood;
+            _jointLogLikelihoods[samplesGenotypes] = likelihood;
+            _totalLogLikelihood += likelihood;
         }
 
         public double GetJointLikelihood(ISampleMap<Genotype> samplesGenotypes)
         {
-            return _jointLikelihoods[samplesGenotypes];
+            return _jointLogLikelihoods[samplesGenotypes];
         }
 
         public double GetMarginalLikelihood(KeyValuePair<SampleId, Genotype> samplesGenotype)
         {
-            return _jointLikelihoods.Where(kvp => Equals(kvp.Key[samplesGenotype.Key], samplesGenotype.Value)).Select(kvp => kvp.Value).Sum() / _totalLikelihood;
+            return _jointLogLikelihoods.Where(kvp => Equals(kvp.Key[samplesGenotype.Key], samplesGenotype.Value)).Select(kvp => kvp.Value).Sum() / _totalLogLikelihood;
         }
 
         public double GetMarginalNonAltLikelihood(KeyValuePair<SampleId, Genotype> samplesGenotype)
         {
-            return _jointLikelihoods.Where(kvp => !Equals(kvp.Key[samplesGenotype.Key], samplesGenotype.Value)).Select(kvp => kvp.Value).Sum() / _totalLikelihood;
+            return _jointLogLikelihoods.Where(kvp => !Equals(kvp.Key[samplesGenotype.Key], samplesGenotype.Value)).Select(kvp => kvp.Value).Sum() / _totalLogLikelihood;
         }
 
         private class SampleGenotypeComparer : IEqualityComparer<ISampleMap<Genotype>>

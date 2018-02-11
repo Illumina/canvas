@@ -23,7 +23,7 @@ namespace CanvasPedigreeCaller
             _qualityFilterThreshold = qualityFilterThreshold;
             _genotypes = GenerateGenotypeCombinations(callerParameters.MaximumCopyNumber);
         }
-        
+
         /// <summary>
         /// Generate all possible copy number genotype combinations with the maximal number of alleles per segment set to maxAlleleNumber.
         /// </summary>
@@ -159,7 +159,7 @@ namespace CanvasPedigreeCaller
             ISampleMap<ICopyNumberModel> copyNumberModel, PedigreeInfo pedigreeInfo)
         {
             var singleSampleLikelihoods = _copyNumberLikelihoodCalculator.GetCopyNumbersLikelihoods(canvasSegments, samplesInfo, copyNumberModel);
-            
+
             (var pedigreeCopyNumbers, var pedigreeLikelihoods) = GetPedigreeCopyNumbers(pedigreeInfo, singleSampleLikelihoods);
 
             var nonPedigreeCopyNumbers = CanvasPedigreeCaller.GetNonPedigreeCopyNumbers(canvasSegments, pedigreeInfo, singleSampleLikelihoods);
@@ -174,34 +174,34 @@ namespace CanvasPedigreeCaller
             if (!UseMafInformation(canvasSegments) && pedigreeInfo.HasOther())
                 AssignMccNoPedigreeInfo(canvasSegments.Where(segment=> pedigreeInfo.OtherIds.Contains(segment.SampleId)).ToSampleMap(), copyNumberModel, _genotypes);
         }
-        
+
         /// <summary>
         /// Calculates maximal likelihood for segments with SNV allele counts given CopyNumber. Updated MajorChromosomeCount.
         /// </summary>   
         private void AssignMccNoPedigreeInfo(ISampleMap<CanvasSegment> canvasSegments,
             ISampleMap<ICopyNumberModel> model, Dictionary<int, List<PhasedGenotype>> genotypes)
         {
-            const int diploidCopyNumber = 2;
-            const int haploidCopyNumber = 1;
-            foreach (var sampleId in canvasSegments.SampleIds)
-            {
-                // variant caller does not attempt to call LOH, for DELs CN=MCC
-                int copyNumber = canvasSegments[sampleId].CopyNumber;
-                if (copyNumber <= diploidCopyNumber)
+                const int diploidCopyNumber = 2;
+                const int haploidCopyNumber = 1;
+                foreach (var sampleId in canvasSegments.SampleIds)
                 {
-                    canvasSegments[sampleId].MajorChromosomeCount = copyNumber == 2 ? 1 : copyNumber;
-                    return;
+                    // variant caller does not attempt to call LOH, for DELs CN=MCC
+                    int copyNumber = canvasSegments[sampleId].CopyNumber;
+                    if (copyNumber <= diploidCopyNumber)
+                    {
+                        canvasSegments[sampleId].MajorChromosomeCount = copyNumber == 2 ? 1 : copyNumber;
+                        return;
+                    }
+                    var genotypeset = genotypes[copyNumber];
+                    int? selectedGtState = null;
+                    double gqscore = GetGtLogLikelihoodScore(canvasSegments[sampleId].Balleles, genotypeset, ref selectedGtState, model[sampleId]);
+                    canvasSegments[sampleId].MajorChromosomeCountScore = gqscore;
+                    if (selectedGtState.HasValue)
+                        canvasSegments[sampleId].MajorChromosomeCount =
+                            Math.Max(genotypeset[selectedGtState.Value].CopyNumberA,
+                                genotypeset[selectedGtState.Value].CopyNumberB);
                 }
-                var genotypeset = genotypes[copyNumber];
-                int? selectedGtState = null;
-                double gqscore = GetGtLogLikelihoodScore(canvasSegments[sampleId].Balleles, genotypeset, ref selectedGtState, model[sampleId]);
-                canvasSegments[sampleId].MajorChromosomeCountScore = gqscore;
-                if (selectedGtState.HasValue)
-                    canvasSegments[sampleId].MajorChromosomeCount =
-                        Math.Max(genotypeset[selectedGtState.Value].CopyNumberA,
-                            genotypeset[selectedGtState.Value].CopyNumberB);
             }
-        }
 
         /// <summary>
         /// Calculates maximal likelihood for genotypes given a copy number call. Updated MajorChromosomeCount.
@@ -217,28 +217,28 @@ namespace CanvasPedigreeCaller
                 foreach (var parent2GtStates in _genotypes[parent2CopyNumber])
                 {
                     var bestChildGtStates = new List<PhasedGenotype>();
-                    double currentLikelihood = 1;
+                    double currentLogLikelihood = 1;
                     foreach (SampleId child in pedigreeInfo.OffspringIds)
                     {
                         int childCopyNumber = canvasSegments[child].CopyNumber;
                         bool isInheritedCnv = !canvasSegments[child].DqScore.HasValue;
-                        double bestLogLikelihood = Double.MinValue;
+                        double bestLogLikelihood = Double.NegativeInfinity;
                         PhasedGenotype bestGtState = null;
                         bestLogLikelihood = GetProbandLogLikelihood(model[child], childCopyNumber,
                             parent1GtStates, parent2GtStates, isInheritedCnv, canvasSegments[child], bestLogLikelihood, ref bestGtState);
                         bestChildGtStates.Add(bestGtState);
-                        currentLikelihood += bestLogLikelihood;
+                        currentLogLikelihood += bestLogLikelihood;
                     }
-                    currentLikelihood += GetCurrentGtLogLikelihood(model[pedigreeInfo.ParentsIds.First()], canvasSegments[pedigreeInfo.ParentsIds.First()], parent1GtStates) *
-                                         GetCurrentGtLogLikelihood(model[pedigreeInfo.ParentsIds.Last()], canvasSegments[pedigreeInfo.ParentsIds.Last()], parent2GtStates);
+                    currentLogLikelihood += GetCurrentGtLogLikelihood(model[pedigreeInfo.ParentsIds.First()], canvasSegments[pedigreeInfo.ParentsIds.First()], parent1GtStates) *
+                                            GetCurrentGtLogLikelihood(model[pedigreeInfo.ParentsIds.Last()], canvasSegments[pedigreeInfo.ParentsIds.Last()], parent2GtStates);
 
-                    currentLikelihood = Double.IsNaN(currentLikelihood) || Double.IsInfinity(currentLikelihood)
-                        ? 0
-                        : currentLikelihood;
+                    currentLogLikelihood = Double.IsNaN(currentLogLikelihood) || Double.IsInfinity(currentLogLikelihood)
+                        ? Double.NegativeInfinity
+                        : currentLogLikelihood;
 
-                    if (currentLikelihood > maximalLogLikelihood)
+                    if (currentLogLikelihood > maximalLogLikelihood)
                     {
-                        maximalLogLikelihood = currentLikelihood;
+                        maximalLogLikelihood = currentLogLikelihood;
                         AssignMcc(canvasSegments[pedigreeInfo.ParentsIds.First()], model[pedigreeInfo.ParentsIds.First()], parent1GtStates, parent1CopyNumber);
                         AssignMcc(canvasSegments[pedigreeInfo.ParentsIds.Last()], model[pedigreeInfo.ParentsIds.Last()], parent2GtStates, parent2CopyNumber);
                         var counter = 0;
@@ -282,7 +282,7 @@ namespace CanvasPedigreeCaller
                 return true;
             return false;
         }
-        
+
         private void AssignMcc(CanvasSegment canvasSegment, ICopyNumberModel copyNumberModel,
             PhasedGenotype gtStates, int copyNumber)
         {
@@ -290,12 +290,11 @@ namespace CanvasPedigreeCaller
             const int haploidCopyNumber = 1;
             if (copyNumber > diploidCopyNumber)
             {
-
                 canvasSegment.MajorChromosomeCount =
                     Math.Max(gtStates.CopyNumberA, gtStates.CopyNumberB);
                 int? selectedGtState = _genotypes[copyNumber].IndexOf(gtStates);
                 canvasSegment.MajorChromosomeCountScore = GetGtLogLikelihoodScore(canvasSegment.Balleles, _genotypes[copyNumber], ref selectedGtState, copyNumberModel);
-                    GetGtLogLikelihoodScore(canvasSegment.Balleles, _genotypes[copyNumber], ref selectedGtState, copyNumberModel);
+                GetGtLogLikelihoodScore(canvasSegment.Balleles, _genotypes[copyNumber], ref selectedGtState, copyNumberModel);
             }
             else
             {
@@ -314,8 +313,9 @@ namespace CanvasPedigreeCaller
             foreach (var gtModelCount in gtModelCounts)
             {
                 // As we don't estimate allele CN but only MCC, focus on upper-triangle 
+
                 if (gtModelCount.CopyNumberA > gtModelCount.CopyNumberB) continue;
-                gtLogLikelihoods[gtModelCounter] = copyNumberModel.GetGenotypeLogLikelihood(gtObservedCounts, gtModelCount);
+                    gtLogLikelihoods[gtModelCounter] = copyNumberModel.GetGenotypeLogLikelihood(gtObservedCounts, gtModelCount);
                 gtModelCounter++;
             }
             var maxLogLikelihood = gtLogLikelihoods.Max();
@@ -330,7 +330,7 @@ namespace CanvasPedigreeCaller
 
         private static double GetCurrentGtLogLikelihood(ICopyNumberModel copyNumberModel, CanvasSegment canvasSegment, PhasedGenotype gtStates)
         {
-            return copyNumberModel.GetGenotypeLogLikelihood(canvasSegment.Balleles, gtStates);
+           return copyNumberModel.GetGenotypeLogLikelihood(canvasSegment.Balleles, gtStates);
         }
 
         private (ISampleMap<Genotype> copyNumbersGenotypes, JointLogLikelihoods jointLikelihood) GetPedigreeCopyNumbers(PedigreeInfo pedigreeInfo, ISampleMap<Dictionary<Genotype, double>> copyNumbersLikelihoods)
@@ -373,14 +373,13 @@ namespace CanvasPedigreeCaller
                             {pedigreeInfo.ParentsIds.First(), copyNumberParent1.Key},
                             {pedigreeInfo.ParentsIds.Last(),  copyNumberParent2.Key}
                         };
-
                         pedigreeInfo.OffspringIds.Zip(totalCopyNumberGenotypes).ForEach(sampleIdGenotypeKvp => genotypesInPedigree.Add(sampleIdGenotypeKvp.Item1, sampleIdGenotypeKvp.Item2));
                         genotypesInPedigree = genotypesInPedigree.OrderBy(pedigreeInfo.AllSampleIds);
                         jointLikelihood.AddJointLikelihood(genotypesInPedigree, currentLikelihood);
 
-                        if (currentLikelihood > jointLikelihood.MaximalLikelihood)
+                        if (currentLikelihood > jointLikelihood.MaximalLogLikelihood)
                         {
-                            jointLikelihood.MaximalLikelihood = currentLikelihood;
+                            jointLikelihood.MaximalLogLikelihood = currentLikelihood;
                             sampleCopyNumbersGenotypes = genotypesInPedigree;
                         }
                     }
