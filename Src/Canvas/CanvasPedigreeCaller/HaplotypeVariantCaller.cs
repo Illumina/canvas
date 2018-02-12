@@ -31,9 +31,6 @@ namespace CanvasPedigreeCaller
             // if number and properties of SNPs in the segment are above threshold, calculate likelihood from SNPs and merge with
             // coverage likelihood to form merged likelihoods
             var nBalleles = canvasSegments.Values.First().Balleles.Size();
-            var seg = canvasSegments.Values.First();
-            if (seg.Chr=="chr2" && seg.Begin> 195291354 && seg.End< 195371613)
-                Console.WriteLine("blah");
             var singleSampleLikelihoods = UseAlleleCountsInformation(canvasSegments)
                 ? JoinLikelihoods(GetGenotypeLogLikelihoods(canvasSegments, copyNumberModel, _PhasedGenotypes), coverageLikelihoods, nBalleles)
                 : coverageLikelihoods;
