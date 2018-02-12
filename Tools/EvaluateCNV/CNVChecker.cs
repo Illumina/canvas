@@ -468,7 +468,7 @@ namespace EvaluateCNV
                     if (!calls.ContainsKey(chr)) chr = "chr" + key;
                     if (!calls.ContainsKey(chr))
                     {
-                        Console.WriteLine($"Error: Skipping exclude intervals for chromosome {chr} with no truth data." +
+                        Console.WriteLine($"Error: Skipping exclude intervals for chromosome {key} with no truth data." +
                                           $"Check that chromosome names are spelled correctly for exclude intervals");
                         continue;
                     }

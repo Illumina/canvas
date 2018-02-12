@@ -19,6 +19,7 @@ namespace EvaluateCNV
         // 3D array stores knownCn, CN call and REF ploidy
         public long[,,] BaseCount;
         public long[,,] RoiBaseCount;
+        public long[,] NoCalls; // 2D array stores knownCN and REF ploidy for bases where there are no calls
 
 
         public BaseCounter(int maxCn, int minSize, int maxSize, bool hasRoi = false)
@@ -107,22 +108,38 @@ namespace EvaluateCNV
             {
                 if (!(interval.Length >= baseCounter.MinSize && interval.Length <= baseCounter.MaxSize)) continue;
                 int nonOverlapBases = interval.Length;
+                int nonOverlapRoiBases = 0;
+                foreach (CNInterval roiInterval in _cnvChecker.RegionsOfInterest[interval.Chromosome])
+                {
+                    int roiOverlapStart = Math.Max(roiInterval.Start, interval.Start);
+                    int roiOverlapEnd = Math.Min(roiInterval.End, interval.End);
+                    if (roiOverlapStart >= roiOverlapEnd) continue;
+                    int roiOverlapBases = roiOverlapEnd - roiOverlapStart;
+                    nonOverlapRoiBases += roiOverlapBases;
+                }
                 int totalOverlapBases = 0;
+                int totalRoiOverlapBases = 0;
                 int excludeIntervalBases = 0;
                 var totalIntervalRefPloidy = new List<(int ploidy, int length)>();
                 string chromosome = interval.Chromosome;
                 if (!calls.ContainsKey(chromosome)) chromosome = chromosome.Replace("chr", "");
                 if (!calls.ContainsKey(chromosome)) chromosome = "chr" + chromosome;
-                if (!calls.ContainsKey(chromosome))
-                {
-                    Console.WriteLine($"Error: Skipping truth variant for chromosome {interval.Chromosome} with no Canvas calls");
-                    continue;
-                }
 
+
+                IEnumerable<CnvCall> callsThisChromosome;
+                if (calls.ContainsKey(chromosome))
+                {
+                    callsThisChromosome = calls[chromosome];
+                }
+                else
+                {
+                    Console.Error.WriteLine($"Error: no Canvas calls for chromosome {interval.Chromosome} in truth file");
+                    callsThisChromosome = Enumerable.Empty<CnvCall>();
+                }
                 int knownCn = interval.Cn;
                 if (knownCn > MaxCn) knownCn = MaxCn;
 
-                foreach (CnvCall call in calls[chromosome])
+                foreach (CnvCall call in callsThisChromosome)
                 {
                     if (!call.RefPloidy.HasValue)
                         throw new IlluminaException($"Could not determine reference ploidy for call '{call}'. Please provide ploidy information via command line option.");
@@ -156,10 +173,7 @@ namespace EvaluateCNV
 
                     totalIntervalRefPloidy.Add((refPloidy, overlapBases));
 
-                    if (!call.PassFilter && includePassingOnly && knownCn != call.RefPloidy)
-                        // assign no call (CN=ploidy) by default
-                        baseCounter.BaseCount[knownCn, refPloidy, refPloidy] += overlapBases;
-                    else
+                    if (call.PassFilter || !includePassingOnly)
                     {
                         totalOverlapBases += overlapBases;
                         baseCounter.BaseCount[knownCn, CN, refPloidy] += overlapBases;
@@ -181,11 +195,11 @@ namespace EvaluateCNV
                         int roiOverlapEnd = Math.Min(roiInterval.End, overlapEnd);
                         if (roiOverlapStart >= roiOverlapEnd) continue;
                         int roiOverlapBases = roiOverlapEnd - roiOverlapStart;
-                        if (!call.PassFilter && includePassingOnly)
-                            // assign no call (CN=ploidy) by default
-                            baseCounter.RoiBaseCount[knownCn, refPloidy, refPloidy] += roiOverlapBases;
-                        else
+                        if (call.PassFilter || !includePassingOnly)
+                        {
+                            totalRoiOverlapBases += roiOverlapBases;
                             baseCounter.RoiBaseCount[knownCn, CN, refPloidy] += roiOverlapBases;
+                        }
                     }
                 }
 
@@ -203,8 +217,7 @@ namespace EvaluateCNV
                 {
                     throw new InvalidDataException($"Truth variant {interval.Chromosome}:{interval.Start}-{interval.End} has negative non-overlap bases");
                 }
-                baseCounter.BaseCount[knownCn, ploidy, ploidy] += nonOverlapBases;
-
+                baseCounter.NoCalls[knownCn, ploidy] += nonOverlapBases;
             }
 
             CalculateMedianAndMeanAccuracies(baseCounter, knownCN);

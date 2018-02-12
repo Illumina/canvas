@@ -25,7 +25,7 @@ namespace CanvasCommon.CommandLineParsing.CoreOptionTypes
             var multipleValues = parseInput.Get(PositionalOption);
             if (multipleValues.Count > 1)
                 return ParsingResult<TOut>.FailedResult($"{PositionalOption.Info.Name} can be specified only once");
-            return ParsingResult<TOut>.SuccessfulResult(multipleValues.Single());
+            return ParsingResult<TOut>.SuccessfulResult(multipleValues.SingleOrDefault());
         }
     }
 }
