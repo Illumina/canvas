@@ -52,7 +52,7 @@ namespace CanvasPedigreeCaller
         {
             var alleles = canvasSegments.Values.Select(segments => segments.Balleles?.TotalCoverage);
             var alleleCounts = alleles.Select(allele => allele?.Count ?? 0).ToList();
-            bool lowAlleleCounts = alleleCounts.Select(x => x < _callerParameters.DefaultReadCountsThreshold).Any(c => c);
+            bool lowAlleleCounts = alleleCounts.Select(x => x < _callerParameters.MinAlleleCountsThreshold).Any(c => c);
             return lowAlleleCounts;
         }
 
@@ -189,7 +189,7 @@ namespace CanvasPedigreeCaller
                     int copyNumber = canvasSegments[sampleId].CopyNumber;
                     if (copyNumber <= diploidCopyNumber)
                     {
-                        canvasSegments[sampleId].MajorChromosomeCount = copyNumber == 2 ? 1 : copyNumber;
+                        canvasSegments[sampleId].MajorChromosomeCount = copyNumber == diploidCopyNumber ? haploidCopyNumber : copyNumber;
                         return;
                     }
                     var genotypeset = genotypes[copyNumber];

@@ -24,14 +24,9 @@ namespace CanvasPedigreeCaller
             _maxCoverage = maxCoverage;
             _totalAlleleCountsDistribution = totalAlleleCountsDistribution;
             _maxAlleleCounts = maxAlleleCounts;
-
-            _logFactorial = new List<double>();
-            _logFactorial.Add(0.0);
-            _logFactorial.Add(0.0);
+            _logFactorial = new List<double> {0.0, 0.0};
             for (int i = 2; i <= _maxCoverage * 2; i++)
-            {
                 _logFactorial.Add(Math.Log(i));
-            }
         }
 
         public double GetTotalCopyNumberLikelihoods(double segmentMedianBinCoverage, Genotype totalCopyNumberGenotype)
@@ -43,7 +38,7 @@ namespace CanvasPedigreeCaller
         {
                 double minLogLikelihood = Math.Log(1.0 / Double.MaxValue);
                 double currentLogLikelihood = 0;
-                foreach (var gtCount in gtObservedCounts.GetAlleleCounts())
+                foreach (var gtCount in gtObservedCounts.GetTruncatedAlleleCounts(10))
                 {
                     int rowId = Math.Min(gtCount.Item1, _maxCoverage - 1);
                     int colId = Math.Min(gtCount.Item2, _maxCoverage - 1);
@@ -73,7 +68,7 @@ namespace CanvasPedigreeCaller
                         // If both haplotypes have non-zero depth and the locus is non-ref, a locus has a prior prob of 1/3 of being hom,
                         // assuming a well-mixed population.  We could adjust for observed het:hom, but we do not at this time.
                         // Of course, if only one haplotype has non-zero depth, it must be hom.
-                        double priorFactorHom = numHapsNonZero == 2 ? 1.0 / 3.0 : 1.0;
+                        double priorFactorHom = numHapsNonZero == 2 ? 0.5* (1.0 / 3.0) : 1.0;
                         // limit ttlReads to maxTotalDepth as that is all we have _readDepth probabilities for
                         int ttlReads = Math.Min(rowId + colId, _maxAlleleCounts);
                         int ttlCN = gtModelCount.CopyNumberA + gtModelCount.CopyNumberB;
@@ -90,8 +85,7 @@ namespace CanvasPedigreeCaller
                     }
                     else
                     {
-                        // if copy number is 0, any reads must be mismappings, all bets are off ... just return a constant;
-                        // that constant might as well be 1 -- returning 0
+                        // if copy number is 0, any reads must be mismappings - just return a constant
                         likelihoodThisLocus = 1;
                     }
 
@@ -102,9 +96,7 @@ namespace CanvasPedigreeCaller
         }
         private double LogCombinations(int a, int b)
         {
-            // N.B. This is defined as the combinations of a red plus b black, rather than 
-            // the more-typical definitions as k red of n (red+black).
-            // Also note: LogCombinations(a,b) == LogCombinations(b,a)
+            // combinations of a red plus b black
             return _logFactorial[a + b] - _logFactorial[a] - _logFactorial[b];
         }
     }

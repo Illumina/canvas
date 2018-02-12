@@ -21,6 +21,7 @@ namespace CanvasPedigreeCaller
         public ISampleMap<Dictionary<Genotype, double>> GetCopyNumbersLikelihoods(ISampleMap<CanvasSegment> canvasSegments, ISampleMap<SampleMetrics> samplesInfo,
             ISampleMap<ICopyNumberModel> copyNumberModel)
         {
+            const int bin2remove = 2;
             var genotypes = Enumerable.Range(0, _maximumCopyNumber).Select(Genotype.Create).ToList();
             const double maxCoverageMultiplier = 3.0;
             var singleSampleLikelihoods = new SampleMap<Dictionary<Genotype, double>>();
@@ -33,7 +34,7 @@ namespace CanvasPedigreeCaller
                 {
                     double currentLikelihood =
                         copyNumberModel[sampleId].GetTotalCopyNumberLikelihoods(
-                            Math.Min(canvasSegments[sampleId].MedianCount,
+                            Math.Min(canvasSegments[sampleId].TruncatedMedianCount(bin2remove),
                                 samplesInfo[sampleId].MeanCoverage * maxCoverageMultiplier), genotypeCopyNumber);
                     currentLikelihood = Double.IsNaN(currentLikelihood) || Double.IsInfinity(currentLikelihood)
                         ? 0

@@ -74,7 +74,7 @@ namespace CanvasPedigreeCaller
                 fileCounter++;
             }
             var segmentSetsFromCommonCnvs = CreateSegmentSetsFromCommonCnvs(variantFrequencyFilesSampleList,
-                _callerParameters.DefaultReadCountsThreshold, commonCnvsBedPath, sampleSegments);
+                _callerParameters.MinAlleleCountsThreshold, commonCnvsBedPath, sampleSegments);
 
             var segmentsForVariantCalling = GetHighestLikelihoodSegments(segmentSetsFromCommonCnvs, samplesInfo, copyNumberModels).ToList();
             PedigreeInfo pedigreeInfo = PedigreeInfo.GetPedigreeInfo(kinships, _callerParameters);

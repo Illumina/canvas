@@ -31,6 +31,9 @@ namespace CanvasPedigreeCaller
             // if number and properties of SNPs in the segment are above threshold, calculate likelihood from SNPs and merge with
             // coverage likelihood to form merged likelihoods
             var nBalleles = canvasSegments.Values.First().Balleles.Size();
+            var seg = canvasSegments.Values.First();
+            if (seg.Chr=="chr2" && seg.Begin> 195291354 && seg.End< 195371613)
+                Console.WriteLine("blah");
             var singleSampleLikelihoods = UseAlleleCountsInformation(canvasSegments)
                 ? JoinLikelihoods(GetGenotypeLogLikelihoods(canvasSegments, copyNumberModel, _PhasedGenotypes), coverageLikelihoods, nBalleles)
                 : coverageLikelihoods;
@@ -55,12 +58,12 @@ namespace CanvasPedigreeCaller
         {
             var alleles = canvasSegments.Values.Select(segments => segments.Balleles?.TotalCoverage);
             var alleleCounts = alleles.Select(allele => allele?.Count ?? 0).ToList();
-            bool lowAlleleCounts = alleleCounts.Select(x => x < _callerParameters.DefaultReadCountsThreshold).Any(c => c);
+            bool sufficientAlleleNum = alleleCounts.Select(x => x > _callerParameters.MinAlleleCountsThreshold).All(c => c);
             // var coverageCounts = canvasSegments.Values.Select(segments => segments.MedianCount).ToList();
             // double alleleDensity = canvasSegments.Values.First().Length / Math.Max(alleleCounts.Average(), 1.0);
             // bool useCnLikelihood = lowAlleleCounts || alleleDensity < _callerParameters.DefaultAlleleDensityThreshold || alleleCounts.Any(x => x > _callerParameters.DefaultPerSegmentAlleleMaxCounts) || coverageCounts.Any(coverage => coverage < medianCoverageThreshold); 
             // for now only use lowAlleleCounts metric
-            return !lowAlleleCounts;
+            return sufficientAlleleNum;
         }
 
         private ISampleMap<Dictionary<Genotype, double>> GetCopyNumbersLikelihoods(ISampleMap<CanvasSegment> canvasSegments, ISampleMap<SampleMetrics> samplesInfo,
@@ -98,7 +101,7 @@ namespace CanvasPedigreeCaller
             var singleSampleLikelihoods = new SampleMap<Dictionary<PhasedGenotype, double>>();
             foreach (var sampleId in canvasSegments.SampleIds)
             {
-                var logLikelihoods = genotypes.Select(genotype => (genotype, copyNumberModel[sampleId].
+                   var logLikelihoods = genotypes.Select(genotype => (genotype, copyNumberModel[sampleId].
                 GetGenotypeLogLikelihood(canvasSegments[sampleId].Balleles, genotype))).ToDictionary(kvp => kvp.Item1, kvp => kvp.Item2);
                 if (logLikelihoods[REF] >= Math.Max(logLikelihoods[loh.First()], logLikelihoods[loh.Last()]))
                     logLikelihoods[loh.First()] = logLikelihoods[loh.Last()] = logLikelihoods.Values.Where(ll => ll > Double.NegativeInfinity).Min();
@@ -123,8 +126,8 @@ namespace CanvasPedigreeCaller
             {
                 var jointLogLikelihoods = new Dictionary<Genotype, double>();
                 // since both likelihoods use negative binomial distribution, area under the curve should be 
-                // similar except for b-allele range vs median point estimate used for depth so correct for this
-                // by using total allele counts 
+                // similar except for all b-alleles vs median point estimate used for depth, so correct for this
+                // by using number of alleles
                 foreach (var genotypeLikelihood in genotypeLikelihoods[sampleId])
                 {
                     int totalCopyNumber = genotypeLikelihood.Key.CopyNumberA + genotypeLikelihood.Key.CopyNumberB;
@@ -237,7 +240,7 @@ namespace CanvasPedigreeCaller
             foreach (var sampleId in canvasSegments.SampleIds)
             {
                 canvasSegments[sampleId].QScore =
-                    GetSingleSampleQualityScore(singleSampleLikelihoods[sampleId], copyNumbers[sampleId]);
+                    GetSingleSampleQualityScore(singleSampleLikelihoods[sampleId], copyNumbers[sampleId], pedigreeMembersInfo[sampleId].GetPloidy(canvasSegments[sampleId]));
                 canvasSegments[sampleId].CopyNumber = copyNumbers[sampleId].TotalCopyNumber;
                 if (canvasSegments[sampleId].QScore < _qualityFilterThreshold)
                     canvasSegments[sampleId].Filter = CanvasFilter.Create(new[] {$"q{_qualityFilterThreshold}"});
@@ -319,14 +322,16 @@ namespace CanvasPedigreeCaller
             return variantCoverage.Any() ? Utilities.Median(variantCoverage) : 0;
         }
 
-        private double GetSingleSampleQualityScore(Dictionary<Genotype, double> copyNumbersLikelihoods, Genotype selectedGenotype)
+        private double GetSingleSampleQualityScore(Dictionary<Genotype, double> copyNumbersLikelihoods, Genotype selectedGenotype, int ploidy)
         {
-            int diploidCN = 2;
+            var altCn = copyNumbersLikelihoods.Keys.Where(gt => gt.TotalCopyNumber == selectedGenotype.TotalCopyNumber);
+            var refCn = selectedGenotype.TotalCopyNumber != ploidy ? copyNumbersLikelihoods.Keys.Where(gt => gt.TotalCopyNumber == ploidy) :
+                copyNumbersLikelihoods.Keys.Where(gt => gt.TotalCopyNumber != selectedGenotype.TotalCopyNumber);
+            var allCn = altCn.Concat(refCn);
+
             double maxLogLikelihood = copyNumbersLikelihoods.Max(ll => ll.Value);
-            double normalizationConstant = copyNumbersLikelihoods.Sum(ll => Math.Exp(ll.Value - maxLogLikelihood));
-            var selectedCn = copyNumbersLikelihoods.Keys.Where(gt => gt.TotalCopyNumber == 
-            selectedGenotype.TotalCopyNumber);
-            double altLikelihood = copyNumbersLikelihoods.SelectKeys(selectedCn).Sum(ll => Math.Exp(ll.Value - maxLogLikelihood));
+            double normalizationConstant = copyNumbersLikelihoods.SelectKeys(allCn).Sum(ll => Math.Exp(ll.Value - maxLogLikelihood));
+            double altLikelihood = copyNumbersLikelihoods.SelectKeys(altCn).Sum(ll => Math.Exp(ll.Value - maxLogLikelihood));
             double qscore = -10.0 * Math.Log10((normalizationConstant - altLikelihood) / normalizationConstant);
             if (Double.IsInfinity(qscore) | qscore > _callerParameters.MaxQscore)
                 qscore = _callerParameters.MaxQscore;

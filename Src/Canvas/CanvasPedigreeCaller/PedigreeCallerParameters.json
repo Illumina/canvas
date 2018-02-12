@@ -4,7 +4,7 @@
   "DefaultAlleleDensityThreshold": 300,
   "MaxQscore": 100.0,
   "DefaultPerSegmentAlleleMaxCounts": 100,
-  "DefaultAlleleCountThreshold": 4,
+  "MinAlleleCountsThreshold": 10,
   "MaxNumOffspringGenotypes": 500,
   "DeNovoRate": 0.00001,
   "MinimumCallSize": 2000,
