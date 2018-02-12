@@ -1,14 +1,10 @@
 using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.IO;
 using System.Linq;
-using System.Net.Sockets;
 using CanvasCommon;
 using Illumina.Common;
 using Illumina.Common.FileSystem;
-using Illumina.Common.MathUtilities;
-using Isas.Framework.Common_Statistics;
 
 namespace EvaluateCNV
 {

@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace EvaluateCNV
+﻿namespace EvaluateCNV
 {
     public class MetricsCalculator
     {
