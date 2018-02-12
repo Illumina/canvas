@@ -37,6 +37,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\..\Tools\EvaluateCNV\EvaluateCNV.csproj" />
     <ProjectReference Include="..\CanvasBin\CanvasBin.csproj" />
     <ProjectReference Include="..\CanvasClean\CanvasClean.csproj" />
     <ProjectReference Include="..\CanvasCommon\CanvasCommon.csproj" />
