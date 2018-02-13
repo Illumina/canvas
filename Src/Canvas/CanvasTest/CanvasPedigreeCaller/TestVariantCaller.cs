@@ -204,12 +204,13 @@ namespace CanvasTest.CanvasPedigreeCaller
                 new Ballele(400, 1, 75),
                 new Ballele(500, 2, 74)
             });
-            var gt0_3 = new PhasedGenotype(0, 3);
+            var gt0_3 = new PhasedGenotype(3, 0);
             int? selectedGtState = null;
+            // variant caller only calls MCC, only upper triangle of CN genotypes is selected - i.e. CNa=3,CNb=0 from [CNa=3,CNb=0,CNa=0,CNb=3]
             double logLikelihoodScore =
                 VariantCaller.GetGtLogLikelihoodScore(gtObservedCounts, gtModelCounts, ref selectedGtState,
                     copyNumberModel);
-            Assert.Equal(selectedGtState, gtModelCounts.IndexOf(gt0_3));
+            Assert.Equal(gtModelCounts.IndexOf(gt0_3), selectedGtState);
 
             gtObservedCounts = new Balleles(new List<Ballele>
             {
@@ -220,12 +221,13 @@ namespace CanvasTest.CanvasPedigreeCaller
                 new Ballele(400, 26, 51),
                 new Ballele(500, 24, 51)
             });
-            var gt1_2 = new PhasedGenotype(1, 2);
+            var gt1_2 = new PhasedGenotype(2, 1);
             selectedGtState = null;
+            // variant caller only calls MCC, only upper triangle of CN genotypes is selected - i.e. CNa=3,CNb=0 from [CNa=3,CNb=0,CNa=0,CNb=3]
             logLikelihoodScore =
                 VariantCaller.GetGtLogLikelihoodScore(gtObservedCounts, gtModelCounts, ref selectedGtState,
                     copyNumberModel);
-            Assert.Equal(selectedGtState, gtModelCounts.IndexOf(gt1_2));
+            Assert.Equal(gtModelCounts.IndexOf(gt1_2), selectedGtState);
 
         }
     }

@@ -313,8 +313,8 @@ namespace CanvasPedigreeCaller
             foreach (var gtModelCount in gtModelCounts)
             {
                 gtModelCounter++;
-                // As we don't estimate allele CN but only MCC, focus on lower-triangle 
-                if (gtModelCount.CopyNumberA > gtModelCount.CopyNumberB)
+                // As we don't estimate allele CN but only MCC, focus on upper-triangle 
+                if (gtModelCount.CopyNumberA < gtModelCount.CopyNumberB)
                     continue;
                 gtLogLikelihoods[gtModelCounter] = copyNumberModel.GetGenotypeLogLikelihood(gtObservedCounts, gtModelCount);
             }
