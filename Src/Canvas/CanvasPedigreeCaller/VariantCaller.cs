@@ -305,18 +305,18 @@ namespace CanvasPedigreeCaller
             }
         }
 
-        private double GetGtLogLikelihoodScore(Balleles gtObservedCounts, List<PhasedGenotype> gtModelCounts, ref int? selectedGtState, ICopyNumberModel copyNumberModel)
+        internal static double GetGtLogLikelihoodScore(Balleles gtObservedCounts, List<PhasedGenotype> gtModelCounts, ref int? selectedGtState, ICopyNumberModel copyNumberModel)
         {
             const int maxGQscore = 60;
             var gtLogLikelihoods = Enumerable.Repeat(Double.NegativeInfinity, gtModelCounts.Count).ToList();
-            var gtModelCounter = 0;
+            var gtModelCounter = -1;
             foreach (var gtModelCount in gtModelCounts)
             {
-                // As we don't estimate allele CN but only MCC, focus on upper-triangle 
-
-                if (gtModelCount.CopyNumberA > gtModelCount.CopyNumberB) continue;
-                    gtLogLikelihoods[gtModelCounter] = copyNumberModel.GetGenotypeLogLikelihood(gtObservedCounts, gtModelCount);
                 gtModelCounter++;
+                // As we don't estimate allele CN but only MCC, focus on lower-triangle 
+                if (gtModelCount.CopyNumberA > gtModelCount.CopyNumberB)
+                    continue;
+                gtLogLikelihoods[gtModelCounter] = copyNumberModel.GetGenotypeLogLikelihood(gtObservedCounts, gtModelCount);
             }
             var maxLogLikelihood = gtLogLikelihoods.Max();
             if (!selectedGtState.HasValue)
