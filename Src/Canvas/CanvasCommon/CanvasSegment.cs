@@ -936,7 +936,7 @@ namespace CanvasCommon
         /// and the space between them is not too large.
         /// </summary>
         public static List<CanvasSegment> MergeSegments(List<CanvasSegment> segments, int minimumCallSize = 0, int maximumMergeSpan = 10000,
-            List<List<int>> copyNumbers = null, List<double> qscores = null)
+            List<List<int>> copyNumbers = null, List<double> qscores = null, int qScoreThreshold = 0)
         {
             // Assimilate short segments into the *best* available neighbor:
             var mergedSegments = new List<CanvasSegment>();
@@ -1023,7 +1023,9 @@ namespace CanvasCommon
                                     lastSegment.IsHeterogeneous == segments[segmentIndex].IsHeterogeneous :
                                     newCopyNumbers[lastSegmentIndex].SequenceEqual(newCopyNumbers[segmentIndex]) &&
                                     lastSegment.Chr == segments[segmentIndex].Chr &&
-                                    segments[segmentIndex].Begin - lastSegment.End < maximumMergeSpan;
+                                    segments[segmentIndex].Begin - lastSegment.End < maximumMergeSpan &&
+                                    // ensure that segment merging does not alter PASS filter flag
+                                    segments[segmentIndex].QScore > qScoreThreshold && lastSegment.QScore > qScoreThreshold;
 
                 if (mergeSegments)
                 {
