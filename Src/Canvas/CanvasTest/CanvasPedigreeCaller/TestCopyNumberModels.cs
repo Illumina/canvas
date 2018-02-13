@@ -8,7 +8,7 @@ namespace CanvasTest.CanvasPedigreeCaller
     public class TestCopyNumberModels
     {
         [Fact]
-        public void copyNumberModelTester_TotalCopyNumberOnly()
+        public void CopyNumberModelTester_TotalCopyNumberOnly()
         {
             var copyNumberModelFactory = new CopyNumberModelFactory();
             var copyNumberModel = copyNumberModelFactory.CreateModel(numCnStates: 5, maxCoverage: 200, meanCoverage: 100, diploidAlleleMeanCounts: 50.0);
@@ -18,7 +18,7 @@ namespace CanvasTest.CanvasPedigreeCaller
         }
 
         [Fact]
-        public void haplotypeCopyNumberModelTester_PhasedGenotype_LossOfHeterozygosity()
+        public void HaplotypeCopyNumberModelTester_PhasedGenotype_LossOfHeterozygosity()
         {
             var copyNumberModelFactory = new HaplotypeCopyNumberModelFactory();
             var copyNumberModel = copyNumberModelFactory.CreateModel(numCnStates: 5, maxCoverage: 200, meanCoverage: 100, diploidAlleleMeanCounts: 50.0);
@@ -54,7 +54,7 @@ namespace CanvasTest.CanvasPedigreeCaller
         }
 
         [Fact]
-        public void haplotypeCopyNumberModelTester_Gain_CN4()
+        public void HaplotypeCopyNumberModelTester_Gain_CN4()
         {
             var copyNumberModelFactory = new HaplotypeCopyNumberModelFactory();
             var copyNumberModel = copyNumberModelFactory.CreateModel(numCnStates: 5, maxCoverage: 300, meanCoverage: 100, diploidAlleleMeanCounts: 50.0);
@@ -75,7 +75,7 @@ namespace CanvasTest.CanvasPedigreeCaller
         }
 
         [Fact]
-        public void haplotypeCopyNumberModelTester_HetLoss()
+        public void HaplotypeCopyNumberModelTester_HetLoss()
         {
             var copyNumberModelFactory = new HaplotypeCopyNumberModelFactory();
             var copyNumberModel = copyNumberModelFactory.CreateModel(numCnStates: 5, maxCoverage: 200, meanCoverage: 100, diploidAlleleMeanCounts: 50.0);
