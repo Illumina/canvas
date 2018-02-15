@@ -7,15 +7,6 @@ namespace CanvasTest.CanvasPedigreeCaller
 {
     public class TestCopyNumberModels
     {
-        [Fact]
-        public void CopyNumberModelTester_TotalCopyNumberOnly()
-        {
-            var copyNumberModelFactory = new CopyNumberModelFactory();
-            var copyNumberModel = copyNumberModelFactory.CreateModel(numCnStates: 5, maxCoverage: 200, meanCoverage: 100, diploidAlleleMeanCounts: 50.0);
-            double diploidLikelihood = copyNumberModel.GetTotalCopyNumberLikelihoods(100.0, Genotype.Create(2));
-            double haploidLikelihood = copyNumberModel.GetTotalCopyNumberLikelihoods(100.0, Genotype.Create(1));
-            Assert.True(diploidLikelihood > haploidLikelihood);
-        }
 
         [Fact]
         public void HaplotypeCopyNumberModelTester_PhasedGenotype_LossOfHeterozygosity()

@@ -17,6 +17,7 @@ namespace CanvasPedigreeCaller
 
         /// <summary>
         /// Calculates maximal likelihood for segments without SNV allele ratios. Updated CanvasSegment CopyNumber only. 
+        /// Use likelihoods as only median point estimator is used
         /// </summary>
         public ISampleMap<Dictionary<Genotype, double>> GetCopyNumbersLikelihoods(ISampleMap<CanvasSegment> canvasSegments, ISampleMap<SampleMetrics> samplesInfo,
             ISampleMap<ICopyNumberModel> copyNumberModel)
