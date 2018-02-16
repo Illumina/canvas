@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using CanvasCommon;
+using EvaluateCNV;
 using Illumina.Common;
 using Isas.Framework.DataTypes;
 using Isas.SequencingFiles;

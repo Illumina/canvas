@@ -19,23 +19,6 @@ namespace CanvasCommon
         }
 
         /// <summary>
-        /// Returns the reference ploidy for <paramref name="referenceInterval"/><para/>
-        /// If <paramref name="referenceInterval"/> spans regions with different ploidy an exception is thrown
-        /// </summary>
-        public int GetSingleReferencePloidy(ReferenceInterval referenceInterval)
-        {
-            var referencePloidies = GetReferencePloidyIntervals(referenceInterval).ToList();
-            if (referencePloidies.Count != 1)
-            {
-                var differentPloidyIntervals = referencePloidies.Select(ploidy => ploidy.Interval);
-                throw new ArgumentException(
-                    $"Reference interval '{referenceInterval}' overlaps regions with different ploidy: '{string.Join(", ", differentPloidyIntervals)}'");
-            }
-
-            return referencePloidies.Single().ReferencePloidy;
-        }
-
-        /// <summary>
         /// Returns a sequence of adjacent <see cref="ReferencePloidyInterval"/>s that span the provided <paramref name="referenceInterval"/>.<para/>
         /// <see cref="ReferencePloidyInterval"/>s are trimmed to only cover the provided <paramref name="referenceInterval"/><para/>
         /// Adjacent <see cref="ReferencePloidyInterval"/>s have different reference ploidy
