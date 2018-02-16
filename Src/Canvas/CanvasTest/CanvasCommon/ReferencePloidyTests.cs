@@ -19,9 +19,8 @@ namespace CanvasTest
         {
             var ploidyVcfIntervals = Enumerable.Empty<ReferencePloidyInterval>();
             var queryInterval = new ReferenceInterval("chrX", new Interval(1, 2));
-            var expectedPloidyIntervals = new ReferencePloidyInterval(queryInterval, 2).Yield();
-
-            AssertEqualPloidy(ploidyVcfIntervals, queryInterval, expectedPloidyIntervals);
+            
+            AssertReferencePloidy(ploidyVcfIntervals, queryInterval, 2);
         }
 
         [Fact]
@@ -30,8 +29,7 @@ namespace CanvasTest
             var queryInterval = new ReferenceInterval("chrX", new Interval(1, 2));
             var ploidyVcfIntervals = new ReferencePloidyInterval(queryInterval, 1).Yield().ToList();
 
-            var expectedPloidyIntervals = ploidyVcfIntervals;
-            AssertEqualPloidy(ploidyVcfIntervals, queryInterval, expectedPloidyIntervals);
+            AssertReferencePloidy(ploidyVcfIntervals, queryInterval, 1);
         }
 
         [Theory]
@@ -52,7 +50,7 @@ namespace CanvasTest
         }
 
         [Fact]
-        public void GetReferencePloidyIntervals_VcfAdjacentPloidy1_SinglePloidy1()
+        public void GetReferencePloidyIntervals_VcfTwoAdjacentPloidy1_SinglePloidy1()
         {
             var ploidyVcfIntervals = new[]
             {
@@ -61,11 +59,22 @@ namespace CanvasTest
             };
             var queryInterval = new ReferenceInterval("chrX", new Interval(1, 2));
 
-            var expectedPloidyIntervals = new[]
+            AssertReferencePloidy(ploidyVcfIntervals, queryInterval, 1);
+        }
+
+        [Fact]
+        public void GetReferencePloidyIntervals_VcfFourAdjacentPloidy1_SinglePloidy1()
+        {
+            var ploidyVcfIntervals = new[]
             {
-                CreatePloidyInterval("chrX", new Interval(1, 2), 1)
+                CreatePloidyInterval("chrX", new Interval(1, 1), 1),
+                CreatePloidyInterval("chrX", new Interval(2, 2), 1),
+                CreatePloidyInterval("chrX", new Interval(3, 3), 1),
+                CreatePloidyInterval("chrX", new Interval(4, 4), 1)
             };
-            AssertEqualPloidy(ploidyVcfIntervals, queryInterval, expectedPloidyIntervals);
+            var queryInterval = new ReferenceInterval("chrX", new Interval(1, 4));
+            
+            AssertReferencePloidy(ploidyVcfIntervals, queryInterval, 1);
         }
 
         [Fact]
@@ -75,6 +84,20 @@ namespace CanvasTest
             {
                 CreatePloidyInterval("chrX", new Interval(1, 1), 2),
                 CreatePloidyInterval("chrX", new Interval(1, 2), 2)
+            };
+
+            var exception = Record.Exception(() => LoadReferencePloidy(ploidyVcfIntervals));
+
+            Assert.IsType<ArgumentException>(exception);
+        }
+
+        [Fact]
+        public void GetReferencePloidyIntervals_VcfWithMissortedIntervals_ThrowsArgumentException()
+        {
+            var ploidyVcfIntervals = new[]
+            {
+                CreatePloidyInterval("chrX", new Interval(2, 2), 2),
+                CreatePloidyInterval("chrX", new Interval(1, 1), 2)
             };
 
             var exception = Record.Exception(() => LoadReferencePloidy(ploidyVcfIntervals));
@@ -131,7 +154,7 @@ namespace CanvasTest
             var queryInterval = new ReferenceInterval("chrX", new Interval(1, 2));
             var referencePloidy = LoadReferencePloidy(ploidyVcfIntervals);
 
-            var exception = Record.Exception(() => referencePloidy.GetReferencePloidy(queryInterval));
+            var exception = Record.Exception(() => referencePloidy.GetSingleReferencePloidy(queryInterval));
 
             Assert.IsType<ArgumentException>(exception);
         }
@@ -149,8 +172,9 @@ namespace CanvasTest
 
             using (var textReader = new StringReader(vcf))
             using (var reader = new GzipOrTextReader(textReader))
+            using (var vcfReader = new VcfReader(reader))
             {
-                return ReferencePloidy.Load(reader, sampleId);
+                return ReferencePloidy.Load(vcfReader, sampleId);
             }
         }
 
@@ -169,7 +193,7 @@ namespace CanvasTest
             IEnumerable<ReferencePloidyInterval> ploidyVcfIntervals, ReferenceInterval queryInterval, int expectedPloidy)
         {
             var referencePloidy = LoadReferencePloidy(ploidyVcfIntervals);
-            var ploidy = referencePloidy.GetReferencePloidy(queryInterval);
+            var ploidy = referencePloidy.GetSingleReferencePloidy(queryInterval);
             Assert.Equal(expectedPloidy, ploidy);
         }
 

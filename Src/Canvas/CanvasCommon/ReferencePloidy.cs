@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using Illumina.Common;
+using Illumina.Common.FileSystem;
 using Isas.Framework.DataTypes;
 using Isas.SequencingFiles;
 using Isas.SequencingFiles.Vcf;
@@ -21,7 +22,7 @@ namespace CanvasCommon
         /// Returns the reference ploidy for <paramref name="referenceInterval"/><para/>
         /// If <paramref name="referenceInterval"/> spans regions with different ploidy an exception is thrown
         /// </summary>
-        public int GetReferencePloidy(ReferenceInterval referenceInterval)
+        public int GetSingleReferencePloidy(ReferenceInterval referenceInterval)
         {
             var referencePloidies = GetReferencePloidyIntervals(referenceInterval).ToList();
             if (referencePloidies.Count != 1)
@@ -36,6 +37,7 @@ namespace CanvasCommon
 
         /// <summary>
         /// Returns a sequence of adjacent <see cref="ReferencePloidyInterval"/>s that span the provided <paramref name="referenceInterval"/>.<para/>
+        /// <see cref="ReferencePloidyInterval"/>s are trimmed to only cover the provided <paramref name="referenceInterval"/><para/>
         /// Adjacent <see cref="ReferencePloidyInterval"/>s have different reference ploidy
         /// </summary>
         public IEnumerable<ReferencePloidyInterval> GetReferencePloidyIntervals(ReferenceInterval referenceInterval)
@@ -77,56 +79,57 @@ namespace CanvasCommon
             yield return new ReferencePloidyInterval(remainingReferenceInterval, 2);
         }
 
-        public static ReferencePloidy Load(GzipOrTextReader reader, SampleId sampleId)
+        public static ReferencePloidy Load(VcfReader reader, SampleId sampleId)
         {
             var regions = LoadRegions(reader, sampleId);
             return new ReferencePloidy(regions);
         }
 
-        private static Dictionary<string, List<(Interval Interval, int ReferencePloidy)>> LoadRegions(GzipOrTextReader reader, SampleId sampleId)
+        private static Dictionary<string, List<(Interval Interval, int ReferencePloidy)>> LoadRegions(VcfReader vcfReader, SampleId sampleId)
         {
-            using (var vcfReader = new VcfReader(reader))
-            {
-                var sampleGenotypeColumnIndex = vcfReader.Samples.IndexOf(sampleId.ToString());
-                if (sampleGenotypeColumnIndex == -1)
-                    throw new ArgumentException($"VCF does not contain genotype column for sample '{sampleId}'");
+            var sampleGenotypeColumnIndex = vcfReader.Samples.IndexOf(sampleId.ToString());
+            if (sampleGenotypeColumnIndex == -1)
+                throw new ArgumentException($"VCF does not contain genotype column for sample '{sampleId}'");
 
-                return vcfReader
-                    .GetVariants()
-                    .GroupByAdjacent(entry => entry.ReferenceName)
-                    .Select(kvp => (kvp.Key, GetReferencePloidies(kvp.Value, sampleGenotypeColumnIndex)))
-                    .ToDictionary();
-            }
+            return vcfReader
+                .GetVariants()
+                .GroupByAdjacent(entry => entry.ReferenceName)
+                .Select(kvp => (kvp.Key, LoadReferencePloidyIntervals(kvp.Value, sampleGenotypeColumnIndex)))
+                .ToDictionary();
         }
 
-        private static List<(Interval Interval, int ReferencePloidy)> GetReferencePloidies(IEnumerable<VcfVariant> entries, int sampleGenotypeColumnIndex)
+        private static List<(Interval Interval, int ReferencePloidy)> LoadReferencePloidyIntervals(IEnumerable<VcfVariant> entries, int sampleGenotypeColumnIndex)
         {
-            var regions = entries.Select(entry => GetReferencePloidy(entry, sampleGenotypeColumnIndex)).ToList();
+            var regions = entries.Select(entry => LoadReferencePloidyInterval(entry, sampleGenotypeColumnIndex)).ToList();
             return GetContinuousRegions(regions).Where(region => region.ReferencePloidy != 2).ToList();
         }
 
         private static IEnumerable<(Interval Interval, int ReferencePloidy)> GetContinuousRegions(List<(Interval Interval, int ReferencePloidy)> regions)
         {
             if (!regions.Any()) yield break;
-            var (currentInveral, currentPloidy) = regions.First();
-            foreach (var (nextInveral, nextPloidy) in regions.Skip(1))
+            var (currentInterval, currentPloidy) = regions.First();
+            foreach (var (nextInterval, nextPloidy) in regions.Skip(1))
             {
-                if (currentInveral.Overlaps(nextInveral))
+                if (currentInterval.Overlaps(nextInterval))
                     throw new ArgumentException(
-                        $"Error in Ploidy VCF. Found overlapping intervals '{currentInveral}' and '{nextInveral}'");
-                if (currentInveral.OneBasedEnd + 1 == nextInveral.OneBasedStart && currentPloidy == nextPloidy)
+                        $"Error in Ploidy VCF. Found overlapping intervals '{currentInterval}' and '{nextInterval}'");
+                if (currentInterval.CompareTo(nextInterval) > 0)
+                    throw new ArgumentException(
+                        $"Error in Ploidy VCF. Missorted intervals '{currentInterval}' followed by '{nextInterval}'");
+
+                if (currentInterval.LeftAdjacent(nextInterval) && currentPloidy == nextPloidy)
                 {
-                    currentInveral = new Interval(currentInveral.OneBasedStart, nextInveral.OneBasedEnd);
+                    currentInterval = new Interval(currentInterval.OneBasedStart, nextInterval.OneBasedEnd);
                     continue;
                 }
-                yield return (currentInveral, currentPloidy);
-                currentInveral = nextInveral;
+                yield return (currentInterval, currentPloidy);
+                currentInterval = nextInterval;
                 currentPloidy = nextPloidy;
             }
-            yield return (currentInveral, currentPloidy);
+            yield return (currentInterval, currentPloidy);
         }
 
-        private static (Interval Interval, int ReferencePloidy) GetReferencePloidy(VcfVariant entry, int sampleGenotypeColumnIndex)
+        private static (Interval Interval, int ReferencePloidy) LoadReferencePloidyInterval(VcfVariant entry, int sampleGenotypeColumnIndex)
         {
             var genotypeColumn = entry.GenotypeColumns[sampleGenotypeColumnIndex];
             if (!genotypeColumn.TryGetValue("CN", out var cnValue))
@@ -143,6 +146,21 @@ namespace CanvasCommon
             if (entry.VariantAlleles[0].StartsWith("<"))
                 start += 1; // vcf spec says if ALT is symbolic then POS is before the record (i.e. padding base)
             return (new Interval(start, (int)end), (int)referencePloidy);
+        }
+
+        internal static ReferencePloidy Load(IFileLocation vcf, SampleId sampleId)
+        {
+            using (var reader = new VcfReader(vcf.FullName))
+            {
+                try
+                {
+                    return Load(reader, sampleId);
+                }
+                catch (Exception e)
+                {
+                    throw new ArgumentException($"Failed to load ploidy VCF at '{vcf}'. Error: {e.Message}", e);
+                }
+            }
         }
     }
 }
