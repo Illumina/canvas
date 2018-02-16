@@ -90,7 +90,7 @@ namespace CanvasPedigreeCaller
             foreach (var key in samplesInfo.SampleIds)
                 variantCalledSegments.Add(key, segmentsForVariantCalling.Select(segment => segment[key]).ToList());
 
-            var mergedVariantCalledSegments = MergeSegments(variantCalledSegments, _callerParameters.MinimumCallSize);
+            var mergedVariantCalledSegments = MergeSegments(variantCalledSegments, _callerParameters.MinimumCallSize, _qualityFilterThreshold);
             var outputFolder = outVcfFile.Directory;
             foreach (var sampleId in samplesInfo.SampleIds)
             {
@@ -144,7 +144,7 @@ namespace CanvasPedigreeCaller
         }
 
 
-        private static ISampleMap<List<CanvasSegment>> MergeSegments(ISampleMap<List<CanvasSegment>> segments, int minimumCallSize)
+        private static ISampleMap<List<CanvasSegment>> MergeSegments(ISampleMap<List<CanvasSegment>> segments, int minimumCallSize, int qScoreThreshold)
         {
             int nSegments = segments.First().Value.Count;
             var copyNumbers = new List<List<int>>(nSegments);
@@ -166,7 +166,7 @@ namespace CanvasPedigreeCaller
             foreach (var sampleSegments in segments)
             {
                 var mergedAllSegments = CanvasSegment.MergeSegments(sampleSegments.Value.ToList(),
-                    minimumCallSize, 10000, copyNumbers, qscores);
+                    minimumCallSize, 10000, copyNumbers, qscores, qScoreThreshold);
                 mergedSegments.Add(sampleSegments.Key, mergedAllSegments);
             }
             return mergedSegments;
