@@ -20,7 +20,7 @@ namespace CanvasTest
             var ploidyVcfIntervals = Enumerable.Empty<ReferencePloidyInterval>();
             var queryInterval = new ReferenceInterval("chrX", new Interval(1, 2));
             
-            AssertReferencePloidy(ploidyVcfIntervals, queryInterval, 2);
+            AssertSingleReferencePloidy(ploidyVcfIntervals, queryInterval, 2);
         }
 
         [Fact]
@@ -29,7 +29,7 @@ namespace CanvasTest
             var queryInterval = new ReferenceInterval("chrX", new Interval(1, 2));
             var ploidyVcfIntervals = new ReferencePloidyInterval(queryInterval, 1).Yield().ToList();
 
-            AssertReferencePloidy(ploidyVcfIntervals, queryInterval, 1);
+            AssertSingleReferencePloidy(ploidyVcfIntervals, queryInterval, 1);
         }
 
         [Theory]
@@ -59,7 +59,7 @@ namespace CanvasTest
             };
             var queryInterval = new ReferenceInterval("chrX", new Interval(1, 2));
 
-            AssertReferencePloidy(ploidyVcfIntervals, queryInterval, 1);
+            AssertSingleReferencePloidy(ploidyVcfIntervals, queryInterval, 1);
         }
 
         [Fact]
@@ -74,7 +74,7 @@ namespace CanvasTest
             };
             var queryInterval = new ReferenceInterval("chrX", new Interval(1, 4));
             
-            AssertReferencePloidy(ploidyVcfIntervals, queryInterval, 1);
+            AssertSingleReferencePloidy(ploidyVcfIntervals, queryInterval, 1);
         }
 
         [Fact]
@@ -132,7 +132,7 @@ namespace CanvasTest
             var ploidyVcfIntervals = Enumerable.Empty<ReferencePloidyInterval>();
 
             var queryInterval = new ReferenceInterval("chrX", new Interval(1, 2));
-            AssertReferencePloidy(ploidyVcfIntervals, queryInterval, 2);
+            AssertSingleReferencePloidy(ploidyVcfIntervals, queryInterval, 2);
         }
 
         [Fact]
@@ -141,7 +141,7 @@ namespace CanvasTest
             var ploidyVcfIntervals = CreatePloidyInterval("chrX", new Interval(1, 4), 1).Yield();
             var queryInterval = new ReferenceInterval("chrX", new Interval(2, 3));
 
-            AssertReferencePloidy(ploidyVcfIntervals, queryInterval, 1);
+            AssertSingleReferencePloidy(ploidyVcfIntervals, queryInterval, 1);
         }
 
         [Fact]
@@ -189,7 +189,7 @@ namespace CanvasTest
         }
 
         [AssertionMethod]
-        private void AssertReferencePloidy(
+        private void AssertSingleReferencePloidy(
             IEnumerable<ReferencePloidyInterval> ploidyVcfIntervals, ReferenceInterval queryInterval, int expectedPloidy)
         {
             var referencePloidy = LoadReferencePloidy(ploidyVcfIntervals);
