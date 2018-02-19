@@ -85,8 +85,9 @@ namespace CanvasPedigreeCaller
                 }
                 else
                 {
-                    // if copy number is 0, any reads must be mismappings - just return a constant
-                    likelihoodThisLocus = 1;
+                    // uses alleleStateZeroCorrector to enable non-zero likelihoods
+                    int totalReads = Math.Min(rowId + colId, _maxAlleleCounts);
+                    likelihoodThisLocus = _totalAlleleCountsDistribution[0][totalReads];
                 }
 
                 likelihoodThisLocus = Math.Max(minLogLikelihood, likelihoodThisLocus);
