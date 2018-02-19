@@ -228,7 +228,7 @@ namespace CanvasPedigreeCaller
                         bestChildGtStates.Add(bestGtState);
                         currentLogLikelihood += bestLogLikelihood;
                     }
-                    currentLogLikelihood += GetCurrentGtLogLikelihood(model[pedigreeInfo.ParentsIds.First()], canvasSegments[pedigreeInfo.ParentsIds.First()], parent1GtStates) *
+                    currentLogLikelihood += GetCurrentGtLogLikelihood(model[pedigreeInfo.ParentsIds.First()], canvasSegments[pedigreeInfo.ParentsIds.First()], parent1GtStates) +
                                             GetCurrentGtLogLikelihood(model[pedigreeInfo.ParentsIds.Last()], canvasSegments[pedigreeInfo.ParentsIds.Last()], parent2GtStates);
 
                     currentLogLikelihood = Double.IsNaN(currentLogLikelihood) || Double.IsInfinity(currentLogLikelihood)

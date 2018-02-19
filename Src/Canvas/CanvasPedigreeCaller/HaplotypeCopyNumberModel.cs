@@ -26,7 +26,7 @@ namespace CanvasPedigreeCaller
             _maxAlleleCounts = maxAlleleCounts;
             _logFactorial = new List<double> { 0.0, 0.0 };
             for (int i = 2; i <= _maxCoverage * 2; i++)
-                _logFactorial.Add(Math.Log(i));
+                _logFactorial.Add(Math.Log(i) + _logFactorial.Last());
         }
 
         public double GetTotalCopyNumberLikelihoods(double segmentMedianBinCoverage, Genotype totalCopyNumberGenotype)

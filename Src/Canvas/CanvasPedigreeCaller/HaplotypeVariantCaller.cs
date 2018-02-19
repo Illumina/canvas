@@ -137,7 +137,7 @@ namespace CanvasPedigreeCaller
                             currentLogLikelihood += EstimateTransmissionProbability(parent1GtStates, parent2GtStates,
                                 new KeyValuePair<Genotype, double>(genotypes[index], tmpLikelihood), _callerParameters.DeNovoRate, pedigreeInfo);
                         }
-                        currentLogLikelihood = Double.IsNaN(currentLogLikelihood) || Double.IsInfinity(currentLogLikelihood) ? 0 : currentLogLikelihood;
+                        currentLogLikelihood = Double.IsNaN(currentLogLikelihood) || Double.IsInfinity(currentLogLikelihood) ? Double.MinValue : currentLogLikelihood;
                         var genotypesInPedigree = new SampleMap<Genotype>
                         {
                             {pedigreeInfo.ParentsIds.First(), parent1GtStates.Key},
@@ -147,7 +147,7 @@ namespace CanvasPedigreeCaller
                         // return to SampleId ordering 
                         var orderedGenotypesInPedigree = genotypesInPedigree.OrderBy(x => singleSampleLogLikelihoods.SampleIds.ToList().IndexOf(x.Key)).ToSampleMap();
                         // convert to likelihood
-                        jointLikelihood.AddJointLikelihood(orderedGenotypesInPedigree, Math.Exp(currentLogLikelihood));
+                        jointLikelihood.AddJointLikelihood(orderedGenotypesInPedigree, Double.IsNaN(Math.Exp(currentLogLikelihood)) ? 0 : Math.Exp(currentLogLikelihood));
 
                         if (currentLogLikelihood > jointLikelihood.MaximalLogLikelihood)
                         {
