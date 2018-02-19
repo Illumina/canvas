@@ -10,6 +10,20 @@ namespace EvaluateCNV
     {
         public static int Main(string[] args)
         {
+            try
+            {
+                var result = MainHelper(args);
+                return result;
+            }
+            catch (Exception e)
+            {
+                Console.Error.WriteLine(e);
+                return -1;
+            }
+        }
+
+        private static int MainHelper(string[] args)
+        {
             EvaluateCnvOptionsParser optionsParser = new EvaluateCnvOptionsParser();
             if (args.Length < 4)
             {
@@ -96,7 +110,7 @@ namespace EvaluateCNV
         public bool SkipDiploid { get; }
         public bool Help { get; }
 
-        public EvaluateCnvOptions(string baseFileName, IFileLocation roiBed, double heterogeneityFraction, double? dqscoreThreshold, 
+        public EvaluateCnvOptions(string baseFileName, IFileLocation roiBed, double heterogeneityFraction, double? dqscoreThreshold,
             bool splitBySize, bool skipDiploid, bool help)
         {
             BaseFileName = baseFileName;

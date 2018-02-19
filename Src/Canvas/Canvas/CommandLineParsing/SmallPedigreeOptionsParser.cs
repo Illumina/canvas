@@ -16,7 +16,7 @@ namespace Canvas.CommandLineParsing
         internal static readonly ValueOption<SampleType> SampleType = ValueOption<SampleType>.CreateWithDefault(CanvasCommon.SampleType.Other, "Pedigree member type (either proband, mother, father or other). Default is other", "pedigree-member");
         private static readonly StringOption SampleName = StringOption.Create("sample name. Default is SM tag in RG header of the .bam", SingleSampleCommonOptionsParser.SampleName.Info.Names.ToArray());
         internal static readonly PositionalOption<IFileLocation, SampleType, string, SmallPedigreeSampleOptions> Bams =
-            new PositionalOption<IFileLocation, SampleType, string, SmallPedigreeSampleOptions>(Parse, true,
+            new PositionalOption<IFileLocation, SampleType, string, SmallPedigreeSampleOptions>(Parse, true, true, "",
                 GermlineWgsModeParser.Bam,
                 SampleType,
                 SampleName,

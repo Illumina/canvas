@@ -670,6 +670,10 @@ namespace CanvasSomaticCaller
                 point.CopyNumber = ploidy.CopyNumber;
                 ploidy.MixedMinorAlleleFrequency = point.Maf;
                 ploidy.MixedCoverage = point.Coverage;
+
+                // and for regions that are reference-haploid:
+                ploidy.MixedHaploidMinorAlleleFrequency = 0;
+                ploidy.MixedHaploidCoverage = (model.Purity * pureCoverage) + (1 - model.Purity) * 0.5 * model.DiploidCoverage;               
             }
 
             // estimate distance between each model point and segments 
@@ -730,6 +734,10 @@ namespace CanvasSomaticCaller
                 }
                 ploidy.MixedMinorAlleleFrequency = point.Maf;
                 ploidy.MixedCoverage = point.Coverage;
+
+                // and for regions that are reference-haploid:
+                ploidy.MixedHaploidMinorAlleleFrequency = 0;
+                ploidy.MixedHaploidCoverage = (model.Purity * pureCoverage) + (1 - model.Purity) * 0.5 * model.DiploidCoverage;
             }
         }
 
@@ -765,6 +773,10 @@ namespace CanvasSomaticCaller
                 point.CopyNumber = ploidy.CopyNumber;
                 ploidy.MixedMinorAlleleFrequency = point.Maf;
                 ploidy.MixedCoverage = point.Coverage;
+
+                // and for regions that are reference-haploid:
+                ploidy.MixedHaploidMinorAlleleFrequency = 0;
+                ploidy.MixedHaploidCoverage = (model.Purity * pureCoverage) + (1 - model.Purity) * 0.5 * model.DiploidCoverage;
             }
 
             return modelPoints;
@@ -2037,9 +2049,12 @@ namespace CanvasSomaticCaller
                 SegmentPloidy bestPloidy = null;
                 SegmentPloidy secondBestPloidy = null;
 
+                bool isRefHaploid = (ReferencePloidy != null && ReferencePloidy.GetReferenceCopyNumber(segment) == 1) ? true : false;
                 foreach (SegmentPloidy ploidy in _allPloidies)
                 {
-                    double distance = GetModelDistance(ploidy.MixedCoverage, medianCoverage, medianMAF, ploidy.MixedMinorAlleleFrequency);
+                    double targetCoverage = isRefHaploid ? ploidy.MixedHaploidCoverage : ploidy.MixedCoverage;
+                    double targetMAF = isRefHaploid ? ploidy.MixedHaploidMinorAlleleFrequency : ploidy.MixedMinorAlleleFrequency;
+                    double distance = GetModelDistance(medianCoverage, targetCoverage, medianMAF, targetMAF);
 
                     if (distance < bestDistance)
                     {
