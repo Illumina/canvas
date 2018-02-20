@@ -201,9 +201,13 @@ namespace EvaluateCNV
                             kmerFaBases++;
                         }
                     }
+                    nonOverlapBases -= Math.Max(totalOverlapBases + excludeIntervalBases + kmerFaBases,
+                        interval.Length);
                 }
-
-                nonOverlapBases -= Math.Max(totalOverlapBases + excludeIntervalBases + kmerFaBases, interval.Length);
+                else
+                {
+                    nonOverlapBases -= totalOverlapBases + excludeIntervalBases;
+                }
 
                 if (totalIntervalRefPloidy.Empty())
                 {
