@@ -155,6 +155,15 @@ namespace CanvasPedigreeCaller
         {
             var singleSampleLikelihoods = _copyNumberLikelihoodCalculator.GetCopyNumbersLikelihoods(canvasSegments, samplesInfo, copyNumberModel);
 
+            if (canvasSegments.First().Value.Chr == "X")
+            {
+                Console.Write($"Segment {canvasSegments.First().Value.Begin} likelihoods ");
+                for(int i=0;i<5;i++)
+                {
+                    Console.Write($"\t{singleSampleLikelihoods.First().Value[Genotype.Create(i)]}");
+                }
+                Console.WriteLine();
+            }
             (var pedigreeCopyNumbers, var pedigreeLikelihoods) = GetPedigreeCopyNumbers(pedigreeInfo, singleSampleLikelihoods);
 
             var nonPedigreeCopyNumbers = CanvasPedigreeCaller.GetNonPedigreeCopyNumbers(canvasSegments, pedigreeInfo, singleSampleLikelihoods);
