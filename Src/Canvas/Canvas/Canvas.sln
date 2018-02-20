@@ -124,5 +124,7 @@ Global
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {8050A36C-7F21-4C8B-BC7C-068EF94E2D03}
 	EndGlobalSection
-
+	GlobalSection(Performance) = preSolution
+		HasPerformanceSessions = true
+	EndGlobalSection
 EndGlobal
