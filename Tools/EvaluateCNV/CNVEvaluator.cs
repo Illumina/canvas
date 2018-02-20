@@ -62,9 +62,10 @@ namespace EvaluateCNV
             }
 
             _cnvChecker.CountExcludedBasesInTruthSetIntervals(knownCN);
-            var referenceBases = new Dictionary<string, string>();
+            Dictionary<string, string>  referenceBases =  null;
             if (options.KmerFa != null)
             {
+                referenceBases = new Dictionary<string, string>();
                 foreach (var chr in knownCN.Keys)
                 {
                     referenceBases[chr] = FastaLoader.LoadFastaSequence(options.KmerFa, chr);
@@ -199,7 +200,7 @@ namespace EvaluateCNV
                     }
                 }
 
-                // truth interval has no calls 
+                // truth interval has no calls, most likley unmappable region
                 var kmerFaBases = 0;
                 if (interval.BasesCovered == 0 && kmerfa != null)
                 {
@@ -210,7 +211,7 @@ namespace EvaluateCNV
                             kmerFaBases++;
                         }
                     }
-                    nonOverlapBases -= Math.Max(totalOverlapBases + excludeIntervalBases + kmerFaBases,
+                    nonOverlapBases -= Math.Min(totalOverlapBases + excludeIntervalBases + kmerFaBases,
                         interval.Length);
                 }
                 else
