@@ -62,10 +62,18 @@ namespace EvaluateCNV
             }
 
             _cnvChecker.CountExcludedBasesInTruthSetIntervals(knownCN);
+            var referenceBases = new Dictionary<string, string>();
+            if (options.KmerFa != null)
+            {
+                foreach (var chr in knownCN.Keys)
+                {
+                    referenceBases[chr] = FastaLoader.LoadFastaSequence(options.KmerFa, chr);
+                }
+            }
 
             foreach (var baseCounter in baseCounters)
             {
-                var metrics = CalculateMetrics(knownCN, calls, baseCounter, options.SkipDiploid, includePassingOnly, options.KmerFa);
+                var metrics = CalculateMetrics(knownCN, calls, baseCounter, options.SkipDiploid, includePassingOnly, referenceBases);
 
                 string fileName = $"{options.BaseFileName}";
                 if (options.DQscoreThreshold.HasValue)
@@ -92,7 +100,7 @@ namespace EvaluateCNV
         }
 
         public MetricsCalculator CalculateMetrics(Dictionary<string, List<CNInterval>> knownCN, Dictionary<string, List<CnvCall>> calls,
-            BaseCounter baseCounter, bool optionsSkipDiploid, bool includePassingOnly, string kmerfa = null)
+            BaseCounter baseCounter, bool optionsSkipDiploid, bool includePassingOnly, Dictionary<string, string> kmerfa = null)
         {
             // string referenceBases = string.Empty;
             calls.Values.SelectMany(x => x).ForEach(call =>
@@ -103,18 +111,8 @@ namespace EvaluateCNV
                     return;
                 baseCounter.TotalVariantBases += call.Length;
                 baseCounter.TotalVariants++;
-            });
-            
-            var referenceBases = new Dictionary<string, string>();
-            if (kmerfa != null)
-            {
-                foreach (var chr in knownCN.Keys)
-                {
-                    referenceBases[chr] = FastaLoader.LoadFastaSequence(kmerfa, chr);
-                }
-            }
-
-            
+            });   
+          
 
             foreach (CNInterval interval in knownCN.Values.SelectMany(x => x))
             {
@@ -207,7 +205,7 @@ namespace EvaluateCNV
                 {
                     for (var bp = interval.Start; bp < interval.End; bp++)
                     {
-                        if (char.IsUpper(referenceBases[chromosome][bp]) || referenceBases[chromosome][bp] == 'n')
+                        if (char.IsUpper(kmerfa[chromosome][bp]) || kmerfa[chromosome][bp] == 'n')
                         {
                             kmerFaBases++;
                         }
