@@ -985,7 +985,7 @@ namespace CanvasCommon
                 {
                     if (segments[checkIndex].Chr != segments[segmentIndex].Chr) break;
                     if (segments[checkIndex].End - segments[checkIndex].Begin < minimumCallSize) continue;
-                    if (segments[checkIndex].Begin - segments[segmentIndex].End > maximumMergeSpan) continue;
+                    if (segments[checkIndex].Begin - segments[segmentIndex].End > maximumMergeSpan) break;
                     nextIndex = checkIndex;
                     nextQ = qscores?[checkIndex] ?? segments[checkIndex].QScore;
                     break;
@@ -1002,13 +1002,12 @@ namespace CanvasCommon
 
                 if (nextQ >= 0)
                 {
-                    // segments[nextIndex] assimilates segments[segmentIndex...nextIndex - 1]
-                    for (int tempIndex = segmentIndex; tempIndex < nextIndex; tempIndex++)
+                    // segments[nextIndex] assimilates segments[segmentIndex...nextIndex - 1], in reverse order
+                    for (int tempIndex = nextIndex -1; segmentIndex <= tempIndex; tempIndex--)
                     {
                         segments[nextIndex].MergeIn(segments[tempIndex]);
                     }
-                    //segmentIndex = nextIndex;
-                    segmentIndex++;
+                    segmentIndex = nextIndex;
                     continue;
                 }
                 if (copyNumbers != null)
