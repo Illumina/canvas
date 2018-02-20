@@ -216,7 +216,7 @@ namespace CanvasPedigreeCaller
         /// </summary>
         private void AssignMccWithPedigreeInfo(ISampleMap<CanvasSegment> canvasSegments, ISampleMap<ICopyNumberModel> model, PedigreeInfo pedigreeInfo)
         {
-            double maximalLogLikelihood = 0;
+            double maximalLogLikelihood = Double.NegativeInfinity;
             int parent1CopyNumber = canvasSegments[pedigreeInfo.ParentsIds.First()].CopyNumber;
             int parent2CopyNumber = canvasSegments[pedigreeInfo.ParentsIds.Last()].CopyNumber;
 

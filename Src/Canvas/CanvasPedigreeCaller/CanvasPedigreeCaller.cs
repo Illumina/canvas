@@ -416,7 +416,9 @@ namespace CanvasPedigreeCaller
             int minAlleleNumberInSegment)
         {
             var alleles = canvasSegments.Values.Select(segment => segment.Balleles?.TotalCoverage);
+            // allele read coverage check
             var alleleCounts = alleles.Select(allele => allele?.Where(y => y >= minAlleleCountsThreshold).Count() ?? 0).ToList();
+            // number of SNVs in a segment check
             bool sufficientAlleleNum = alleleCounts.All(x => x >= minAlleleNumberInSegment);
             return sufficientAlleleNum;
         }
