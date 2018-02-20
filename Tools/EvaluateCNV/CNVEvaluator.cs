@@ -94,7 +94,7 @@ namespace EvaluateCNV
         public MetricsCalculator CalculateMetrics(Dictionary<string, List<CNInterval>> knownCN, Dictionary<string, List<CnvCall>> calls,
             BaseCounter baseCounter, bool optionsSkipDiploid, bool includePassingOnly, string kmerfa = null)
         {
-            string referenceBases = string.Empty;
+            // string referenceBases = string.Empty;
             calls.Values.SelectMany(x => x).ForEach(call =>
             {
                 if (!(call.IsAltVariant && call.Length >= baseCounter.MinSize && call.Length <= baseCounter.MaxSize))
@@ -104,6 +104,17 @@ namespace EvaluateCNV
                 baseCounter.TotalVariantBases += call.Length;
                 baseCounter.TotalVariants++;
             });
+            
+            var referenceBases = new Dictionary<string, string>();
+            if (kmerfa != null)
+            {
+                foreach (var chr in knownCN.Keys)
+                {
+                    referenceBases[chr] = FastaLoader.LoadFastaSequence(kmerfa, chr);
+                }
+            }
+
+            
 
             foreach (CNInterval interval in knownCN.Values.SelectMany(x => x))
             {
@@ -113,7 +124,7 @@ namespace EvaluateCNV
                 int excludeIntervalBases = 0;
                 var totalIntervalRefPloidy = new List<(int ploidy, int length)>();
                 string chromosome = interval.Chromosome;
-                referenceBases = kmerfa != null ? FastaLoader.LoadFastaSequence(kmerfa, chromosome) : String.Empty;
+    
 
                 if (!calls.ContainsKey(chromosome)) chromosome = chromosome.Replace("chr", "");
                 if (!calls.ContainsKey(chromosome)) chromosome = "chr" + chromosome;
@@ -192,11 +203,11 @@ namespace EvaluateCNV
 
                 // truth interval has no calls 
                 var kmerFaBases = 0;
-                if (interval.BasesCovered == 0 && referenceBases != String.Empty)
+                if (interval.BasesCovered == 0 && kmerfa != null)
                 {
                     for (var bp = interval.Start; bp < interval.End; bp++)
                     {
-                        if (char.IsUpper(referenceBases[bp]) || referenceBases[bp] == 'n')
+                        if (char.IsUpper(referenceBases[chromosome][bp]) || referenceBases[chromosome][bp] == 'n')
                         {
                             kmerFaBases++;
                         }
