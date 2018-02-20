@@ -5,6 +5,7 @@ using System.Linq;
 using CanvasCommon;
 using Illumina.Common;
 using Illumina.Common.FileSystem;
+using Isas.SequencingFiles;
 
 namespace EvaluateCNV
 {
@@ -64,7 +65,7 @@ namespace EvaluateCNV
 
             foreach (var baseCounter in baseCounters)
             {
-                var metrics = CalculateMetrics(knownCN, calls, baseCounter, options.SkipDiploid, includePassingOnly);
+                var metrics = CalculateMetrics(knownCN, calls, baseCounter, options.SkipDiploid, includePassingOnly, options.KmerFa);
 
                 string fileName = $"{options.BaseFileName}";
                 if (options.DQscoreThreshold.HasValue)
@@ -90,8 +91,8 @@ namespace EvaluateCNV
             }
         }
 
-        public MetricsCalculator CalculateMetrics(Dictionary<string, List<CNInterval>> knownCN, Dictionary<string, List<CnvCall>> calls, 
-            BaseCounter baseCounter, bool optionsSkipDiploid, bool includePassingOnly)
+        public MetricsCalculator CalculateMetrics(Dictionary<string, List<CNInterval>> knownCN, Dictionary<string, List<CnvCall>> calls,
+            BaseCounter baseCounter, bool optionsSkipDiploid, bool includePassingOnly, string kmerfa)
         {
             calls.Values.SelectMany(x => x).ForEach(call =>
             {
@@ -103,7 +104,7 @@ namespace EvaluateCNV
                 baseCounter.TotalVariants++;
             });
 
-            foreach (CNInterval interval in knownCN.Values.SelectMany(x=>x))
+            foreach (CNInterval interval in knownCN.Values.SelectMany(x => x))
             {
                 if (!(interval.Length >= baseCounter.MinSize && interval.Length <= baseCounter.MaxSize)) continue;
                 int nonOverlapBases = interval.Length;
@@ -111,6 +112,8 @@ namespace EvaluateCNV
                 int excludeIntervalBases = 0;
                 var totalIntervalRefPloidy = new List<(int ploidy, int length)>();
                 string chromosome = interval.Chromosome;
+                string referenceBases = FastaLoader.LoadFastaSequence(kmerfa, chromosome);
+
                 if (!calls.ContainsKey(chromosome)) chromosome = chromosome.Replace("chr", "");
                 if (!calls.ContainsKey(chromosome)) chromosome = "chr" + chromosome;
                 if (!calls.ContainsKey(chromosome))
@@ -186,15 +189,29 @@ namespace EvaluateCNV
                     }
                 }
 
-                nonOverlapBases -= (totalOverlapBases + excludeIntervalBases);
+                // truth interval has no calls 
+                var kmerFaBases = 0;
+                if (interval.BasesCovered == 0)
+                {
+                    for (var bp = interval.Start; bp < interval.End; bp++)
+                    {
+                        if (char.IsUpper(referenceBases[bp]) || referenceBases[bp] == 'n')
+                        {
+                            kmerFaBases++;
+                        }
+                    }
+                }
+
+                nonOverlapBases -= Math.Max(totalOverlapBases + excludeIntervalBases + kmerFaBases, interval.Length);
+
                 if (totalIntervalRefPloidy.Empty())
                 {
                     Console.WriteLine($"Error: Truth variant {interval.Chromosome}:{interval.Start}-{interval.End} with no overlapping " +
                                       $"Canvas calls. Ploidy cannot be determined!");
                     continue;
                 }
-                int ploidy = Convert.ToInt32(Math.Round(Utilities.WeightedMean(totalIntervalRefPloidy.Select(x => (double) x.ploidy).ToList(),
-                    totalIntervalRefPloidy.Select(x => (double) Math.Max(x.length,1)).ToList())));
+                int ploidy = Convert.ToInt32(Math.Round(Utilities.WeightedMean(totalIntervalRefPloidy.Select(x => (double)x.ploidy).ToList(),
+                    totalIntervalRefPloidy.Select(x => (double)Math.Max(x.length, 1)).ToList())));
                 interval.ReferenceCopyNumber = ploidy;
                 if (nonOverlapBases < 0)
                 {
