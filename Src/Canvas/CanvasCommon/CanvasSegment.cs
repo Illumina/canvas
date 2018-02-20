@@ -97,6 +97,17 @@ namespace CanvasCommon
             return Range.Select(allele => new Tuple<int, int>(allele.CountsA, allele.CountsB)).ToList();
         }
 
+        // Due to coverage filters SNV callers tend to call less hemyzygous variants,
+        // skip potential hom/het variants at breakends that might overinfluence mean/median summary metrics 
+        public List<Tuple<int, int>> GetTruncatedAlleleCounts()
+        {
+            const int minAlleleCounts = 10;
+            if (Range.Count >= minAlleleCounts)
+                return Range.Skip(Convert.ToInt32(Math.Floor(minAlleleCounts / 3.0))).Take(Range.Count - Convert.ToInt32(Math.Floor(minAlleleCounts / 1.5))).
+                Select(allele => new Tuple<int, int>(allele.CountsA, allele.CountsB)).ToList();
+            return GetAlleleCounts();
+        }
+
         public Tuple<int, int> MedianCounts(Balleles balleles)
         {
             var item1 = Utilities.Median(balleles.Range.Select(allele => Math.Max(allele.CountsA, allele.CountsB)).ToList());
