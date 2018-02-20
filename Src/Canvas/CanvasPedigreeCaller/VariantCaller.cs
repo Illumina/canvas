@@ -172,6 +172,14 @@ namespace CanvasPedigreeCaller
 
             EstimateQScores(canvasSegments, samplesInfo, pedigreeInfo, singleSampleLikelihoods, pedigreeLikelihoods, mergedCopyNumbers);
 
+            if (canvasSegments.First().Value.Chr == "X")
+            {
+                bool useACI = CanvasPedigreeCaller.UseAlleleCountsInformation(canvasSegments, _callerParameters.MinAlleleCountsThreshold, _callerParameters.MinAlleleNumberInSegment);
+                bool hasFullPedigree = pedigreeInfo.HasFullPedigree();
+                bool hasOther = pedigreeInfo.HasOther();
+                Console.WriteLine($"segment starting at {canvasSegments.First().Value.Begin} useACI={useACI} hasFull={hasFullPedigree} hasOther={hasOther}");
+            }
+
             // TODO: this will be integrated with GetCopyNumbers* on a model level as a part of https://jira.illumina.com/browse/CANV-404
             if (CanvasPedigreeCaller.UseAlleleCountsInformation(canvasSegments, _callerParameters.MinAlleleCountsThreshold, _callerParameters.MinAlleleNumberInSegment) && 
                 pedigreeInfo.HasFullPedigree())
@@ -200,7 +208,14 @@ namespace CanvasPedigreeCaller
                     }
                     var genotypeset = genotypes[copyNumber];
                     int? selectedGtState = null;
-                    double gqscore = GetGtLogLikelihoodScore(canvasSegments[sampleId].Balleles, genotypeset, ref selectedGtState, model[sampleId]);
+
+                bool debugLogging = canvasSegments[sampleId].Chr == "X";
+                if (debugLogging)
+                    {
+                        Console.Write($"segment at {canvasSegments[sampleId].Begin}: ");
+                    }
+                    double gqscore = GetGtLogLikelihoodScore(canvasSegments[sampleId].Balleles, genotypeset, ref selectedGtState, model[sampleId], debugLogging);
+                if (debugLogging) Console.WriteLine();
                     if (selectedGtState.HasValue) { 
                         canvasSegments[sampleId].MajorChromosomeCount =
                             Math.Max(genotypeset[selectedGtState.Value].CopyNumberA,
@@ -312,7 +327,7 @@ namespace CanvasPedigreeCaller
             }
         }
 
-        internal static double GetGtLogLikelihoodScore(Balleles gtObservedCounts, List<PhasedGenotype> gtModelCounts, ref int? selectedGtState, ICopyNumberModel copyNumberModel)
+        internal static double GetGtLogLikelihoodScore(Balleles gtObservedCounts, List<PhasedGenotype> gtModelCounts, ref int? selectedGtState, ICopyNumberModel copyNumberModel,bool writeLogging=false)
         {
             const int maxGQscore = 60;
             var gtLogLikelihoods = Enumerable.Repeat(Double.NegativeInfinity, gtModelCounts.Count).ToList();
@@ -324,6 +339,10 @@ namespace CanvasPedigreeCaller
                 if (gtModelCount.CopyNumberA < gtModelCount.CopyNumberB)
                     continue;
                 gtLogLikelihoods[gtModelCounter] = copyNumberModel.GetGenotypeLogLikelihood(gtObservedCounts, gtModelCount);
+                if (writeLogging)
+                {
+                    Console.Write($"\t[{gtModelCount.CopyNumberA},{gtModelCount.CopyNumberB}]:{gtLogLikelihoods[gtModelCounter]}");
+                }
             }
             var maxLogLikelihood = gtLogLikelihoods.Max();
             if (!selectedGtState.HasValue)
