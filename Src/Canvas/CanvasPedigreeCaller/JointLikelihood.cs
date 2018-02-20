@@ -16,7 +16,7 @@ namespace CanvasPedigreeCaller
 
         public JointLikelihoods()
         {
-            MaximalLogLikelihood = 0;
+            MaximalLogLikelihood = double.NegativeInfinity;
             var comparer = new SampleGenotypeComparer();
             _jointLikelihoods = new Dictionary<ISampleMap<Genotype>, double>(comparer);
             _totalMarginalLikelihood = 0;
