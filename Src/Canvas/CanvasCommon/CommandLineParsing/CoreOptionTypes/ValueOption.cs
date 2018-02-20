@@ -104,10 +104,5 @@ namespace CanvasCommon.CommandLineParsing.CoreOptionTypes
         {
             return Info.GetHashCode();
         }
-
-        public static implicit operator ValueOption<T>(FlagOption v)
-        {
-            throw new NotImplementedException();
-        }
     }
 }
