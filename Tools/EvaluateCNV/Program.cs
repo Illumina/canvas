@@ -68,7 +68,7 @@ namespace EvaluateCNV
         private static readonly ValueOption<double> HeterogeneityFraction = ValueOption<double>.CreateWithDefault(1, "HeterogeneityFraction", "het");
         private static readonly ValueOption<double?> DQscoreThreshold = ValueOption<double?>.Create("DQscore threshold", "q", "dqscore");
         private static readonly FlagOption SplitBySize = new FlagOption("Split by variant size", "s", "splitBySize");
-        private static readonly ValueOption<string> KmerFa = ValueOption<string>.CreateWithDefault("Kmer.fa file", "k", "kmerFa");
+        private static readonly ValueOption<string> KmerFa = ValueOption<string>.Create("Kmer.fa file", "k", "kmerFa");
         private static readonly FlagOption SkipDiploid = new FlagOption("Skip diploid calls", "d", "skipDiploid");
         private static readonly FlagOption Help = new FlagOption("show this message and exit", "h", "help");
 
