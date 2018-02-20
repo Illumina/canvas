@@ -19,8 +19,8 @@ namespace CanvasTest.CanvasPedigreeCaller
                 new SampleGenomicBin("chr1", 1, 2, 100),
                 new SampleGenomicBin("chr1", 1, 2, 100)
             };
-            var balleles = new Balleles(new List<Ballele> { new Ballele(5501, 30, 30) });
-            var segmentParent1 = new CanvasSegment("chr1", 1, 2, bins, balleles) { CopyNumber = 2 };
+            var balleles = new Balleles(new List<Ballele> {new Ballele(5501, 30, 30)});
+            var segmentParent1 = new CanvasSegment("chr1", 1, 2, bins, balleles) {CopyNumber = 2};
 
             bins = new List<SampleGenomicBin>
             {
@@ -28,8 +28,8 @@ namespace CanvasTest.CanvasPedigreeCaller
                 new SampleGenomicBin("chr1", 1, 2, 100),
                 new SampleGenomicBin("chr1", 1, 2, 100)
             };
-            balleles = new Balleles(new List<Ballele> { new Ballele(5501, 30, 30) });
-            var segmentParent2 = new CanvasSegment("chr1", 1, 2, bins, balleles) { CopyNumber = 2 };
+            balleles = new Balleles(new List<Ballele> {new Ballele(5501, 30, 30)});
+            var segmentParent2 = new CanvasSegment("chr1", 1, 2, bins, balleles) {CopyNumber = 2};
 
             bins = new List<SampleGenomicBin>
             {
@@ -37,8 +37,8 @@ namespace CanvasTest.CanvasPedigreeCaller
                 new SampleGenomicBin("chr1", 1, 2, 0),
                 new SampleGenomicBin("chr1", 1, 2, 0)
             };
-            balleles = new Balleles(new List<Ballele> { new Ballele(5501, 0, 0) });
-            var segmentProband = new CanvasSegment("chr1", 1, 2, bins, balleles) { CopyNumber = 0 };
+            balleles = new Balleles(new List<Ballele> {new Ballele(5501, 0, 0)});
+            var segmentProband = new CanvasSegment("chr1", 1, 2, bins, balleles) {CopyNumber = 0};
 
             var pedigreeSegments = new SampleMap<CanvasSegment>
             {
@@ -47,13 +47,13 @@ namespace CanvasTest.CanvasPedigreeCaller
                 {new SampleId("proband"), segmentProband}
             };
 
-            var sampleMetricsParent1 = SampleMetrics.GetSampleInfo(new List<CanvasSegment> { segmentParent1 },
+            var sampleMetricsParent1 = SampleMetrics.GetSampleInfo(new List<CanvasSegment> {segmentParent1},
                 ploidyBedPath: null,
                 numberOfTrimmedBins: 2, id: new SampleId("parent1"));
-            var sampleMetricsParent2 = SampleMetrics.GetSampleInfo(new List<CanvasSegment> { segmentParent2 },
+            var sampleMetricsParent2 = SampleMetrics.GetSampleInfo(new List<CanvasSegment> {segmentParent2},
                 ploidyBedPath: null,
                 numberOfTrimmedBins: 2, id: new SampleId("parent2"));
-            var sampleMetricsProband = SampleMetrics.GetSampleInfo(new List<CanvasSegment> { segmentProband },
+            var sampleMetricsProband = SampleMetrics.GetSampleInfo(new List<CanvasSegment> {segmentProband},
                 ploidyBedPath: null,
                 numberOfTrimmedBins: 2, id: new SampleId("proband"));
 
@@ -65,7 +65,7 @@ namespace CanvasTest.CanvasPedigreeCaller
             };
 
             bool isCommonCnv = VariantCaller.IsCommonCnv(pedigreeSegments, sampleMetrics,
-                new List<SampleId> { new SampleId("parent1"), new SampleId("parent2") },
+                new List<SampleId> {new SampleId("parent1"), new SampleId("parent2")},
                 new SampleId("proband"), maximumCopyNumber: 5);
 
             Assert.False(isCommonCnv);
@@ -78,7 +78,7 @@ namespace CanvasTest.CanvasPedigreeCaller
             };
 
             isCommonCnv = HaplotypeVariantCaller.IsCommonCnv(pedigreeGenotypes,
-                new List<SampleId> { new SampleId("parent1"), new SampleId("parent2") },
+                new List<SampleId> {new SampleId("parent1"), new SampleId("parent2")},
                 new SampleId("proband"));
 
             Assert.False(isCommonCnv);
@@ -91,7 +91,7 @@ namespace CanvasTest.CanvasPedigreeCaller
             };
 
             isCommonCnv = HaplotypeVariantCaller.IsCommonCnv(pedigreeGenotypes,
-                new List<SampleId> { new SampleId("parent1"), new SampleId("parent2") },
+                new List<SampleId> {new SampleId("parent1"), new SampleId("parent2")},
                 new SampleId("proband"));
 
             Assert.False(isCommonCnv);
@@ -107,8 +107,8 @@ namespace CanvasTest.CanvasPedigreeCaller
                 new SampleGenomicBin("chr1", 1, 2, 100),
                 new SampleGenomicBin("chr1", 1, 2, 100)
             };
-            var balleles = new Balleles(new List<Ballele> { new Ballele(5501, 30, 30) });
-            var segmentParent1 = new CanvasSegment("chr1", 1, 2, bins, balleles) { CopyNumber = 2 };
+            var balleles = new Balleles(new List<Ballele> {new Ballele(5501, 30, 30)});
+            var segmentParent1 = new CanvasSegment("chr1", 1, 2, bins, balleles) {CopyNumber = 2};
 
             bins = new List<SampleGenomicBin>
             {
@@ -116,8 +116,8 @@ namespace CanvasTest.CanvasPedigreeCaller
                 new SampleGenomicBin("chr1", 1, 2, 50),
                 new SampleGenomicBin("chr1", 1, 2, 50)
             };
-            balleles = new Balleles(new List<Ballele> { new Ballele(5501, 0, 30) });
-            var segmentParent2 = new CanvasSegment("chr1", 1, 2, bins, balleles) { CopyNumber = 1 };
+            balleles = new Balleles(new List<Ballele> {new Ballele(5501, 0, 30)});
+            var segmentParent2 = new CanvasSegment("chr1", 1, 2, bins, balleles) {CopyNumber = 1};
 
             bins = new List<SampleGenomicBin>
             {
@@ -125,8 +125,8 @@ namespace CanvasTest.CanvasPedigreeCaller
                 new SampleGenomicBin("chr1", 1, 2, 50),
                 new SampleGenomicBin("chr1", 1, 2, 50)
             };
-            balleles = new Balleles(new List<Ballele> { new Ballele(5501, 0, 30) });
-            var segmentProband = new CanvasSegment("chr1", 1, 2, bins, balleles) { CopyNumber = 1 };
+            balleles = new Balleles(new List<Ballele> {new Ballele(5501, 0, 30)});
+            var segmentProband = new CanvasSegment("chr1", 1, 2, bins, balleles) {CopyNumber = 1};
 
             var pedigreeSegments = new SampleMap<CanvasSegment>
             {
@@ -135,13 +135,13 @@ namespace CanvasTest.CanvasPedigreeCaller
                 {new SampleId("proband"), segmentProband}
             };
 
-            var sampleMetricsParent1 = SampleMetrics.GetSampleInfo(new List<CanvasSegment> { segmentParent1 },
+            var sampleMetricsParent1 = SampleMetrics.GetSampleInfo(new List<CanvasSegment> {segmentParent1},
                 ploidyBedPath: null,
                 numberOfTrimmedBins: 2, id: new SampleId("parent1"));
-            var sampleMetricsParent2 = SampleMetrics.GetSampleInfo(new List<CanvasSegment> { segmentParent2 },
+            var sampleMetricsParent2 = SampleMetrics.GetSampleInfo(new List<CanvasSegment> {segmentParent2},
                 ploidyBedPath: null,
                 numberOfTrimmedBins: 2, id: new SampleId("parent1"));
-            var sampleMetricsProband = SampleMetrics.GetSampleInfo(new List<CanvasSegment> { segmentProband },
+            var sampleMetricsProband = SampleMetrics.GetSampleInfo(new List<CanvasSegment> {segmentProband},
                 ploidyBedPath: null,
                 numberOfTrimmedBins: 2, id: new SampleId("parent1"));
 
@@ -153,7 +153,7 @@ namespace CanvasTest.CanvasPedigreeCaller
             };
 
             bool isCommonCnv = VariantCaller.IsCommonCnv(pedigreeSegments, sampleMetrics,
-                new List<SampleId> { new SampleId("parent1"), new SampleId("parent2") },
+                new List<SampleId> {new SampleId("parent1"), new SampleId("parent2")},
                 new SampleId("proband"), maximumCopyNumber: 5);
 
             Assert.True(isCommonCnv);
@@ -166,7 +166,7 @@ namespace CanvasTest.CanvasPedigreeCaller
             };
 
             isCommonCnv = HaplotypeVariantCaller.IsCommonCnv(pedigreeGenotypes,
-                new List<SampleId> { new SampleId("parent1"), new SampleId("parent2") },
+                new List<SampleId> {new SampleId("parent1"), new SampleId("parent2")},
                 new SampleId("proband"));
 
             Assert.True(isCommonCnv);
@@ -179,7 +179,7 @@ namespace CanvasTest.CanvasPedigreeCaller
             };
 
             isCommonCnv = HaplotypeVariantCaller.IsCommonCnv(pedigreeGenotypes,
-                new List<SampleId> { new SampleId("parent1"), new SampleId("parent2") },
+                new List<SampleId> {new SampleId("parent1"), new SampleId("parent2")},
                 new SampleId("proband"));
 
             Assert.True(isCommonCnv);
