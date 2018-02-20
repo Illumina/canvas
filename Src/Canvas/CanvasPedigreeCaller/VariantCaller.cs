@@ -223,8 +223,8 @@ namespace CanvasPedigreeCaller
                         bool isInheritedCnv = !canvasSegments[child].DqScore.HasValue;
                         double bestLogLikelihood = Double.NegativeInfinity;
                         PhasedGenotype bestGtState = null;
-                        bestLikelihood = GetProbandLikelihood(model[child], childCopyNumber,
-                            parent1GtStates, parent2GtStates, isInheritedCnv, canvasSegments[child], bestLikelihood, ref bestGtState);
+                        bestLogLikelihood = GetProbandLogLikelihood(model[child], childCopyNumber,
+                            parent1GtStates, parent2GtStates, isInheritedCnv, canvasSegments[child], bestLogLikelihood, ref bestGtState);
                         bestChildGtStates.Add(bestGtState);
                         currentLogLikelihood += bestLogLikelihood;
                     }

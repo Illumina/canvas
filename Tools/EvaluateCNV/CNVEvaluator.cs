@@ -92,8 +92,9 @@ namespace EvaluateCNV
         }
 
         public MetricsCalculator CalculateMetrics(Dictionary<string, List<CNInterval>> knownCN, Dictionary<string, List<CnvCall>> calls,
-            BaseCounter baseCounter, bool optionsSkipDiploid, bool includePassingOnly, string kmerfa)
+            BaseCounter baseCounter, bool optionsSkipDiploid, bool includePassingOnly, string kmerfa = null)
         {
+            string referenceBases = string.Empty;
             calls.Values.SelectMany(x => x).ForEach(call =>
             {
                 if (!(call.IsAltVariant && call.Length >= baseCounter.MinSize && call.Length <= baseCounter.MaxSize))
@@ -112,7 +113,7 @@ namespace EvaluateCNV
                 int excludeIntervalBases = 0;
                 var totalIntervalRefPloidy = new List<(int ploidy, int length)>();
                 string chromosome = interval.Chromosome;
-                string referenceBases = FastaLoader.LoadFastaSequence(kmerfa, chromosome);
+                referenceBases = kmerfa != null ? FastaLoader.LoadFastaSequence(kmerfa, chromosome) : String.Empty;
 
                 if (!calls.ContainsKey(chromosome)) chromosome = chromosome.Replace("chr", "");
                 if (!calls.ContainsKey(chromosome)) chromosome = "chr" + chromosome;
@@ -191,7 +192,7 @@ namespace EvaluateCNV
 
                 // truth interval has no calls 
                 var kmerFaBases = 0;
-                if (interval.BasesCovered == 0)
+                if (interval.BasesCovered == 0 && referenceBases != String.Empty)
                 {
                     for (var bp = interval.Start; bp < interval.End; bp++)
                     {
