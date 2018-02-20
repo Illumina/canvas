@@ -1007,7 +1007,8 @@ namespace CanvasCommon
                     {
                         segments[nextIndex].MergeIn(segments[tempIndex]);
                     }
-                    segmentIndex = nextIndex;
+                    //segmentIndex = nextIndex;
+                    segmentIndex++;
                     continue;
                 }
                 if (copyNumbers != null)
