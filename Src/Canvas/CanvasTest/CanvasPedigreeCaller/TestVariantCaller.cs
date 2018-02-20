@@ -230,49 +230,5 @@ namespace CanvasTest.CanvasPedigreeCaller
             Assert.Equal(gtModelCounts.IndexOf(gt1_2), selectedGtState);
 
         }
-
-        [Fact]
-        public void TestUseAlleleCounts()
-        {
-
-            var segments = new SampleMap<CanvasSegment> { };
-
-            List<SampleGenomicBin> emptyBins = new List<SampleGenomicBin>();
-
-            var gtObservedCounts1 = new Balleles(new List<Ballele>
-            {
-                new Ballele(1, 1, 73),
-                new Ballele(100, 2, 74),
-                new Ballele(200, 1, 76),
-                new Ballele(300, 0, 74)
-            });
-            CanvasSegment segment1 = new CanvasSegment("chr1", 1, 2000, emptyBins, gtObservedCounts1);
-            segments.Add(new SampleId("1"), segment1);
-
-            var gtObservedCounts2 = new Balleles(new List<Ballele>
-            {
-                new Ballele(400, 1, 75),
-                new Ballele(500, 2, 74)
-            });
-            CanvasSegment segment2 = new CanvasSegment("chr1", 1, 2000, emptyBins, gtObservedCounts2);
-            segments.Add(new SampleId("2"), segment2);
-
-            var alleles = segments.Values.Select(sgmts => sgmts.Balleles?.TotalCoverage);
-            //Assert.Equal(alleles.First(), new List<int> { 74, 76, 77, 74 });
-            //Assert.Equal(alleles.Last(), new List<int> {76, 76});
-            var alleleCounts = alleles.Select(allele => allele?.Count ?? 0).ToList();
-            Assert.Equal(alleleCounts, new List<int> { 4, 2 });
-            Assert.Equal(2, alleleCounts.Select(x => x > 3).Count());
-            bool sufficientAlleleNum = alleleCounts.Select(x => x > 3).Count() >= 10;
-            Assert.False(sufficientAlleleNum);
-
-            var newAlleleCounts = alleles.Select(allele => allele.Where(y => y >= 75).Count()).ToList();
-            Assert.Equal(new List<int> { 2, 2 }, newAlleleCounts);
-            bool sufficientAlleleNumFalse = newAlleleCounts.All(x => x > 2);
-            bool sufficientAlleleNumTrue = newAlleleCounts.All(x => x > 1);
-            Assert.False(sufficientAlleleNumFalse);
-            Assert.True(sufficientAlleleNumTrue);
-
-        }
     }
 }
