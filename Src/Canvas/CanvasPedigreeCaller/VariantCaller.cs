@@ -104,7 +104,7 @@ namespace CanvasPedigreeCaller
         {
             const double q60 = 0.000001;
             double marginalAltLikelihood = jointLikelihoods.GetMarginalLikelihood(new KeyValuePair<SampleId, Genotype>(probandId, copyNumberGenotypes[probandId]));
-            double marginalRefLikelihood = jointLikelihoods.GetMarginalLikelihood(new KeyValuePair<SampleId, Genotype>(probandId, Genotype.Create(probandRefPloidy)));
+            double marginalRefLikelihood = jointLikelihoods.GetMarginalNonAltLikelihood(new KeyValuePair<SampleId, Genotype>(probandId, Genotype.Create(probandRefPloidy)));
             double normalization = marginalAltLikelihood + marginalRefLikelihood;
             // likelihood of proband genotype != ALT given "copyNumberGenotypes" configuration in pedigree with Mendelian conflict 
             double denovoProbability = jointLikelihoods.GetJointLikelihood(copyNumberGenotypes) / marginalAltLikelihood * marginalRefLikelihood / normalization;
@@ -137,6 +137,7 @@ namespace CanvasPedigreeCaller
             int parent1Ploidy = samplesInfo[probandId].GetPloidy(parent1Segment);
             int parent2Ploidy = samplesInfo[probandId].GetPloidy(parent2Segment);
             int probandPloidy = samplesInfo[probandId].GetPloidy(probandSegment);
+            // this wouldn't capture multi-allelic variants, i.e. case where parents have CN=3 and proband CN=4, will need MCC information for this
             bool isCommoCnv = parent1CopyNumber == probandCopyNumber && parent1Ploidy == probandPloidy ||
                               parent2CopyNumber == probandCopyNumber && parent2Ploidy == probandPloidy;
             return isCommoCnv;
