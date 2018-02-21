@@ -102,12 +102,15 @@ namespace CanvasPedigreeCaller
             var mergedVariantCalledSegments = MergeSegments(variantCalledSegments, _callerParameters.MinimumCallSize, _qualityFilterThreshold);
 
             var nseg2 = mergedVariantCalledSegments.First().Value.Count;
-            for (int i = 0; i < nseg; i++)
+            for (int i = 0; i < nseg2; i++)
             {
                 if (mergedVariantCalledSegments.First().Value[i].Chr == "chrY" && mergedVariantCalledSegments.First().Value[i].Begin > 4059932 - 10 &&
                         mergedVariantCalledSegments.First().Value[i].Begin < 6000199 - 10)
                 {
                     Console.WriteLine($"bin counts Z+1 {mergedVariantCalledSegments.First().Value[i].Begin}: {mergedVariantCalledSegments.ToList()[0].Value[i].GenomicBins.Count()} {mergedVariantCalledSegments.ToList()[1].Value[i].GenomicBins.Count()} {variantCalledSegments.ToList()[2].Value[i].GenomicBins.Count()}");
+                    Console.WriteLine($"bin counts Z+1 {mergedVariantCalledSegments.ToList()[0].Value[i].Begin}-{mergedVariantCalledSegments.ToList()[0].Value[i].End}");
+                    Console.WriteLine($"bin counts Z+1 {mergedVariantCalledSegments.ToList()[1].Value[i].Begin}-{mergedVariantCalledSegments.ToList()[1].Value[i].End}");
+                    Console.WriteLine($"bin counts Z+1 {mergedVariantCalledSegments.ToList()[2].Value[i].Begin}-{mergedVariantCalledSegments.ToList()[2].Value[i].End}");
                 }
             }
 
