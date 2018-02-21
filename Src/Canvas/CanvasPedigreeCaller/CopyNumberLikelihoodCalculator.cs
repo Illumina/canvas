@@ -22,7 +22,7 @@ namespace CanvasPedigreeCaller
         public ISampleMap<Dictionary<Genotype, double>> GetCopyNumbersLikelihoods(ISampleMap<CanvasSegment> canvasSegments, ISampleMap<SampleMetrics> samplesInfo,
             ISampleMap<ICopyNumberModel> copyNumberModel)
         {
-            const double proportionBins2remove = 0.1;
+            const double proportionBins2remove = 0.2;
             var genotypes = Enumerable.Range(0, _maximumCopyNumber).Select(Genotype.Create).ToList();
             const double maxCoverageMultiplier = 3.0;
             var singleSampleLikelihoods = new SampleMap<Dictionary<Genotype, double>>();
