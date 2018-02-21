@@ -115,8 +115,10 @@ namespace EvaluateCNV
                 baseCounter.TotalVariants++;
             });
 
+            // skip truth interval that have more than 80% of unmapable bases
+            // code is not parallel as this will be done by Regression workflow
+            const double fractionUnmappableBases = 0.8;
             var filteredknownCN = new Dictionary<string, List<CNInterval>>();
-            // truth interval has no calls, most likley unmappable region
             if (kmerfa != null)
             {
                 foreach (var chromosome in knownCN.Keys)
@@ -132,7 +134,7 @@ namespace EvaluateCNV
                                 kmerFaBases++;
                             }
                         }
-                        if (kmerFaBases / (double) interval.Length < 0.8)
+                        if (kmerFaBases / (double) interval.Length < fractionUnmappableBases)
                             filteredknownCN[chromosome].Add(interval);
                     }
                 }
@@ -228,8 +230,7 @@ namespace EvaluateCNV
                     }
                 }
 
-
-                nonOverlapBases -= totalOverlapBases + excludeIntervalBases;
+                nonOverlapBases -= (totalOverlapBases + excludeIntervalBases);
 
                 if (totalIntervalRefPloidy.Empty())
                 {
