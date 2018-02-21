@@ -180,7 +180,6 @@ namespace CanvasPedigreeCaller
             var mergedCopyNumbers = pedigreeCopyNumbers.Concat(nonPedigreeCopyNumbers).OrderBy(canvasSegments.SampleIds);
 
             EstimateQScores(canvasSegments, samplesInfo, pedigreeInfo, singleSampleLikelihoods, pedigreeLikelihoods, mergedCopyNumbers);
-
             // TODO: this will be integrated with GetCopyNumbers* on a model level as a part of https://jira.illumina.com/browse/CANV-404
             if (CanvasPedigreeCaller.UseAlleleCountsInformation(canvasSegments, _callerParameters.MinAlleleCountsThreshold, _callerParameters.MinAlleleNumberInSegment) && 
                 pedigreeInfo.HasFullPedigree())
