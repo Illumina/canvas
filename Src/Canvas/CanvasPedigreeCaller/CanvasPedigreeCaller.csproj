@@ -37,8 +37,7 @@
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Illumina.Common" Version="5.1.1.387" />
-    <PackageReference Include="ClassicBioinfoTools" Version="2.7.3.257" />
-	<PackageReference Include="Isas.Framework" Version="8.15.2.961" />
+    <PackageReference Include="ClassicBioinfoTools" Version="2.7.4-O00258bwaIndexer" />
     <PackageReference Include="Isas.SequencingFiles" Version="6.2.0.414" />
     <PackageReference Include="MathNet.Numerics.Core" Version="3.17.0" />
     <PackageReference Include="Newtonsoft.Json" Version="9.0.1" />
