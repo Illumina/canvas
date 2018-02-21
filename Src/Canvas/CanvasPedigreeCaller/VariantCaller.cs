@@ -162,7 +162,7 @@ namespace CanvasPedigreeCaller
                 var numBins = canvasSegments.First().Value.GenomicBins.Count();
                 for (int i = 0; i< numBins; i++ )
                 {
-                    Console.WriteLine($"bin {canvasSegments.Skip(0).First().Value.GenomicBins[i].Start}: {canvasSegments.Skip(1).First().Value.GenomicBins[i].Count:F2}\t{canvasSegments.Skip(2).First().Value.GenomicBins[i].Count:F2}\t{canvasSegments.Last().Value.GenomicBins[i].Count:F2}");
+                    Console.WriteLine($"bin {canvasSegments.ToList()[0].Value.GenomicBins[i].Start}: {canvasSegments.ToList()[1].Value.GenomicBins[i].Count:F2}\t{canvasSegments.ToList()[2].Value.GenomicBins[i].Count:F2}\t{canvasSegments.Last().Value.GenomicBins[i].Count:F2}");
                 }
             }
 
