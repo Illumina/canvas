@@ -159,10 +159,12 @@ namespace CanvasPedigreeCaller
 
             if (debugLogging)
             {
+                Console.WriteLine($"Num samples: {canvasSegments.ToList().Count}");
+                Console.WriteLine($"ID {canvasSegments.ToList()[0].Key}: {canvasSegments.ToList()[1].Key}\t{canvasSegments.ToList()[2].Key}");
                 var numBins = canvasSegments.First().Value.GenomicBins.Count();
                 for (int i = 0; i< numBins; i++ )
                 {
-                    Console.WriteLine($"bin {canvasSegments.ToList()[0].Value.GenomicBins[i].Start}: {canvasSegments.ToList()[1].Value.GenomicBins[i].Count:F2}\t{canvasSegments.ToList()[2].Value.GenomicBins[i].Count:F2}\t{canvasSegments.Last().Value.GenomicBins[i].Count:F2}");
+                    Console.WriteLine($"bin {canvasSegments.ToList()[0].Value.GenomicBins[i].Start}: {canvasSegments.ToList()[1].Value.GenomicBins[i].Count:F2}\t{canvasSegments.ToList()[2].Value.GenomicBins[i].Count:F2}");
                 }
             }
 
