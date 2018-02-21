@@ -102,6 +102,8 @@ namespace CanvasPedigreeCaller
             var mergedVariantCalledSegments = MergeSegments(variantCalledSegments, _callerParameters.MinimumCallSize, _qualityFilterThreshold);
 
             var nseg2 = mergedVariantCalledSegments.First().Value.Count;
+
+            Console.WriteLine($"post-merge segment count expected to be {nseg2} :  {mergedVariantCalledSegments.ToList()[0].Value.Count} {mergedVariantCalledSegments.ToList()[1].Value.Count} {mergedVariantCalledSegments.ToList()[2].Value.Count}");
             for (int i = 0; i < nseg2; i++)
             {
                 if (mergedVariantCalledSegments.First().Value[i].Chr == "chrY" && mergedVariantCalledSegments.First().Value[i].Begin > 4059932 - 10 &&
