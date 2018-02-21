@@ -45,7 +45,7 @@
     <ProjectReference Include="..\CanvasPedigreeCaller\CanvasPedigreeCaller.csproj" />
     <ProjectReference Include="..\CanvasSNV\CanvasSNV.csproj" />
     <ProjectReference Include="..\CanvasSomaticCaller\CanvasSomaticCaller.csproj" />
-    <ProjectReference Include="..\Canvas\Canvas.csproj" />
+    <ProjectReference Include="..\Canvas\Canvas_.csproj" />
   </ItemGroup>
 
   <ItemGroup>

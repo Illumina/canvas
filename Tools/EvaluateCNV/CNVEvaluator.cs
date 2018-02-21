@@ -61,8 +61,9 @@ namespace EvaluateCNV
                 baseCounters.Add(new BaseCounter(MaxCn, 500000, int.MaxValue, regionsOfInterest));
             }
 
+            // not parallel here as parallelism will be attained at the level of regression workflow 
             _cnvChecker.CountExcludedBasesInTruthSetIntervals(knownCN);
-            Dictionary<string, string>  referenceBases =  null;
+            Dictionary<string, string> referenceBases = null;
             if (options.KmerFa != null)
             {
                 referenceBases = new Dictionary<string, string>();
@@ -112,10 +113,37 @@ namespace EvaluateCNV
                     return;
                 baseCounter.TotalVariantBases += call.Length;
                 baseCounter.TotalVariants++;
-            });   
-          
+            });
 
-            foreach (CNInterval interval in knownCN.Values.SelectMany(x => x))
+            var filteredknownCN = new Dictionary<string, List<CNInterval>>();
+            // truth interval has no calls, most likley unmappable region
+            if (kmerfa != null)
+            {
+                foreach (var chromosome in knownCN.Keys)
+                {
+                    filteredknownCN[chromosome] = new List<CNInterval>();
+                    foreach (var interval in knownCN[chromosome])
+                    {
+                        var kmerFaBases = 0;
+                        for (var bp = interval.Start; bp < interval.End; bp++)
+                        {
+                            if (char.IsLower(kmerfa[chromosome][bp]) || kmerfa[chromosome][bp] == 'n')
+                            {
+                                kmerFaBases++;
+                            }
+                        }
+                        if (kmerFaBases / (double) interval.Length < 0.8)
+                            filteredknownCN[chromosome].Add(interval);
+                    }
+                }
+
+            }
+            else
+            {
+                filteredknownCN = knownCN;
+            }
+
+            foreach (CNInterval interval in filteredknownCN.Values.SelectMany(x => x))
             {
                 if (!(interval.Length >= baseCounter.MinSize && interval.Length <= baseCounter.MaxSize)) continue;
                 int nonOverlapBases = interval.Length;
@@ -123,7 +151,7 @@ namespace EvaluateCNV
                 int excludeIntervalBases = 0;
                 var totalIntervalRefPloidy = new List<(int ploidy, int length)>();
                 string chromosome = interval.Chromosome;
-    
+
 
                 if (!calls.ContainsKey(chromosome)) chromosome = chromosome.Replace("chr", "");
                 if (!calls.ContainsKey(chromosome)) chromosome = "chr" + chromosome;
@@ -200,24 +228,8 @@ namespace EvaluateCNV
                     }
                 }
 
-                // truth interval has no calls, most likley unmappable region
-                var kmerFaBases = 0;
-                if (interval.BasesCovered == 0 && kmerfa != null)
-                {
-                    for (var bp = interval.Start; bp < interval.End; bp++)
-                    {
-                        if (char.IsLower(kmerfa[chromosome][bp]) || kmerfa[chromosome][bp] == 'n')
-                        {
-                            kmerFaBases++;
-                        }
-                    }
-                    nonOverlapBases -= Math.Min(totalOverlapBases + excludeIntervalBases + kmerFaBases,
-                        interval.Length);
-                }
-                else
-                {
-                    nonOverlapBases -= totalOverlapBases + excludeIntervalBases;
-                }
+
+                nonOverlapBases -= totalOverlapBases + excludeIntervalBases;
 
                 if (totalIntervalRefPloidy.Empty())
                 {
