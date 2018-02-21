@@ -155,7 +155,7 @@ namespace CanvasPedigreeCaller
         {
             var singleSampleLikelihoods = _copyNumberLikelihoodCalculator.GetCopyNumbersLikelihoods(canvasSegments, samplesInfo, copyNumberModel);
 
-            bool debugLogging = (canvasSegments.First().Value.Chr == "chrY" && canvasSegments.First().Value.Begin >= 3276076 - 10 && canvasSegments.First().Value.Begin < 4059932 - 10);
+            bool debugLogging = (canvasSegments.First().Value.Chr == "chrY" && canvasSegments.First().Value.Begin >= 4059932 - 10   && canvasSegments.First().Value.Begin < 6000199 - 10);
 
             if (debugLogging)
             {
