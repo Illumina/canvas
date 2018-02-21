@@ -90,7 +90,27 @@ namespace CanvasPedigreeCaller
             foreach (var key in samplesInfo.SampleIds)
                 variantCalledSegments.Add(key, segmentsForVariantCalling.Select(segment => segment[key]).ToList());
 
+            var nseg = variantCalledSegments.First().Value.Count;
+            for (int i=0;i<nseg;i++)
+            {
+                if (variantCalledSegments.First().Value[i].Chr == "chrY" && variantCalledSegments.First().Value[i].Begin > 4059932 - 10 &&
+                        variantCalledSegments.First().Value[i].Begin < 6000199 - 10)
+                {
+                    Console.WriteLine($"bin counts Z {variantCalledSegments.First().Value[i].Begin}: {variantCalledSegments.ToList()[0].Value[i].GenomicBins.Count()} {variantCalledSegments.ToList()[1].Value[i].GenomicBins.Count()} {variantCalledSegments.ToList()[2].Value[i].GenomicBins.Count()}");
+                }
+            }
             var mergedVariantCalledSegments = MergeSegments(variantCalledSegments, _callerParameters.MinimumCallSize, _qualityFilterThreshold);
+
+            var nseg2 = mergedVariantCalledSegments.First().Value.Count;
+            for (int i = 0; i < nseg; i++)
+            {
+                if (mergedVariantCalledSegments.First().Value[i].Chr == "chrY" && mergedVariantCalledSegments.First().Value[i].Begin > 4059932 - 10 &&
+                        mergedVariantCalledSegments.First().Value[i].Begin < 6000199 - 10)
+                {
+                    Console.WriteLine($"bin counts Z+1 {mergedVariantCalledSegments.First().Value[i].Begin}: {mergedVariantCalledSegments.ToList()[0].Value[i].GenomicBins.Count()} {mergedVariantCalledSegments.ToList()[1].Value[i].GenomicBins.Count()} {variantCalledSegments.ToList()[2].Value[i].GenomicBins.Count()}");
+                }
+            }
+
             var outputFolder = outVcfFile.Directory;
             foreach (var sampleId in samplesInfo.SampleIds)
             {
