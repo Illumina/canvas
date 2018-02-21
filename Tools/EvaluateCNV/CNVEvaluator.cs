@@ -206,7 +206,7 @@ namespace EvaluateCNV
                 {
                     for (var bp = interval.Start; bp < interval.End; bp++)
                     {
-                        if (char.IsUpper(kmerfa[chromosome][bp]) || kmerfa[chromosome][bp] == 'n')
+                        if (char.IsLower(kmerfa[chromosome][bp]) || kmerfa[chromosome][bp] == 'n')
                         {
                             kmerFaBases++;
                         }
