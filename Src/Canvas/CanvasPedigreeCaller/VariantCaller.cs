@@ -117,22 +117,28 @@ namespace CanvasPedigreeCaller
             return canvasSegments[sampleId].QScore >= _qualityFilterThreshold;
         }
 
+        /// <summary>
+        /// identify common variants using total CN calls within a pedigree obtained with coverage information only 
+        /// </summary>
+        /// <param name="canvasSegments"></param>
+        /// <param name="samplesInfo"></param>
+        /// <param name="parentIDs"></param>
+        /// <param name="probandId"></param>
+        /// <param name="maximumCopyNumber"></param>
+        /// <returns></returns>
         public static bool IsCommonCnv(ISampleMap<CanvasSegment> canvasSegments, ISampleMap<SampleMetrics> samplesInfo, List<SampleId> parentIDs, SampleId probandId, int maximumCopyNumber)
         {
             int parent1CopyNumber = GetCnState(canvasSegments, parentIDs.First(), maximumCopyNumber);
             int parent2CopyNumber = GetCnState(canvasSegments, parentIDs.Last(), maximumCopyNumber);
             int probandCopyNumber = GetCnState(canvasSegments, probandId, maximumCopyNumber);
-            var parent1Genotypes = CanvasPedigreeCaller.GenerateCnAlleles(parent1CopyNumber);
-            var parent2Genotypes = CanvasPedigreeCaller.GenerateCnAlleles(parent2CopyNumber);
-            var probandGenotypes = CanvasPedigreeCaller.GenerateCnAlleles(probandCopyNumber);
             var parent1Segment = canvasSegments[parentIDs.First()];
             var parent2Segment = canvasSegments[parentIDs.Last()];
             var probandSegment = canvasSegments[probandId];
             int parent1Ploidy = samplesInfo[probandId].GetPloidy(parent1Segment);
             int parent2Ploidy = samplesInfo[probandId].GetPloidy(parent2Segment);
             int probandPloidy = samplesInfo[probandId].GetPloidy(probandSegment);
-            bool isCommoCnv = parent1Genotypes.Intersect(probandGenotypes).Any() && parent1Ploidy == probandPloidy ||
-                              parent2Genotypes.Intersect(probandGenotypes).Any() && parent2Ploidy == probandPloidy;
+            bool isCommoCnv = parent1CopyNumber == probandCopyNumber && parent1Ploidy == probandPloidy ||
+                              parent2CopyNumber == probandCopyNumber && parent2Ploidy == probandPloidy;
             return isCommoCnv;
         }
 
