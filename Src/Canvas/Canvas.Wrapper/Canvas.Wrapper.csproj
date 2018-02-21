@@ -22,8 +22,8 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" />
 
   <ItemGroup>
-    <ProjectReference Include="..\CanvasCommon\CanvasCommon.csproj" />
-    <ProjectReference Include="..\Canvas\Canvas_.csproj" />
+     <ProjectReference Include="..\Canvas\Canvas.csproj" />	
+     <ProjectReference Include="..\CanvasCommon\CanvasCommon.csproj" />
   </ItemGroup>
 
   <ItemGroup>
