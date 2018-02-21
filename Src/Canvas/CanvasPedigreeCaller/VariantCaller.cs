@@ -157,6 +157,15 @@ namespace CanvasPedigreeCaller
 
             bool debugLogging = (canvasSegments.First().Value.Chr == "chrY" && canvasSegments.First().Value.Begin >= 3276076 - 10 && canvasSegments.First().Value.Begin < 4059932 - 10);
 
+            if (debugLogging)
+            {
+                var numBins = canvasSegments.First().Value.GenomicBins.Count();
+                for (int i = 0; i< numBins; i++ )
+                {
+                    Console.WriteLine($"bin {canvasSegments.Skip(0).First().Value.GenomicBins[i].Start}: {canvasSegments.Skip(1).First().Value.GenomicBins[i].Count:F2}\t{canvasSegments.Skip(2).First().Value.GenomicBins[i].Count:F2}\t{canvasSegments.Last().Value.GenomicBins[i].Count:F2}");
+                }
+            }
+
             (var pedigreeCopyNumbers, var pedigreeLikelihoods) = GetPedigreeCopyNumbers(pedigreeInfo, singleSampleLikelihoods, debugLogging);
 
             var nonPedigreeCopyNumbers = CanvasPedigreeCaller.GetNonPedigreeCopyNumbers(canvasSegments, pedigreeInfo, singleSampleLikelihoods);
