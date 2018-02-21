@@ -66,6 +66,17 @@ namespace CanvasPedigreeCaller
             return qscore;
         }
 
+        /// <summary>
+        /// Perform de-novo CNV calling in two steps:
+        /// 1. Filter REF variants and common CNVs, this step relies only on total CN calls with associated shortcomings 
+        /// 2. Assign de-novo quality based on joint likelihood across pedigree using marginalisation operations  
+        /// </summary>
+        /// <param name="canvasSegments"></param>
+        /// <param name="samplesInfo"></param>
+        /// <param name="parentIDs"></param>
+        /// <param name="offspringIDs"></param>
+        /// <param name="copyNumbersLikelihoods"></param>
+        /// <param name="copyNumbers"></param>
         private void SetDenovoQualityScores(ISampleMap<CanvasSegment> canvasSegments, ISampleMap<SampleMetrics> samplesInfo, List<SampleId> parentIDs, List<SampleId> offspringIDs,
             JointLikelihoods copyNumbersLikelihoods, ISampleMap<Genotype> copyNumbers)
         {
@@ -137,9 +148,19 @@ namespace CanvasPedigreeCaller
             int parent1Ploidy = samplesInfo[probandId].GetPloidy(parent1Segment);
             int parent2Ploidy = samplesInfo[probandId].GetPloidy(parent2Segment);
             int probandPloidy = samplesInfo[probandId].GetPloidy(probandSegment);
-            // this wouldn't capture multi-allelic variants, i.e. case where parents have CN=3 and proband CN=4, will need MCC information for this
             bool isCommoCnv = parent1CopyNumber == probandCopyNumber && parent1Ploidy == probandPloidy ||
                               parent2CopyNumber == probandCopyNumber && parent2Ploidy == probandPloidy;
+            if (!isCommoCnv)
+            {
+                isCommoCnv = parent1CopyNumber < 2 && probandCopyNumber < 3 && parent1Ploidy == probandPloidy ||
+                             parent2CopyNumber < 2 && probandCopyNumber < 3 && parent2Ploidy == probandPloidy;
+            }
+            if (!isCommoCnv)
+            {
+                // this wouldn't capture multi-allelic variants, i.e. case where parents have CN=3 and proband CN=4, will need MCC information for this
+                isCommoCnv = parent1CopyNumber > 2 && probandCopyNumber > 3 && parent1Ploidy == probandPloidy ||
+                             parent2CopyNumber > 2 && probandCopyNumber > 3 && parent2Ploidy == probandPloidy;
+            }
             return isCommoCnv;
         }
 
