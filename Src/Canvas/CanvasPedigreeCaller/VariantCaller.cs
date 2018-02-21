@@ -170,6 +170,11 @@ namespace CanvasPedigreeCaller
 
             (var pedigreeCopyNumbers, var pedigreeLikelihoods) = GetPedigreeCopyNumbers(pedigreeInfo, singleSampleLikelihoods, debugLogging);
 
+            if (debugLogging)
+            {
+                Console.WriteLine($"bin counts before Qscores: {canvasSegments.ToList()[0].Value.GenomicBins.Count()}\t{canvasSegments.ToList()[1].Value.GenomicBins.Count()}\t{canvasSegments.ToList()[2].Value.GenomicBins.Count()}");
+            }
+
             var nonPedigreeCopyNumbers = CanvasPedigreeCaller.GetNonPedigreeCopyNumbers(canvasSegments, pedigreeInfo, singleSampleLikelihoods);
 
             var mergedCopyNumbers = pedigreeCopyNumbers.Concat(nonPedigreeCopyNumbers).OrderBy(canvasSegments.SampleIds);
@@ -183,6 +188,13 @@ namespace CanvasPedigreeCaller
             if (CanvasPedigreeCaller.UseAlleleCountsInformation(canvasSegments, _callerParameters.MinAlleleCountsThreshold, _callerParameters.MinAlleleNumberInSegment) && 
                 pedigreeInfo.HasOther())
                 AssignMccNoPedigreeInfo(canvasSegments.Where(segment=> pedigreeInfo.OtherIds.Contains(segment.SampleId)).ToSampleMap(), copyNumberModel, _genotypes);
+
+
+            if (debugLogging)
+            {
+                Console.WriteLine($"bin counts at end of CN likelihoods: {canvasSegments.ToList()[0].Value.GenomicBins.Count()}\t{canvasSegments.ToList()[1].Value.GenomicBins.Count()}\t{canvasSegments.ToList()[2].Value.GenomicBins.Count()}");
+            }
+
         }
 
         /// <summary>
