@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using CanvasCommon;
@@ -16,7 +17,7 @@ namespace CanvasPedigreeCaller
 
         public JointLikelihoods()
         {
-            MaximalLogLikelihood = 0;
+            MaximalLogLikelihood = Double.NegativeInfinity;
             var comparer = new SampleGenotypeComparer();
             _jointLikelihoods = new Dictionary<ISampleMap<Genotype>, double>(comparer);
             _totalMarginalLikelihood = 0;
