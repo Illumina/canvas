@@ -97,6 +97,9 @@ namespace CanvasPedigreeCaller
                         variantCalledSegments.First().Value[i].Begin < 6000199 - 10)
                 {
                     Console.WriteLine($"bin counts Z {variantCalledSegments.First().Value[i].Begin}: {variantCalledSegments.ToList()[0].Value[i].GenomicBins.Count()} {variantCalledSegments.ToList()[1].Value[i].GenomicBins.Count()} {variantCalledSegments.ToList()[2].Value[i].GenomicBins.Count()}");
+                    Console.WriteLine($"bin counts Z {variantCalledSegments.ToList()[0].Value[i].Begin}-{variantCalledSegments.ToList()[0].Value[i].End}");
+                    Console.WriteLine($"bin counts Z {variantCalledSegments.ToList()[1].Value[i].Begin}-{variantCalledSegments.ToList()[1].Value[i].End}");
+                    Console.WriteLine($"bin counts Z {variantCalledSegments.ToList()[2].Value[i].Begin}-{variantCalledSegments.ToList()[2].Value[i].End}");
                 }
             }
             var mergedVariantCalledSegments = MergeSegments(variantCalledSegments, _callerParameters.MinimumCallSize, _qualityFilterThreshold);
