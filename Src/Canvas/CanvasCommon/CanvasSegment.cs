@@ -267,8 +267,9 @@ namespace CanvasCommon
         /// <summary>
         /// removes flanking bins before median estimation
         /// </summary>
-        public double TruncatedMedianCount(int bins2Remove)
+        public double TruncatedMedianCount(double bins2RemoverProportion)
         {
+            int bins2Remove = (int) (Counts.Count * bins2RemoverProportion);
             int start = bins2Remove;
             int end = Counts.Count - bins2Remove;
             int length = end - start;
