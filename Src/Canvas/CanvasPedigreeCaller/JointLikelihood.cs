@@ -2,6 +2,7 @@
 using System.IO;
 using System.Linq;
 using CanvasCommon;
+using Illumina.Common;
 using Illumina.Common.FileSystem;
 using Isas.Framework.DataTypes;
 using Isas.Framework.DataTypes.Maps;
@@ -12,25 +13,60 @@ namespace CanvasPedigreeCaller
     {
         public double MaximalLogLikelihood;
         private readonly Dictionary<ISampleMap<Genotype>, double> _jointLikelihoods;
-        private double _totalMarginalLikelihood;
+        public double TotalMarginalLikelihood { get; private set; }
 
         public JointLikelihoods()
         {
             MaximalLogLikelihood = double.NegativeInfinity;
             var comparer = new SampleGenotypeComparer();
             _jointLikelihoods = new Dictionary<ISampleMap<Genotype>, double>(comparer);
-            _totalMarginalLikelihood = 0;
+            TotalMarginalLikelihood = 0;
         }
+
 
         public void AddJointLikelihood(ISampleMap<Genotype> samplesGenotypes, double likelihood)
         {
-            _jointLikelihoods[samplesGenotypes] = likelihood;
-            _totalMarginalLikelihood += likelihood;
+            if (_jointLikelihoods.ContainsKey(samplesGenotypes) && _jointLikelihoods[samplesGenotypes] < likelihood)
+            {
+                TotalMarginalLikelihood = TotalMarginalLikelihood + (likelihood - _jointLikelihoods[samplesGenotypes]);
+                _jointLikelihoods[samplesGenotypes] = likelihood;
+
+            }
+            else if (!_jointLikelihoods.ContainsKey(samplesGenotypes))
+            {
+                TotalMarginalLikelihood = TotalMarginalLikelihood + likelihood;
+                _jointLikelihoods[samplesGenotypes] = likelihood;
+            }
+
+        }
+
+        public void SumSanityCheck()
+        {
+            double sumOfJointLikelihoods = _jointLikelihoods.Select(x => x.Value).Sum();
+            if (sumOfJointLikelihoods < TotalMarginalLikelihood * .99 ||
+                              sumOfJointLikelihoods > TotalMarginalLikelihood * 1.01)
+            {
+                throw new IlluminaException($"JointLikelihoods sum of _jointLikelihoods {sumOfJointLikelihoods} != {TotalMarginalLikelihood} _totalMarginalLikelihood");
+            }
         }
 
         public double GetJointLikelihood(ISampleMap<Genotype> samplesGenotypes)
         {
             return _jointLikelihoods[samplesGenotypes];
+        }
+        
+        public double GetMarginalGainDeNovoLikelihood(KeyValuePair<SampleId, Genotype> probandRefPloidy, KeyValuePair<SampleId, Genotype> parent1RefPloidy,
+            KeyValuePair<SampleId, Genotype> parent2RefPloidy)
+        {
+            return _jointLikelihoods.Where(kvp => kvp.Key[probandRefPloidy.Key].More(probandRefPloidy.Value) && kvp.Key[parent1RefPloidy.Key].Less(parent1RefPloidy.Value)
+            && kvp.Key[parent2RefPloidy.Key].Less(parent2RefPloidy.Value)).Select(kvp => kvp.Value).Sum() / TotalMarginalLikelihood;
+        }
+        
+        public double GetMarginalLossDeNovoLikelihood(KeyValuePair<SampleId, Genotype> probandRefPloidy, KeyValuePair<SampleId, Genotype> parent1RefPloidy,
+            KeyValuePair<SampleId, Genotype> parent2RefPloidy)
+        {
+            return _jointLikelihoods.Where(kvp => kvp.Key[probandRefPloidy.Key].Less(probandRefPloidy.Value) && kvp.Key[parent1RefPloidy.Key].Less(parent1RefPloidy.Value)
+            && kvp.Key[parent2RefPloidy.Key].Less(parent2RefPloidy.Value)).Select(kvp => kvp.Value).Sum() / TotalMarginalLikelihood;
         }
 
         // in a pedigree with the map (SampleId[M]=>Genotype[G], M: parents, offspring, G: genotype), estimate posterior likelihood as
@@ -39,7 +75,7 @@ namespace CanvasPedigreeCaller
         public double GetMarginalLikelihood(KeyValuePair<SampleId, Genotype> samplesGenotype)
         {
             return _jointLikelihoods.Where(kvp => Equals(kvp.Key[samplesGenotype.Key], samplesGenotype.Value)).Select(kvp => kvp.Value).Sum() /
-                _totalMarginalLikelihood;
+                TotalMarginalLikelihood;
         }
 
         // in a pedigree with the map (SampleId[M]=>Genotype[G], M: parents, offspring, G: genotype), estimate posterior likelihood as
@@ -47,8 +83,8 @@ namespace CanvasPedigreeCaller
         // pedigree member X not having genotype Y
         public double GetMarginalNonAltLikelihood(KeyValuePair<SampleId, Genotype> samplesGenotype)
         {
-            return _jointLikelihoods.Where(kvp => !Equals(kvp.Key[samplesGenotype.Key], samplesGenotype.Value)).Select(kvp => kvp.Value).Sum() / 
-                _totalMarginalLikelihood;
+            return _jointLikelihoods.Where(kvp => !Equals(kvp.Key[samplesGenotype.Key], samplesGenotype.Value)).Select(kvp => kvp.Value).Sum() /
+                TotalMarginalLikelihood;
         }
 
         private class SampleGenotypeComparer : IEqualityComparer<ISampleMap<Genotype>>

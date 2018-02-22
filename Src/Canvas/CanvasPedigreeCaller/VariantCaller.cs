@@ -54,7 +54,7 @@ namespace CanvasPedigreeCaller
                     canvasSegments[sampleId].Filter = CanvasFilter.Create(new[] {$"q{_qualityFilterThreshold}"});
             }
             if (pedigreeInfo.HasFullPedigree())
-                SetDenovoQualityScores(canvasSegments, pedigreeMembersInfo, pedigreeInfo.ParentsIds, pedigreeInfo.OffspringIds, copyNumberLikelihoods, copyNumbers);
+                SetDenovoQualityScores(canvasSegments, pedigreeMembersInfo, pedigreeInfo.ParentsIds, pedigreeInfo.OffspringIds, copyNumberLikelihoods);
         }
 
         private double GetSingleSampleQualityScore(Dictionary<Genotype, double> copyNumbersLikelihoods, Genotype cnState)
@@ -76,12 +76,9 @@ namespace CanvasPedigreeCaller
         /// <param name="parentIDs"></param>
         /// <param name="offspringIDs"></param>
         /// <param name="copyNumbersLikelihoods"></param>
-        /// <param name="copyNumbers"></param>
         private void SetDenovoQualityScores(ISampleMap<CanvasSegment> canvasSegments, ISampleMap<SampleMetrics> samplesInfo, List<SampleId> parentIDs, List<SampleId> offspringIDs,
-            JointLikelihoods copyNumbersLikelihoods, ISampleMap<Genotype> copyNumbers)
+            JointLikelihoods copyNumbersLikelihoods)
         {
-            var pedigreeCopyNumbers = copyNumbers.WhereSampleIds(sampleId =>
-                parentIDs.Contains(sampleId) || offspringIDs.Contains(sampleId));
             foreach (var probandId in offspringIDs)
             {
                 // targeted proband is REF
@@ -96,8 +93,7 @@ namespace CanvasPedigreeCaller
                 // not all q-scores are above the threshold
                 if (parentIDs.Concat(probandId).Any(id => !IsPassVariant(canvasSegments, id)))
                     continue;
-                var refPloidy = samplesInfo[probandId].Ploidy.GetReferenceCopyNumber(canvasSegments[probandId]);
-                double deNovoQualityScore = GetConditionalDeNovoQualityScore(copyNumbersLikelihoods, probandId, pedigreeCopyNumbers, refPloidy);
+                double deNovoQualityScore = GetConditionalDeNovoQualityScore(canvasSegments, copyNumbersLikelihoods, samplesInfo, parentIDs, probandId);
                 if (Double.IsInfinity(deNovoQualityScore) | deNovoQualityScore > _callerParameters.MaxQscore)
                     deNovoQualityScore = _callerParameters.MaxQscore;
                 canvasSegments[probandId].DqScore = deNovoQualityScore;
@@ -111,14 +107,22 @@ namespace CanvasPedigreeCaller
         /// <param name="probandId"></param>
         /// <param name="copyNumberGenotypes"></param>
         /// <returns></returns>
-        private double GetConditionalDeNovoQualityScore(JointLikelihoods jointLikelihoods, SampleId probandId, ISampleMap<Genotype> copyNumberGenotypes, int probandRefPloidy)
+        private double GetConditionalDeNovoQualityScore(ISampleMap<CanvasSegment> canvasSegments, JointLikelihoods jointLikelihoods, ISampleMap<SampleMetrics> samplesInfo, List<SampleId> parentIDs, SampleId probandId)
         {
             const double q60 = 0.000001;
-            double marginalAltLikelihood = jointLikelihoods.GetMarginalLikelihood(new KeyValuePair<SampleId, Genotype>(probandId, copyNumberGenotypes[probandId]));
-            double marginalRefLikelihood = jointLikelihoods.GetMarginalNonAltLikelihood(new KeyValuePair<SampleId, Genotype>(probandId, Genotype.Create(probandRefPloidy)));
-            double normalization = marginalAltLikelihood + marginalRefLikelihood;
+            var parent1Ploidy = Genotype.Create(samplesInfo[parentIDs.First()].GetPloidy(canvasSegments[parentIDs.First()]));
+            var parent2Ploidy = Genotype.Create(samplesInfo[parentIDs.Last()].GetPloidy(canvasSegments[parentIDs.Last()]));
+            int probandPloidy = samplesInfo[probandId].GetPloidy(canvasSegments[probandId]);
+            double deNovoMarginalLikelihood = 0;
+            if (canvasSegments[probandId].CopyNumber > probandPloidy)
+                deNovoMarginalLikelihood  = jointLikelihoods.GetMarginalGainDeNovoLikelihood(new KeyValuePair<SampleId, Genotype>(probandId, Genotype.Create(probandPloidy)),
+                    new KeyValuePair<SampleId, Genotype>(parentIDs.First(), parent1Ploidy), new KeyValuePair<SampleId, Genotype>(parentIDs.Last(), parent2Ploidy));
+            else if (canvasSegments[probandId].CopyNumber < probandPloidy)
+                deNovoMarginalLikelihood  = jointLikelihoods.GetMarginalLossDeNovoLikelihood(new KeyValuePair<SampleId, Genotype>(probandId, Genotype.Create(probandPloidy)),
+                    new KeyValuePair<SampleId, Genotype>(parentIDs.First(), parent1Ploidy), new KeyValuePair<SampleId, Genotype>(parentIDs.Last(), parent2Ploidy));
+
             // likelihood of proband genotype != ALT given "copyNumberGenotypes" configuration in pedigree with Mendelian conflict 
-            double denovoProbability = jointLikelihoods.GetJointLikelihood(copyNumberGenotypes) / marginalAltLikelihood * marginalRefLikelihood / normalization;
+            double denovoProbability = 1 - deNovoMarginalLikelihood / jointLikelihoods.TotalMarginalLikelihood;
             return -10.0 * Math.Log10(Math.Max(denovoProbability, q60));
         }
 
@@ -145,23 +149,14 @@ namespace CanvasPedigreeCaller
             var parent1Segment = canvasSegments[parentIDs.First()];
             var parent2Segment = canvasSegments[parentIDs.Last()];
             var probandSegment = canvasSegments[probandId];
-            int parent1Ploidy = samplesInfo[probandId].GetPloidy(parent1Segment);
-            int parent2Ploidy = samplesInfo[probandId].GetPloidy(parent2Segment);
+            int parent1Ploidy = samplesInfo[parentIDs.First()].GetPloidy(parent1Segment);
+            int parent2Ploidy = samplesInfo[parentIDs.Last()].GetPloidy(parent2Segment);
             int probandPloidy = samplesInfo[probandId].GetPloidy(probandSegment);
-            bool isCommoCnv = parent1CopyNumber == probandCopyNumber && parent1Ploidy == probandPloidy ||
-                              parent2CopyNumber == probandCopyNumber && parent2Ploidy == probandPloidy;
-            if (!isCommoCnv)
-            {
-                isCommoCnv = parent1CopyNumber < 2 && probandCopyNumber < 3 && parent1Ploidy == probandPloidy ||
-                             parent2CopyNumber < 2 && probandCopyNumber < 3 && parent2Ploidy == probandPloidy;
-            }
-            if (!isCommoCnv)
-            {
-                // this wouldn't capture multi-allelic variants, i.e. case where parents have CN=3 and proband CN=4, will need MCC information for this
-                isCommoCnv = parent1CopyNumber > 2 && probandCopyNumber > 3 && parent1Ploidy == probandPloidy ||
-                             parent2CopyNumber > 2 && probandCopyNumber > 3 && parent2Ploidy == probandPloidy;
-            }
-            return isCommoCnv;
+            // Use the following logic: if the proband has fewer copies than expected (from ploidy) but both parents have at least the expected number of copies OR the 
+            // proband has more copies than expected but both parents have no more than the expected number of copies, 
+            // then it is not a 'common CNV' (i.e.it could be de novo); otherwise, it is common
+            return !(parent1CopyNumber <= parent1Ploidy && parent2CopyNumber <= parent2Ploidy && probandCopyNumber > probandPloidy ||
+                parent1CopyNumber >= parent1Ploidy && parent2CopyNumber >= parent2Ploidy && probandCopyNumber < probandPloidy);
         }
 
         private bool IsReferenceVariant(ISampleMap<CanvasSegment> canvasSegments, ISampleMap<SampleMetrics> samplesInfo, SampleId sampleId)
@@ -359,6 +354,12 @@ namespace CanvasPedigreeCaller
            return copyNumberModel.GetGenotypeLogLikelihood(canvasSegment.Balleles, gtStates);
         }
 
+        /// <summary>
+        /// Estimate joint likelihood and most likely CN assignment within a pedigree using total CN Genotype likelihoods and transition matrix
+        /// </summary>
+        /// <param name="pedigreeInfo"></param>
+        /// <param name="copyNumbersLikelihoods"></param>
+        /// <returns></returns>
         private (ISampleMap<Genotype> copyNumbersGenotypes, JointLikelihoods jointLikelihood) GetPedigreeCopyNumbers(PedigreeInfo pedigreeInfo, ISampleMap<Dictionary<Genotype, double>> copyNumbersLikelihoods)
         {
             int nHighestLikelihoodGenotypes = pedigreeInfo != null && pedigreeInfo.OffspringIds.Count >= 2 ? 3 : _callerParameters.MaximumCopyNumber;
@@ -368,16 +369,21 @@ namespace CanvasPedigreeCaller
             var jointLikelihood = new JointLikelihoods();
             if (!pedigreeInfo.HasFullPedigree())
                 return (sampleCopyNumbersGenotypes, jointLikelihood);
+            // parent 1 total CNs and likelihoods
             foreach (var copyNumberParent1 in copyNumbersLikelihoods[pedigreeInfo.ParentsIds.First()])
             {
+                // parent 2 total CNs and likelihoods
                 foreach (var copyNumberParent2 in copyNumbersLikelihoods[pedigreeInfo.ParentsIds.Last()])
                 {
+                    // for offspring in addition to querying likelihoods using total CNs, iterate over all possible genotype combination (CopyNumberA/B) for a given
+                    // CN and estimate likely transition probabilities using TransitionMatrix
                     foreach (var offspringGtStates in pedigreeInfo.OffspringPhasedGenotypes)
                     {
                         if (!pedigreeInfo.OffspringIds.All(id => copyNumbersLikelihoods[id].ContainsKey(
                             Genotype.Create(Math.Min(offspringGtStates[pedigreeInfo.OffspringIds.IndexOf(id)].PhasedGenotype.CopyNumberA + offspringGtStates[pedigreeInfo.OffspringIds.IndexOf(id)].PhasedGenotype.CopyNumberB,
                                 _callerParameters.MaximumCopyNumber - 1)))))
                         {
+                            // unavailable total CN
                             continue;
                         }
                         double currentLikelihood = copyNumberParent1.Value * copyNumberParent2.Value;
@@ -402,7 +408,7 @@ namespace CanvasPedigreeCaller
                         pedigreeInfo.OffspringIds.Zip(totalCopyNumberGenotypes).ForEach(sampleIdGenotypeKvp => genotypesInPedigree.Add(sampleIdGenotypeKvp.Item1, sampleIdGenotypeKvp.Item2));
                         genotypesInPedigree = genotypesInPedigree.OrderBy(pedigreeInfo.AllSampleIds);
                         jointLikelihood.AddJointLikelihood(genotypesInPedigree, currentLikelihood);
-                        var currentLogLikelihood = Math.Log(currentLikelihood);
+                        double currentLogLikelihood = Math.Log(currentLikelihood);
                         if (currentLogLikelihood > jointLikelihood.MaximalLogLikelihood)
                         {
                             jointLikelihood.MaximalLogLikelihood = currentLogLikelihood;
@@ -413,6 +419,7 @@ namespace CanvasPedigreeCaller
             }
             if (sampleCopyNumbersGenotypes.Empty())
                 throw new IlluminaException("Maximal likelihood was not found");
+            jointLikelihood.SumSanityCheck(); // temporary
             return (sampleCopyNumbersGenotypes, jointLikelihood);
         }
     }

@@ -51,5 +51,21 @@ namespace CanvasCommon
                    obj.PhasedGenotype.CopyNumberB == PhasedGenotype.CopyNumberB;
             return obj != null && obj.TotalCopyNumber == TotalCopyNumber;
         }
+
+        public bool More(Genotype obj)
+        {
+            if (obj?.PhasedGenotype != null && PhasedGenotype != null)
+                return obj.TotalCopyNumber < TotalCopyNumber && obj.PhasedGenotype.CopyNumberA <= PhasedGenotype.CopyNumberA &&
+                       obj.PhasedGenotype.CopyNumberB <= PhasedGenotype.CopyNumberB;
+            return obj != null && obj.TotalCopyNumber < TotalCopyNumber;
+        }
+
+        public bool Less(Genotype obj)
+        {
+            if (obj?.PhasedGenotype != null && PhasedGenotype != null)
+                return obj.TotalCopyNumber > TotalCopyNumber && obj.PhasedGenotype.CopyNumberA >= PhasedGenotype.CopyNumberA &&
+                       obj.PhasedGenotype.CopyNumberB >= PhasedGenotype.CopyNumberB;
+            return obj != null && obj.TotalCopyNumber > TotalCopyNumber;
+        }
     }
 }
