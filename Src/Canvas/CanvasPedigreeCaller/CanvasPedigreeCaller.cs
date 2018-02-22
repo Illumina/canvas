@@ -21,7 +21,7 @@ namespace CanvasPedigreeCaller
     {
         #region Members
         public const int DefaultQualityFilterThreshold = 7;
-        public const int DefaultDeNovoQualityFilterThreshold = 20;
+        public const int DefaultDeNovoQualityFilterThreshold = 10;
         private readonly int _qualityFilterThreshold;
         private readonly int _deNovoQualityFilterThreshold;
         private readonly PedigreeCallerParameters _callerParameters;
