@@ -115,16 +115,15 @@ namespace CanvasPedigreeCaller
             var parent1Ploidy = Genotype.Create(samplesInfo[parentIDs.First()].GetPloidy(canvasSegments[parentIDs.First()]));
             var parent2Ploidy = Genotype.Create(samplesInfo[parentIDs.Last()].GetPloidy(canvasSegments[parentIDs.Last()]));
             int probandPloidy = samplesInfo[probandId].GetPloidy(canvasSegments[probandId]);
-            double deNovoMarginalLikelihood = 0;
-            if (canvasSegments[probandId].CopyNumber > probandPloidy)
-                deNovoMarginalLikelihood  = jointLikelihoods.GetMarginalGainDeNovoLikelihood(new KeyValuePair<SampleId, Genotype>(probandId, Genotype.Create(probandPloidy)),
-                    new KeyValuePair<SampleId, Genotype>(parentIDs.First(), parent1Ploidy), new KeyValuePair<SampleId, Genotype>(parentIDs.Last(), parent2Ploidy));
-            else if (canvasSegments[probandId].CopyNumber < probandPloidy)
-                deNovoMarginalLikelihood  = jointLikelihoods.GetMarginalLossDeNovoLikelihood(new KeyValuePair<SampleId, Genotype>(probandId, Genotype.Create(probandPloidy)),
-                    new KeyValuePair<SampleId, Genotype>(parentIDs.First(), parent1Ploidy), new KeyValuePair<SampleId, Genotype>(parentIDs.Last(), parent2Ploidy));
 
+            double deNovoGainMarginalLikelihood = jointLikelihoods.GetMarginalGainDeNovoLikelihood(new KeyValuePair<SampleId, Genotype>(probandId, Genotype.Create(probandPloidy)),
+                    new KeyValuePair<SampleId, Genotype>(parentIDs.First(), parent1Ploidy), new KeyValuePair<SampleId, Genotype>(parentIDs.Last(), parent2Ploidy));
+            double deNovoLossMarginalLikelihood = jointLikelihoods.GetMarginalLossDeNovoLikelihood(new KeyValuePair<SampleId, Genotype>(probandId, Genotype.Create(probandPloidy)),
+                    new KeyValuePair<SampleId, Genotype>(parentIDs.First(), parent1Ploidy), new KeyValuePair<SampleId, Genotype>(parentIDs.Last(), parent2Ploidy));
+            double denovoProbability = canvasSegments[probandId].CopyNumber > probandPloidy ? 
+                1 - deNovoGainMarginalLikelihood / (jointLikelihoods.TotalMarginalLikelihood - deNovoLossMarginalLikelihood): 
+                1 - deNovoLossMarginalLikelihood / (jointLikelihoods.TotalMarginalLikelihood - deNovoGainMarginalLikelihood);
             // likelihood of proband genotype != ALT given "copyNumberGenotypes" configuration in pedigree with Mendelian conflict 
-            double denovoProbability = 1 - deNovoMarginalLikelihood / jointLikelihoods.TotalMarginalLikelihood;
             return -10.0 * Math.Log10(Math.Max(denovoProbability, q60));
         }
 
