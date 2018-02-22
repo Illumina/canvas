@@ -965,7 +965,6 @@ namespace CanvasCommon
                     {
                         newCopyNumbers.Add(copyNumbers[segmentIndex]);
                         newQscores.Add(qscores?[segmentIndex] ?? segments[segmentIndex].QScore);
-                        Console.WriteLine($"qscores: {qscores?[segmentIndex] ?? -1} segments.QScore {segments[segmentIndex].QScore} newQscores {newQscores.Last()}");
                     }
                     segmentIndex++;
                     continue;
@@ -1019,7 +1018,6 @@ namespace CanvasCommon
                 {
                     newCopyNumbers.Add(copyNumbers[segmentIndex]);
                     newQscores.Add(qscores?[segmentIndex] ?? segments[segmentIndex].QScore);
-                    Console.WriteLine($"qscores: {qscores?[segmentIndex] ?? -1} segments.QScore {segments[segmentIndex].QScore} newQscores {newQscores.Last()}");
                 }
                 mergedSegments.Add(segments[segmentIndex]);
                 segmentIndex++;
@@ -1048,7 +1046,7 @@ namespace CanvasCommon
                                     segments[segmentIndex].Begin - lastSegment.End < maximumMergeSpan &&
                                     // ensure that segment merging does not alter PASS filter flag
                                     // WAS: segments[segmentIndex].QScore > qScoreThreshold && lastSegment.QScore > qScoreThreshold
-                                    newQscores[segmentIndex] > qScoreThreshold && newQscores[segmentIndex] > qScoreThreshold;
+                                    newQscores[segmentIndex] > qScoreThreshold && newQscores[lastSegmentIndex] > qScoreThreshold;
 
                 if (mergeSegments)
                 {
