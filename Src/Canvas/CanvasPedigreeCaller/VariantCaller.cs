@@ -103,9 +103,11 @@ namespace CanvasPedigreeCaller
         /// <summary>
         /// Assess likelihood of a de-novo variant for copyNumberGenotypes configuration with a Mendelian conflict 
         /// </summary>
+        /// <param name="canvasSegments"></param>
         /// <param name="jointLikelihoods"></param>
+        /// <param name="parentIDs"></param>
         /// <param name="probandId"></param>
-        /// <param name="copyNumberGenotypes"></param>
+        /// <param name="samplesInfo"></param>
         /// <returns></returns>
         private double GetConditionalDeNovoQualityScore(ISampleMap<CanvasSegment> canvasSegments, JointLikelihoods jointLikelihoods, ISampleMap<SampleMetrics> samplesInfo, List<SampleId> parentIDs, SampleId probandId)
         {

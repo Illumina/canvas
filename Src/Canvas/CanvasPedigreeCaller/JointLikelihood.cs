@@ -58,15 +58,15 @@ namespace CanvasPedigreeCaller
         public double GetMarginalGainDeNovoLikelihood(KeyValuePair<SampleId, Genotype> probandRefPloidy, KeyValuePair<SampleId, Genotype> parent1RefPloidy,
             KeyValuePair<SampleId, Genotype> parent2RefPloidy)
         {
-            return _jointLikelihoods.Where(kvp => kvp.Key[probandRefPloidy.Key].More(probandRefPloidy.Value) && kvp.Key[parent1RefPloidy.Key].Less(parent1RefPloidy.Value)
-            && kvp.Key[parent2RefPloidy.Key].Less(parent2RefPloidy.Value)).Select(kvp => kvp.Value).Sum() / TotalMarginalLikelihood;
+            return _jointLikelihoods.Where(kvp => kvp.Key[probandRefPloidy.Key].More(probandRefPloidy.Value) && kvp.Key[parent1RefPloidy.Key].Equals(parent1RefPloidy.Value)
+            && kvp.Key[parent2RefPloidy.Key].Equals(parent2RefPloidy.Value)).Select(kvp => kvp.Value).Sum() / TotalMarginalLikelihood;
         }
         
         public double GetMarginalLossDeNovoLikelihood(KeyValuePair<SampleId, Genotype> probandRefPloidy, KeyValuePair<SampleId, Genotype> parent1RefPloidy,
             KeyValuePair<SampleId, Genotype> parent2RefPloidy)
         {
-            return _jointLikelihoods.Where(kvp => kvp.Key[probandRefPloidy.Key].Less(probandRefPloidy.Value) && kvp.Key[parent1RefPloidy.Key].Less(parent1RefPloidy.Value)
-            && kvp.Key[parent2RefPloidy.Key].Less(parent2RefPloidy.Value)).Select(kvp => kvp.Value).Sum() / TotalMarginalLikelihood;
+            return _jointLikelihoods.Where(kvp => kvp.Key[probandRefPloidy.Key].Less(probandRefPloidy.Value) && kvp.Key[parent1RefPloidy.Key].Equals(parent1RefPloidy.Value)
+            && kvp.Key[parent2RefPloidy.Key].Equals(parent2RefPloidy.Value)).Select(kvp => kvp.Value).Sum() / TotalMarginalLikelihood;
         }
 
         // in a pedigree with the map (SampleId[M]=>Genotype[G], M: parents, offspring, G: genotype), estimate posterior likelihood as
