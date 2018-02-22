@@ -118,14 +118,17 @@ namespace EvaluateCNV
             // skip truth interval that have more than 80% of unmapable bases
             // code is not parallel as this will be done by Regression workflow
             const double fractionUnmappableBases = 0.8;
-            var filteredknownCN = new Dictionary<string, List<CNInterval>>();
+            var filteredknownCn = new Dictionary<string, List<CNInterval>>();
             if (kmerfa != null)
             {
                 foreach (var chromosome in knownCN.Keys)
                 {
-                    filteredknownCN[chromosome] = new List<CNInterval>();
+                    filteredknownCn[chromosome] = new List<CNInterval>();
                     foreach (var interval in knownCN[chromosome])
                     {
+                        // hack for now
+                        if (interval.Cn == 2)
+                            continue;
                         var kmerFaBases = 0;
                         for (var bp = interval.Start; bp < interval.End; bp++)
                         {
@@ -135,17 +138,17 @@ namespace EvaluateCNV
                             }
                         }
                         if (kmerFaBases / (double) interval.Length < fractionUnmappableBases)
-                            filteredknownCN[chromosome].Add(interval);
+                            filteredknownCn[chromosome].Add(interval);
                     }
                 }
 
             }
             else
             {
-                filteredknownCN = knownCN;
+                filteredknownCn = knownCN;
             }
 
-            foreach (CNInterval interval in filteredknownCN.Values.SelectMany(x => x))
+            foreach (CNInterval interval in filteredknownCn.Values.SelectMany(x => x))
             {
                 if (!(interval.Length >= baseCounter.MinSize && interval.Length <= baseCounter.MaxSize)) continue;
                 int nonOverlapBases = interval.Length;
