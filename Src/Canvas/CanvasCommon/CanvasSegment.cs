@@ -964,7 +964,7 @@ namespace CanvasCommon
                     if (copyNumbers != null)
                     {
                         newCopyNumbers.Add(copyNumbers[segmentIndex]);
-                        newQscores.Add(qscores[segmentIndex]);
+                        newQscores.Add(qscores?[segmentIndex] ?? segments[segmentIndex].QScore);
                     }
                     segmentIndex++;
                     continue;
@@ -1017,7 +1017,7 @@ namespace CanvasCommon
                 if (copyNumbers != null)
                 {
                     newCopyNumbers.Add(copyNumbers[segmentIndex]);
-                    newQscores.Add(qscores[segmentIndex]);
+                    newQscores.Add(qscores?[segmentIndex] ?? segments[segmentIndex].QScore);
                 }
                 mergedSegments.Add(segments[segmentIndex]);
                 segmentIndex++;
