@@ -91,6 +91,7 @@ namespace CanvasPedigreeCaller
                 variantCalledSegments.Add(key, segmentsForVariantCalling.Select(segment => segment[key]).ToList());
 
             var mergedVariantCalledSegments = MergeSegments(variantCalledSegments, _callerParameters.MinimumCallSize, _qualityFilterThreshold);
+
             var outputFolder = outVcfFile.Directory;
             foreach (var sampleId in samplesInfo.SampleIds)
             {
@@ -415,13 +416,11 @@ namespace CanvasPedigreeCaller
         public static bool UseAlleleCountsInformation(ISampleMap<CanvasSegment> canvasSegments, int  minAlleleCountsThreshold,
             int minAlleleNumberInSegment)
         {
-            var alleles = canvasSegments.Values.Select(segments => segments.Balleles?.TotalCoverage);
-            var alleleCounts = alleles.Select(allele => allele?.Count ?? 0).ToList();
-            bool sufficientAlleleNum = alleleCounts.Select(x => x > minAlleleCountsThreshold).Count() >= minAlleleNumberInSegment;
-            // var coverageCounts = canvasSegments.Values.Select(segments => segments.MedianCount).ToList();
-            // double alleleDensity = canvasSegments.Values.First().Length / Math.Max(alleleCounts.Average(), 1.0);
-            // bool useCnLikelihood = lowAlleleCounts || alleleDensity < _callerParameters.DefaultAlleleDensityThreshold || alleleCounts.Any(x => x > _callerParameters.DefaultPerSegmentAlleleMaxCounts) || coverageCounts.Any(coverage => coverage < medianCoverageThreshold); 
-            // for now only use lowAlleleCounts metric
+            var alleles = canvasSegments.Values.Select(segment => segment.Balleles?.TotalCoverage);
+            // allele read coverage check
+            var alleleCounts = alleles.Select(allele => allele?.Where(y => y >= minAlleleCountsThreshold).Count() ?? 0).ToList();
+            // number of SNVs in a segment check
+            bool sufficientAlleleNum = alleleCounts.All(x => x >= minAlleleNumberInSegment);
             return sufficientAlleleNum;
         }
 
