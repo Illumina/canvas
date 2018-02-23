@@ -68,6 +68,7 @@ namespace EvaluateCNV
         private static readonly ValueOption<double> HeterogeneityFraction = ValueOption<double>.CreateWithDefault(1, "HeterogeneityFraction", "het");
         private static readonly ValueOption<double?> DQscoreThreshold = ValueOption<double?>.Create("DQscore threshold", "q", "dqscore");
         private static readonly FlagOption SplitBySize = new FlagOption("Split by variant size", "s", "splitBySize");
+        private static readonly ValueOption<string> KmerFa = ValueOption<string>.Create("Kmer.fa file", "k", "kmerFa");
         private static readonly FlagOption SkipDiploid = new FlagOption("Skip diploid calls", "d", "skipDiploid");
         private static readonly FlagOption Help = new FlagOption("show this message and exit", "h", "help");
 
@@ -81,6 +82,7 @@ namespace EvaluateCNV
                 DQscoreThreshold,
                 SplitBySize,
                 SkipDiploid,
+                KmerFa,
                 Help
             };
         }
@@ -93,9 +95,10 @@ namespace EvaluateCNV
             double? dqscoreThreshold = parseInput.Get(DQscoreThreshold);
             bool splitBySize = parseInput.Get(SplitBySize);
             bool skipDiploid = parseInput.Get(SkipDiploid);
+            string kmerFa = parseInput.Get(KmerFa);
             var help = parseInput.Get(Help);
             return ParsingResult<EvaluateCnvOptions>.SuccessfulResult(new EvaluateCnvOptions(baseFileName, roiBed, heterogeneityFraction,
-                dqscoreThreshold, splitBySize, skipDiploid, help));
+                dqscoreThreshold, splitBySize, skipDiploid, kmerFa, help));
 
         }
     }
@@ -108,10 +111,12 @@ namespace EvaluateCNV
         public double? DQscoreThreshold { get; }
         public bool SplitBySize { get; }
         public bool SkipDiploid { get; }
+        public string KmerFa { get; }
+
         public bool Help { get; }
 
         public EvaluateCnvOptions(string baseFileName, IFileLocation roiBed, double heterogeneityFraction, double? dqscoreThreshold,
-            bool splitBySize, bool skipDiploid, bool help)
+            bool splitBySize, bool skipDiploid, string kmerFa, bool help)
         {
             BaseFileName = baseFileName;
             RoiBed = roiBed;
@@ -119,6 +124,7 @@ namespace EvaluateCNV
             DQscoreThreshold = dqscoreThreshold;
             SplitBySize = splitBySize;
             SkipDiploid = skipDiploid;
+            KmerFa = kmerFa;
             Help = help;
         }
     }
