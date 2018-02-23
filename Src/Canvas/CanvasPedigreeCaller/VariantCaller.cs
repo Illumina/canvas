@@ -85,7 +85,7 @@ namespace CanvasPedigreeCaller
                 if (IsReferenceVariant(canvasSegments, samplesInfo, probandId))
                     continue;
                 // common variant
-                if (IsCommonCnv(canvasSegments, samplesInfo, parentIDs, probandId, _callerParameters.MaximumCopyNumber))
+                if (IsSharedCnv(canvasSegments, samplesInfo, parentIDs, probandId, _callerParameters.MaximumCopyNumber))
                     continue;
                 // other offsprings are ALT
                 if (!offspringIDs.Except(probandId.ToEnumerable()).All(id => IsReferenceVariant(canvasSegments, samplesInfo, id)))
@@ -142,7 +142,7 @@ namespace CanvasPedigreeCaller
         /// <param name="probandId"></param>
         /// <param name="maximumCopyNumber"></param>
         /// <returns></returns>
-        public static bool IsCommonCnv(ISampleMap<CanvasSegment> canvasSegments, ISampleMap<SampleMetrics> samplesInfo, List<SampleId> parentIDs, SampleId probandId, int maximumCopyNumber)
+        public static bool IsSharedCnv(ISampleMap<CanvasSegment> canvasSegments, ISampleMap<SampleMetrics> samplesInfo, List<SampleId> parentIDs, SampleId probandId, int maximumCopyNumber)
         {
             int parent1CopyNumber = GetCnState(canvasSegments, parentIDs.First(), maximumCopyNumber);
             int parent2CopyNumber = GetCnState(canvasSegments, parentIDs.Last(), maximumCopyNumber);
@@ -387,6 +387,7 @@ namespace CanvasPedigreeCaller
                             // unavailable total CN
                             continue;
                         }
+                        // For a given combination of offspring copy numbers, only the genotypes that result in the maximum likelihood contribute to the final result."
                         double currentLikelihood = copyNumberParent1.Value * copyNumberParent2.Value;
                         var totalCopyNumberGenotypes = new List<Genotype>();
                         for (var counter = 0; counter < pedigreeInfo.OffspringIds.Count; counter++)
@@ -420,7 +421,6 @@ namespace CanvasPedigreeCaller
             }
             if (sampleCopyNumbersGenotypes.Empty())
                 throw new IlluminaException("Maximal likelihood was not found");
-            jointLikelihood.SumSanityCheck(); // temporary
             return (sampleCopyNumbersGenotypes, jointLikelihood);
         }
     }

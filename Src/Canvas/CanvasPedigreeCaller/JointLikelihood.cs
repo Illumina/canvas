@@ -40,16 +40,6 @@ namespace CanvasPedigreeCaller
 
         }
 
-        public void SumSanityCheck()
-        {
-            double sumOfJointLikelihoods = _jointLikelihoods.Select(x => x.Value).Sum();
-            if (sumOfJointLikelihoods < TotalMarginalLikelihood * .99 ||
-                              sumOfJointLikelihoods > TotalMarginalLikelihood * 1.01)
-            {
-                throw new IlluminaException($"JointLikelihoods sum of _jointLikelihoods {sumOfJointLikelihoods} != {TotalMarginalLikelihood} _totalMarginalLikelihood");
-            }
-        }
-
         public double GetJointLikelihood(ISampleMap<Genotype> samplesGenotypes)
         {
             return _jointLikelihoods[samplesGenotypes];
@@ -62,9 +52,9 @@ namespace CanvasPedigreeCaller
                     // proband is more than ref ploidy
                     kvp => kvp.Key[probandRefPloidy.Key].More(probandRefPloidy.Value) &&
                     // parent1 equals or less than ref ploidy
-                    (kvp.Key[parent1RefPloidy.Key].Equals(parent1RefPloidy.Value) || kvp.Key[parent1RefPloidy.Key].Less(parent1RefPloidy.Value)) &&
+                    !kvp.Key[parent1RefPloidy.Key].More(parent1RefPloidy.Value) &&
                     // parent2 equals or less than ref ploidy
-                    (kvp.Key[parent2RefPloidy.Key].Equals(parent2RefPloidy.Value) || kvp.Key[parent2RefPloidy.Key].Less(parent2RefPloidy.Value)))
+                    !kvp.Key[parent2RefPloidy.Key].More(parent2RefPloidy.Value))
                 .Select(kvp => kvp.Value).Sum();
         }
 
@@ -75,9 +65,9 @@ namespace CanvasPedigreeCaller
                 // proband is less than ref ploidy
                 kvp => kvp.Key[probandRefPloidy.Key].Less(probandRefPloidy.Value) &&
                 // parent1 equals or more than ref ploidy
-                (kvp.Key[parent1RefPloidy.Key].Equals(parent1RefPloidy.Value) || kvp.Key[parent1RefPloidy.Key].More(parent1RefPloidy.Value)) &&
+                !kvp.Key[parent1RefPloidy.Key].Less(parent1RefPloidy.Value) &&
                 // parent2 equals or more than ref ploidy
-                (kvp.Key[parent2RefPloidy.Key].Equals(parent2RefPloidy.Value) || kvp.Key[parent2RefPloidy.Key].More(parent2RefPloidy.Value)))
+                !kvp.Key[parent2RefPloidy.Key].Less(parent2RefPloidy.Value))
             .Select(kvp => kvp.Value).Sum();
         }
 
