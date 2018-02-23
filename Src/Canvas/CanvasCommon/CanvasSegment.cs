@@ -269,7 +269,6 @@ namespace CanvasCommon
         /// </summary>
         public double TruncatedMedianCount(int bins2Remove)
         {
-            //int bins2Remove = (int) (Counts.Count * bins2RemoverProportion);
             int start = bins2Remove;
             int end = Counts.Count - bins2Remove;
             int length = end - start;

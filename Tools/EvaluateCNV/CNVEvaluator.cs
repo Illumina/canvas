@@ -126,7 +126,7 @@ namespace EvaluateCNV
                     filteredknownCn[chromosome] = new List<CNInterval>();
                     foreach (var interval in knownCN[chromosome])
                     {
-                        // hack for now
+                        // hack for now to speed processing of multiple small REF blocks
                         if (interval.Cn == 2)
                             continue;
                         var kmerFaBases = 0;
