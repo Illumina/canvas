@@ -289,7 +289,7 @@ namespace CanvasCommon
             }
             if (CopyNumber > referenceCopyNumber)
             {
-                if (referenceCopyNumber == 1) return (CnvType.Gain, new[] { CopyNumber });
+                if (referenceCopyNumber <= 1) return (CnvType.Gain, new[] { CopyNumber });
                 if (!MajorChromosomeCount.HasValue)
                     return (CnvType.Gain, new[]
                         {-1, Int32.MaxValue}); // use -1 for unknown allele copynum and MaxValue for <DUP> 
@@ -954,6 +954,7 @@ namespace CanvasCommon
             if (!segments.Any()) return mergedSegments;
 
             var newCopyNumbers = new List<List<int>>();
+            var newQscores = new List<double>();
             int segmentIndex = 0;
             while (segmentIndex < segments.Count)
             {
@@ -961,7 +962,10 @@ namespace CanvasCommon
                 {
                     mergedSegments.Add(segments[segmentIndex]);
                     if (copyNumbers != null)
+                    {
                         newCopyNumbers.Add(copyNumbers[segmentIndex]);
+                        newQscores.Add(qscores?[segmentIndex] ?? segments[segmentIndex].QScore);
+                    }
                     segmentIndex++;
                     continue;
                 }
@@ -985,7 +989,7 @@ namespace CanvasCommon
                 {
                     if (segments[checkIndex].Chr != segments[segmentIndex].Chr) break;
                     if (segments[checkIndex].End - segments[checkIndex].Begin < minimumCallSize) continue;
-                    if (segments[checkIndex].Begin - segments[segmentIndex].End > maximumMergeSpan) continue;
+                    if (segments[checkIndex].Begin - segments[segmentIndex].End > maximumMergeSpan) break;
                     nextIndex = checkIndex;
                     nextQ = qscores?[checkIndex] ?? segments[checkIndex].QScore;
                     break;
@@ -1002,8 +1006,8 @@ namespace CanvasCommon
 
                 if (nextQ >= 0)
                 {
-                    // segments[nextIndex] assimilates segments[segmentIndex...nextIndex - 1]
-                    for (int tempIndex = segmentIndex; tempIndex < nextIndex; tempIndex++)
+                    // segments[nextIndex] assimilates segments[segmentIndex...nextIndex - 1], in reverse order
+                    for (int tempIndex = nextIndex -1; segmentIndex <= tempIndex; tempIndex--)
                     {
                         segments[nextIndex].MergeIn(segments[tempIndex]);
                     }
@@ -1011,13 +1015,18 @@ namespace CanvasCommon
                     continue;
                 }
                 if (copyNumbers != null)
+                {
                     newCopyNumbers.Add(copyNumbers[segmentIndex]);
+                    newQscores.Add(qscores?[segmentIndex] ?? segments[segmentIndex].QScore);
+                }
                 mergedSegments.Add(segments[segmentIndex]);
                 segmentIndex++;
             }
             segments = mergedSegments;
             if (copyNumbers != null && newCopyNumbers.Count != segments.Count)
                 throw new ArgumentException("Length of copyNumbers list should equal the number of segments.");
+            if (qscores != null && newQscores.Count != segments.Count)
+                throw new ArgumentException("Length of qscores list should equal the number of segments.");
 
             // Now, merge together adjacent segments with same calls!
             mergedSegments = new List<CanvasSegment>();
@@ -1036,7 +1045,8 @@ namespace CanvasCommon
                                     lastSegment.Chr == segments[segmentIndex].Chr &&
                                     segments[segmentIndex].Begin - lastSegment.End < maximumMergeSpan &&
                                     // ensure that segment merging does not alter PASS filter flag
-                                    segments[segmentIndex].QScore > qScoreThreshold && lastSegment.QScore > qScoreThreshold;
+                                    // WAS: segments[segmentIndex].QScore > qScoreThreshold && lastSegment.QScore > qScoreThreshold
+                                    newQscores[segmentIndex] > qScoreThreshold && newQscores[lastSegmentIndex] > qScoreThreshold;
 
                 if (mergeSegments)
                 {

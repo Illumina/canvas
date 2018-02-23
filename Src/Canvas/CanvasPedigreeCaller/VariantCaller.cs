@@ -186,7 +186,6 @@ namespace CanvasPedigreeCaller
             var mergedCopyNumbers = pedigreeCopyNumbers.Concat(nonPedigreeCopyNumbers).OrderBy(canvasSegments.SampleIds);
 
             EstimateQScores(canvasSegments, samplesInfo, pedigreeInfo, singleSampleLikelihoods, pedigreeLikelihoods, mergedCopyNumbers);
-
             // TODO: this will be integrated with GetCopyNumbers* on a model level as a part of https://jira.illumina.com/browse/CANV-404
             if (CanvasPedigreeCaller.UseAlleleCountsInformation(canvasSegments, _callerParameters.MinAlleleCountsThreshold, _callerParameters.MinAlleleNumberInSegment) && 
                 pedigreeInfo.HasFullPedigree())
@@ -194,6 +193,7 @@ namespace CanvasPedigreeCaller
             if (CanvasPedigreeCaller.UseAlleleCountsInformation(canvasSegments, _callerParameters.MinAlleleCountsThreshold, _callerParameters.MinAlleleNumberInSegment) && 
                 pedigreeInfo.HasOther())
                 AssignMccNoPedigreeInfo(canvasSegments.Where(segment=> pedigreeInfo.OtherIds.Contains(segment.SampleId)).ToSampleMap(), copyNumberModel, _genotypes);
+
         }
 
         /// <summary>
@@ -400,8 +400,8 @@ namespace CanvasPedigreeCaller
                                                  pedigreeInfo.TransitionMatrix[copyNumberParent2.Key.TotalCopyNumber][offspringGtStates[counter].PhasedGenotype.CopyNumberB] *
                                                  copyNumbersLikelihoods[child][copyNumberGenotypeChild];
                         }
-
                         currentLikelihood = Double.IsNaN(currentLikelihood) || Double.IsInfinity(currentLikelihood) ? 0 : currentLikelihood;
+
                         var genotypesInPedigree = new SampleMap<Genotype>
                         {
                             {pedigreeInfo.ParentsIds.First(), copyNumberParent1.Key},
