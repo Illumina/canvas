@@ -35,7 +35,7 @@ namespace CanvasPedigreeCaller
                 {
                     double currentLikelihood =
                         copyNumberModel[sampleId].GetTotalCopyNumberLikelihoods(
-                            Math.Min(canvasSegments[sampleId].TruncatedMedianCount(proportionBins2remove),
+                            Math.Min(canvasSegments[sampleId].TruncatedMedianCount(5),
                                 samplesInfo[sampleId].MeanCoverage * maxCoverageMultiplier), genotypeCopyNumber);
                     currentLikelihood = Double.IsNaN(currentLikelihood) || Double.IsInfinity(currentLikelihood)
                         ? 0
