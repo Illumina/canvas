@@ -64,7 +64,7 @@ namespace CanvasTest.CanvasPedigreeCaller
                 {new SampleId("proband"), sampleMetricsProband}
             };
 
-            bool isCommonCnv = VariantCaller.IsCommonCnv(pedigreeSegments, sampleMetrics,
+            bool isCommonCnv = VariantCaller.IsSharedCnv(pedigreeSegments, sampleMetrics,
                 new List<SampleId> {new SampleId("parent1"), new SampleId("parent2")},
                 new SampleId("proband"), maximumCopyNumber: 5);
 
@@ -152,7 +152,7 @@ namespace CanvasTest.CanvasPedigreeCaller
                 {new SampleId("proband"), sampleMetricsProband}
             };
 
-            bool isCommonCnv = VariantCaller.IsCommonCnv(pedigreeSegments, sampleMetrics,
+            bool isCommonCnv = VariantCaller.IsSharedCnv(pedigreeSegments, sampleMetrics,
                 new List<SampleId> {new SampleId("parent1"), new SampleId("parent2")},
                 new SampleId("proband"), maximumCopyNumber: 5);
 
