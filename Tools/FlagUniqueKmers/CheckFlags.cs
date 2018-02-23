@@ -1,6 +1,5 @@
 ﻿using System;
 using Illumina.Common.FileSystem;
-using Isas.Framework.Utilities;
 using Isas.SequencingFiles;
 
 namespace FlagUniqueKmers
