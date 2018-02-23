@@ -53,5 +53,20 @@ namespace CanvasTest
             Assert.Equal(CnvType.Gain, cnvTypeCn2);
             Assert.Equal(new[] { 2 }, alleleCopyNumbersCn2);
         }
+        [Fact]
+        public void GetCnvTypeAndAlleleCopyNumbers_referenceCn_is_zero()
+        {
+            int referenceCopyNumber = 0;
+            var (cnvTypeCn0, alleleCopyNumbersCn0) = _segmentCn0.GetCnvTypeAndAlleleCopyNumbers(referenceCopyNumber);
+            var (cnvTypeCn1, alleleCopyNumbersCn1) = _segmentCn1.GetCnvTypeAndAlleleCopyNumbers(referenceCopyNumber);
+            var (cnvTypeCn2, alleleCopyNumbersCn2) = _segmentCn2.GetCnvTypeAndAlleleCopyNumbers(referenceCopyNumber);
+
+            Assert.Equal(CnvType.Reference, cnvTypeCn0);
+            Assert.Equal(new[] { -1 }, alleleCopyNumbersCn0);
+            Assert.Equal(CnvType.Gain, cnvTypeCn1);
+            Assert.Equal(new[] { 1 }, alleleCopyNumbersCn1);
+            Assert.Equal(CnvType.Gain, cnvTypeCn2);
+            Assert.Equal(new[] { 2 }, alleleCopyNumbersCn2);
+        }
     }
 }

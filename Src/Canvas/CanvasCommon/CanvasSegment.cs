@@ -289,7 +289,7 @@ namespace CanvasCommon
             }
             if (CopyNumber > referenceCopyNumber)
             {
-                if (referenceCopyNumber == 1) return (CnvType.Gain, new[] { CopyNumber });
+                if (referenceCopyNumber <= 1) return (CnvType.Gain, new[] { CopyNumber });
                 if (!MajorChromosomeCount.HasValue)
                     return (CnvType.Gain, new[]
                         {-1, Int32.MaxValue}); // use -1 for unknown allele copynum and MaxValue for <DUP> 
