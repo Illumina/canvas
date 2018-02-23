@@ -29,10 +29,10 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Illumina.Common" Version="5.1.0.384" />
-    <PackageReference Include="Isas.Framework" Version="8.13.0.935" />
-    <PackageReference Include="Isas.Manifests" Version="5.1.0.173" />
-    <PackageReference Include="Isas.SequencingFiles" Version="6.1.1.409" />
+    <PackageReference Include="Illumina.Common" Version="5.1.1.387" />
+    <PackageReference Include="Isas.Framework" Version="8.15.3.963" />
+    <PackageReference Include="Isas.Manifests" Version="5.3.0.179" />
+    <PackageReference Include="Isas.SequencingFiles" Version="6.2.0.414" />
     <PackageReference Include="protobuf-net" Version="2.3.2" />
     <PackageReference Include="System.ComponentModel.TypeConverter" Version="4.3.0" />
   </ItemGroup>
