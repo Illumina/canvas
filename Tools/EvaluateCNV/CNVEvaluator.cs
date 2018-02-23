@@ -115,7 +115,7 @@ namespace EvaluateCNV
                     int roiOverlapEnd = Math.Min(roiInterval.End, interval.End);
                     if (roiOverlapStart >= roiOverlapEnd) continue;
                     int roiOverlapBases = roiOverlapEnd - roiOverlapStart;
-                    nonOverlapRoiBases += roiOverlapBases;
+                    nonOverlapRoiBases -= roiOverlapBases;
                 }
                 int totalOverlapBases = 0;
                 int totalRoiOverlapBases = 0;

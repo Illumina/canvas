@@ -548,13 +548,12 @@ namespace EvaluateCNV
             foreach (var currentPloidyRegion in ploidyRegions)
             {
                 // interval must be completely contained within the ploidy region	
-                if (call.End >= currentPloidyRegion.Start && call.Start <= currentPloidyRegion.End)
+                if (call.Start >= currentPloidyRegion.Start && call.End <= currentPloidyRegion.End)
                 {
                     ploidyRegion = currentPloidyRegion;
                     return true;
                 }
-                if (call.Start >= currentPloidyRegion.Start && call.Start <= currentPloidyRegion.End ||
-                    call.End >= currentPloidyRegion.Start && call.End <= currentPloidyRegion.End)
+                if (call.Start <= currentPloidyRegion.Start || call.End >= currentPloidyRegion.End)
                     throw new IlluminaException($"Call '{call}' crosses reference ploidy region {currentPloidyRegion}. Update truth interval");
             }
             ploidyRegion = null;
