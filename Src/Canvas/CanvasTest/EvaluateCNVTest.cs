@@ -74,7 +74,7 @@ namespace CanvasTest
                 }
             };
             var metrics = cnvEvaluator.CalculateMetrics(knownCN, calls, baseCounter, optionsSkipDiploid: false, includePassingOnly: true);
-            Assert.Equal(50, Convert.ToInt32(metrics.Recall));
+            Assert.Equal(Convert.ToInt32((2/3.0)*100), Convert.ToInt32(metrics.Recall));
         }
 
         [Fact]

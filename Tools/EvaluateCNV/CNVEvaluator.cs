@@ -27,6 +27,7 @@ namespace EvaluateCNV
             MinSize = minSize;
             MaxSize = maxSize;
             BaseCount = new long[maxCn + 1, maxCn + 1, 3];
+            NoCalls = new long[maxCn + 1, 3];
             if (hasRoi)
                 RoiBaseCount = new long[maxCn + 1, maxCn + 1, 3];
         }
@@ -50,7 +51,7 @@ namespace EvaluateCNV
             // Make a note of how many bases in the truth set are not *actually* considered to be known bases, using
             // the "cnaqc" exclusion set:
             _cnvChecker.InitializeIntervalMetrics(knownCN);
-            bool regionsOfInterest = _cnvChecker.RegionsOfInterest != null;
+            bool regionsOfInterest = !_cnvChecker.RegionsOfInterest.Empty();
             var baseCounters = new List<BaseCounter> { new BaseCounter(MaxCn, 0, Int32.MaxValue, regionsOfInterest) };
             if (options.SplitBySize)
             {
@@ -109,6 +110,9 @@ namespace EvaluateCNV
                 if (!(interval.Length >= baseCounter.MinSize && interval.Length <= baseCounter.MaxSize)) continue;
                 int nonOverlapBases = interval.Length;
                 int nonOverlapRoiBases = 0;
+                if (!_cnvChecker.RegionsOfInterest.Empty() &&
+                    _cnvChecker.RegionsOfInterest.ContainsKey(interval.Chromosome)) {
+
                 foreach (CNInterval roiInterval in _cnvChecker.RegionsOfInterest[interval.Chromosome])
                 {
                     int roiOverlapStart = Math.Max(roiInterval.Start, interval.Start);
@@ -116,6 +120,7 @@ namespace EvaluateCNV
                     if (roiOverlapStart >= roiOverlapEnd) continue;
                     int roiOverlapBases = roiOverlapEnd - roiOverlapStart;
                     nonOverlapRoiBases -= roiOverlapBases;
+                }
                 }
                 int totalOverlapBases = 0;
                 int totalRoiOverlapBases = 0;
@@ -186,7 +191,7 @@ namespace EvaluateCNV
                     else
                         interval.BasesCalledIncorrectly += overlapBases;
 
-                    if (_cnvChecker.RegionsOfInterest == null ||
+                    if (_cnvChecker.RegionsOfInterest.Empty() ||
                         !_cnvChecker.RegionsOfInterest.ContainsKey(chr)) continue;
 
                     foreach (CNInterval roiInterval in _cnvChecker.RegionsOfInterest[chr])
