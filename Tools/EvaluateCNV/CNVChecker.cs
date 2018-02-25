@@ -525,7 +525,7 @@ namespace EvaluateCNV
             Dictionary<string, List<CnvCall>> allCalls, PloidyInfo ploidy)
         {
             return allCalls.Select(kvp =>
-                    (kvp.Key, GetCallsWithRefPloidy(kvp.Value, ploidy.PloidyByChromosome[kvp.Key]).ToList()))
+                    (kvp.Key, GetCallsWithRefPloidy(kvp.Value, ploidy.PloidyByChromosome.ContainsKey(kvp.Key)?ploidy.PloidyByChromosome[kvp.Key]:new List<PloidyInterval>()).ToList()))
                 .ToDictionary();
         }
 
