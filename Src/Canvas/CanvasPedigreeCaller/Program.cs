@@ -169,10 +169,11 @@ namespace CanvasPedigreeCaller
                 var workManager = WorkManagerFactory.GetWorkManager(workDoer, logger, pedigreeCallerWorkDirectory, settings);
 
                 var copyNumberLikelihoodCalculator = new CopyNumberLikelihoodCalculator(callerParameters.MaximumCopyNumber);
-                IVariantCaller variantCaller = new VariantCaller(copyNumberLikelihoodCalculator, callerParameters, qScoreThreshold);
-                var copyNumberModelFactory = new CopyNumberModelFactory();
+                var variantCaller = callerParameters.DefaultCaller == CallerType.VariantCaller ?
+                (IVariantCaller) new VariantCaller(copyNumberLikelihoodCalculator, callerParameters, qScoreThreshold):
+                new HaplotypeVariantCaller(copyNumberLikelihoodCalculator, callerParameters, qScoreThreshold);
 
-
+                var copyNumberModelFactory = new HaplotypeCopyNumberModelFactory();
                 var referenceGenome = new ReferenceGenomeFactory().GetReferenceGenome(new DirectoryLocation(referenceFolder));
                 var genomeMetadata = referenceGenome.GenomeMetadata;
 

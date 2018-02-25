@@ -35,7 +35,7 @@ namespace CanvasPedigreeCaller
         }
         public static SampleMetrics GetSampleInfo(IReadOnlyList<CanvasSegment> segments, string ploidyBedPath, int numberOfTrimmedBins, SampleId id)
         {
-            double meanMafCoverage = segments.SelectMany(x => x.Balleles.TotalCoverage).Average();
+            double meanMafCoverage = new SortedList<int>(segments.SelectMany(x => x.Balleles.TotalCoverage)).Median();
             double variance = Utilities.Variance(segments.Select(x => x.TruncatedMedianCount(numberOfTrimmedBins)).ToList());
             double mafVariance = Utilities.Variance(segments.Where(x => x.Balleles.TotalCoverage.Count > 0)
                 .Select(x => x.Balleles.TotalCoverage.Average()).ToList());

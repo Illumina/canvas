@@ -69,6 +69,7 @@ namespace EvaluateCNV
         private static readonly ValueOption<double> HeterogeneityFraction = ValueOption<double>.CreateWithDefault(1, "HeterogeneityFraction", "het");
         private static readonly ValueOption<double?> DQscoreThreshold = ValueOption<double?>.Create("DQscore threshold", "q", "dqscore");
         private static readonly FlagOption SplitBySize = new FlagOption("Split by variant size", "s", "splitBySize");
+        private static readonly ValueOption<string> KmerFa = ValueOption<string>.Create("Kmer.fa file", "k", "kmerFa");
         private static readonly FlagOption SkipDiploid = new FlagOption("Skip diploid calls", "d", "skipDiploid");
         private static readonly ValueOption<int> MinEntrySize = ValueOption<int>.CreateWithDefault(10000, "Minimum entry size to consider from either the truth or query files. Entries in those files that span fewer bases than this will be excluded from evaluation.", "min-size");
         private static readonly ValueOption<int> PloidyX = ValueOption<int>.CreateRequired("Reference ploidy for chromosome X (integer)", "ploidy-x");
@@ -95,6 +96,7 @@ namespace EvaluateCNV
                 SkipDiploid,
                 MinEntrySize,
                 PloidyOption,
+                KmerFa,
                 Help
             };
         }
@@ -107,11 +109,13 @@ namespace EvaluateCNV
             double? dqscoreThreshold = parseInput.Get(DQscoreThreshold);
             bool splitBySize = parseInput.Get(SplitBySize);
             bool skipDiploid = parseInput.Get(SkipDiploid);
+            string kmerFa = parseInput.Get(KmerFa);
             int minEntrySize = parseInput.Get(MinEntrySize);
             var ploidyInfo = parseInput.Get(PloidyOption);
             var help = parseInput.Get(Help);
             return ParsingResult<EvaluateCnvOptions>.SuccessfulResult(new EvaluateCnvOptions(baseFileName, roiBed, heterogeneityFraction,
-                dqscoreThreshold, splitBySize, skipDiploid, minEntrySize, ploidyInfo, help));
+                dqscoreThreshold, splitBySize, skipDiploid, minEntrySize, ploidyInfo, kmerFa, help));
+                
 
         }
     }
@@ -124,6 +128,8 @@ namespace EvaluateCNV
         public double? DQscoreThreshold { get; }
         public bool SplitBySize { get; }
         public bool SkipDiploid { get; }
+        public string KmerFa { get; }
+
         public int MinEntrySize { get; }
         public (SexPloidyInfo SexPloidyInfo, IFileLocation ParBed) PloidyInfo { get; }
         public bool Help { get; }
@@ -131,7 +137,7 @@ namespace EvaluateCNV
         public EvaluateCnvOptions(string baseFileName, IFileLocation roiBed, double heterogeneityFraction,
             double? dqscoreThreshold,
             bool splitBySize, bool skipDiploid, int minEntrySize, (SexPloidyInfo, IFileLocation) ploidyInfo,
-            bool help)
+            string kmerFa, bool help)
         {
             BaseFileName = baseFileName;
             RoiBed = roiBed;
@@ -139,6 +145,7 @@ namespace EvaluateCNV
             DQscoreThreshold = dqscoreThreshold;
             SplitBySize = splitBySize;
             SkipDiploid = skipDiploid;
+            KmerFa = kmerFa;
             MinEntrySize = minEntrySize;
             PloidyInfo = ploidyInfo;
             Help = help;

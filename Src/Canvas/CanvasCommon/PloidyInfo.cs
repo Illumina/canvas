@@ -54,7 +54,8 @@ namespace CanvasCommon
         /// </summary>
         public int GetReferenceCopyNumber(CanvasSegment segment)
         {
-            if (!PloidyByChromosome.ContainsKey(segment.Chr)) return 2;
+            if (!PloidyByChromosome.ContainsKey(segment.Chr))
+                return 2;
             int[] baseCounts = new int[5];
             baseCounts[2] = segment.Length;
 
@@ -181,6 +182,8 @@ namespace CanvasCommon
         public double MinorAlleleFrequency; // for PURE tumor
         public double MixedMinorAlleleFrequency; // for our ESTIMATED overall purity
         public double MixedCoverage; // for our ESTIMATED overall purity
+        public double MixedHaploidMinorAlleleFrequency;
+        public double MixedHaploidCoverage;
 
         // Used by the EM algorithm
         // Dimensions: 0: MAF, 1: Coverage

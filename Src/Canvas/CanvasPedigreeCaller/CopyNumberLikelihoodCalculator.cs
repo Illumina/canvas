@@ -17,10 +17,12 @@ namespace CanvasPedigreeCaller
 
         /// <summary>
         /// Calculates maximal likelihood for segments without SNV allele ratios. Updated CanvasSegment CopyNumber only. 
+        /// Use likelihoods as only median point estimator is used
         /// </summary>
         public ISampleMap<Dictionary<Genotype, double>> GetCopyNumbersLikelihoods(ISampleMap<CanvasSegment> canvasSegments, ISampleMap<SampleMetrics> samplesInfo,
             ISampleMap<ICopyNumberModel> copyNumberModel)
         {
+            const int bins2Remove = 5;
             var genotypes = Enumerable.Range(0, _maximumCopyNumber).Select(Genotype.Create).ToList();
             const double maxCoverageMultiplier = 3.0;
             var singleSampleLikelihoods = new SampleMap<Dictionary<Genotype, double>>();
@@ -33,7 +35,7 @@ namespace CanvasPedigreeCaller
                 {
                     double currentLikelihood =
                         copyNumberModel[sampleId].GetTotalCopyNumberLikelihoods(
-                            Math.Min(canvasSegments[sampleId].MedianCount,
+                            Math.Min(canvasSegments[sampleId].TruncatedMedianCount(bins2Remove),
                                 samplesInfo[sampleId].MeanCoverage * maxCoverageMultiplier), genotypeCopyNumber);
                     currentLikelihood = Double.IsNaN(currentLikelihood) || Double.IsInfinity(currentLikelihood)
                         ? 0

@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using EvaluateCNV;
 using Xunit;
+using Xunit.Sdk;
 using CNInterval = EvaluateCNV.CNInterval;
 
 namespace CanvasTest

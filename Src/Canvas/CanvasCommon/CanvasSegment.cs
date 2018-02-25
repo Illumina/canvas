@@ -96,6 +96,17 @@ namespace CanvasCommon
             return Range.Select(allele => new Tuple<int, int>(allele.CountsA, allele.CountsB)).ToList();
         }
 
+        // Due to coverage filters SNV callers tend to call less hemyzygous variants,
+        // skip potential hom/het variants at breakends that might overinfluence mean/median summary metrics 
+        public List<Tuple<int, int>> GetTruncatedAlleleCounts()
+        {
+            const int minAlleleCounts = 10;
+            if (Range.Count >= minAlleleCounts)
+                return Range.Skip(Convert.ToInt32(Math.Floor(minAlleleCounts / 3.0))).Take(Range.Count - Convert.ToInt32(Math.Floor(minAlleleCounts / 1.5))).
+                Select(allele => new Tuple<int, int>(allele.CountsA, allele.CountsB)).ToList();
+            return GetAlleleCounts();
+        }
+
         public Tuple<int, int> MedianCounts(Balleles balleles)
         {
             var item1 = Utilities.Median(balleles.Range.Select(allele => Math.Max(allele.CountsA, allele.CountsB)).ToList());
@@ -277,7 +288,7 @@ namespace CanvasCommon
             }
             if (CopyNumber > referenceCopyNumber)
             {
-                if (referenceCopyNumber == 1) return (CnvType.Gain, new[] { CopyNumber });
+                if (referenceCopyNumber <= 1) return (CnvType.Gain, new[] { CopyNumber });
                 if (!MajorChromosomeCount.HasValue)
                     return (CnvType.Gain, new[]
                         {-1, Int32.MaxValue}); // use -1 for unknown allele copynum and MaxValue for <DUP> 
@@ -935,13 +946,14 @@ namespace CanvasCommon
         /// and the space between them is not too large.
         /// </summary>
         public static List<CanvasSegment> MergeSegments(List<CanvasSegment> segments, int minimumCallSize = 0, int maximumMergeSpan = 10000,
-            List<List<int>> copyNumbers = null, List<double> qscores = null)
+            List<List<int>> copyNumbers = null, List<double> qscores = null, int qScoreThreshold = 0)
         {
             // Assimilate short segments into the *best* available neighbor:
             var mergedSegments = new List<CanvasSegment>();
             if (!segments.Any()) return mergedSegments;
 
             var newCopyNumbers = new List<List<int>>();
+            var newQscores = new List<double>();
             int segmentIndex = 0;
             while (segmentIndex < segments.Count)
             {
@@ -949,7 +961,10 @@ namespace CanvasCommon
                 {
                     mergedSegments.Add(segments[segmentIndex]);
                     if (copyNumbers != null)
+                    {
                         newCopyNumbers.Add(copyNumbers[segmentIndex]);
+                        newQscores.Add(qscores?[segmentIndex] ?? segments[segmentIndex].QScore);
+                    }
                     segmentIndex++;
                     continue;
                 }
@@ -973,7 +988,7 @@ namespace CanvasCommon
                 {
                     if (segments[checkIndex].Chr != segments[segmentIndex].Chr) break;
                     if (segments[checkIndex].End - segments[checkIndex].Begin < minimumCallSize) continue;
-                    if (segments[checkIndex].Begin - segments[segmentIndex].End > maximumMergeSpan) continue;
+                    if (segments[checkIndex].Begin - segments[segmentIndex].End > maximumMergeSpan) break;
                     nextIndex = checkIndex;
                     nextQ = qscores?[checkIndex] ?? segments[checkIndex].QScore;
                     break;
@@ -990,8 +1005,8 @@ namespace CanvasCommon
 
                 if (nextQ >= 0)
                 {
-                    // segments[nextIndex] assimilates segments[segmentIndex...nextIndex - 1]
-                    for (int tempIndex = segmentIndex; tempIndex < nextIndex; tempIndex++)
+                    // segments[nextIndex] assimilates segments[segmentIndex...nextIndex - 1], in reverse order
+                    for (int tempIndex = nextIndex -1; segmentIndex <= tempIndex; tempIndex--)
                     {
                         segments[nextIndex].MergeIn(segments[tempIndex]);
                     }
@@ -999,13 +1014,18 @@ namespace CanvasCommon
                     continue;
                 }
                 if (copyNumbers != null)
+                {
                     newCopyNumbers.Add(copyNumbers[segmentIndex]);
+                    newQscores.Add(qscores?[segmentIndex] ?? segments[segmentIndex].QScore);
+                }
                 mergedSegments.Add(segments[segmentIndex]);
                 segmentIndex++;
             }
             segments = mergedSegments;
             if (copyNumbers != null && newCopyNumbers.Count != segments.Count)
                 throw new ArgumentException("Length of copyNumbers list should equal the number of segments.");
+            if (qscores != null && newQscores.Count != segments.Count)
+                throw new ArgumentException("Length of qscores list should equal the number of segments.");
 
             // Now, merge together adjacent segments with same calls!
             mergedSegments = new List<CanvasSegment>();
@@ -1022,7 +1042,10 @@ namespace CanvasCommon
                                     lastSegment.IsHeterogeneous == segments[segmentIndex].IsHeterogeneous :
                                     newCopyNumbers[lastSegmentIndex].SequenceEqual(newCopyNumbers[segmentIndex]) &&
                                     lastSegment.Chr == segments[segmentIndex].Chr &&
-                                    segments[segmentIndex].Begin - lastSegment.End < maximumMergeSpan;
+                                    segments[segmentIndex].Begin - lastSegment.End < maximumMergeSpan &&
+                                    // ensure that segment merging does not alter PASS filter flag
+                                    // WAS: segments[segmentIndex].QScore > qScoreThreshold && lastSegment.QScore > qScoreThreshold
+                                    newQscores[segmentIndex] > qScoreThreshold && newQscores[lastSegmentIndex] > qScoreThreshold;
 
                 if (mergeSegments)
                 {

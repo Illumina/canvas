@@ -5,6 +5,7 @@ using System.Linq;
 using CanvasCommon;
 using Illumina.Common;
 using Illumina.Common.FileSystem;
+using Isas.SequencingFiles;
 
 namespace EvaluateCNV
 {
@@ -62,11 +63,21 @@ namespace EvaluateCNV
                 baseCounters.Add(new BaseCounter(MaxCn, 500000, int.MaxValue, regionsOfInterest));
             }
 
+            // not parallel here as parallelism will be attained at the level of regression workflow 
             _cnvChecker.CountExcludedBasesInTruthSetIntervals(knownCN);
+            Dictionary<string, string> referenceBases = null;
+            if (options.KmerFa != null)
+            {
+                referenceBases = new Dictionary<string, string>();
+                foreach (var chr in knownCN.Keys)
+                {
+                    referenceBases[chr] = FastaLoader.LoadFastaSequence(options.KmerFa, chr);
+                }
+            }
 
             foreach (var baseCounter in baseCounters)
             {
-                var metrics = CalculateMetrics(knownCN, calls, baseCounter, options.SkipDiploid, includePassingOnly);
+                var metrics = CalculateMetrics(knownCN, calls, baseCounter, options.SkipDiploid, includePassingOnly, referenceBases);
 
                 string fileName = $"{options.BaseFileName}";
                 if (options.DQscoreThreshold.HasValue)
@@ -93,8 +104,9 @@ namespace EvaluateCNV
         }
 
         public MetricsCalculator CalculateMetrics(Dictionary<string, List<CNInterval>> knownCN, Dictionary<string, List<CnvCall>> calls,
-            BaseCounter baseCounter, bool optionsSkipDiploid, bool includePassingOnly)
+            BaseCounter baseCounter, bool optionsSkipDiploid, bool includePassingOnly, Dictionary<string, string> kmerfa = null)
         {
+            // string referenceBases = string.Empty;
             calls.Values.SelectMany(x => x).ForEach(call =>
             {
                 if (!(call.IsAltVariant && call.Length >= baseCounter.MinSize && call.Length <= baseCounter.MaxSize))
@@ -105,7 +117,40 @@ namespace EvaluateCNV
                 baseCounter.TotalVariants++;
             });
 
-            foreach (CNInterval interval in knownCN.Values.SelectMany(x => x))
+            // skip truth interval that have more than 80% of unmapable bases
+            // code is not parallel as this will be done by Regression workflow
+            const double fractionUnmappableBases = 0.8;
+            var filteredknownCn = new Dictionary<string, List<CNInterval>>();
+            if (kmerfa != null)
+            {
+                foreach (var chromosome in knownCN.Keys)
+                {
+                    filteredknownCn[chromosome] = new List<CNInterval>();
+                    foreach (var interval in knownCN[chromosome])
+                    {
+                        // hack for now to speed processing of multiple small REF blocks
+                        if (interval.Cn == 2)
+                            continue;
+                        var kmerFaBases = 0;
+                        for (var bp = interval.Start; bp < interval.End; bp++)
+                        {
+                            if (char.IsLower(kmerfa[chromosome][bp]) || kmerfa[chromosome][bp] == 'n')
+                            {
+                                kmerFaBases++;
+                            }
+                        }
+                        if (kmerFaBases / (double) interval.Length < fractionUnmappableBases)
+                            filteredknownCn[chromosome].Add(interval);
+                    }
+                }
+
+            }
+            else
+            {
+                filteredknownCn = knownCN;
+            }
+
+            foreach (CNInterval interval in filteredknownCn.Values.SelectMany(x => x))
             {
                 if (!(interval.Length >= baseCounter.MinSize && interval.Length <= baseCounter.MaxSize)) continue;
                 int nonOverlapBases = interval.Length;
@@ -127,6 +172,8 @@ namespace EvaluateCNV
                 int excludeIntervalBases = 0;
                 var totalIntervalRefPloidy = new List<(int ploidy, int length)>();
                 string chromosome = interval.Chromosome;
+
+
                 if (!calls.ContainsKey(chromosome)) chromosome = chromosome.Replace("chr", "");
                 if (!calls.ContainsKey(chromosome)) chromosome = "chr" + chromosome;
 
@@ -209,6 +256,7 @@ namespace EvaluateCNV
                 }
 
                 nonOverlapBases -= (totalOverlapBases + excludeIntervalBases);
+
                 if (totalIntervalRefPloidy.Empty())
                 {
                     Console.WriteLine($"Error: Truth variant {interval.Chromosome}:{interval.Start}-{interval.End} with no overlapping " +
