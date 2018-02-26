@@ -553,9 +553,16 @@ namespace EvaluateCNV
                     ploidyRegion = currentPloidyRegion;
                     return true;
                 }
-                if ((call.Start < currentPloidyRegion.Start && call.End < currentPloidyRegion.End && call.End > currentPloidyRegion.Start) ||
-                    (call.Start > currentPloidyRegion.Start && call.End > currentPloidyRegion.End && call.Start < currentPloidyRegion.End))
-                    throw new IlluminaException($"Call '{call}' crosses reference ploidy region {currentPloidyRegion}. Update truth interval");
+                // for now assign variant that overlaps several ploidy regions to the one with the highest overlap 
+                int overlapStart = Math.Max(call.Start, currentPloidyRegion.Start);
+                int overlapEnd = Math.Min(call.End, currentPloidyRegion.End);
+                if (overlapStart >= overlapEnd) continue;
+                int overlapBases = (overlapEnd - overlapStart)/ call.Length;
+                if (overlapBases > 0.5)
+                {
+                    ploidyRegion = currentPloidyRegion;
+                    return true;
+                }
             }
             ploidyRegion = null;
             return false;
