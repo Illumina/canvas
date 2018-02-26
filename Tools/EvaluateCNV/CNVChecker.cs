@@ -553,7 +553,8 @@ namespace EvaluateCNV
                     ploidyRegion = currentPloidyRegion;
                     return true;
                 }
-                if (call.Start <= currentPloidyRegion.Start || call.End >= currentPloidyRegion.End)
+                if ((call.Start < currentPloidyRegion.Start && call.End < currentPloidyRegion.End && call.End > currentPloidyRegion.Start) ||
+                    (call.Start > currentPloidyRegion.Start && call.End > currentPloidyRegion.End && call.Start < currentPloidyRegion.End))
                     throw new IlluminaException($"Call '{call}' crosses reference ploidy region {currentPloidyRegion}. Update truth interval");
             }
             ploidyRegion = null;
