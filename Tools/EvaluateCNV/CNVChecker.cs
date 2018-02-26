@@ -558,11 +558,11 @@ namespace EvaluateCNV
                 int overlapEnd = Math.Min(call.End, currentPloidyRegion.End);
                 if (overlapStart >= overlapEnd) continue;
                 int overlapBases = (overlapEnd - overlapStart)/ call.Length;
-                if (overlapBases > 0.5)
-                {
-                    ploidyRegion = currentPloidyRegion;
-                    return true;
-                }
+                ploidyRegion = currentPloidyRegion;
+                // for now allow call ploidy to be preserved
+                if (overlapBases < 0.5 && call.RefPloidy.HasValue)
+                    ploidyRegion.Ploidy = call.RefPloidy.Value;                 
+                return true;
             }
             ploidyRegion = null;
             return false;
