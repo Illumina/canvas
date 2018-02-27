@@ -542,6 +542,16 @@ namespace EvaluateCNV
         private static bool TryGetPloidyForCall(CnvCall call, List<PloidyInterval> ploidyRegions,
             out PloidyInterval ploidyRegion)
         {
+            foreach (var currentPloidyRegion in ploidyRegions)
+            {
+                // interval must be completely contained within the ploidy region	
+                if (call.Start >= currentPloidyRegion.Start && call.End <= currentPloidyRegion.End)
+                {
+
+                    ploidyRegion = currentPloidyRegion;
+                    return true;
+                }
+            }
             // majority of the variant falls into ploidy region
             foreach (var currentPloidyRegion in ploidyRegions)
             {
@@ -549,8 +559,8 @@ namespace EvaluateCNV
                 int overlapStart = Math.Max(call.Start, currentPloidyRegion.Start);
                 int overlapEnd = Math.Min(call.End, currentPloidyRegion.End);
                 if (overlapStart >= overlapEnd) continue;
-                int overlapBases = (overlapEnd - overlapStart)/ call.Length;
-                if (overlapBases > 0.5 && call.RefPloidy.HasValue)
+                double overlapRatio = (overlapEnd - overlapStart) / (double) call.Length;
+                if (overlapRatio > 0.5 && call.RefPloidy.HasValue)
                 {
                     ploidyRegion = currentPloidyRegion;
                     return true;
