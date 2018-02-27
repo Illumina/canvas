@@ -535,9 +535,6 @@ namespace EvaluateCNV
             {
                 // any truth entries not in ploidy regions are considered diploid
                 int refPloidy = TryGetPloidyForCall(call, ploidyRegions, out var ploidyRegion) ? ploidyRegion.Ploidy : 2;
-                if (call.RefPloidy.HasValue && call.RefPloidy != refPloidy)
-                    throw new IlluminaException(
-                        $"call '{call}' had unexpected reference ploidy '{call.RefPloidy}'. From provided ploidy information expected '{refPloidy}'");
                 yield return new CnvCall(call.Chr, call.Start, call.End, call.CN, refPloidy, call.PassFilter, call.AltAllele);
             }
         }
@@ -565,11 +562,15 @@ namespace EvaluateCNV
                 int overlapBases = (overlapEnd - overlapStart)/ call.Length;
                 ploidyRegion = currentPloidyRegion;
                 // for now allow call ploidy to be preserved
-                if (overlapBases < 0.5 && call.RefPloidy.HasValue)
-                    ploidyRegion.Ploidy = call.RefPloidy.Value;                 
+                if (overlapBases > 0.5 && call.RefPloidy.HasValue)
+                    ploidyRegion = currentPloidyRegion;
                 return true;
             }
             ploidyRegion = null;
+            var refPloidy = 2;
+            if (call.RefPloidy.HasValue && call.RefPloidy.Value != refPloidy)
+                throw new IlluminaException(
+                    $"call '{call}' had unexpected reference ploidy '{call.RefPloidy}'. From provided ploidy information expected '{refPloidy}'");
             return false;
         }
     }
