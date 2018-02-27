@@ -6,7 +6,7 @@ namespace Canvas.Wrapper.SmallPedigree
     public class IntermediateOutput
     {
         public IntermediateOutput(Vcf cnvVcf, IFileLocation coverageAndVariantFrequencies, IFileLocation variantFrequencies, IFileLocation variantFrequenciesBaf, 
-            IFileLocation partitioned, IFileLocation coverageBigwig, IFileLocation bAlleleBedgraph, IFileLocation copyNumberBedgraph)
+            IFileLocation partitioned, IFileLocation coverageBigwig, BgzfFile bAlleleBedgraph, BgzfFile copyNumberBedgraph)
         {
             CnvVcf = cnvVcf;
             CoverageAndVariantFrequencies = coverageAndVariantFrequencies;
@@ -29,8 +29,8 @@ namespace Canvas.Wrapper.SmallPedigree
         public IFileLocation Partitioned { get; }
 
         public IFileLocation CoverageBigwig { get; }
-        public IFileLocation BAlleleBedgraph { get; }
-        public IFileLocation CopyNumberBedgraph { get; }
+        public BgzfFile BAlleleBedgraph { get; }
+        public BgzfFile CopyNumberBedgraph { get; }
 
     }
 }

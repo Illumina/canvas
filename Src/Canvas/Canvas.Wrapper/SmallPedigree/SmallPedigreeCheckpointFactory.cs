@@ -93,8 +93,12 @@ namespace Canvas.Wrapper.SmallPedigree
             
             // Files for visualization:
             fileMover.Move(output.CoverageBigwig, SingleSampleCallset.GetSingleSamplePedigreeCoverageBigWig(stub));
-            fileMover.Move(output.BAlleleBedgraph, SingleSampleCallset.GetSingleSamplePedigreeBAlleleBedGraph(stub));
-            fileMover.Move(output.CopyNumberBedgraph, SingleSampleCallset.GetSingleSamplePedigreeCopyNumberBedGraph(stub));
+            var targetBAlleleBedgraph = SingleSampleCallset.GetSingleSamplePedigreeBAlleleBedGraph(stub);
+            fileMover.Move(output.BAlleleBedgraph.FileLocation, targetBAlleleBedgraph.FileLocation);
+            fileMover.Move(output.BAlleleBedgraph.TabixIndex, targetBAlleleBedgraph.TabixIndex);
+            var targetCopyNumbedBedgraph  = SingleSampleCallset.GetSingleSamplePedigreeBAlleleBedGraph(stub);
+            fileMover.Move(output.CopyNumberBedgraph.FileLocation, targetCopyNumbedBedgraph.FileLocation);
+            fileMover.Move(output.CopyNumberBedgraph.TabixIndex, targetCopyNumbedBedgraph.TabixIndex);
 
             // Deprecated files:
             fileMover.Move(output.CoverageAndVariantFrequencies, SingleSampleCallset.GetCoverageAndVariantFrequencyOutput(stub)); // Used for (non-dynamic) plotting

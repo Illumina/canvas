@@ -132,7 +132,7 @@ namespace Canvas.Wrapper.SmallPedigree
                 var bAlleleBedgraph = SingleSampleCallset.GetSingleSamplePedigreeBAlleleBedGraph(sampleSandbox, sampleId);
                 var copyNumberBedgraph = SingleSampleCallset.GetSingleSamplePedigreeCopyNumberBedGraph(sampleSandbox, sampleId);
                 return new IntermediateOutput(new Vcf(singleSampleVcf), coverageAndVariantFrequencies, variantFrequencies, variantFrequenciesBaf, 
-                    partitioned, coverageBigwig, bAlleleBedgraph.FileLocation, copyNumberBedgraph.FileLocation);
+                    partitioned, coverageBigwig, bAlleleBedgraph, copyNumberBedgraph);
             });
             var cnvVcf = new Vcf(sampleSandbox.GetFileLocation("CNV.vcf.gz"));
             return new CanvasSmallPedigreeOutput(cnvVcf, intermediateResults);

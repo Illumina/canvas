@@ -118,9 +118,9 @@ namespace CanvasCommon
             return new BgzfFile(GetSampleOutputFolder(analysisOutputFolder, sampleName).GetFileLocation("copynumber.bedgraph.gz"));
         }
 
-        public static IFileLocation GetSingleSamplePedigreeCopyNumberBedGraph(IFileLocation stub)
+        public static BgzfFile GetSingleSamplePedigreeCopyNumberBedGraph(IFileLocation stub)
         {
-            return stub.AppendName(".copynumber.bedgraph.gz");
+            return new BgzfFile(stub.AppendName(".copynumber.bedgraph.gz"));
         }
 
         public static BgzfFile GetSingleSamplePedigreeBAlleleBedGraph(IDirectoryLocation analysisOutputFolder, string sampleName)
@@ -128,9 +128,9 @@ namespace CanvasCommon
             return new BgzfFile(GetSampleOutputFolder(analysisOutputFolder, sampleName).GetFileLocation("ballele.bedgraph.gz"));
         }
 
-        public static IFileLocation GetSingleSamplePedigreeBAlleleBedGraph(IFileLocation stub)
+        public static BgzfFile GetSingleSamplePedigreeBAlleleBedGraph(IFileLocation stub)
         {
-            return stub.AppendName(".ballele.bedgraph.gz");
+            return new BgzfFile(stub.AppendName(".ballele.bedgraph.gz"));
         }
 
     }
