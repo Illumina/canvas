@@ -5,6 +5,6 @@ namespace Canvas.Wrapper
 {
     public interface ICanvasOutput
     {
-        void Move(IFileLocation fileNameStub, bool includeIntermediateResults, Action<IFileLocation, IFileLocation> move);
+        void Move(IFileLocation fileNameStub, Action<IFileLocation, IFileLocation> move);
     }
 }

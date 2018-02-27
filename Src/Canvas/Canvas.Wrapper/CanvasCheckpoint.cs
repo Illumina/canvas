@@ -45,19 +45,17 @@ namespace Canvas.Wrapper
     public class CanvasOutputNamingConventionFactory<TCanvasInput, TCanvasOutput> where TCanvasInput : ICanvasCheckpointInput where TCanvasOutput : ICanvasOutput
     {
         private readonly ICanvasAnnotationFileProvider _annotationFileProvider;
-        private readonly bool _includeIntermediateResults;
-        private readonly Func<IFileLocation, bool, TCanvasOutput> _getFromStub;
+        private readonly Func<IFileLocation, TCanvasOutput> _getFromStub;
 
-        public CanvasOutputNamingConventionFactory(ICanvasAnnotationFileProvider annotationFileProvider, bool includeIntermediateResults, Func<IFileLocation, bool, TCanvasOutput> getFromStub)
+        public CanvasOutputNamingConventionFactory(ICanvasAnnotationFileProvider annotationFileProvider,Func<IFileLocation, TCanvasOutput> getFromStub)
         {
             _annotationFileProvider = annotationFileProvider;
-            _includeIntermediateResults = includeIntermediateResults;
             _getFromStub = getFromStub;
         }
 
         public CanvasOutputNamingConvention<TCanvasInput, TCanvasOutput> GetCanvasOutputNamingConvention(IFileLocation fileNameStub)
         {
-            return new CanvasOutputNamingConvention<TCanvasInput, TCanvasOutput>(fileNameStub, _annotationFileProvider, _includeIntermediateResults, _getFromStub);
+            return new CanvasOutputNamingConvention<TCanvasInput, TCanvasOutput>(fileNameStub, _annotationFileProvider, _getFromStub);
         }
     }
 
@@ -65,27 +63,25 @@ namespace Canvas.Wrapper
     {
         private readonly IFileLocation _fileNameStub;
         private readonly ICanvasAnnotationFileProvider _annotationFileProvider;
-        private readonly bool _includeIntermediateResults;
-        private readonly Func<IFileLocation, bool, TCanvasOutput> _getFromStub;
+        private readonly Func<IFileLocation, TCanvasOutput> _getFromStub;
 
-        public CanvasOutputNamingConvention(IFileLocation fileNameStub, ICanvasAnnotationFileProvider annotationFileProvider, bool includeIntermediateResults, Func<IFileLocation, bool, TCanvasOutput> getFromStub)
+        public CanvasOutputNamingConvention(IFileLocation fileNameStub, ICanvasAnnotationFileProvider annotationFileProvider, Func<IFileLocation, TCanvasOutput> getFromStub)
         {
             _fileNameStub = fileNameStub;
             _annotationFileProvider = annotationFileProvider;
-            _includeIntermediateResults = includeIntermediateResults;
             _getFromStub = getFromStub;
         }
 
         public TCanvasOutput Load(TCanvasInput resequencingInput)
         {
             if (!_annotationFileProvider.IsSupported(resequencingInput.GenomeMetadata)) return default(TCanvasOutput);
-            return _getFromStub(_fileNameStub, _includeIntermediateResults);
+            return _getFromStub(_fileNameStub);
         }
 
         public void Move(TCanvasOutput source, Action<IFileLocation, IFileLocation> move)
         {
             if (source == null) return;
-            source.Move(_fileNameStub, _includeIntermediateResults, move);
+            source.Move(_fileNameStub, move);
         }
     }
 }

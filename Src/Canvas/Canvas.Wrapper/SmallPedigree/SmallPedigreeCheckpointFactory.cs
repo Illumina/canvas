@@ -49,9 +49,8 @@ namespace Canvas.Wrapper.SmallPedigree
                 var stub = GetSingleSampleOutputStub(info);
                 var coverageAndVariantFrequency = SingleSampleCallset.GetCoverageAndVariantFrequencyOutput(stub);
                 var singleSampleVcf = new Vcf(SingleSampleCallset.GetSingleSamplePedigreeVcfOutput(stub));
-                if (!_canvasWorkerFactory.IncludeIntermediateResults())
-                    return new IntermediateOutput(singleSampleVcf, coverageAndVariantFrequency, null, null, null);
 
+                // %%% TODO: add other files!
                 var partitioned = SingleSampleCallset.GetPartitionedPath(stub);
                 var variantFrequencies = SingleSampleCallset.GetVfSummaryPath(stub);
                 var variantFrequenciesBaf = SingleSampleCallset.GetVfSummaryPath(stub);
@@ -85,12 +84,11 @@ namespace Canvas.Wrapper.SmallPedigree
             var stub = GetSingleSampleOutputStub(info);
             fileMover.Move(output.CnvVcf.VcfFile, SingleSampleCallset.GetSingleSamplePedigreeVcfOutput(stub));
             fileMover.Move(output.CoverageAndVariantFrequencies, SingleSampleCallset.GetCoverageAndVariantFrequencyOutput(stub));
-            if (_canvasWorkerFactory.IncludeIntermediateResults())
-            {
-                fileMover.Move(output.Partitioned, SingleSampleCallset.GetPartitionedPath(stub));
-                fileMover.Move(output.VariantFrequencies, SingleSampleCallset.GetVfSummaryPath(stub));
-                fileMover.Move(output.VariantFrequenciesBaf, SingleSampleCallset.GetVfSummaryBafPath(stub));
-            }
+
+            // %%% TODO: add additional files
+            fileMover.Move(output.Partitioned, SingleSampleCallset.GetPartitionedPath(stub));
+            fileMover.Move(output.VariantFrequencies, SingleSampleCallset.GetVfSummaryPath(stub));
+            fileMover.Move(output.VariantFrequenciesBaf, SingleSampleCallset.GetVfSummaryBafPath(stub));
         }
 
         private IFileLocation GetRuntimeExecutable()
