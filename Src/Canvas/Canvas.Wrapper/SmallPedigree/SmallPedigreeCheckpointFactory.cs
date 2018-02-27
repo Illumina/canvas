@@ -50,11 +50,17 @@ namespace Canvas.Wrapper.SmallPedigree
                 var coverageAndVariantFrequency = SingleSampleCallset.GetCoverageAndVariantFrequencyOutput(stub);
                 var singleSampleVcf = new Vcf(SingleSampleCallset.GetSingleSamplePedigreeVcfOutput(stub));
 
-                // %%% TODO: add other files!
                 var partitioned = SingleSampleCallset.GetPartitionedPath(stub);
                 var variantFrequencies = SingleSampleCallset.GetVfSummaryPath(stub);
                 var variantFrequenciesBaf = SingleSampleCallset.GetVfSummaryPath(stub);
-                return new IntermediateOutput(singleSampleVcf, coverageAndVariantFrequency, variantFrequencies, variantFrequenciesBaf, partitioned);
+
+                var coverageBigwig = SingleSampleCallset.GetSingleSamplePedigreeCoverageBigWig(stub);
+                var bAlleleBedgraph = SingleSampleCallset.GetSingleSamplePedigreeBAlleleBedGraph(stub);
+                var copyNumberBedgraph = SingleSampleCallset.GetSingleSamplePedigreeCopyNumberBedGraph(stub);
+
+
+                return new IntermediateOutput(singleSampleVcf, coverageAndVariantFrequency, variantFrequencies, variantFrequenciesBaf, partitioned, 
+                    coverageBigwig, bAlleleBedgraph, copyNumberBedgraph);
             });
 
             return new CanvasSmallPedigreeOutput(new Vcf(GetPedigreeVcf()), intermediateOutputs);
@@ -82,13 +88,19 @@ namespace Canvas.Wrapper.SmallPedigree
         private void MoveIntermediateOutput(SampleInfo info, IntermediateOutput output, IFileMover fileMover)
         {
             var stub = GetSingleSampleOutputStub(info);
+            // Output:
             fileMover.Move(output.CnvVcf.VcfFile, SingleSampleCallset.GetSingleSamplePedigreeVcfOutput(stub));
+            
+            // Files for visualization:
+            fileMover.Move(output.CoverageBigwig, SingleSampleCallset.GetSingleSamplePedigreeCoverageBigWig(stub));
+            fileMover.Move(output.BAlleleBedgraph, SingleSampleCallset.GetSingleSamplePedigreeBAlleleBedGraph(stub));
+            fileMover.Move(output.CopyNumberBedgraph, SingleSampleCallset.GetSingleSamplePedigreeCopyNumberBedGraph(stub));
             fileMover.Move(output.CoverageAndVariantFrequencies, SingleSampleCallset.GetCoverageAndVariantFrequencyOutput(stub));
-
-            // %%% TODO: add additional files
+            // Deprecated files:
             fileMover.Move(output.Partitioned, SingleSampleCallset.GetPartitionedPath(stub));
             fileMover.Move(output.VariantFrequencies, SingleSampleCallset.GetVfSummaryPath(stub));
             fileMover.Move(output.VariantFrequenciesBaf, SingleSampleCallset.GetVfSummaryBafPath(stub));
+
         }
 
         private IFileLocation GetRuntimeExecutable()

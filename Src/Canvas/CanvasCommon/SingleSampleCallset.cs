@@ -42,11 +42,13 @@ namespace CanvasCommon
             return GetVfSummaryPathExtension(stub);
         }
 
+        [System.Obsolete("Deprecated output - to be removed after NSv7 release")]
         public static IFileLocation GetVfSummaryBafPath(IDirectoryLocation analysisOutputFolder, string sampleName)
         {
             return GetVfSummaryPath(analysisOutputFolder, sampleName).AppendName(".baf");
         }
 
+        [System.Obsolete("Deprecated output - to be removed after NSv7 release")]
         public static IFileLocation GetVfSummaryBafPath(IFileLocation stub)
         {
             return GetVfSummaryPath(stub).AppendName(".baf");
@@ -108,14 +110,30 @@ namespace CanvasCommon
             return GetSampleOutputFolder(analysisOutputFolder, sampleName).GetFileLocation("coverage.bigWig");
         }
 
+        public static IFileLocation GetSingleSamplePedigreeCoverageBigWig(IFileLocation stub)
+        {
+            return stub.AppendName(".coverage.bigWig");
+        }
+
         public static BgzfFile GetSingleSamplePedigreeCopyNumberBedGraph(IDirectoryLocation analysisOutputFolder, string sampleName)
         {
             return new BgzfFile(GetSampleOutputFolder(analysisOutputFolder, sampleName).GetFileLocation("copynumber.bedgraph.gz"));
+        }
+
+        public static IFileLocation GetSingleSamplePedigreeCopyNumberBedGraph(IFileLocation stub)
+        {
+            return stub.AppendName(".copynumber.bedgraph.gz");
         }
 
         public static BgzfFile GetSingleSamplePedigreeBAlleleBedGraph(IDirectoryLocation analysisOutputFolder, string sampleName)
         {
             return new BgzfFile(GetSampleOutputFolder(analysisOutputFolder, sampleName).GetFileLocation("ballele.bedgraph.gz"));
         }
+
+        public static IFileLocation GetSingleSamplePedigreeBAlleleBedGraph(IFileLocation stub)
+        {
+            return stub.AppendName(".ballele.bedgraph.gz");
+        }
+
     }
 }
