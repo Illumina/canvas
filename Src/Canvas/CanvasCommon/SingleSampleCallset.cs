@@ -42,13 +42,11 @@ namespace CanvasCommon
             return GetVfSummaryPathExtension(stub);
         }
 
-        [System.Obsolete("Deprecated output - to be removed after NSv7 release")]
         public static IFileLocation GetVfSummaryBafPath(IDirectoryLocation analysisOutputFolder, string sampleName)
         {
             return GetVfSummaryPath(analysisOutputFolder, sampleName).AppendName(".baf");
         }
 
-        [System.Obsolete("Deprecated output - to be removed after NSv7 release")]
         public static IFileLocation GetVfSummaryBafPath(IFileLocation stub)
         {
             return GetVfSummaryPath(stub).AppendName(".baf");

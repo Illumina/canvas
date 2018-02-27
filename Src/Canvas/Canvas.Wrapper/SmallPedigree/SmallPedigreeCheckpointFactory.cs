@@ -95,12 +95,12 @@ namespace Canvas.Wrapper.SmallPedigree
             fileMover.Move(output.CoverageBigwig, SingleSampleCallset.GetSingleSamplePedigreeCoverageBigWig(stub));
             fileMover.Move(output.BAlleleBedgraph, SingleSampleCallset.GetSingleSamplePedigreeBAlleleBedGraph(stub));
             fileMover.Move(output.CopyNumberBedgraph, SingleSampleCallset.GetSingleSamplePedigreeCopyNumberBedGraph(stub));
-            fileMover.Move(output.CoverageAndVariantFrequencies, SingleSampleCallset.GetCoverageAndVariantFrequencyOutput(stub));
-            // Deprecated files:
-            fileMover.Move(output.Partitioned, SingleSampleCallset.GetPartitionedPath(stub));
-            fileMover.Move(output.VariantFrequencies, SingleSampleCallset.GetVfSummaryPath(stub));
-            fileMover.Move(output.VariantFrequenciesBaf, SingleSampleCallset.GetVfSummaryBafPath(stub));
 
+            // Deprecated files:
+            fileMover.Move(output.CoverageAndVariantFrequencies, SingleSampleCallset.GetCoverageAndVariantFrequencyOutput(stub)); // Used for (non-dynamic) plotting
+            fileMover.Move(output.Partitioned, SingleSampleCallset.GetPartitionedPath(stub)); // used by BSVI
+            fileMover.Move(output.VariantFrequencies, SingleSampleCallset.GetVfSummaryPath(stub)); // used by BSVI
+            fileMover.Move(output.VariantFrequenciesBaf, SingleSampleCallset.GetVfSummaryBafPath(stub)); // used by BSVI
         }
 
         private IFileLocation GetRuntimeExecutable()

@@ -19,6 +19,7 @@ namespace Canvas.Wrapper.SmallPedigree
         }
 
         public Vcf CnvVcf { get; }
+        [System.Obsolete("Deprecated output - to be removed after NSv7 release")]
         public IFileLocation CoverageAndVariantFrequencies { get; }
         [System.Obsolete("Deprecated output - to be removed after NSv7 release")]
         public IFileLocation VariantFrequencies { get; }
