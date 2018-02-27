@@ -550,9 +550,14 @@ namespace EvaluateCNV
                 // interval must be completely contained within the ploidy region	
                 if (call.Start >= currentPloidyRegion.Start && call.End <= currentPloidyRegion.End)
                 {
+
                     ploidyRegion = currentPloidyRegion;
                     return true;
                 }
+            }
+            // no variant falls completely into ploidy region
+            foreach (var currentPloidyRegion in ploidyRegions)
+            {
                 // for now assign variant that overlaps several ploidy regions to the one with the highest overlap 
                 int overlapStart = Math.Max(call.Start, currentPloidyRegion.Start);
                 int overlapEnd = Math.Min(call.End, currentPloidyRegion.End);
