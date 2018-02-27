@@ -127,10 +127,10 @@ namespace Canvas.Wrapper.SmallPedigree
                 var variantFrequenciesBaf = SingleSampleCallset.GetVfSummaryBafPath(sampleSandbox, sampleId);
                 var partitioned = SingleSampleCallset.GetPartitionedPath(sampleSandbox, sampleId);
                 var coverageAndVariantFrequencies = SingleSampleCallset.GetCoverageAndVariantFrequencyOutput(sampleSandbox, sampleId);
-                var singleSampleVcf = SingleSampleCallset.GetSingleSamplePedigreeVcfOutput(sampleSandbox, sampleId);
-                var coverageBigwig = SingleSampleCallset.GetSingleSamplePedigreeCoverageBigWig(sampleSandbox, sampleId);
-                var bAlleleBedgraph = SingleSampleCallset.GetSingleSamplePedigreeBAlleleBedGraph(sampleSandbox, sampleId);
-                var copyNumberBedgraph = SingleSampleCallset.GetSingleSamplePedigreeCopyNumberBedGraph(sampleSandbox, sampleId);
+                var singleSampleVcf = SingleSampleCallset.GetVcfOutput(sampleSandbox, sampleId);
+                var coverageBigwig = SingleSampleCallset.GetCoverageBigWig(sampleSandbox, sampleId);
+                var bAlleleBedgraph = SingleSampleCallset.GetBAlleleBedGraph(sampleSandbox, sampleId);
+                var copyNumberBedgraph = SingleSampleCallset.GetCopyNumberBedGraph(sampleSandbox, sampleId);
                 return new IntermediateOutput(new Vcf(singleSampleVcf), coverageAndVariantFrequencies, variantFrequencies, variantFrequenciesBaf, 
                     partitioned, coverageBigwig, bAlleleBedgraph, copyNumberBedgraph);
             });

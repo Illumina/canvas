@@ -48,15 +48,15 @@ namespace Canvas.Wrapper.SmallPedigree
             {
                 var stub = GetSingleSampleOutputStub(info);
                 var coverageAndVariantFrequency = SingleSampleCallset.GetCoverageAndVariantFrequencyOutput(stub);
-                var singleSampleVcf = new Vcf(SingleSampleCallset.GetSingleSamplePedigreeVcfOutput(stub));
+                var singleSampleVcf = new Vcf(SingleSampleCallset.GetVcfOutput(stub));
 
                 var partitioned = SingleSampleCallset.GetPartitionedPath(stub);
                 var variantFrequencies = SingleSampleCallset.GetVfSummaryPath(stub);
                 var variantFrequenciesBaf = SingleSampleCallset.GetVfSummaryPath(stub);
 
-                var coverageBigwig = SingleSampleCallset.GetSingleSamplePedigreeCoverageBigWig(stub);
-                var bAlleleBedgraph = SingleSampleCallset.GetSingleSamplePedigreeBAlleleBedGraph(stub);
-                var copyNumberBedgraph = SingleSampleCallset.GetSingleSamplePedigreeCopyNumberBedGraph(stub);
+                var coverageBigwig = SingleSampleCallset.GetCoverageBigWig(stub);
+                var bAlleleBedgraph = SingleSampleCallset.GetBAlleleBedGraph(stub);
+                var copyNumberBedgraph = SingleSampleCallset.GetCopyNumberBedGraph(stub);
 
 
                 return new IntermediateOutput(singleSampleVcf, coverageAndVariantFrequency, variantFrequencies, variantFrequenciesBaf, partitioned, 
@@ -89,14 +89,14 @@ namespace Canvas.Wrapper.SmallPedigree
         {
             var stub = GetSingleSampleOutputStub(info);
             // Output:
-            fileMover.Move(output.CnvVcf.VcfFile, SingleSampleCallset.GetSingleSamplePedigreeVcfOutput(stub));
+            fileMover.Move(output.CnvVcf.VcfFile, SingleSampleCallset.GetVcfOutput(stub));
             
             // Files for visualization:
-            fileMover.Move(output.CoverageBigwig, SingleSampleCallset.GetSingleSamplePedigreeCoverageBigWig(stub));
-            var targetBAlleleBedgraph = SingleSampleCallset.GetSingleSamplePedigreeBAlleleBedGraph(stub);
+            fileMover.Move(output.CoverageBigwig, SingleSampleCallset.GetCoverageBigWig(stub));
+            var targetBAlleleBedgraph = SingleSampleCallset.GetBAlleleBedGraph(stub);
             fileMover.Move(output.BAlleleBedgraph.FileLocation, targetBAlleleBedgraph.FileLocation);
             fileMover.Move(output.BAlleleBedgraph.TabixIndex, targetBAlleleBedgraph.TabixIndex);
-            var targetCopyNumbedBedgraph  = SingleSampleCallset.GetSingleSamplePedigreeBAlleleBedGraph(stub);
+            var targetCopyNumbedBedgraph  = SingleSampleCallset.GetBAlleleBedGraph(stub);
             fileMover.Move(output.CopyNumberBedgraph.FileLocation, targetCopyNumbedBedgraph.FileLocation);
             fileMover.Move(output.CopyNumberBedgraph.TabixIndex, targetCopyNumbedBedgraph.TabixIndex);
 

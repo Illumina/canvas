@@ -27,7 +27,7 @@ namespace CanvasCommon
         public string BinSizePath => Path.Combine(SampleOutputFolder.FullName, $"{SampleName}.binsize");
         public string VfSummaryPath => GetVfSummaryPath(_analysisOutputFolder, SampleName).FullName;
         public string VfSummaryBafPath => GetVfSummaryBafPath(_analysisOutputFolder, SampleName).FullName;
-        public BgzfFile BAlleleCoverageBedGraph => GetSingleSamplePedigreeBAlleleBedGraph(_analysisOutputFolder, SampleName);
+        public BgzfFile BAlleleCoverageBedGraph => GetBAlleleBedGraph(_analysisOutputFolder, SampleName);
         public string NormalBinnedPath => Path.Combine(SampleOutputFolder.FullName, $"{SampleName}.normal.binned");
         public IFileLocation PartitionedPath => GetPartitionedPath(_analysisOutputFolder, SampleName);
 
@@ -83,14 +83,14 @@ namespace CanvasCommon
             return GetCoverageAndVariantFrequencyOutput(GetSampleOutputFolder(analysisOutputFolder, sampleName).GetFileLocation("CNV"));
         }
 
-        public static IFileLocation GetSingleSamplePedigreeVcfOutput(IFileLocation stub)
+        public static IFileLocation GetVcfOutput(IFileLocation stub)
         {
             return stub.AppendName(".vcf.gz");
         }
 
-        public static IFileLocation GetSingleSamplePedigreeVcfOutput(IDirectoryLocation analysisOutputFolder, string sampleName)
+        public static IFileLocation GetVcfOutput(IDirectoryLocation analysisOutputFolder, string sampleName)
         {
-            return GetSingleSamplePedigreeVcfOutput(GetSampleOutputFolder(analysisOutputFolder, sampleName).GetFileLocation("CNV"));
+            return GetVcfOutput(GetSampleOutputFolder(analysisOutputFolder, sampleName).GetFileLocation("CNV"));
         }
 
         public static IFileLocation GetCoverageAndVariantFrequencyOutputPath(string outputVcfPath)
@@ -103,32 +103,32 @@ namespace CanvasCommon
             return GetCoverageAndVariantFrequencyOutput(new FileLocation(coveragePath));
         }
 
-        public static IFileLocation GetSingleSamplePedigreeCoverageBigWig(IDirectoryLocation analysisOutputFolder, string sampleName)
+        public static IFileLocation GetCoverageBigWig(IDirectoryLocation analysisOutputFolder, string sampleName)
         {
             return GetSampleOutputFolder(analysisOutputFolder, sampleName).GetFileLocation("coverage.bigWig");
         }
 
-        public static IFileLocation GetSingleSamplePedigreeCoverageBigWig(IFileLocation stub)
+        public static IFileLocation GetCoverageBigWig(IFileLocation stub)
         {
             return stub.AppendName(".coverage.bigWig");
         }
 
-        public static BgzfFile GetSingleSamplePedigreeCopyNumberBedGraph(IDirectoryLocation analysisOutputFolder, string sampleName)
+        public static BgzfFile GetCopyNumberBedGraph(IDirectoryLocation analysisOutputFolder, string sampleName)
         {
             return new BgzfFile(GetSampleOutputFolder(analysisOutputFolder, sampleName).GetFileLocation("copynumber.bedgraph.gz"));
         }
 
-        public static BgzfFile GetSingleSamplePedigreeCopyNumberBedGraph(IFileLocation stub)
+        public static BgzfFile GetCopyNumberBedGraph(IFileLocation stub)
         {
             return new BgzfFile(stub.AppendName(".copynumber.bedgraph.gz"));
         }
 
-        public static BgzfFile GetSingleSamplePedigreeBAlleleBedGraph(IDirectoryLocation analysisOutputFolder, string sampleName)
+        public static BgzfFile GetBAlleleBedGraph(IDirectoryLocation analysisOutputFolder, string sampleName)
         {
             return new BgzfFile(GetSampleOutputFolder(analysisOutputFolder, sampleName).GetFileLocation("ballele.bedgraph.gz"));
         }
 
-        public static BgzfFile GetSingleSamplePedigreeBAlleleBedGraph(IFileLocation stub)
+        public static BgzfFile GetBAlleleBedGraph(IFileLocation stub)
         {
             return new BgzfFile(stub.AppendName(".ballele.bedgraph.gz"));
         }
