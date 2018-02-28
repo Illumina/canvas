@@ -96,7 +96,7 @@ namespace Canvas.Wrapper.SmallPedigree
             var targetBAlleleBedgraph = SingleSampleCallset.GetBAlleleBedGraph(stub);
             fileMover.Move(output.BAlleleBedgraph.FileLocation, targetBAlleleBedgraph.FileLocation);
             fileMover.Move(output.BAlleleBedgraph.TabixIndex, targetBAlleleBedgraph.TabixIndex);
-            var targetCopyNumbedBedgraph  = SingleSampleCallset.GetBAlleleBedGraph(stub);
+            var targetCopyNumbedBedgraph  = SingleSampleCallset.GetCopyNumberBedGraph(stub);
             fileMover.Move(output.CopyNumberBedgraph.FileLocation, targetCopyNumbedBedgraph.FileLocation);
             fileMover.Move(output.CopyNumberBedgraph.TabixIndex, targetCopyNumbedBedgraph.TabixIndex);
 
