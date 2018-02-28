@@ -29,12 +29,11 @@ namespace Canvas.Wrapper
             Partitioned = partitioned;
         }
 
-        public static CanvasOutput GetFromStub(IFileLocation stub, bool includeIntermediateResults)
+        public static CanvasOutput GetFromStub(IFileLocation stub)
         {
             Vcf cnvVcf = Vcf.GetVcfFromStub(stub);
             IFileLocation coverageAndVariantFrequencies = stub.AppendName(".CoverageAndVariantFrequency.txt");
-            if (!includeIntermediateResults)
-                return new CanvasOutput(cnvVcf, coverageAndVariantFrequencies);
+
             IFileLocation variantFrequencies = stub.AppendName(".VFResults.txt.gz");
             IFileLocation variantFrequenciesBaf = stub.AppendName(".VFResults.baf");
             IFileLocation partitioned = stub.AppendName(".partitioned");
@@ -52,9 +51,9 @@ namespace Canvas.Wrapper
             return coveragePath + ".CoverageAndVariantFrequency.txt";
         }
 
-        public void Move(IFileLocation fileNameStub, bool includeIntermediateResults, Action<IFileLocation, IFileLocation> move)
+        public void Move(IFileLocation fileNameStub, Action<IFileLocation, IFileLocation> move)
         {
-            CanvasOutput destination = GetFromStub(fileNameStub, includeIntermediateResults);
+            CanvasOutput destination = GetFromStub(fileNameStub);
             CnvVcf.Move(destination.CnvVcf, move);
             move(CoverageAndVariantFrequencies, destination.CoverageAndVariantFrequencies);
             VariantFrequencies.MoveIfNotNull(destination.VariantFrequencies, move);

@@ -48,14 +48,19 @@ namespace Canvas.Wrapper.SmallPedigree
             {
                 var stub = GetSingleSampleOutputStub(info);
                 var coverageAndVariantFrequency = SingleSampleCallset.GetCoverageAndVariantFrequencyOutput(stub);
-                var singleSampleVcf = new Vcf(SingleSampleCallset.GetSingleSamplePedigreeVcfOutput(stub));
-                if (!_canvasWorkerFactory.IncludeIntermediateResults())
-                    return new IntermediateOutput(singleSampleVcf, coverageAndVariantFrequency, null, null, null);
+                var singleSampleVcf = new Vcf(SingleSampleCallset.GetVcfOutput(stub));
 
                 var partitioned = SingleSampleCallset.GetPartitionedPath(stub);
                 var variantFrequencies = SingleSampleCallset.GetVfSummaryPath(stub);
                 var variantFrequenciesBaf = SingleSampleCallset.GetVfSummaryPath(stub);
-                return new IntermediateOutput(singleSampleVcf, coverageAndVariantFrequency, variantFrequencies, variantFrequenciesBaf, partitioned);
+
+                var coverageBigwig = SingleSampleCallset.GetCoverageBigWig(stub);
+                var bAlleleBedgraph = SingleSampleCallset.GetBAlleleBedGraph(stub);
+                var copyNumberBedgraph = SingleSampleCallset.GetCopyNumberBedGraph(stub);
+
+
+                return new IntermediateOutput(singleSampleVcf, coverageAndVariantFrequency, variantFrequencies, variantFrequenciesBaf, partitioned, 
+                    coverageBigwig, bAlleleBedgraph, copyNumberBedgraph);
             });
 
             return new CanvasSmallPedigreeOutput(new Vcf(GetPedigreeVcf()), intermediateOutputs);
@@ -83,14 +88,23 @@ namespace Canvas.Wrapper.SmallPedigree
         private void MoveIntermediateOutput(SampleInfo info, IntermediateOutput output, IFileMover fileMover)
         {
             var stub = GetSingleSampleOutputStub(info);
-            fileMover.Move(output.CnvVcf.VcfFile, SingleSampleCallset.GetSingleSamplePedigreeVcfOutput(stub));
-            fileMover.Move(output.CoverageAndVariantFrequencies, SingleSampleCallset.GetCoverageAndVariantFrequencyOutput(stub));
-            if (_canvasWorkerFactory.IncludeIntermediateResults())
-            {
-                fileMover.Move(output.Partitioned, SingleSampleCallset.GetPartitionedPath(stub));
-                fileMover.Move(output.VariantFrequencies, SingleSampleCallset.GetVfSummaryPath(stub));
-                fileMover.Move(output.VariantFrequenciesBaf, SingleSampleCallset.GetVfSummaryBafPath(stub));
-            }
+            // Output:
+            fileMover.Move(output.CnvVcf.VcfFile, SingleSampleCallset.GetVcfOutput(stub));
+            
+            // Files for visualization:
+            fileMover.Move(output.CoverageBigwig, SingleSampleCallset.GetCoverageBigWig(stub));
+            var targetBAlleleBedgraph = SingleSampleCallset.GetBAlleleBedGraph(stub);
+            fileMover.Move(output.BAlleleBedgraph.FileLocation, targetBAlleleBedgraph.FileLocation);
+            fileMover.Move(output.BAlleleBedgraph.TabixIndex, targetBAlleleBedgraph.TabixIndex);
+            var targetCopyNumbedBedgraph  = SingleSampleCallset.GetCopyNumberBedGraph(stub);
+            fileMover.Move(output.CopyNumberBedgraph.FileLocation, targetCopyNumbedBedgraph.FileLocation);
+            fileMover.Move(output.CopyNumberBedgraph.TabixIndex, targetCopyNumbedBedgraph.TabixIndex);
+
+            // Deprecated files:
+            fileMover.Move(output.CoverageAndVariantFrequencies, SingleSampleCallset.GetCoverageAndVariantFrequencyOutput(stub)); // Used for (non-dynamic) plotting
+            fileMover.Move(output.Partitioned, SingleSampleCallset.GetPartitionedPath(stub)); // used by BSVI
+            fileMover.Move(output.VariantFrequencies, SingleSampleCallset.GetVfSummaryPath(stub)); // used by BSVI
+            fileMover.Move(output.VariantFrequenciesBaf, SingleSampleCallset.GetVfSummaryBafPath(stub)); // used by BSVI
         }
 
         private IFileLocation GetRuntimeExecutable()
