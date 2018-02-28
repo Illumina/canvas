@@ -110,7 +110,7 @@ namespace CanvasPedigreeCaller
 
             foreach (var sampleId in samplesInfo.SampleIds)
             {
-                var outputVcfPath = SingleSampleCallset.GetSingleSamplePedigreeVcfOutput(outputFolder, sampleId.ToString());
+                var outputVcfPath = SingleSampleCallset.GetVcfOutput(outputFolder, sampleId.ToString());
                 var sampleMetrics = samplesInfo[sampleId];
                 var segments = mergedVariantCalledSegments[sampleId];
                 CanvasSegmentWriter.WriteSegments(outputVcfPath.FullName, segments,
@@ -119,8 +119,8 @@ namespace CanvasPedigreeCaller
 
                 var visualizationTemp = outputFolder.CreateSubdirectory($"VisualizationTemp{sampleId}");
                 var bigWig = _coverageBigWigWriter.Write(segments, visualizationTemp);
-                bigWig?.MoveTo(SingleSampleCallset.GetSingleSamplePedigreeCoverageBigWig(outputFolder, sampleId.ToString()));
-                var copyNumberBedGraph = SingleSampleCallset.GetSingleSamplePedigreeCopyNumberBedGraph(outputFolder, sampleId.ToString());
+                bigWig?.MoveTo(SingleSampleCallset.GetCoverageBigWig(outputFolder, sampleId.ToString()));
+                var copyNumberBedGraph = SingleSampleCallset.GetCopyNumberBedGraph(outputFolder, sampleId.ToString());
                 _copyNumbeBedGraphWriter.Write(segments, sampleMetrics.Ploidy, copyNumberBedGraph);
             }
             return 0;
