@@ -19,7 +19,7 @@ namespace CanvasPedigreeCaller.Visualization
             if (!segment.Filter.IsPass) return false;
             var referenceCopyNumber = ploidyInfo?.GetReferenceCopyNumber(segment) ?? 2;
             if (segment.CopyNumber != referenceCopyNumber) return true;
-            if (segment.CopyNumber == segment.MajorChromosomeCount) return true; //LOH
+            if (segment.CopyNumber == 2 && segment.MajorChromosomeCount == 2) return true; //LOH
             return false;
         }
 

@@ -29,11 +29,6 @@ namespace Canvas.Wrapper
             public static Setting<bool> EnableCNVDetectionSetting => SampleSettings.CreateSetting(
                 "RunCNVDetection",
                 "Enable/disable CNV Detection step", converter : DetectCnvs);
-            public static Setting<bool> RetainIntermediateCnvFilesSetting => SampleSettings
-                .CreateSetting(
-                    "RetainIntermediateCNVFiles",
-                    "Include intermediate CNV files in the workflow output.",
-                    false);
             public static Setting<int?> QualityScoreThresholdSetting => 
                     SampleSettings
                         .CreateSetting<int?>(
@@ -184,22 +179,15 @@ namespace Canvas.Wrapper
             }
         }
 
-        private ICanvasWorker<TCanvasInput, TCanvasOutput> GetCanvasWorker<TCanvasInput, TCanvasOutput>(ICanvasCnvCaller<TCanvasInput, TCanvasOutput> canvasCnvCaller, Func<IFileLocation, bool, TCanvasOutput> getFromStub) where TCanvasInput : ICanvasCheckpointInput where TCanvasOutput : ICanvasOutput
+        private ICanvasWorker<TCanvasInput, TCanvasOutput> GetCanvasWorker<TCanvasInput, TCanvasOutput>(ICanvasCnvCaller<TCanvasInput, TCanvasOutput> canvasCnvCaller, Func<IFileLocation, TCanvasOutput> getFromStub) where TCanvasInput : ICanvasCheckpointInput where TCanvasOutput : ICanvasOutput
         {
             if (!RunCnvDetection(_detectCnvDefault)) return new NullCanvasWorker<TCanvasInput, TCanvasOutput>();
 
             ICanvasAnnotationFileProvider annotationFileProvider = GetAnnotationFileProvider();
-            bool includeIntermediateResults = IncludeIntermediateResults();
-            var canvasOutputNamingConventionFactory = new CanvasOutputNamingConventionFactory<TCanvasInput, TCanvasOutput>(annotationFileProvider, includeIntermediateResults, getFromStub);
+            var canvasOutputNamingConventionFactory = new CanvasOutputNamingConventionFactory<TCanvasInput, TCanvasOutput>(annotationFileProvider, getFromStub);
             var canvasCheckpoint = new CanvasCheckpoint<TCanvasInput, TCanvasOutput>(canvasCnvCaller, canvasOutputNamingConventionFactory);
             return new CanvasWorker<TCanvasInput, TCanvasOutput>(canvasCheckpoint);
         }
-
-        internal bool IncludeIntermediateResults()
-        {
-            return _sampleSettings.GetSetting(Settings.RetainIntermediateCnvFilesSetting);
-        }
-
 
         internal IFileLocation GetCanvasExe()
         {
