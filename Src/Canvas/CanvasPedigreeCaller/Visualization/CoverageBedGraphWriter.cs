@@ -1,9 +1,7 @@
-using System.Collections.Generic;
 using CanvasCommon;
 using CanvasCommon.Visualization;
-using Illumina.Common;
 using Illumina.Common.FileSystem;
-using Isas.ClassicBioinfoTools.KentUtils;
+using System.Collections.Generic;
 
 namespace CanvasPedigreeCaller.Visualization
 {
