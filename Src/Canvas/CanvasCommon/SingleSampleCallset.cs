@@ -49,7 +49,7 @@ namespace CanvasCommon
 
         public static IFileLocation GetVfSummaryBafPath(IFileLocation stub)
         {
-            return GetVfSummaryPath(stub).AppendName(".baf");
+            return stub.AppendName(".VFResults.baf");
         }
 
         private static IFileLocation GetVfSummaryPathExtension(IFileLocation stub)
