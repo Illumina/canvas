@@ -1,8 +1,6 @@
 ﻿
 using System;
 using System.Collections.Generic;
-using CanvasCommon;
-using CanvasPedigreeCaller.Visualization;
 using EvaluateCNV;
 using Xunit;
 using Xunit.Sdk;
@@ -15,7 +13,7 @@ namespace CanvasTest
         [Fact]
         public void TestAllosomes()
         {
-            var cnvEvaluator = new CnvEvaluator(new CNVChecker(null, new Dictionary<string, List<CNInterval>>()));
+            var cnvEvaluator = new CnvEvaluator(new CNVChecker(null, new Dictionary<string, List<CNInterval>>(), null));
 
             var baseCounter = new BaseCounter(5, 0, 4999);
             const string chr = "1";
@@ -35,11 +33,11 @@ namespace CanvasTest
             {
                 [chr] = new List<CNInterval>
                 {
-                    new CNInterval(chr, start: 1, end: 1000, cn: 2, referenceCopyNumber: 1),
-                    new CNInterval(chr, start: 2001, end: 3000, cn: 1, referenceCopyNumber: 2),
-                    new CNInterval(chr, start: 3001, end: 4000, cn: 1, referenceCopyNumber: 2),
-                    new CNInterval(chr, start: 4001, end: 5000, cn: 1, referenceCopyNumber: 1),
-                    new CNInterval(chr, start: 6001, end: 7000, cn: 2, referenceCopyNumber: 2)
+                    new CNInterval(chr, start: 1, end: 1000, cn: 2),
+                    new CNInterval(chr, start: 2001, end: 3000, cn: 1),
+                    new CNInterval(chr, start: 3001, end: 4000, cn: 1),
+                    new CNInterval(chr, start: 4001, end: 5000, cn: 1),
+                    new CNInterval(chr, start: 6001, end: 7000, cn: 2)
                 }
             };
             var metrics = cnvEvaluator.CalculateMetrics(knownCN, calls, baseCounter, optionsSkipDiploid: false, includePassingOnly: true);
@@ -49,7 +47,7 @@ namespace CanvasTest
         [Fact]
         public void TestFalseNegatives()
         {
-            var cnvEvaluator = new CnvEvaluator(new CNVChecker(null, new Dictionary<string, List<CNInterval>>()));
+            var cnvEvaluator = new CnvEvaluator(new CNVChecker(null, new Dictionary<string, List<CNInterval>>(), null));
 
             var baseCounter = new BaseCounter(5, 0, 4999);
             const string chr = "1";
@@ -69,15 +67,15 @@ namespace CanvasTest
             {
                 [chr] = new List<CNInterval>
                 {
-                    new CNInterval(chr, start: 1, end: 1000, cn: 2, referenceCopyNumber: 1),
-                    new CNInterval(chr, start: 2001, end: 3000, cn: 1, referenceCopyNumber: 2),
-                    new CNInterval(chr, start: 3001, end: 4000, cn: 1, referenceCopyNumber: 2),
-                    new CNInterval(chr, start: 4001, end: 5000, cn: 1, referenceCopyNumber: 1),
-                    new CNInterval(chr, start: 6001, end: 7000, cn: 2, referenceCopyNumber: 2)
+                    new CNInterval(chr, start: 1, end: 1000, cn: 2),
+                    new CNInterval(chr, start: 2001, end: 3000, cn: 1),
+                    new CNInterval(chr, start: 3001, end: 4000, cn: 1),
+                    new CNInterval(chr, start: 4001, end: 5000, cn: 1),
+                    new CNInterval(chr, start: 6001, end: 7000, cn: 2)
                 }
             };
             var metrics = cnvEvaluator.CalculateMetrics(knownCN, calls, baseCounter, optionsSkipDiploid: false, includePassingOnly: true);
-            Assert.Equal(50, Convert.ToInt32(metrics.Recall));
+            Assert.Equal(Convert.ToInt32((2/3.0)*100), Convert.ToInt32(metrics.Recall));
         }
 
         [Fact]
@@ -92,7 +90,7 @@ namespace CanvasTest
                     new CNInterval(chr) {Start = 4001, End = 5000},
                 }
             };
-            var cnvEvaluator = new CnvEvaluator(new CNVChecker(null, excludedRegions));
+            var cnvEvaluator = new CnvEvaluator(new CNVChecker(null, excludedRegions, null));
 
             var baseCounter = new BaseCounter(5, 0, 4999);
             var calls = new Dictionary<string, List<CnvCall>>
@@ -111,11 +109,11 @@ namespace CanvasTest
             {
                 [chr] = new List<CNInterval>
                 {
-                    new CNInterval(chr, start: 1, end: 1000, cn: 2, referenceCopyNumber: 1),
-                    new CNInterval(chr, start: 2001, end: 3000, cn: 1, referenceCopyNumber: 2),
-                    new CNInterval(chr, start: 3001, end: 4000, cn: 1, referenceCopyNumber: 2),
-                    new CNInterval(chr, start: 4001, end: 5000, cn: 1, referenceCopyNumber: 1),
-                    new CNInterval(chr, start: 6001, end: 7000, cn: 2, referenceCopyNumber: 2)
+                    new CNInterval(chr, start: 1, end: 1000, cn: 2),
+                    new CNInterval(chr, start: 2001, end: 3000, cn: 1),
+                    new CNInterval(chr, start: 3001, end: 4000, cn: 1),
+                    new CNInterval(chr, start: 4001, end: 5000, cn: 1),
+                    new CNInterval(chr, start: 6001, end: 7000, cn: 2)
                 }
             };
             var metrics = cnvEvaluator.CalculateMetrics(knownCN, calls, baseCounter, optionsSkipDiploid: false, includePassingOnly: true);

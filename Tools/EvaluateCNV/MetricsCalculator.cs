@@ -84,10 +84,13 @@
             {
                 for (var trueCn = 0; trueCn <= maxCn; trueCn++)
                 {
+                    long noCallBases = baseCounter.NoCalls[trueCn, ploidy];
+                    if (trueCn < ploidy) isLossBases += noCallBases;
+                    if (trueCn > ploidy) isGainBases += noCallBases;
                     for (var callCn = 0; callCn <= maxCn; callCn++)
                     {
                         long bases = baseCounter.BaseCount[trueCn, callCn, ploidy];
-                        totalBases += bases;
+                        totalBases += bases + noCallBases;
                         if (trueCn == callCn) totalBasesRight += bases;
                         if (trueCn < ploidy && callCn < ploidy || trueCn == ploidy && callCn == ploidy || trueCn > ploidy && callCn > ploidy)
                             totalBasesRightDirection += bases;

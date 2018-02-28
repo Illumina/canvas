@@ -3,6 +3,7 @@ using System.Linq;
 using CanvasCommon.CommandLineParsing.CoreOptionTypes;
 using CanvasCommon.CommandLineParsing.OptionProcessing;
 using Illumina.Common.FileSystem;
+using Illumina.SecondaryAnalysis.VariantCalling;
 
 namespace EvaluateCNV
 {
@@ -70,7 +71,18 @@ namespace EvaluateCNV
         private static readonly FlagOption SplitBySize = new FlagOption("Split by variant size", "s", "splitBySize");
         private static readonly ValueOption<string> KmerFa = ValueOption<string>.Create("Kmer.fa file", "k", "kmerFa");
         private static readonly FlagOption SkipDiploid = new FlagOption("Skip diploid calls", "d", "skipDiploid");
+        private static readonly ValueOption<int> MinEntrySize = ValueOption<int>.CreateWithDefault(10000, "Minimum entry size to consider from either the truth or query files. Entries in those files that span fewer bases than this will be excluded from evaluation.", "min-size");
+        private static readonly ValueOption<int> PloidyX = ValueOption<int>.CreateRequired("Reference ploidy for chromosome X (integer)", "ploidy-x");
+        private static readonly ValueOption<int> PloidyY = ValueOption<int>.CreateRequired("Reference ploidy for chromosome Y (integer)", "ploidy-y");
+        private static readonly ValueOption<IFileLocation> ParBed = FileOption.CreateRequired("Path to PAR bed file containing X chromosome PAR regions. Assumes chromosome Y PAR regions have been N-masked in the reference", "par-bed");
+        private static readonly SinglePositionalOption<int, int, IFileLocation, (SexPloidyInfo, IFileLocation)> PloidyOption = new SinglePositionalOption<int, int, IFileLocation, (SexPloidyInfo, IFileLocation)>(Parse, false, "Instead of relying on the GT field in the query vcf to determine reference ploidy, use specified ploidy for allosomes taking into account chr X PAR regions in the provided bed file", PloidyX, PloidyY, ParBed, "ploidy");
         private static readonly FlagOption Help = new FlagOption("show this message and exit", "h", "help");
+
+        private static IParsingResult<(SexPloidyInfo, IFileLocation)> Parse(int ploidyX, int ploidyY, IFileLocation parBed)
+        {
+            return ParsingResult<(SexPloidyInfo, IFileLocation)>.SuccessfulResult(
+                (new SexPloidyInfo(ploidyX, ploidyY), parBed));
+        }
 
         public override OptionCollection<EvaluateCnvOptions> GetOptions()
         {
@@ -82,6 +94,8 @@ namespace EvaluateCNV
                 DQscoreThreshold,
                 SplitBySize,
                 SkipDiploid,
+                MinEntrySize,
+                PloidyOption,
                 KmerFa,
                 Help
             };
@@ -96,9 +110,12 @@ namespace EvaluateCNV
             bool splitBySize = parseInput.Get(SplitBySize);
             bool skipDiploid = parseInput.Get(SkipDiploid);
             string kmerFa = parseInput.Get(KmerFa);
+            int minEntrySize = parseInput.Get(MinEntrySize);
+            var ploidyInfo = parseInput.Get(PloidyOption);
             var help = parseInput.Get(Help);
             return ParsingResult<EvaluateCnvOptions>.SuccessfulResult(new EvaluateCnvOptions(baseFileName, roiBed, heterogeneityFraction,
-                dqscoreThreshold, splitBySize, skipDiploid, kmerFa, help));
+                dqscoreThreshold, splitBySize, skipDiploid, minEntrySize, ploidyInfo, kmerFa, help));
+                
 
         }
     }
@@ -113,10 +130,14 @@ namespace EvaluateCNV
         public bool SkipDiploid { get; }
         public string KmerFa { get; }
 
+        public int MinEntrySize { get; }
+        public (SexPloidyInfo SexPloidyInfo, IFileLocation ParBed) PloidyInfo { get; }
         public bool Help { get; }
 
-        public EvaluateCnvOptions(string baseFileName, IFileLocation roiBed, double heterogeneityFraction, double? dqscoreThreshold,
-            bool splitBySize, bool skipDiploid, string kmerFa, bool help)
+        public EvaluateCnvOptions(string baseFileName, IFileLocation roiBed, double heterogeneityFraction,
+            double? dqscoreThreshold,
+            bool splitBySize, bool skipDiploid, int minEntrySize, (SexPloidyInfo, IFileLocation) ploidyInfo,
+            string kmerFa, bool help)
         {
             BaseFileName = baseFileName;
             RoiBed = roiBed;
@@ -125,6 +146,8 @@ namespace EvaluateCNV
             SplitBySize = splitBySize;
             SkipDiploid = skipDiploid;
             KmerFa = kmerFa;
+            MinEntrySize = minEntrySize;
+            PloidyInfo = ploidyInfo;
             Help = help;
         }
     }

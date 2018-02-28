@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using CanvasCommon.CommandLineParsing.OptionProcessing;
 using Illumina.Common;
 using System.Linq;
+using System.Net.Http.Headers;
 
 namespace CanvasCommon.CommandLineParsing.CoreOptionTypes
 {
@@ -66,13 +67,13 @@ namespace CanvasCommon.CommandLineParsing.CoreOptionTypes
         public int MaxNumValues { get; }
         private readonly bool _required;
 
-        private PositionalOptionInfo(bool required, string description, int maxNumValues, params string[] names) : base(description, names)
+        public PositionalOptionInfo(bool required, bool isMultiValue, string description, int maxNumValues, params string[] names) : base(description, names)
         {
             MaxNumValues = maxNumValues;
             _required = required;
         }
 
-        public PositionalOptionInfo(bool required, bool isMultiValue, string overallDescription, IOptionInfo[] optionsInfos, params string[] names) : this(required, GetDescription(overallDescription, isMultiValue, required, optionsInfos), optionsInfos.Length, names)
+        public PositionalOptionInfo(bool required, bool isMultiValue, string overallDescription, IOptionInfo[] optionsInfos, params string[] names) : this(required, isMultiValue, GetDescription(overallDescription, isMultiValue, required, optionsInfos), optionsInfos.Length, names)
         {
         }
 
