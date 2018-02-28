@@ -21,21 +21,19 @@ namespace Canvas.Wrapper
             UnsmoothedCnd = unsmoothedCnd;
         }
 
-        public static CanvasEnrichmentOutput GetFromStub(IFileLocation stub, bool includeIntermediateResults)
+        public static CanvasEnrichmentOutput GetFromStub(IFileLocation stub)
         {
-            var canvasOutput = CanvasOutput.GetFromStub(stub, includeIntermediateResults);
-            if (!includeIntermediateResults)
-                return new CanvasEnrichmentOutput(canvasOutput);
+            var canvasOutput = CanvasOutput.GetFromStub(stub);
             IFileLocation binSize = stub.AppendName(".binsize");
             IFileLocation normalBinned = stub.AppendName(".binned");
             IFileLocation unsmoothedCnd = stub.AppendName(".unsmoothed.cnd");
             return new CanvasEnrichmentOutput(canvasOutput, binSize, normalBinned, unsmoothedCnd);
         }
 
-        public void Move(IFileLocation fileNameStub, bool includeIntermediateResults, Action<IFileLocation, IFileLocation> move)
+        public void Move(IFileLocation fileNameStub, Action<IFileLocation, IFileLocation> move)
         {
-            CanvasOutput.Move(fileNameStub, includeIntermediateResults, move);
-            CanvasEnrichmentOutput destination = GetFromStub(fileNameStub, includeIntermediateResults);
+            CanvasOutput.Move(fileNameStub, move);
+            CanvasEnrichmentOutput destination = GetFromStub(fileNameStub);
             BinSize.MoveIfNotNull(destination.BinSize, move);
             NormalBinned.MoveIfNotNull(destination.NormalBinned, move);
             UnsmoothedCnd.MoveIfNotNull(destination.UnsmoothedCnd, move);
