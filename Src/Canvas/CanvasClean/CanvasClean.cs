@@ -265,7 +265,7 @@ namespace CanvasClean
         /// The rationale of this function is that standard deviation of difference of consecutive bins values, when taken over a small range of bin (i.e. 20 bins),
         /// has a distinct distribution for FFPE compared to Fresh Frozen (FF) samples. This property is used to flag and remove such bins.
 
-        static double getLocalStandardDeviation(List<SampleGenomicBin> bins)
+        static double GetLocalStandardDeviation(List<SampleGenomicBin> bins)
         {
             // Will hold consecutive bin count difference (approximates Skellam Distribution: mean centred on zero so agnostic to CN changes)
             double[] countsDiffs = new double[bins.Count - 1];
@@ -486,7 +486,7 @@ namespace CanvasClean
             double LocalSD = -1.0;
             if (ffpeOutliersFile != null)
             {
-                LocalSD = getLocalStandardDeviation(bins);
+                LocalSD = GetLocalStandardDeviation(bins);
                 CanvasIO.WriteCoverageMetricToTextFile(ffpeOutliersFile, LocalSD, CanvasIO.CoverageMetric.localSD);
             }
 

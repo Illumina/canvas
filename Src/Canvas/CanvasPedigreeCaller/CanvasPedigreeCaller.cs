@@ -30,11 +30,11 @@ namespace CanvasPedigreeCaller
         private readonly CopyNumberLikelihoodCalculator _copyNumberLikelihoodCalculator;
         private readonly ICoverageBigWigWriter _coverageBigWigWriter;
         private readonly ICopyNumberModelFactory _copyNumberModelFactory;
-        private readonly ICopyNumberBedGraphWriter _copyNumbeBedGraphWriter;
+        private readonly ICopyNumberBedGraphWriter _copyNumberBedGraphWriter;
 
         #endregion
 
-        public CanvasPedigreeCaller(ILogger logger, int qualityFilterThreshold, int deNovoQualityFilterThreshold, PedigreeCallerParameters callerParameters, CopyNumberLikelihoodCalculator copyNumberLikelihoodCalculator, IVariantCaller variantCaller, ICoverageBigWigWriter coverageBigWigWriter, ICopyNumberModelFactory copyNumberModelFactory, ICopyNumberBedGraphWriter copyNumbeBedGraphWriter)
+        public CanvasPedigreeCaller(ILogger logger, int qualityFilterThreshold, int deNovoQualityFilterThreshold, PedigreeCallerParameters callerParameters, CopyNumberLikelihoodCalculator copyNumberLikelihoodCalculator, IVariantCaller variantCaller, ICoverageBigWigWriter coverageBigWigWriter, ICopyNumberModelFactory copyNumberModelFactory, ICopyNumberBedGraphWriter copyNumberBedGraphWriter)
         {
             _logger = logger;
             _qualityFilterThreshold = qualityFilterThreshold;
@@ -44,7 +44,24 @@ namespace CanvasPedigreeCaller
             _variantCaller = variantCaller;
             _coverageBigWigWriter = coverageBigWigWriter;
             _copyNumberModelFactory = copyNumberModelFactory;
-            _copyNumbeBedGraphWriter = copyNumbeBedGraphWriter;
+            _copyNumberBedGraphWriter = copyNumberBedGraphWriter;
+        }
+
+        /// <summary>
+        /// For each segment shorter than 10kb, flag it as filtered.
+        /// </summary>
+        private void FilterExcessivelyShortSegments(ISampleMap<List<CanvasSegment>> segments)
+        {
+            string lengthFailTag = "L" + CanvasFilter.FormatCnvSizeWithSuffix(CanvasFilter.SegmentSizeCutoff);
+            
+            foreach (var segmentList in segments.Values)
+            {
+                foreach (var segment in segmentList)
+                {
+                    if (segment.Length >= CanvasFilter.SegmentSizeCutoff) continue;
+                    segment.Filter = segment.Filter.AddFilter(lengthFailTag);
+                }
+            }
         }
 
         internal int CallVariants(List<string> variantFrequencyFiles, List<string> segmentFiles,
@@ -92,6 +109,8 @@ namespace CanvasPedigreeCaller
 
             var mergedVariantCalledSegments = MergeSegments(variantCalledSegments, _callerParameters.MinimumCallSize, _qualityFilterThreshold);
 
+            FilterExcessivelyShortSegments(mergedVariantCalledSegments);
+
             var outputFolder = outVcfFile.Directory;
             foreach (var sampleId in samplesInfo.SampleIds)
             {
@@ -106,7 +125,7 @@ namespace CanvasPedigreeCaller
             var diploidCoverage = samplesInfo.Select(info => info.Value.MeanCoverage).ToList();
             var names = samplesInfo.SampleIds.Select(id => id.ToString()).ToList();
             CanvasSegmentWriter.WriteMultiSampleSegments(outVcfFile.FullName, mergedVariantCalledSegments, diploidCoverage, referenceFolder, names,
-                null, ploidies, _qualityFilterThreshold, denovoQualityThreshold, null, isPedigreeInfoSupplied);
+                null, ploidies, _qualityFilterThreshold, denovoQualityThreshold, CanvasFilter.SegmentSizeCutoff, isPedigreeInfoSupplied);
 
             foreach (var sampleId in samplesInfo.SampleIds)
             {
@@ -121,7 +140,7 @@ namespace CanvasPedigreeCaller
                 var bigWig = _coverageBigWigWriter.Write(segments, visualizationTemp);
                 bigWig?.MoveTo(SingleSampleCallset.GetCoverageBigWig(outputFolder, sampleId.ToString()));
                 var copyNumberBedGraph = SingleSampleCallset.GetCopyNumberBedGraph(outputFolder, sampleId.ToString());
-                _copyNumbeBedGraphWriter.Write(segments, sampleMetrics.Ploidy, copyNumberBedGraph);
+                _copyNumberBedGraphWriter.Write(segments, sampleMetrics.Ploidy, copyNumberBedGraph);
             }
             return 0;
         }
@@ -166,9 +185,9 @@ namespace CanvasPedigreeCaller
             var mergedSegments = new SampleMap<List<CanvasSegment>>();
             foreach (var sampleSegments in segments)
             {
-                var mergedAllSegments = CanvasSegment.MergeSegments(sampleSegments.Value.ToList(),
+                var mergedSegmentsThisSample = CanvasSegment.MergeSegments(sampleSegments.Value.ToList(),
                     minimumCallSize, 10000, copyNumbers, qscores, qScoreThreshold);
-                mergedSegments.Add(sampleSegments.Key, mergedAllSegments);
+                mergedSegments.Add(sampleSegments.Key, mergedSegmentsThisSample);
             }
             return mergedSegments;
         }

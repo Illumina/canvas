@@ -170,7 +170,7 @@ namespace CanvasPedigreeCaller
 
                 var copyNumberLikelihoodCalculator = new CopyNumberLikelihoodCalculator(callerParameters.MaximumCopyNumber);
                 var variantCaller = callerParameters.DefaultCaller == CallerType.VariantCaller ?
-                (IVariantCaller) new VariantCaller(copyNumberLikelihoodCalculator, callerParameters, qScoreThreshold):
+                (IVariantCaller)new VariantCaller(copyNumberLikelihoodCalculator, callerParameters, qScoreThreshold) :
                 new HaplotypeVariantCaller(copyNumberLikelihoodCalculator, callerParameters, qScoreThreshold);
 
                 var copyNumberModelFactory = new HaplotypeCopyNumberModelFactory();
@@ -185,7 +185,7 @@ namespace CanvasPedigreeCaller
                 var tabixWrapper = TabixWrapperFactory.GetTabixWrapper(logger, workDoer, commandManager);
                 var bgzfBedGraphWriter = new BgzfBedGraphWriter(new BedGraphWriterFacade(), tabixWrapper);
                 var copyNumberBedGraphWriter = new CopyNumberBedGraphWriter(bgzfBedGraphWriter, new CopyNumberBedGraphCalculator());
-                
+
                 var caller = new CanvasPedigreeCaller(logger, qScoreThreshold, dqScoreThreshold, callerParameters, copyNumberLikelihoodCalculator, variantCaller, coverageBigWigWriter, copyNumberModelFactory, copyNumberBedGraphWriter);
 
                 var outVcf = outputDirectory.GetFileLocation("CNV.vcf.gz");

@@ -1064,15 +1064,15 @@ namespace CanvasCommon
         /// <summary>
         /// Set segment.Filter for each of our segments.
         /// </summary>
-        public static void SetFilterForSegments(int qualityFilterThreshold, List<CanvasSegment> segments, int segmantSizeCutoff)
+        public static void SetFilterForSegments(int qualityFilterThreshold, List<CanvasSegment> segments, int segmentSizeCutoff)
         {
             string qualityFilter = $"q{qualityFilterThreshold}";
-            string sizeFilter = "L" + CanvasFilter.FormatCnvSizeWithSuffix(segmantSizeCutoff);
+            string sizeFilter = "L" + CanvasFilter.FormatCnvSizeWithSuffix(segmentSizeCutoff);
             foreach (var segment in segments)
             {
                 var filterTags = new List<string>();
                 if (segment.QScore < qualityFilterThreshold) filterTags.Add(qualityFilter);
-                if (segment.End - segment.Begin < segmantSizeCutoff) filterTags.Add(sizeFilter);
+                if (segment.End - segment.Begin < segmentSizeCutoff) filterTags.Add(sizeFilter);
                 segment.Filter = CanvasFilter.Create(filterTags);
             }
         }
