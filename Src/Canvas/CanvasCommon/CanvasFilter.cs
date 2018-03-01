@@ -11,7 +11,6 @@ namespace CanvasCommon
         public const int SegmentSizeCutoff = 10000;
         public const string Pass = "PASS";
         public const string AllSampleFailedTag = "FailedFT";
-        public const string SampleFilterFailed = "FT";
         public static readonly CanvasFilter PassFilter = Create(Enumerable.Empty<string>());
         private IReadOnlyList<string> FailedFilterTags { get; }
         public bool IsPass => FailedFilterTags.Count == 0;
@@ -25,6 +24,13 @@ namespace CanvasCommon
         {
             var allFailedFilterTags = filterTags.Where(failedFilterTag => failedFilterTag != Pass).ToList();
             return new CanvasFilter(allFailedFilterTags.ToReadOnlyList());
+        }
+
+        public CanvasFilter AddFilter(string newTag)
+        {
+            List<string> allTags = this.FailedFilterTags.ToList();
+            allTags.Add(newTag);
+            return CanvasFilter.Create(allTags);
         }
 
         public static CanvasFilter UpdateRecordLevelFilter(CanvasFilter recordLevelFilter,

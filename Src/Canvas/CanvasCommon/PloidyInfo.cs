@@ -54,14 +54,15 @@ namespace CanvasCommon
         /// </summary>
         public int GetReferenceCopyNumber(CanvasSegment segment)
         {
-            if (!PloidyByChromosome.ContainsKey(segment.Chr)) return 2;
+            if (!PloidyByChromosome.ContainsKey(segment.Chr))
+                return 2;
             int[] baseCounts = new int[5];
             baseCounts[2] = segment.Length;
 
             foreach (PloidyInterval interval in PloidyByChromosome[segment.Chr])
             {
                 if (interval.Ploidy == 2) continue;
-                int overlapStart = Math.Max(segment.Begin, interval.Start);
+                int overlapStart = Math.Max(segment.Begin, interval.Start -1);
                 if (overlapStart > segment.End) continue;
                 int overlapEnd = Math.Min(segment.End, interval.End);
                 int overlapBases = overlapEnd - overlapStart;
@@ -154,8 +155,8 @@ namespace CanvasCommon
     public class PloidyInterval
     {
         public string Chromosome { get; }
-        public int Start;
-        public int End;
+        public int Start; //one-based start position from vcf
+        public int End; //one-based end position from vcf
         public int Ploidy;
 
         public PloidyInterval(string chromosome)
@@ -165,7 +166,7 @@ namespace CanvasCommon
 
         public override string ToString()
         {
-            return $"{Chromosome}:{Start + 1}-{End}";
+            return $"{Chromosome}:{Start}-{End}";
         }
     }
 
@@ -181,6 +182,8 @@ namespace CanvasCommon
         public double MinorAlleleFrequency; // for PURE tumor
         public double MixedMinorAlleleFrequency; // for our ESTIMATED overall purity
         public double MixedCoverage; // for our ESTIMATED overall purity
+        public double MixedHaploidMinorAlleleFrequency;
+        public double MixedHaploidCoverage;
 
         // Used by the EM algorithm
         // Dimensions: 0: MAF, 1: Coverage

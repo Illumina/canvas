@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using CanvasCommon;
+using Illumina.Common;
 using Isas.Framework.DataTypes;
 using Isas.Framework.DataTypes.Maps;
 using MathNet.Numerics.Distributions;
@@ -10,18 +11,32 @@ namespace CanvasPedigreeCaller
 {
     class PedigreeInfo
     {
+        public IReadOnlyList<SampleId> AllSampleIds { get; }
         public List<SampleId> ParentsIds { get; }
         public List<SampleId> OffspringIds { get; }
+        public List<SampleId> OtherIds { get; }
         public List<List<Genotype>> OffspringPhasedGenotypes { get; }
         public List<List<Genotype>> OffspringTotalCopyNumberGenotypes { get; }
-
         public double[][] TransitionMatrix { get; }
 
-        private PedigreeInfo(List<SampleId> offspringIds, List<SampleId> parentsIds, List<List<Genotype>> offspringPhasedGenotypes,
+        public bool HasFullPedigree()
+        {
+            return ParentsIds.Count == 2 && OffspringIds.Count >= 1;
+        }
+
+        public bool HasOther()
+        {
+            return OtherIds.Count >= 1;
+        }
+
+        private PedigreeInfo(IReadOnlyList<SampleId> allSampleIds, List<SampleId> offspringIds,
+            List<SampleId> parentsIds, List<SampleId> otherIds, List<List<Genotype>> offspringPhasedGenotypes,
             List<List<Genotype>> offspringTotalCopyNumberGenotypes, double[][] transitionMatrix)
         {
+            AllSampleIds = allSampleIds;
             OffspringIds = offspringIds;
             ParentsIds = parentsIds;
+            OtherIds = otherIds;
             OffspringPhasedGenotypes = offspringPhasedGenotypes;
             OffspringTotalCopyNumberGenotypes = offspringTotalCopyNumberGenotypes;
             TransitionMatrix = transitionMatrix;
@@ -29,16 +44,20 @@ namespace CanvasPedigreeCaller
 
         public static PedigreeInfo GetPedigreeInfo(ISampleMap<SampleType> kinships, PedigreeCallerParameters callerParameters)
         {
-            var parentsIds = kinships.Where(kin => kin.Value.Equals(SampleType.Father) || kin.Value.Equals(SampleType.Mother)).Select(kin => kin.Key)
-                .ToList();
-            var offspringIds = kinships.Where(kin => kin.Value.Equals(SampleType.Proband) || kin.Value.Equals(SampleType.Sibling)).Select(kin => kin.Key)
-                .ToList();
+            var allSampleIds = kinships.SampleIds.ToReadOnlyList();
+            bool fullPedigree = kinships.Values.Count(x => x == SampleType.Father) == 1 &&
+                kinships.Values.Count(x => x == SampleType.Mother) == 1 &&
+                kinships.Values.Count(x => x == SampleType.Proband) == 1;
+            // do not populate parents and offspring fields for partial pedigrees 
+            var parentsIds = fullPedigree ? kinships.WhereValues(value => value == SampleType.Father || value == SampleType.Mother).SampleIds.ToList() : new List<SampleId>();
+            var offspringIds = fullPedigree ? kinships.WhereValues(value => value == SampleType.Proband || value == SampleType.Sibling).SampleIds.ToList() : new List<SampleId>();
+            var otherIds = fullPedigree ? kinships.WhereValues(value => value == SampleType.Other).SampleIds.ToList() : kinships.SampleIds.ToList();
             var parentalPhasedGenotypes = GeneratePhasedGenotype(callerParameters.MaximumCopyNumber);
             var parentalTotalCopyNumberGenotypes = Enumerable.Range(0, callerParameters.MaximumCopyNumber).Select(Genotype.Create).ToList();
             var offspringPhasedGenotypes = GetOffspringGenotypes(callerParameters, parentalPhasedGenotypes, offspringIds);
             var offspringTotalCopyNumberGenotypes = GetOffspringGenotypes(callerParameters, parentalTotalCopyNumberGenotypes, offspringIds);
             var transitionMatrix = GetTransitionMatrix(callerParameters.MaximumCopyNumber);
-            return new PedigreeInfo(offspringIds, parentsIds, offspringPhasedGenotypes, offspringTotalCopyNumberGenotypes, transitionMatrix);
+            return new PedigreeInfo(allSampleIds, offspringIds, parentsIds, otherIds, offspringPhasedGenotypes, offspringTotalCopyNumberGenotypes, transitionMatrix);
         }
 
         private static List<List<Genotype>> GetOffspringGenotypes(PedigreeCallerParameters callerParameters, List<Genotype> genotypes, List<SampleId> offspringIds)
@@ -72,7 +91,7 @@ namespace CanvasPedigreeCaller
             {
                 foreach (var genotype in genotypeSet)
                 {
-                    GenerateOffspringGenotypes(offspringGenotypes, genotypeSet, nOffsprings - 1, 
+                    GenerateOffspringGenotypes(offspringGenotypes, genotypeSet, nOffsprings - 1,
                         partialGenotypes.Concat(new List<Genotype> { genotype }).ToList());
                 }
             }

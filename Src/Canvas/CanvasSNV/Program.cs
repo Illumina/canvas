@@ -4,7 +4,7 @@ using Illumina.Common;
 
 namespace CanvasSNV
 {
-    class Program
+    internal class Program
     {
         /// <summary>
         /// Command line help message.
@@ -19,10 +19,24 @@ namespace CanvasSNV
             p.WriteOptionDescriptions(Console.Out);
         }
 
-        static int Main(string[] args)
+        private static int Main(string[] args)
+        {
+            try
+            {
+                int exitCode = Run(args);
+                return exitCode;
+            }
+            catch (Exception e)
+            {
+                Console.Error.WriteLine(e);
+                return -1;
+            }
+        }
+
+        static int Run(string[] args)
         {
             CanvasCommon.Utilities.LogCommandLine(args);
-            string chromosome = null; 
+            string chromosome = null;
             string vcfPath = null;
             string bamPath = null;
             string outputPath = null;
@@ -39,8 +53,9 @@ namespace CanvasSNV
                 { "b|bamPath=",        "bam file",                                                                                       v => bamPath = v },
                 { "o|outputPath=",     "name of output directory",                                                                       v => outputPath = v },
                 { "n|sampleName=",     "sample name for output VCF header (optional)",                                                   v => sampleName = v},
-                { "i|isDbSnpVcf=",     "flag to specify if vcf file contains dbSNP variants (optional)",                                 v => isDbSnpVcf = v != null },
-                { "q|minMapQ=",        "mapQ threshold for vcf file (optional)",                                                         v => minMapQ = int.Parse(v)},
+                { "i|isDbSnpVcf",      "flag to specify if vcf file contains dbSNP variants (optional)",                                 v => isDbSnpVcf = v != null },
+                { "q|minMapQ=",        "mapQ threshold for reads in bam file (optional). " +
+                                       "Default is 0 and means reads with mapQ <= 0 are not counted)",                                   v => minMapQ = int.Parse(v)},
                 { "s|isSomatic",       "flag to specify if Canvas workflow is somatic (optional)",                                       v => isSomatic = v != null },
                 { "h|help",            "show this message and exit",                                                                     v => needHelp = v != null },
             };
