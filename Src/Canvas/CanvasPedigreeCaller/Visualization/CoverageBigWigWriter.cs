@@ -11,11 +11,11 @@ namespace CanvasPedigreeCaller.Visualization
     public class CoverageBigWigWriter : ICoverageBigWigWriter
     {
         private readonly ILogger _logger;
-        private readonly ICoverageBedGraphWriter _writer;
+        private readonly CoverageBedGraphWriter _writer;
         private readonly IBedGraphToBigWigConverter _converter;
         private readonly GenomeMetadata _genome;
 
-        public CoverageBigWigWriter(ILogger logger, ICoverageBedGraphWriter writer, IBedGraphToBigWigConverter converter, GenomeMetadata genome)
+        public CoverageBigWigWriter(ILogger logger, CoverageBedGraphWriter writer, IBedGraphToBigWigConverter converter, GenomeMetadata genome)
         {
             _logger = logger;
             _writer = writer;
@@ -34,7 +34,11 @@ namespace CanvasPedigreeCaller.Visualization
             benchmark = new Benchmark();
             var bigWigConverterOutput = output.CreateSubdirectory("BigWigConverter");
             var bigwigFile = _converter.Convert(bedGraph, _genome, bigWigConverterOutput);
-            _logger.Info($"Finished conversion from bedgraph file at '{bedGraph}' to bigwig file at '{bigwigFile}'. Elapsed time: {benchmark.GetElapsedTime()}");
+            if (bigwigFile != null)
+            {
+                _logger.Info(
+                    $"Finished conversion from bedgraph file at '{bedGraph}' to bigwig file at '{bigwigFile}'. Elapsed time: {benchmark.GetElapsedTime()}");
+            }
             return bigwigFile;
         }
     }

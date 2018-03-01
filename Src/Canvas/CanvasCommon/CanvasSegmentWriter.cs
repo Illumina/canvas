@@ -55,7 +55,9 @@ namespace CanvasCommon
             writer.WriteLine("##fileformat=VCFv4.1");
             writer.WriteLine($"##source={CanvasVersionInfo.NameString} {CanvasVersionInfo.VersionString}");
             writer.WriteLine($"##reference={Path.Combine(wholeGenomeFastaDirectory, "genome.fa")}");
-            AddPloidyAndCoverageHeaders(writer, segments, diploidCoverage);
+            // Write ##OverallPloidy and ##DiploidCoverage for a single-sample file (where it makes sense to do so):
+            if (sampleNames.Count == 1)
+                AddPloidyAndCoverageHeaders(writer, segments, diploidCoverage);
             foreach (string header in extraHeaders ?? new List<string>())
             {
                 writer.WriteLine(header);
@@ -69,7 +71,7 @@ namespace CanvasCommon
                 writer.WriteLine($"##contig=<ID={chromosome.Name},length={chromosome.Length}>");
             }
             string qualityFilter = $"q{qualityThreshold}";
-            writer.WriteLine("##ALT=<ID=CNV,Description=\"Copy number variable region\">");
+            writer.WriteLine("##ALT=<ID=DUP,Description=\"Region of elevated copy number relative to the reference\">");
             WriteHeaderAllAltCnTags(writer);
             writer.WriteLine($"##FILTER=<ID={qualityFilter},Description=\"Quality below {qualityThreshold}\">");
             if (sizeThreshold.HasValue)

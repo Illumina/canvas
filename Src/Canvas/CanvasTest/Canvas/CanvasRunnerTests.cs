@@ -3,6 +3,7 @@ using System.IO;
 using System.Runtime.CompilerServices;
 using System.Text;
 using Canvas;
+using Canvas.Visualization;
 using CanvasCommon;
 using Illumina.Common.FileSystem;
 using Isas.Framework.Checkpointing;
@@ -30,7 +31,8 @@ namespace CanvasTest.Canvas
             var coverageMode = new CanvasCoverageMode();
             int countsPerBin = 0;
             string canvasFolder = @"C:\path\to\Canvas\"; 
-            var canvasRunner = new CanvasRunner(logger, workManager, workDoer, checkpointRunner, runtimeExecutable, runtimePrefix, isSomatic, coverageMode, countsPerBin, null, canvasFolder);
+            var bAlleleBedGraphWriter = Substitute.For<IBAlleleBedGraphWriter>();
+            var canvasRunner = new CanvasRunner(logger, workManager, workDoer, checkpointRunner, runtimeExecutable, runtimePrefix, isSomatic, coverageMode, countsPerBin, bAlleleBedGraphWriter, null, canvasFolder);
             string prefix = "something before ";
             var commandLineBuilder = new StringBuilder(prefix);
             string canvasExecutableStub = "CanvasBin";
