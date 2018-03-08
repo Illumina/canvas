@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -65,13 +66,21 @@ namespace EvaluateCNV
 
             // not parallel here as parallelism will be attained at the level of regression workflow 
             _cnvChecker.CountExcludedBasesInTruthSetIntervals(knownCN);
-            Dictionary<string, string> referenceBases = null;
+            Dictionary<string, BitArray> referenceBases = null;
             if (options.KmerFa != null)
             {
-                referenceBases = new Dictionary<string, string>();
+                referenceBases = new Dictionary<string, BitArray>();
                 foreach (var chr in knownCN.Keys)
                 {
-                    referenceBases[chr] = FastaLoader.LoadFastaSequence(options.KmerFa, chr);
+                    string chromReferenceBases = FastaLoader.LoadFastaSequence(options.KmerFa, chr);
+                    var bitArrayBases = new BitArray(chromReferenceBases.Length);
+                    // Mark which k-mers in the fasta file are unique. These are indicated by upper-case letters.
+                    for (var i = 0; i < chromReferenceBases.Length; i++)
+                    {
+                        if (char.IsUpper(chromReferenceBases[i]))
+                            bitArrayBases[i] = true;
+                    }
+                    referenceBases[chr] = bitArrayBases;
                 }
             }
 
@@ -104,7 +113,7 @@ namespace EvaluateCNV
         }
 
         public MetricsCalculator CalculateMetrics(Dictionary<string, List<CNInterval>> knownCN, Dictionary<string, List<CnvCall>> calls,
-            BaseCounter baseCounter, bool optionsSkipDiploid, bool includePassingOnly, Dictionary<string, string> kmerfa = null)
+            BaseCounter baseCounter, bool optionsSkipDiploid, bool includePassingOnly, Dictionary<string, BitArray> kmerfa = null)
         {
             // string referenceBases = string.Empty;
             calls.Values.SelectMany(x => x).ForEach(call =>
@@ -131,15 +140,15 @@ namespace EvaluateCNV
                         // hack for now to speed processing of multiple small REF blocks
                         if (interval.Cn == 2)
                             continue;
-                        var kmerFaBases = 0;
+                        var flaggedBasesCounter = 0;
                         for (var bp = interval.Start; bp < interval.End; bp++)
                         {
-                            if (char.IsLower(kmerfa[chromosome][bp]) || kmerfa[chromosome][bp] == 'n')
+                            if (!kmerfa[chromosome][bp])
                             {
-                                kmerFaBases++;
+                                flaggedBasesCounter++;
                             }
                         }
-                        if (kmerFaBases / (double) interval.Length < fractionUnmappableBases)
+                        if (flaggedBasesCounter / (double) interval.Length < fractionUnmappableBases)
                             filteredknownCn[chromosome].Add(interval);
                     }
                 }
