@@ -52,7 +52,6 @@ namespace EvaluateCNV
         {
             // Make a note of how many bases in the truth set are not *actually* considered to be known bases, using
             // the "cnaqc" exclusion set:
-            _cnvChecker.InitializeIntervalMetrics(knownCN);
             bool regionsOfInterest = !_cnvChecker.RegionsOfInterest.Empty();
             var baseCounters = new List<BaseCounter> { new BaseCounter(MaxCn, 0, Int32.MaxValue, regionsOfInterest) };
             if (options.SplitBySize)
@@ -86,6 +85,7 @@ namespace EvaluateCNV
 
             foreach (var baseCounter in baseCounters)
             {
+                _cnvChecker.InitializeIntervalMetrics(knownCN);
                 var metrics = CalculateMetrics(knownCN, calls, baseCounter, options.SkipDiploid, includePassingOnly, referenceBases);
 
                 string fileName = $"{options.BaseFileName}";
