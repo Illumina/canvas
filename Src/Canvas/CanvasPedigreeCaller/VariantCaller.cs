@@ -94,6 +94,10 @@ namespace CanvasPedigreeCaller
                 if (parentIDs.Concat(probandId).Any(id => !IsPassVariant(canvasSegments, id)))
                     continue;
                 double deNovoQualityScore = GetConditionalDeNovoQualityScore(canvasSegments, copyNumbersLikelihoods, samplesInfo, parentIDs, probandId);
+
+                // adjustment so that denovo quality score threshold is 20 (rather than 10) to match Manta 
+                deNovoQualityScore *= 2;
+
                 if (Double.IsInfinity(deNovoQualityScore) | deNovoQualityScore > _callerParameters.MaxQscore)
                     deNovoQualityScore = _callerParameters.MaxQscore;
                 canvasSegments[probandId].DqScore = deNovoQualityScore;
