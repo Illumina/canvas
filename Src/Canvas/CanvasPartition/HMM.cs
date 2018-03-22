@@ -474,7 +474,7 @@ namespace CanvasPartition
         /// <returns></returns>
         public List<int> BestPathViterbi(List<List<double>> depthList, uint[] start, List<double> haploidMeans)
         {
-            var x = MeanSmoother(depthList);
+            var x = depthList;
 
             // Initialization 
             var size = x.Count;
