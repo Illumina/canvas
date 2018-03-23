@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -51,7 +52,6 @@ namespace EvaluateCNV
         {
             // Make a note of how many bases in the truth set are not *actually* considered to be known bases, using
             // the "cnaqc" exclusion set:
-            _cnvChecker.InitializeIntervalMetrics(knownCN);
             bool regionsOfInterest = !_cnvChecker.RegionsOfInterest.Empty();
             var baseCounters = new List<BaseCounter> { new BaseCounter(MaxCn, 0, Int32.MaxValue, regionsOfInterest) };
             if (options.SplitBySize)
@@ -65,18 +65,27 @@ namespace EvaluateCNV
 
             // not parallel here as parallelism will be attained at the level of regression workflow 
             _cnvChecker.CountExcludedBasesInTruthSetIntervals(knownCN);
-            Dictionary<string, string> referenceBases = null;
+            Dictionary<string, BitArray> referenceBases = null;
             if (options.KmerFa != null)
             {
-                referenceBases = new Dictionary<string, string>();
+                referenceBases = new Dictionary<string, BitArray>();
                 foreach (var chr in knownCN.Keys)
                 {
-                    referenceBases[chr] = FastaLoader.LoadFastaSequence(options.KmerFa, chr);
+                    string chromReferenceBases = FastaLoader.LoadFastaSequence(options.KmerFa, chr);
+                    var bitArrayBases = new BitArray(chromReferenceBases.Length);
+                    // Mark which k-mers in the fasta file are unique. These are indicated by upper-case letters.
+                    for (var i = 0; i < chromReferenceBases.Length; i++)
+                    {
+                        if (char.IsUpper(chromReferenceBases[i]))
+                            bitArrayBases[i] = true;
+                    }
+                    referenceBases[chr] = bitArrayBases;
                 }
             }
 
             foreach (var baseCounter in baseCounters)
             {
+                _cnvChecker.InitializeIntervalMetrics(knownCN);
                 var metrics = CalculateMetrics(knownCN, calls, baseCounter, options.SkipDiploid, includePassingOnly, referenceBases);
 
                 string fileName = $"{options.BaseFileName}";
@@ -104,7 +113,7 @@ namespace EvaluateCNV
         }
 
         public MetricsCalculator CalculateMetrics(Dictionary<string, List<CNInterval>> knownCN, Dictionary<string, List<CnvCall>> calls,
-            BaseCounter baseCounter, bool optionsSkipDiploid, bool includePassingOnly, Dictionary<string, string> kmerfa = null)
+            BaseCounter baseCounter, bool optionsSkipDiploid, bool includePassingOnly, Dictionary<string, BitArray> kmerfa = null)
         {
             // string referenceBases = string.Empty;
             calls.Values.SelectMany(x => x).ForEach(call =>
@@ -117,7 +126,7 @@ namespace EvaluateCNV
                 baseCounter.TotalVariants++;
             });
 
-            // skip truth interval that have more than 80% of unmapable bases
+            // skip truth interval that have >= 80% of unmapable bases
             // code is not parallel as this will be done by Regression workflow
             const double fractionUnmappableBases = 0.8;
             var filteredknownCn = new Dictionary<string, List<CNInterval>>();
@@ -128,19 +137,29 @@ namespace EvaluateCNV
                     filteredknownCn[chromosome] = new List<CNInterval>();
                     foreach (var interval in knownCN[chromosome])
                     {
-                        // hack for now to speed processing of multiple small REF blocks
-                        if (interval.Cn == 2)
+                        // always include REF intervals even if they are in unmappable regions
+                        if (interval.Cn == interval.ReferenceCopyNumber)
+                        {
+                            filteredknownCn[chromosome].Add(interval);
                             continue;
-                        var kmerFaBases = 0;
+                        }
+                        var flaggedBasesCounter = 0;
                         for (var bp = interval.Start; bp < interval.End; bp++)
                         {
-                            if (char.IsLower(kmerfa[chromosome][bp]) || kmerfa[chromosome][bp] == 'n')
+                            if (!kmerfa[chromosome][bp])
                             {
-                                kmerFaBases++;
+                                flaggedBasesCounter++;
                             }
                         }
-                        if (kmerFaBases / (double) interval.Length < fractionUnmappableBases)
+
+                        if (flaggedBasesCounter / (double)interval.Length < fractionUnmappableBases)
+                        {
                             filteredknownCn[chromosome].Add(interval);
+                        }
+                        else
+                        {
+                            Console.Error.WriteLine($"skipping truth interval {interval} with >= {fractionUnmappableBases} fraction of unmappable positions");
+                        }
                     }
                 }
 
@@ -156,16 +175,17 @@ namespace EvaluateCNV
                 int nonOverlapBases = interval.Length;
                 int nonOverlapRoiBases = 0;
                 if (!_cnvChecker.RegionsOfInterest.Empty() &&
-                    _cnvChecker.RegionsOfInterest.ContainsKey(interval.Chromosome)) {
-
-                foreach (CNInterval roiInterval in _cnvChecker.RegionsOfInterest[interval.Chromosome])
+                    _cnvChecker.RegionsOfInterest.ContainsKey(interval.Chromosome))
                 {
-                    int roiOverlapStart = Math.Max(roiInterval.Start, interval.Start);
-                    int roiOverlapEnd = Math.Min(roiInterval.End, interval.End);
-                    if (roiOverlapStart >= roiOverlapEnd) continue;
-                    int roiOverlapBases = roiOverlapEnd - roiOverlapStart;
-                    nonOverlapRoiBases -= roiOverlapBases;
-                }
+
+                    foreach (CNInterval roiInterval in _cnvChecker.RegionsOfInterest[interval.Chromosome])
+                    {
+                        int roiOverlapStart = Math.Max(roiInterval.Start, interval.Start);
+                        int roiOverlapEnd = Math.Min(roiInterval.End, interval.End);
+                        if (roiOverlapStart >= roiOverlapEnd) continue;
+                        int roiOverlapBases = roiOverlapEnd - roiOverlapStart;
+                        nonOverlapRoiBases -= roiOverlapBases;
+                    }
                 }
                 int totalOverlapBases = 0;
                 int totalRoiOverlapBases = 0;
@@ -195,7 +215,7 @@ namespace EvaluateCNV
                 {
                     if (!call.RefPloidy.HasValue)
                         throw new IlluminaException($"Could not determine reference ploidy for call '{call}'. Please provide ploidy information via command line option.");
-                    int refPloidy = call.RefPloidy.Value;
+                    int refPloidy = interval.ReferenceCopyNumber ?? call.RefPloidy.Value;
                     int CN = call.CN;
                     if (CN < 0 || call.End < 0) continue; // Not a CNV call, apparently
                     if (call.AltAllele == "." && optionsSkipDiploid) continue;
@@ -257,20 +277,24 @@ namespace EvaluateCNV
 
                 nonOverlapBases -= (totalOverlapBases + excludeIntervalBases);
 
-                if (totalIntervalRefPloidy.Empty())
+                if (!interval.ReferenceCopyNumber.HasValue)
                 {
-                    Console.WriteLine($"Error: Truth variant {interval.Chromosome}:{interval.Start}-{interval.End} with no overlapping " +
-                                      $"Canvas calls. Ploidy cannot be determined!");
-                    continue;
+                    if (totalIntervalRefPloidy.Empty())
+                    {
+                        throw new ArgumentException(
+                            $"Error: Truth variant {interval.Chromosome}:{interval.Start}-{interval.End} with no overlapping " +
+                            $"Canvas calls. Reference ploidy cannot be determined! Please provide reference ploidy via command line options");
+                    }
+
+                    interval.ReferenceCopyNumber = Convert.ToInt32(Math.Round(Utilities.WeightedMean(
+                        totalIntervalRefPloidy.Select(x => (double)x.ploidy).ToList(),
+                        totalIntervalRefPloidy.Select(x => (double)Math.Max(x.length, 1)).ToList())));
                 }
-                int ploidy = Convert.ToInt32(Math.Round(Utilities.WeightedMean(totalIntervalRefPloidy.Select(x => (double)x.ploidy).ToList(),
-                    totalIntervalRefPloidy.Select(x => (double)Math.Max(x.length, 1)).ToList())));
-                interval.ReferenceCopyNumber = ploidy;
                 if (nonOverlapBases < 0)
                 {
                     throw new InvalidDataException($"Truth variant {interval.Chromosome}:{interval.Start}-{interval.End} has negative non-overlap bases");
                 }
-                baseCounter.NoCalls[knownCn, ploidy] += nonOverlapBases;
+                baseCounter.NoCalls[knownCn, interval.ReferenceCopyNumber.Value] += nonOverlapBases;
             }
 
             CalculateMedianAndMeanAccuracies(baseCounter, knownCN);
