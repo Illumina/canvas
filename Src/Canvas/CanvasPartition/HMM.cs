@@ -50,6 +50,7 @@ namespace CanvasPartition
                     else
                         _transition[i][j] = (1.0 - selfTransition) / (nStates - 1);
                 }
+                _stateProbabilities[i] = 1f / nStates;
             }
 
             // alpha-beta algorithm
@@ -473,23 +474,26 @@ namespace CanvasPartition
         /// <returns></returns>
         public List<int> BestPathViterbi(List<List<double>> depthList, uint[] start, List<double> haploidMeans)
         {
-            var x = MeanSmoother(depthList);
-            
+            var x = depthList;
+
             // Initialization 
             var size = x.Count;
-            double[][] bestScore = CanvasCommon.Utilities.MatrixCreate(size + 1, nStates);
-            int[][] bestStateSequence = new int[size + 1][];
+            double[][] bestScore = CanvasCommon.Utilities.MatrixCreate(size, nStates);
+            int[][] bestStateSequence = new int[size][];
             for (int i = 0; i < size; ++i)
                 bestStateSequence[i] = new int[nStates];
 
             for (int j = 0; j < nStates; j++)
             {
-                bestScore[0][j] = this._stateProbabilities[j];
-                bestStateSequence[0][j] = 0;
+                // This should be the score for emitting the first data element, combining the initial state prob with the emission prob.
+                // The right way to make the change here is to refactor such that we can get the emission probability separate from the transition probability,
+                // but for now just hack: subtract off the transition probability
+                bestScore[0][j] = Math.Log(this._stateProbabilities[j]) + _emission.EstimateViterbiLikelihood(x[0], j, haploidMeans, _transition[0]) - Math.Log(_transition[0][j]);
+                bestStateSequence[0][j] = -1;
             }
 
             // Induction 
-            for (int t = 1; t < size - 1; t++)
+            for (int t = 1; t < size; t++)
             {
 
                 for (int j = 0; j < nStates; j++)
@@ -510,14 +514,13 @@ namespace CanvasPartition
                 }
             }
 
-            var backtrack = size - 1;
-            int bestState = 0;
-            var bestStates = new List<int>(size + 1);
+            int bestState = -1;
+            var bestStates = new List<int>(size);
             var max1 = Double.MinValue;
             for (int i = 0; i < nStates; i++)
             {
 
-                var tmpMax = bestScore[size][i];
+                var tmpMax = bestScore[size-1][i];
                 if (tmpMax > max1)
                 {
                     bestState = i;
@@ -526,12 +529,14 @@ namespace CanvasPartition
             }
 
             // backtracking 
-            bestStates.Add(backtrack);
-            while (backtrack >= 0)
+            var backtrack = size - 1;
+            while (backtrack > 0)
             {
-                bestStates.Add(bestStateSequence[backtrack][bestState]);
+                bestStates.Add(bestState);
+                bestState = bestStateSequence[backtrack][bestState];
                 backtrack--;
             }
+            bestStates.Add(bestState);
 
             bestStates.Reverse();
             return bestStates;

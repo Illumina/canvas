@@ -20,10 +20,17 @@ namespace EvaluateCNV
     public class CNInterval
     {
         public string Chromosome { get; }
-        public int Start; // 0-based inclusive
-        public int End; // 0-based exclusive
+
+        /// <summary>
+        /// 0-based inclusive
+        /// </summary>
+        public int Start;
+        /// <summary>
+        /// 0-based exclusive
+        /// </summary>
+        public int End;
         public int Cn;
-        public int ReferenceCopyNumber; // set based on ploidy from GT fields or command line parameter
+        public int? ReferenceCopyNumber; // set based on ploidy from GT fields or command line parameter
         public int BasesCovered;
         public int BasesExcluded;
         public int BasesCalledCorrectly;
@@ -495,6 +502,8 @@ namespace EvaluateCNV
                     Console.WriteLine($">>>Getting reference ploidy from provided ploidy information and PAR bed file '{options.PloidyInfo.ParBed}'");
 
                     var ploidy = checker.GetPloidy(options.PloidyInfo, output);
+                    var referencePloidy = LoadReferencePloidy(options.PloidyInfo.SexPloidyInfo, options.PloidyInfo.ParBed);
+                    knownCn = GetKnownCopyNumberWithReferencePloidy(referencePloidy, knownCn);
                     calls = GetCallsWithRefPloidy(calls, ploidy);
                 }
                 var cnvEvaluator = new CnvEvaluator(checker);
@@ -506,6 +515,26 @@ namespace EvaluateCNV
                     cnvEvaluator.ComputeAccuracy(knownCn, cnvCallsPath, outputPath, false, options, calls);
                 Console.WriteLine(">>>Done - results written to {0}", outputPath);
             });
+        }
+
+        private static Dictionary<string, List<CNInterval>> GetKnownCopyNumberWithReferencePloidy(ReferencePloidy referencePloidy, Dictionary<string, List<CNInterval>> knownCn)
+        {
+            return knownCn.SelectValues(knownCnIntervals =>
+                GetKnownCopyNumberWithReferencePloidy(knownCnIntervals, referencePloidy).ToList());
+        }
+
+        private static IEnumerable<CNInterval> GetKnownCopyNumberWithReferencePloidy(List<CNInterval> knownCnIntervals, ReferencePloidy referencePloidy)
+        {
+            foreach (var knownCnInterval in knownCnIntervals)
+            {
+                var interval = new ReferenceInterval(knownCnInterval.Chromosome, new Interval(knownCnInterval.Start + 1, knownCnInterval.End));
+                var refPloidy = referencePloidy.GetSingleReferencePloidy(interval);
+                yield return new CNInterval(knownCnInterval.Chromosome,
+                    knownCnInterval.Start, knownCnInterval.End, knownCnInterval.Cn)
+                {
+                    ReferenceCopyNumber = refPloidy
+                };
+            }
         }
 
         private PloidyInfo GetPloidy((SexPloidyInfo SexPloidyInfo, IFileLocation ParBed) ploidyInfo, IDirectoryLocation output)
@@ -520,12 +549,34 @@ namespace EvaluateCNV
             return PloidyInfo.LoadPloidyFromVcfFileNoSampleId(vcf.VcfFile.FullName);
         }
 
+        private static ReferencePloidy LoadReferencePloidy(SexPloidyInfo sexPloidyInfo, IFileLocation parBed)
+        {
+            var genome = new ReferenceGenome(parBed.Directory.Parent).GenomeMetadata;
+            string ploidyVcfString;
+            var sampleId = "EvaluateCNVSample";
+            using (var stringWriter = new StringWriter())
+            using (var writer = new BgzipOrStreamWriter(stringWriter))
+            {
+                var sample = new SampleSet<SexPloidyInfo>
+                {
+                    {new SampleInfo(sampleId, sampleId), sexPloidyInfo}
+                };
+                PloidyCorrector.WritePloidyVcfFile(writer, sample, genome, parBed);
+                ploidyVcfString = stringWriter.ToString();
+            }
+
+            using (var stringReader = new StringReader(ploidyVcfString))
+            using (var reader = new VcfReader(stringReader))
+            {
+                return ReferencePloidy.Load(reader, new SampleId(sampleId));
+            }
+        }
 
         private static Dictionary<string, List<CnvCall>> GetCallsWithRefPloidy(
             Dictionary<string, List<CnvCall>> allCalls, PloidyInfo ploidy)
         {
             return allCalls.Select(kvp =>
-                    (kvp.Key, GetCallsWithRefPloidy(kvp.Value, ploidy.PloidyByChromosome.ContainsKey(kvp.Key)?ploidy.PloidyByChromosome[kvp.Key]:new List<PloidyInterval>()).ToList()))
+                    (kvp.Key, GetCallsWithRefPloidy(kvp.Value, ploidy.PloidyByChromosome.ContainsKey(kvp.Key) ? ploidy.PloidyByChromosome[kvp.Key] : new List<PloidyInterval>()).ToList()))
                 .ToDictionary();
         }
 
@@ -559,7 +610,7 @@ namespace EvaluateCNV
                 int overlapStart = Math.Max(call.Start, currentPloidyRegion.Start);
                 int overlapEnd = Math.Min(call.End, currentPloidyRegion.End);
                 if (overlapStart >= overlapEnd) continue;
-                double overlapRatio = (overlapEnd - overlapStart) / (double) call.Length;
+                double overlapRatio = (overlapEnd - overlapStart) / (double)call.Length;
                 if (overlapRatio > 0.5 && call.RefPloidy.HasValue)
                 {
                     ploidyRegion = currentPloidyRegion;
