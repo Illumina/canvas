@@ -41,11 +41,6 @@ namespace CanvasPedigreeCaller
 
         }
 
-        public double GetJointLikelihood(ISampleMap<Genotype> samplesGenotypes)
-        {
-            return _jointLikelihoods[samplesGenotypes];
-        }
-
         public double GetMarginalGainDeNovoLikelihood(KeyValuePair<SampleId, Genotype> probandRefPloidy, KeyValuePair<SampleId, Genotype> parent1RefPloidy,
             KeyValuePair<SampleId, Genotype> parent2RefPloidy)
         {
@@ -70,24 +65,6 @@ namespace CanvasPedigreeCaller
                 // parent2 equals or more than ref ploidy
                 !kvp.Key[parent2RefPloidy.Key].Less(parent2RefPloidy.Value))
             .Select(kvp => kvp.Value).Sum();
-        }
-
-        // in a pedigree with the map (SampleId[M]=>Genotype[G], M: parents, offspring, G: genotype), estimate posterior likelihood as
-        // (SampleId[M]=>Genotype[G], sum over all M=m, G=g)/(SampleId[M]=>Genotype[G], sum over all M and G, i.e. what is the probability of 
-        // pedigree member X having genotype Y
-        public double GetMarginalLikelihood(KeyValuePair<SampleId, Genotype> samplesGenotype)
-        {
-            return _jointLikelihoods.Where(kvp => Equals(kvp.Key[samplesGenotype.Key], samplesGenotype.Value)).Select(kvp => kvp.Value).Sum() /
-                TotalMarginalLikelihood;
-        }
-
-        // in a pedigree with the map (SampleId[M]=>Genotype[G], M: parents, offspring, G: genotype), estimate posterior likelihood as
-        // (SampleId[M]=>Genotype[G], sum over all M!=m, G!=g)/(SampleId[M]=>Genotype[G], sum over all M and G, i.e. what is the probability of 
-        // pedigree member X not having genotype Y
-        public double GetMarginalNonAltLikelihood(KeyValuePair<SampleId, Genotype> samplesGenotype)
-        {
-            return _jointLikelihoods.Where(kvp => !Equals(kvp.Key[samplesGenotype.Key], samplesGenotype.Value)).Select(kvp => kvp.Value).Sum() /
-                TotalMarginalLikelihood;
         }
 
         private class SampleGenotypeComparer : IEqualityComparer<ISampleMap<Genotype>>
