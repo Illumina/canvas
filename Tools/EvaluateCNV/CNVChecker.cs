@@ -609,8 +609,11 @@ namespace EvaluateCNV
                 int overlapEnd = Math.Min(call.End, currentPloidyRegion.End);
                 int overlap = overlapEnd - overlapStart;
                 if (overlap <= 0) continue;
-                Console.Error.WriteLine(
-                    $"call '{call}' partially overlaps reference ploidy {currentPloidyRegion.Ploidy} region '{currentPloidyRegion}'. The reference ploidy region with majority base overlap will be used.");
+                if (overlap < call.Length)
+                {
+                    Console.Error.WriteLine(
+                        $"call '{call}' partially overlaps reference ploidy {currentPloidyRegion.Ploidy} region '{currentPloidyRegion}'. The reference ploidy region with majority base overlap will be used.");
+                }
                 totalOverlap += overlap;
                 if (overlap > maxOverlap)
                 {
@@ -622,8 +625,11 @@ namespace EvaluateCNV
             var diploidOverlap = call.Length - totalOverlap;
             if (diploidOverlap > maxOverlap)
             {
-                Console.Error.WriteLine(
-                    $"call '{call}' has majority overlap with reference ploidy 2 region.");
+                if (maxOverlap > 0)
+                {
+                    Console.Error.WriteLine(
+                        $"call '{call}' has majority overlap with reference ploidy 2 region.");
+                }
                 ploidyRegion = null;
                 return false;
             }
