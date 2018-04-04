@@ -52,7 +52,7 @@ namespace Canvas.Wrapper.SmallPedigree
 
                 var partitioned = SingleSampleCallset.GetPartitionedPath(stub);
                 var variantFrequencies = SingleSampleCallset.GetVfSummaryPath(stub);
-                var variantFrequenciesBaf = SingleSampleCallset.GetVfSummaryPath(stub);
+                var variantFrequenciesBaf = SingleSampleCallset.GetVfSummaryBafPath(stub);
 
                 var coverageBigwig = SingleSampleCallset.GetCoverageBigWig(stub);
                 var bAlleleBedgraph = SingleSampleCallset.GetBAlleleBedGraph(stub);

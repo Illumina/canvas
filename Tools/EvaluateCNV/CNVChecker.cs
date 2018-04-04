@@ -318,32 +318,36 @@ namespace EvaluateCNV
                 Console.WriteLine("Median size: {0}", eventSizes[eventSizes.Count / 2]);
         }
 
-        protected static int GetCopyNumber(VcfVariant variant, out int end)
+        private static bool TryGetCopyNumberFields(VcfVariant variant, out int copyNumber, out int end)
         {
-            int CN = -1;
-            end = -1;
+
+            copyNumber = 0;
+            end = 0;
+            if (!variant.InfoFields.ContainsKey("END")) return false;
+
+            int? genotypeCopyNumber = null;
             if (variant.GenotypeColumns != null && variant.GenotypeColumns.Count > 0)
             {
                 Dictionary<string, string> genotype = variant.GenotypeColumns[variant.GenotypeColumns.Count - 1];
                 if (genotype.ContainsKey("CN"))
                 {
-                    CN = int.Parse(genotype["CN"]);
+                    genotypeCopyNumber = int.Parse(genotype["CN"]);
                 }
-                if (genotype.ContainsKey("END"))
-                {
-                    end = int.Parse(genotype["END"]);
-                }
-            }
-            if (variant.InfoFields.ContainsKey("END"))
-            {
-                end = int.Parse(variant.InfoFields["END"]);
-            }
-            if (variant.InfoFields.ContainsKey("CN"))
-            {
-                CN = int.Parse(variant.InfoFields["CN"]);
             }
 
-            return CN;
+            if (genotypeCopyNumber == null)
+            {
+                if (!variant.InfoFields.ContainsKey("CN"))
+                    return false;
+                copyNumber = int.Parse(variant.InfoFields["CN"]);
+            }
+            else
+            {
+                copyNumber = genotypeCopyNumber.Value;
+            }
+
+            end = int.Parse(variant.InfoFields["END"]);
+            return true;
         }
 
         private static int? TryGetRefPloidy(VcfVariant variant)
@@ -429,8 +433,8 @@ namespace EvaluateCNV
                 foreach (VcfVariant variant in reader.GetVariants())
                 {
                     if (!calls.ContainsKey(variant.ReferenceName)) calls[variant.ReferenceName] = new List<CnvCall>();
-                    int end;
-                    int cn = GetCopyNumber(variant, out end);
+                    if (!TryGetCopyNumberFields(variant, out int copyNumber, out int end))
+                        continue;
                     int? refPloidy = TryGetRefPloidy(variant);
                     var passFilter = variant.Filters == "PASS";
                     if (dQscoreThreshold.HasValue)
@@ -446,7 +450,7 @@ namespace EvaluateCNV
                             continue;
                     }
                     calls[variant.ReferenceName].Add(new CnvCall(variant.ReferenceName, variant.ReferencePosition,
-                        end, cn, refPloidy, passFilter, variant.VariantAlleles.First()));
+                        end, copyNumber, refPloidy, passFilter, variant.VariantAlleles.First()));
                 }
             }
             return calls;
@@ -584,8 +588,11 @@ namespace EvaluateCNV
         {
             foreach (var call in calls)
             {
-                // any truth entries not in ploidy regions are considered diploid
+                // any entries not in ploidy regions are considered diploid
                 int refPloidy = TryGetPloidyForCall(call, ploidyRegions, out var ploidyRegion) ? ploidyRegion.Ploidy : 2;
+                if (call.RefPloidy.HasValue && call.RefPloidy.Value != refPloidy)
+                    Console.Error.WriteLine(
+                        $"call '{call}' had GT field with unexpected reference ploidy '{call.RefPloidy}'. From provided ploidy information expected '{refPloidy}'");
                 yield return new CnvCall(call.Chr, call.Start, call.End, call.CN, refPloidy, call.PassFilter, call.AltAllele);
             }
         }
@@ -593,36 +600,41 @@ namespace EvaluateCNV
         private static bool TryGetPloidyForCall(CnvCall call, List<PloidyInterval> ploidyRegions,
             out PloidyInterval ploidyRegion)
         {
-            foreach (var currentPloidyRegion in ploidyRegions)
-            {
-                // interval must be completely contained within the ploidy region	
-                if (call.Start >= currentPloidyRegion.Start && call.End <= currentPloidyRegion.End)
-                {
-
-                    ploidyRegion = currentPloidyRegion;
-                    return true;
-                }
-            }
-            // majority of the variant falls into ploidy region
+            int totalOverlap = 0;
+            (int maxOverlap, PloidyInterval ploidyIntervalMaxOverlap) = (0, new PloidyInterval(call.Chr));
             foreach (var currentPloidyRegion in ploidyRegions)
             {
                 // for now assign variant that overlaps several ploidy regions to the one with the highest overlap 
                 int overlapStart = Math.Max(call.Start, currentPloidyRegion.Start);
                 int overlapEnd = Math.Min(call.End, currentPloidyRegion.End);
-                if (overlapStart >= overlapEnd) continue;
-                double overlapRatio = (overlapEnd - overlapStart) / (double)call.Length;
-                if (overlapRatio > 0.5 && call.RefPloidy.HasValue)
+                int overlap = overlapEnd - overlapStart;
+                if (overlap <= 0) continue;
+                Console.Error.WriteLine(
+                    $"call '{call}' partially overlaps reference ploidy {currentPloidyRegion.Ploidy} region '{currentPloidyRegion}'. The reference ploidy region with majority base overlap will be used.");
+                totalOverlap += overlap;
+                if (overlap > maxOverlap)
                 {
-                    ploidyRegion = currentPloidyRegion;
-                    return true;
+                    maxOverlap = overlap;
+                    ploidyIntervalMaxOverlap = currentPloidyRegion;
                 }
             }
-            ploidyRegion = null;
-            var refPloidy = 2;
-            if (call.RefPloidy.HasValue && call.RefPloidy.Value != refPloidy)
-                throw new IlluminaException(
-                    $"call '{call}' had unexpected reference ploidy '{call.RefPloidy}'. From provided ploidy information expected '{refPloidy}'");
-            return false;
+
+            var diploidOverlap = call.Length - totalOverlap;
+            if (diploidOverlap > maxOverlap)
+            {
+                Console.Error.WriteLine(
+                    $"call '{call}' has majority overlap with reference ploidy 2 region.");
+                ploidyRegion = null;
+                return false;
+            }
+
+            if (maxOverlap != call.Length)
+            {
+                Console.Error.WriteLine(
+                    $"call '{call}' has majority overlap with reference ploidy {ploidyIntervalMaxOverlap.Ploidy} region: {ploidyIntervalMaxOverlap}");
+            }
+            ploidyRegion = ploidyIntervalMaxOverlap;
+            return true;
         }
     }
 }
