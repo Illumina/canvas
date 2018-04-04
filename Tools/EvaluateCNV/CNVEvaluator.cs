@@ -217,7 +217,6 @@ namespace EvaluateCNV
                         throw new IlluminaException($"Could not determine reference ploidy for call '{call}'. Please provide ploidy information via command line option.");
                     int refPloidy = interval.ReferenceCopyNumber ?? call.RefPloidy.Value;
                     int CN = call.CN;
-                    if (CN < 0 || call.End < 0) continue; // Not a CNV call, apparently
                     if (call.AltAllele == "." && optionsSkipDiploid) continue;
 
                     if (CN > MaxCn) CN = MaxCn;
