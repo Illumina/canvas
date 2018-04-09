@@ -22,10 +22,19 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" />
 
   <Target Name="CanvasSNVCopyTargetBuild" AfterTargets="Build">
-    <Exec Command="robocopy /MIR $(TargetDir) $(MSBuildThisFileDirectory)..\Canvas\bin\$(Platform)\$(Configuration)\$(TargetFramework)\$(PackageId) /XD publish || if %ERRORLEVEL% LSS 8 exit 0" />
+    <ItemGroup>
+      <CanvasSNVAssets Include="$(TargetDir)**\*" Exclude="$(TargetDir)publish\**\*" />
+    </ItemGroup>
+
+    <Copy SourceFiles="@(CanvasSNVAssets)" DestinationFiles="@(CanvasSNVAssets->'$(MSBuildThisFileDirectory)..\Canvas\bin\$(Platform)\$(Configuration)\$(TargetFramework)\$(PackageId)\%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="false" />
   </Target>
+
   <Target Name="CanvasSNVCopyTargetPublish" AfterTargets="Publish">
-    <Exec Command="robocopy /MIR $(ProjectDir)$(PublishDir) $(MSBuildThisFileDirectory)..\Canvas\bin\$(Platform)\$(Configuration)\$(TargetFramework)\publish\$(PackageId)  || if %ERRORLEVEL% LSS 8 exit 0" />
+    <ItemGroup>
+      <CanvasSNVAssets Include="$(ProjectDir)$(PublishDir)**\*" />
+    </ItemGroup>
+
+    <Copy SourceFiles="@(CanvasSNVAssets)" DestinationFiles="@(CanvasSNVAssets->'$(MSBuildThisFileDirectory)..\Canvas\bin\$(Platform)\$(Configuration)\$(TargetFramework)\publish\$(PackageId)\%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="false" />
   </Target>
 
   <ItemGroup>

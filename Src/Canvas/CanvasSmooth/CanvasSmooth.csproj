@@ -23,12 +23,21 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" />
 
   <Target Name="CanvasSmoothCopyTargetBuild" AfterTargets="Build">
-    <Exec Command="robocopy /MIR $(TargetDir) $(MSBuildThisFileDirectory)..\Canvas\bin\$(Platform)\$(Configuration)\$(TargetFramework)\$(PackageId) /XD publish || if %ERRORLEVEL% LSS 8 exit 0" />
+    <ItemGroup>
+      <CanvasSmoothAssets Include="$(TargetDir)**\*" Exclude="$(TargetDir)publish\**\*" />
+    </ItemGroup>
+
+    <Copy SourceFiles="@(CanvasSmoothAssets)" DestinationFiles="@(CanvasSmoothAssets->'$(MSBuildThisFileDirectory)..\Canvas\bin\$(Platform)\$(Configuration)\$(TargetFramework)\$(PackageId)\%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="false" />
   </Target>
+
   <Target Name="CanvasSmoothCopyTargetPublish" AfterTargets="Publish">
-    <Exec Command="robocopy /MIR $(ProjectDir)$(PublishDir) $(MSBuildThisFileDirectory)..\Canvas\bin\$(Platform)\$(Configuration)\$(TargetFramework)\publish\$(PackageId) || if %ERRORLEVEL% LSS 8 exit 0" />
+    <ItemGroup>
+      <CanvasSmoothAssets Include="$(ProjectDir)$(PublishDir)**\*" />
+    </ItemGroup>
+
+    <Copy SourceFiles="@(CanvasSmoothAssets)" DestinationFiles="@(CanvasSmoothAssets->'$(MSBuildThisFileDirectory)..\Canvas\bin\$(Platform)\$(Configuration)\$(TargetFramework)\publish\$(PackageId)\%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="false" />
   </Target>
-  
+
   <ItemGroup>
     <ProjectReference Include="..\CanvasCommon\CanvasCommon.csproj" />
   </ItemGroup>

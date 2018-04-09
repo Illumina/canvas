@@ -22,10 +22,19 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" />
 
   <Target Name="CanvasCleanCopyTargetBuild" AfterTargets="Build">
-    <Exec Command="robocopy /MIR $(TargetDir) $(MSBuildThisFileDirectory)..\Canvas\bin\$(Platform)\$(Configuration)\$(TargetFramework)\$(PackageId) /XD publish || if %ERRORLEVEL% LSS 8 exit 0" />
+    <ItemGroup>
+      <CanvasCleanAssets Include="$(TargetDir)**\*" Exclude="$(TargetDir)publish\**\*" />
+    </ItemGroup>
+
+    <Copy SourceFiles="@(CanvasCleanAssets)" DestinationFiles="@(CanvasCleanAssets->'$(MSBuildThisFileDirectory)..\Canvas\bin\$(Platform)\$(Configuration)\$(TargetFramework)\$(PackageId)\%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="false" />
   </Target>
+
   <Target Name="CanvasCleanCopyTargetPublish" AfterTargets="Publish">
-    <Exec Command="robocopy /MIR $(ProjectDir)$(PublishDir) $(MSBuildThisFileDirectory)..\Canvas\bin\$(Platform)\$(Configuration)\$(TargetFramework)\publish\$(PackageId)  || if %ERRORLEVEL% LSS 8 exit 0" />
+    <ItemGroup>
+      <CanvasCleanAssets Include="$(ProjectDir)$(PublishDir)**\*" />
+    </ItemGroup>
+
+    <Copy SourceFiles="@(CanvasCleanAssets)" DestinationFiles="@(CanvasCleanAssets->'$(MSBuildThisFileDirectory)..\Canvas\bin\$(Platform)\$(Configuration)\$(TargetFramework)\publish\$(PackageId)\%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="false" />
   </Target>
 
   <ItemGroup>

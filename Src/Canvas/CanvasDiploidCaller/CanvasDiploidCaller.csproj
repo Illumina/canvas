@@ -22,10 +22,19 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" />
 
   <Target Name="CanvasDiploidCallerCopyTargetBuild" AfterTargets="Build">
-    <Exec Command="robocopy /MIR $(TargetDir) $(MSBuildThisFileDirectory)..\Canvas\bin\$(Platform)\$(Configuration)\$(TargetFramework)\$(PackageId) /XD publish || if %ERRORLEVEL% LSS 8 exit 0" />
+    <ItemGroup>
+      <CanvasDiploidCallerAssets Include="$(TargetDir)**\*" Exclude="$(TargetDir)publish\**\*" />
+    </ItemGroup>
+
+    <Copy SourceFiles="@(CanvasDiploidCallerAssets)" DestinationFiles="@(CanvasDiploidCallerAssets->'$(MSBuildThisFileDirectory)..\Canvas\bin\$(Platform)\$(Configuration)\$(TargetFramework)\$(PackageId)\%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="false" />
   </Target>
+
   <Target Name="CanvasDiploidCallerCopyTargetPublish" AfterTargets="Publish">
-    <Exec Command="robocopy /MIR $(ProjectDir)$(PublishDir) $(MSBuildThisFileDirectory)..\Canvas\bin\$(Platform)\$(Configuration)\$(TargetFramework)\publish\$(PackageId)  || if %ERRORLEVEL% LSS 8 exit 0" />
+    <ItemGroup>
+      <CanvasDiploidCallerAssets Include="$(ProjectDir)$(PublishDir)**\*" />
+    </ItemGroup>
+
+    <Copy SourceFiles="@(CanvasDiploidCallerAssets)" DestinationFiles="@(CanvasDiploidCallerAssets->'$(MSBuildThisFileDirectory)..\Canvas\bin\$(Platform)\$(Configuration)\$(TargetFramework)\publish\$(PackageId)\%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="false" />
   </Target>
 
   <ItemGroup>

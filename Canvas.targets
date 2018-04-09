@@ -1,16 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-  <!--<ItemGroup>
-    <CanvasLibs Include="$(MSBuildThisFileDirectory)Canvas\**\*" />
-    <None Include="@(CanvasLibs)">
-      <Link>Canvas\%(RecursiveDir)%(FileName)%(Extension)</Link>
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-  </ItemGroup>-->
   <Target Name="CanvasCopyTargetBuild" AfterTargets="Build">
-    <Exec Command="robocopy /MIR $(MSBuildThisFileDirectory)Canvas $(TargetDir)Canvas || if %ERRORLEVEL% LSS 8 exit 0"/>
+    <ItemGroup>
+      <CanvasAssets Include="$(MSBuildThisFileDirectory)Canvas\**\*" />
+    </ItemGroup>
+
+    <Copy SourceFiles="@(CanvasAssets)" DestinationFiles="@(CanvasAssets->'$(ProjectDir)$(PublishDir)Canvas\%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="false" />
   </Target>
+
   <Target Name="CanvasCopyTargetPublish" AfterTargets="Publish">
-    <Exec Command="robocopy /MIR $(MSBuildThisFileDirectory)Canvas $(ProjectDir)$(PublishDir)Canvas || if %ERRORLEVEL% LSS 8 exit 0"/>
+    <ItemGroup>
+      <CanvasAssets Include="$(MSBuildThisFileDirectory)Canvas\**\*" />
+    </ItemGroup>
+
+    <Copy SourceFiles="@(CanvasAssets)" DestinationFiles="@(CanvasAssets->'$(TargetDir)Canvas\%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="false" />
   </Target>
 </Project>
