@@ -20,13 +20,23 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" />
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" />
-  
+
   <Target Name="CanvasPedigreeCallerCopyTargetBuild" AfterTargets="Build">
-    <Exec Command="robocopy /MIR $(TargetDir) $(MSBuildThisFileDirectory)..\Canvas\bin\$(Platform)\$(Configuration)\$(TargetFramework)\$(PackageId) /XD publish || if %ERRORLEVEL% LSS 8 exit 0" />
+    <ItemGroup>
+      <CanvasPedigreeCallerAssets Include="$(TargetDir)**\*" Exclude="$(TargetDir)publish\**\*" />
+    </ItemGroup>
+
+    <Copy SourceFiles="@(CanvasPedigreeCallerAssets)" DestinationFiles="@(CanvasPedigreeCallerAssets->'$(MSBuildThisFileDirectory)..\Canvas\bin\$(Platform)\$(Configuration)\$(TargetFramework)\$(PackageId)\%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="false" />
   </Target>
+
   <Target Name="CanvasPedigreeCallerCopyTargetPublish" AfterTargets="Publish">
-    <Exec Command="robocopy /MIR $(ProjectDir)$(PublishDir) $(MSBuildThisFileDirectory)..\Canvas\bin\$(Platform)\$(Configuration)\$(TargetFramework)\publish\$(PackageId)  || if %ERRORLEVEL% LSS 8 exit 0" />
+    <ItemGroup>
+      <CanvasPedigreeCallerAssets Include="$(ProjectDir)$(PublishDir)**\*" />
+    </ItemGroup>
+
+    <Copy SourceFiles="@(CanvasPedigreeCallerAssets)" DestinationFiles="@(CanvasPedigreeCallerAssets->'$(MSBuildThisFileDirectory)..\Canvas\bin\$(Platform)\$(Configuration)\$(TargetFramework)\publish\$(PackageId)\%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="false" />
   </Target>
+
   <ItemGroup>
     <ProjectReference Include="..\CanvasCommon\CanvasCommon.csproj" />
   </ItemGroup>
