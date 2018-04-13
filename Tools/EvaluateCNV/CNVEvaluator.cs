@@ -211,6 +211,13 @@ namespace EvaluateCNV
                 int knownCn = interval.Cn;
                 if (knownCn > MaxCn) knownCn = MaxCn;
 
+                int thisIntervalBasesTruePositive = 0;
+                int thisIntervalBasesTrueNegative = 0;
+                int thisIntervalBasesFalsePositive = 0;
+                int thisIntervalBasesFalseNegative = 0;
+                int thisIntervalBasesNoCall = interval.Length;
+                int thisIntervalBasesExcluded = 0;
+
                 foreach (CnvCall call in callsThisChromosome)
                 {
                     if (!call.RefPloidy.HasValue)
@@ -235,10 +242,16 @@ namespace EvaluateCNV
                             int excludeOverlapEnd = Math.Min(excludeInterval.End, overlapEnd);
                             if (excludeOverlapStart >= excludeOverlapEnd) continue;
                             excludeIntervalBases += excludeOverlapEnd - excludeOverlapStart;
+                            thisIntervalBasesExcluded += excludeOverlapEnd - excludeOverlapStart;
                             overlapBases -= excludeOverlapEnd - excludeOverlapStart;
                             // if majority of the region is in exclude intervals, don't consider any overlap
                             if (overlapBases / Math.Max(excludeOverlapEnd - excludeOverlapStart, 1) < 0.1)
+                            {
+                                thisIntervalBasesExcluded += overlapBases;
+                                excludeIntervalBases += overlapBases;
                                 overlapBases = 0;
+                                break;
+                            }
                         }
                     }
 
@@ -248,6 +261,23 @@ namespace EvaluateCNV
                     {
                         totalOverlapBases += overlapBases;
                         baseCounter.BaseCount[knownCn, CN, refPloidy] += overlapBases;
+
+                        if (knownCn == CN)
+                        {
+                            if (CN == refPloidy)
+                                thisIntervalBasesTrueNegative += overlapBases;
+                            else
+                                thisIntervalBasesTruePositive += overlapBases;
+                        }
+                        else
+                        {
+                            if (knownCn == refPloidy)
+                                thisIntervalBasesFalsePositive += overlapBases;
+                            else
+                                thisIntervalBasesFalseNegative += overlapBases;
+                        }
+                        thisIntervalBasesNoCall -= overlapBases;
+                        thisIntervalBasesNoCall -= thisIntervalBasesExcluded;
                     }
 
                     interval.BasesCovered += overlapBases;
@@ -273,6 +303,9 @@ namespace EvaluateCNV
                         }
                     }
                 }
+
+                if (baseCounter.MinSize == 0 && baseCounter.MaxSize > 100000)
+                    Console.WriteLine($"Truth {chromosome}:{interval.Start}-{interval.End} CN={knownCn} base counts TP/TN/FP/FN/NC/EXCL {thisIntervalBasesTruePositive} {thisIntervalBasesTrueNegative} {thisIntervalBasesFalsePositive} {thisIntervalBasesFalseNegative} {thisIntervalBasesNoCall} {thisIntervalBasesExcluded}");
 
                 nonOverlapBases -= (totalOverlapBases + excludeIntervalBases);
 
