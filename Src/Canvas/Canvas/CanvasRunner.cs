@@ -72,7 +72,7 @@ namespace Canvas
             if (_customParameters.ContainsKey("CanvasBin"))
             {
                 string beforeFirstOption;
-                var options = Isas.Framework.Settings.CommandOptionsUtilities.GetCommandOptions(_customParameters["CanvasBin"], out beforeFirstOption);
+                var options = Canvas.CommandOptionsUtilities.GetCommandOptions(_customParameters["CanvasBin"], out beforeFirstOption);
                 foreach (var option in options)
                 {
                     if (option.Key != "-m" && option.Key != "--mode")
@@ -80,7 +80,7 @@ namespace Canvas
                     mode = CanvasCommon.Utilities.ParseCanvasCoverageMode(option.Value.TrimStart('=').Trim());
                 }
                 // remove mode from custom parameters
-                _customParameters["CanvasBin"] = Isas.Framework.Settings.CommandOptionsUtilities.MergeCommandLineOptions(_customParameters["CanvasBin"], "#m #mode");
+                _customParameters["CanvasBin"] = Canvas.CommandOptionsUtilities.MergeCommandLineOptions(_customParameters["CanvasBin"], "#m #mode");
             }
         }
 
@@ -89,7 +89,7 @@ namespace Canvas
             if (_customParameters.ContainsKey("CanvasNormalize"))
             {
                 string beforeFirstOption;
-                var options = Isas.Framework.Settings.CommandOptionsUtilities.GetCommandOptions(_customParameters["CanvasNormalize"], out beforeFirstOption);
+                var options = Canvas.CommandOptionsUtilities.GetCommandOptions(_customParameters["CanvasNormalize"], out beforeFirstOption);
                 foreach (var option in options)
                 {
                     if (option.Key != "-m" && option.Key != "--mode")
@@ -97,7 +97,7 @@ namespace Canvas
                     mode = CanvasCommon.Utilities.ParseCanvasNormalizeMode(option.Value.TrimStart('=').Trim());
                 }
                 // remove mode from custom parameters
-                _customParameters["CanvasNormalize"] = Isas.Framework.Settings.CommandOptionsUtilities.MergeCommandLineOptions(_customParameters["CanvasNormalize"], "#m #mode");
+                _customParameters["CanvasNormalize"] = Canvas.CommandOptionsUtilities.MergeCommandLineOptions(_customParameters["CanvasNormalize"], "#m #mode");
             }
         }
 
@@ -318,7 +318,7 @@ namespace Canvas
                     var command = commandLine.ToString();
                     if (_customParameters.ContainsKey("CanvasBin"))
                     {
-                        command = Isas.Framework.Settings.CommandOptionsUtilities.MergeCommandLineOptions(
+                        command = Canvas.CommandOptionsUtilities.MergeCommandLineOptions(
                             command, _customParameters["CanvasBin"], true);
                     }
 
@@ -369,7 +369,7 @@ namespace Canvas
                                 var command = commandLine.ToString();
                                 if (_customParameters.ContainsKey("CanvasBin"))
                                 {
-                                    command = Isas.Framework.Settings.CommandOptionsUtilities.MergeCommandLineOptions(
+                                    command = Canvas.CommandOptionsUtilities.MergeCommandLineOptions(
                                         command, _customParameters["CanvasBin"], true);
                                 }
                                 var job = new JobInfo(executablePath, command, intermediateDataPath.Name);
@@ -440,7 +440,7 @@ namespace Canvas
                     var command = commandLine.ToString();
                     if (_customParameters.ContainsKey("CanvasBin"))
                     {
-                        command = Isas.Framework.Settings.CommandOptionsUtilities.MergeCommandLineOptions(
+                        command = Canvas.CommandOptionsUtilities.MergeCommandLineOptions(
                             command, _customParameters["CanvasBin"], true);
                     }
                     var job = new JobInfo(executablePath, command, binnedPath.Name);
@@ -460,7 +460,7 @@ namespace Canvas
             if (_customParameters.ContainsKey("CanvasBin"))
             {
                 string beforeFirstOption;
-                var options = Isas.Framework.Settings.CommandOptionsUtilities.GetCommandOptions(_customParameters["CanvasBin"], out beforeFirstOption);
+                var options = Canvas.CommandOptionsUtilities.GetCommandOptions(_customParameters["CanvasBin"], out beforeFirstOption);
                 foreach (var option in options)
                 {
                     if (option.Key != "-n" && option.Key != "--bins")
@@ -468,7 +468,7 @@ namespace Canvas
                     path = option.Value.TrimStart('=').Trim();
                 }
                 // remove bins from custom parameters
-                _customParameters["CanvasBin"] = Isas.Framework.Settings.CommandOptionsUtilities.MergeCommandLineOptions(_customParameters["CanvasBin"], "#n #bins");
+                _customParameters["CanvasBin"] = Canvas.CommandOptionsUtilities.MergeCommandLineOptions(_customParameters["CanvasBin"], "#n #bins");
             }
             return path;
         }
@@ -534,7 +534,7 @@ namespace Canvas
             var command = commandLine.ToString();
             if (_customParameters.ContainsKey("CanvasNormalize"))
             {
-                command = Isas.Framework.Settings.CommandOptionsUtilities.MergeCommandLineOptions(
+                command = Canvas.CommandOptionsUtilities.MergeCommandLineOptions(
                     command, _customParameters["CanvasNormalize"], true);
             }
 
@@ -659,7 +659,7 @@ namespace Canvas
                         var command = commandLine.ToString();
                         if (_customParameters.ContainsKey("CanvasSNV"))
                         {
-                            command = Isas.Framework.Settings.CommandOptionsUtilities.MergeCommandLineOptions(
+                            command = Canvas.CommandOptionsUtilities.MergeCommandLineOptions(
                                 command, _customParameters["CanvasSNV"], true);
                         }
 
@@ -918,7 +918,7 @@ namespace Canvas
             var command = commandLine.ToString();
             if (_customParameters.ContainsKey("CanvasPartition"))
             {
-                command = Isas.Framework.Settings.CommandOptionsUtilities.MergeCommandLineOptions
+                command = Canvas.CommandOptionsUtilities.MergeCommandLineOptions
                     (command, _customParameters["CanvasPartition"], true);
             }
             var job = new JobInfo(executablePath, command, partitionedPaths.First().Name);
@@ -950,7 +950,7 @@ namespace Canvas
             var command = commandLine.ToString();
             if (_customParameters.ContainsKey("CanvasPartition"))
             {
-                command = Isas.Framework.Settings.CommandOptionsUtilities.MergeCommandLineOptions(
+                command = Canvas.CommandOptionsUtilities.MergeCommandLineOptions(
                     command, _customParameters["CanvasPartition"], true);
             }
             var job = new JobInfo(executablePath, command, partitionedPath.Name);
@@ -1013,7 +1013,7 @@ namespace Canvas
             var command = commandLine.ToString();
             if (_customParameters.ContainsKey("CanvasClean"))
             {
-                command = Isas.Framework.Settings.CommandOptionsUtilities.MergeCommandLineOptions(
+                command = Canvas.CommandOptionsUtilities.MergeCommandLineOptions(
                     command, _customParameters["CanvasClean"], true);
             }
             var job = new JobInfo(executablePath, command, cleanedPath.Name);
@@ -1064,7 +1064,7 @@ namespace Canvas
             var command = commandLine.ToString();
             if (_customParameters.ContainsKey("CanvasSomaticCaller"))
             {
-                command = Isas.Framework.Settings.CommandOptionsUtilities.MergeCommandLineOptions(
+                command = Canvas.CommandOptionsUtilities.MergeCommandLineOptions(
                     command, _customParameters["CanvasSomaticCaller"], true);
             }
             var job = new JobInfo(executablePath, command, $"SomaticCNV-{callset.SingleSampleCallset.SampleName}");
@@ -1100,7 +1100,7 @@ namespace Canvas
             var command = commandLine.ToString();
             if (_customParameters.ContainsKey("CanvasPedigreeCaller"))
             {
-                command = Isas.Framework.Settings.CommandOptionsUtilities.MergeCommandLineOptions(
+                command = Canvas.CommandOptionsUtilities.MergeCommandLineOptions(
                     command, _customParameters["CanvasPedigreeCaller"], true);
             }
             var job = new JobInfo(executablePath, command, "CanvasPedigreeCaller");
@@ -1150,7 +1150,7 @@ namespace Canvas
             var command = commandLine.ToString();
             if (_customParameters.ContainsKey("CanvasDiploidCaller"))
             {
-                command = Isas.Framework.Settings.CommandOptionsUtilities.MergeCommandLineOptions(
+                command = Canvas.CommandOptionsUtilities.MergeCommandLineOptions(
                     command, _customParameters["CanvasDiploidCaller"], true);
             }
             var job = new JobInfo(executablePath, command, cnvVcfPath.Name);
