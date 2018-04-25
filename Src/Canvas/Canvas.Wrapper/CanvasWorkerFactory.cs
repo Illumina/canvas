@@ -128,7 +128,7 @@ namespace Canvas.Wrapper
 
         internal PloidyCorrector GetPloidyCorrector()
         {
-            return new PloidyCorrector(_logger, _workDoer, new PloidyEstimator(_logger, _workDoer, _executableProcessor.GetExecutable("samtools"), false, _commandManager), _tabixWrapper, true);
+            return new PloidyCorrector(_logger, _workDoer, new PloidyEstimator(_logger, _workDoer, _executableProcessor.GetExecutableFileLocation("samtools").FullName, false, _commandManager), _tabixWrapper, true);
         }
 
         public bool RequireNormalVcf()
@@ -176,7 +176,7 @@ namespace Canvas.Wrapper
 
         internal IFileLocation GetCanvasExe()
         {
-            return new FileLocation(_executableProcessor.GetExecutable("Canvas", "Canvas"));
+            return _executableProcessor.GetExecutableFileLocation("Canvas", "Canvas");
         }
 
         internal ICanvasAnnotationFileProvider GetAnnotationFileProvider()
