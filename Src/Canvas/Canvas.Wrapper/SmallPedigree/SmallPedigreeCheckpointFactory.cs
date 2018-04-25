@@ -101,10 +101,12 @@ namespace Canvas.Wrapper.SmallPedigree
             fileMover.Move(output.CopyNumberBedgraph.TabixIndex, targetCopyNumbedBedgraph.TabixIndex);
 
             // Deprecated files:
+#pragma warning disable CS0618 // Type or member is obsolete
             fileMover.Move(output.CoverageAndVariantFrequencies, SingleSampleCallset.GetCoverageAndVariantFrequencyOutput(stub)); // Used for (non-dynamic) plotting
             fileMover.Move(output.Partitioned, SingleSampleCallset.GetPartitionedPath(stub)); // used by BSVI
             fileMover.Move(output.VariantFrequencies, SingleSampleCallset.GetVfSummaryPath(stub)); // used by BSVI
             fileMover.Move(output.VariantFrequenciesBaf, SingleSampleCallset.GetVfSummaryBafPath(stub)); // used by BSVI
+#pragma warning restore CS0618 // Type or member is obsolete
         }
 
         private IFileLocation GetRuntimeExecutable()
