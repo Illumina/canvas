@@ -11,20 +11,20 @@ namespace Canvas.Wrapper.SmallPedigree
 {
     public class SmallPedigreeCheckpointFactory
     {
-        private readonly IWorkManager _workManager;
+        private readonly IWorkDoer _workDoer;
         private readonly ILogger _logger;
         private readonly ExecutableProcessor _executableProcessor;
         private readonly CanvasWorkerFactory _canvasWorkerFactory;
         private readonly IFileLocation _pedigreefileNameStub;
 
         public SmallPedigreeCheckpointFactory(
-            IWorkManager workManager,
+            IWorkDoer workDoer,
             ILogger logger,
             ExecutableProcessor executableProcessor,
             IFileLocation pedigreefileNameStub,
             CanvasWorkerFactory canvasWorkerFactory)
         {
-            _workManager = workManager;
+            _workDoer = workDoer;
             _logger = logger;
             _executableProcessor = executableProcessor;
             _pedigreefileNameStub = pedigreefileNameStub;
@@ -35,7 +35,7 @@ namespace Canvas.Wrapper.SmallPedigree
         {
             if (!_canvasWorkerFactory.RunCnvDetection()) return new NullSmallPedigreeCheckpoint(_logger);
 
-            CanvasSmallPedigreeWrapper wrapper = new CanvasSmallPedigreeWrapper(_workManager, _logger, _canvasWorkerFactory.GetCanvasExe(),
+            CanvasSmallPedigreeWrapper wrapper = new CanvasSmallPedigreeWrapper(_workDoer, _logger, _canvasWorkerFactory.GetCanvasExe(),
                 GetRuntimeExecutable(), _canvasWorkerFactory.GetAnnotationFileProvider(),
                 _canvasWorkerFactory.GetCanvasSingleSampleInputCommandLineBuilder(_canvasWorkerFactory.GetAnnotationFileProvider()),
                 new CanvasPloidyVcfCreator(_canvasWorkerFactory.GetPloidyCorrector()));
