@@ -61,7 +61,7 @@ namespace Canvas.Wrapper
                 if (_customParameters.ContainsKey(module))
                     options = _customParameters[module];
                 if (moreCustomParameters.ContainsKey(module))
-                    options = Isas.Framework.Settings.CommandOptionsUtilities.MergeCommandLineOptions(options, moreCustomParameters[module]);
+                    options = Canvas.CommandOptionsUtilities.MergeCommandLineOptions(options, moreCustomParameters[module]);
                 string customParameters = module + "," + options;
                 commandLine.Append($" --custom-parameters \"{customParameters}\"");
             }
@@ -70,7 +70,7 @@ namespace Canvas.Wrapper
 
         public StringBuilder MergeCustomCanvasParameters(StringBuilder commandLine)
         {
-            return new StringBuilder(Isas.Framework.Settings.CommandOptionsUtilities.MergeCommandLineOptions(commandLine.ToString(), _customCanvasParameters));
+            return new StringBuilder(Canvas.CommandOptionsUtilities.MergeCommandLineOptions(commandLine.ToString(), _customCanvasParameters));
         }
     }
 }

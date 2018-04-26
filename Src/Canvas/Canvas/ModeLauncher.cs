@@ -25,19 +25,19 @@ namespace Canvas
         private readonly ILogger _logger;
         private readonly ISettings _settings;
         private readonly ICheckpointRunner _checkpointRunner;
-        private readonly IWorkManager _workManager;
         private readonly IWorkDoer _workDoer;
         private readonly IModeRunner _modeRunner;
         private readonly IEnumerable<string> _args;
         private readonly string _version;
         private readonly string _mode;
 
-        public ModeLauncher(ILogger logger, ISettings settings, ICheckpointRunner checkpointRunner, IWorkManager workManager, IWorkDoer workDoer, IModeRunner modeRunner, IEnumerable<string> args, string version, string mode)
+        public ModeLauncher(
+            ILogger logger, ISettings settings, ICheckpointRunner checkpointRunner, 
+            IWorkDoer workDoer, IModeRunner modeRunner, IEnumerable<string> args, string version, string mode)
         {
             _logger = logger;
             _settings = settings;
             _checkpointRunner = checkpointRunner;
-            _workManager = workManager;
             _workDoer = workDoer;
             _modeRunner = modeRunner;
             _args = args;
@@ -59,7 +59,7 @@ namespace Canvas
                 }
                 _logger.Info($"Running Canvas {_mode} {_version}");
                 _logger.Info($"Command-line arguments: {string.Join(" ", _args)}");
-                var runnerFactory = new CanvasRunnerFactory(_logger, _checkpointRunner, _workManager, _workDoer, runtimeExecutable, GetDotnetCommand);
+                var runnerFactory = new CanvasRunnerFactory(_logger, _checkpointRunner, _workDoer, runtimeExecutable, GetDotnetCommand);
                 _modeRunner.Run(runnerFactory);
                 return 0;
             }

@@ -14,7 +14,7 @@ namespace Canvas.Wrapper
     /// </summary>
     public class CanvasTumorNormalEnrichmentCnvCaller : ICanvasCnvCaller<CanvasTumorNormalEnrichmentInput, CanvasOutput>
     {
-        private readonly IWorkManager _workManager;
+        private readonly IWorkDoer _workDoer;
         private readonly ILogger _logger;
         private readonly IFileLocation _canvasExe;
         private readonly ICanvasAnnotationFileProvider _annotationFileProvider;
@@ -24,14 +24,14 @@ namespace Canvas.Wrapper
         private readonly IFileLocation _runtimeExecutable;
 
         public CanvasTumorNormalEnrichmentCnvCaller(
-            IWorkManager workManager,
+            IWorkDoer workDoer,
             ILogger logger,
             IFileLocation canvasExe, IFileLocation runtimeExecutable,
             ICanvasAnnotationFileProvider annotationFileProvider,
-            ICanvasSingleSampleInputCommandLineBuilder singleSampleInputCommandLineBuilder, CanvasEnrichmentInputCreator<CanvasTumorNormalEnrichmentInput> enrichmentInputCreator, 
+            ICanvasSingleSampleInputCommandLineBuilder singleSampleInputCommandLineBuilder, CanvasEnrichmentInputCreator<CanvasTumorNormalEnrichmentInput> enrichmentInputCreator,
               CanvasPloidyVcfCreator canvasPloidyVcfCreator)
         {
-            _workManager = workManager;
+            _workDoer = workDoer;
             _logger = logger;
             _canvasExe = canvasExe;
             _annotationFileProvider = annotationFileProvider;
@@ -99,14 +99,9 @@ namespace Canvas.Wrapper
 
             commandLine.Append(_singleSampleInputCommandLineBuilder.GetCustomParameters());
             commandLine = _singleSampleInputCommandLineBuilder.MergeCustomCanvasParameters(commandLine);
-            UnitOfWork singleSampleJob = new UnitOfWork
-            {
-                ExecutablePath = _runtimeExecutable.FullName,
-                CommandLine = _canvasExe + " " + commandLine,
-                LoggingStub = "Canvas_" + sampleId,
-            };
-            _workManager.DoWorkSingleThread(singleSampleJob);
-            return GetCanvasOutput(sampleId, sampleSandbox);
+
+            var job = new JobInfo(_runtimeExecutable.FullName, _canvasExe + " " + commandLine, "Canvas_" + sampleId);
+            return _workDoer.DoWork(WorkResourceRequest.CreateExact(1, 8), job, GetCanvasOutput(sampleId, sampleSandbox)).Await();
         }
 
         private void AddPloidyVcf(StringBuilder commandLine, string optionName, CanvasTumorNormalEnrichmentInput input, string sampleId, IDirectoryLocation sampleSandbox)

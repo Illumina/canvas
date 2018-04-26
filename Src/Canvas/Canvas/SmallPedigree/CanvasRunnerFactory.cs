@@ -17,17 +17,15 @@ namespace Canvas.SmallPedigree
     {
         private readonly ILogger _logger;
         private readonly ICheckpointRunner _checkpointRunner;
-        private readonly IWorkManager _workManager;
         private readonly IWorkDoer _workDoer;
         private readonly IFileLocation _runtimeExecutable;
         private readonly Func<string, ICommandFactory> _runtimeCommandPrefix;
 
-        public CanvasRunnerFactory(ILogger logger, ICheckpointRunner checkpointRunner, IWorkManager workManager,
+        public CanvasRunnerFactory(ILogger logger, ICheckpointRunner checkpointRunner,
             IWorkDoer workDoer, IFileLocation runtimeExecutable, Func<string, ICommandFactory> runtimeCommandPrefix)
         {
             _logger = logger;
             _checkpointRunner = checkpointRunner;
-            _workManager = workManager;
             _workDoer = workDoer;
             _runtimeExecutable = runtimeExecutable;
             _runtimeCommandPrefix = runtimeCommandPrefix;
@@ -43,7 +41,7 @@ namespace Canvas.SmallPedigree
             var tabixWrapper = TabixWrapperFactory.GetTabixWrapper(_logger, _workDoer, commandManager);
             var bAlleleBedGraphWriter = new BAlleleBedGraphWriter(new BgzfBedGraphWriter(new RoundingBedGraphWriter(new BedGraphWriterFacade(), 4), tabixWrapper));
 
-            return new CanvasRunner(_logger, _workManager, _workDoer, _checkpointRunner, _runtimeExecutable, _runtimeCommandPrefix, isSomatic, coverageMode, countsPerBin, bAlleleBedGraphWriter, customParameters, canvasFolder.FullName);
+            return new CanvasRunner(_logger, _workDoer, _checkpointRunner, _runtimeExecutable, _runtimeCommandPrefix, isSomatic, coverageMode, countsPerBin, bAlleleBedGraphWriter, customParameters, canvasFolder.FullName);
         }
     }
 }

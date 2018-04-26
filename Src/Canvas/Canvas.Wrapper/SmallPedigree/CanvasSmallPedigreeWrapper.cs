@@ -17,7 +17,7 @@ namespace Canvas.Wrapper.SmallPedigree
     /// </summary>
     public class CanvasSmallPedigreeWrapper
     {
-        private readonly IWorkManager _workManager;
+        private readonly IWorkDoer _workDoer;
         private readonly ILogger _logger;
         private readonly IFileLocation _canvasExe;
         private readonly ICanvasAnnotationFileProvider _annotationFileProvider;
@@ -26,14 +26,14 @@ namespace Canvas.Wrapper.SmallPedigree
         private readonly IFileLocation _runtimeExecutable;
 
         public CanvasSmallPedigreeWrapper(
-            IWorkManager workManager,
+            IWorkDoer workDoer,
             ILogger logger,
             IFileLocation canvasExe, IFileLocation runtimeExecutable,
             ICanvasAnnotationFileProvider annotationFileProvider,
             ICanvasSingleSampleInputCommandLineBuilder singleSampleInputCommandLineBuilder,
             CanvasPloidyVcfCreator canvasPloidyVcfCreator)
         {
-            _workManager = workManager;
+            _workDoer = workDoer;
             _logger = logger;
             _canvasExe = canvasExe;
             _annotationFileProvider = annotationFileProvider;
@@ -108,14 +108,8 @@ namespace Canvas.Wrapper.SmallPedigree
             if (pedigreeId.IsNullOrEmpty())
                 pedigreeId = input.Samples.First().Key.Id;
 
-            var singleSampleJob = new UnitOfWork()
-            {
-                ExecutablePath = _runtimeExecutable.FullName,
-                CommandLine = _canvasExe + " " + commandLine,
-                LoggingStub = "Canvas_" + pedigreeId,
-            };
-            _workManager.DoWorkSingleThread(singleSampleJob);
-            return GetCanvasOutput(input.Samples, sampleSandbox);
+            var job = new JobInfo(_runtimeExecutable.FullName, _canvasExe + " " + commandLine, "Canvas_" + pedigreeId);
+            return _workDoer.DoWork(WorkResourceRequest.CreateExact(1,8), job, GetCanvasOutput(input.Samples, sampleSandbox)).Await();
         }
 
         private CanvasSmallPedigreeOutput GetCanvasOutput(SampleSet<CanvasPedigreeSample> pedigreeSamples, IDirectoryLocation sampleSandbox)

@@ -11,20 +11,20 @@ namespace Canvas.Wrapper.SmallPedigree
 {
     public class SmallPedigreeCheckpointFactory
     {
-        private readonly IWorkManager _workManager;
+        private readonly IWorkDoer _workDoer;
         private readonly ILogger _logger;
         private readonly ExecutableProcessor _executableProcessor;
         private readonly CanvasWorkerFactory _canvasWorkerFactory;
         private readonly IFileLocation _pedigreefileNameStub;
 
         public SmallPedigreeCheckpointFactory(
-            IWorkManager workManager,
+            IWorkDoer workDoer,
             ILogger logger,
             ExecutableProcessor executableProcessor,
             IFileLocation pedigreefileNameStub,
             CanvasWorkerFactory canvasWorkerFactory)
         {
-            _workManager = workManager;
+            _workDoer = workDoer;
             _logger = logger;
             _executableProcessor = executableProcessor;
             _pedigreefileNameStub = pedigreefileNameStub;
@@ -35,7 +35,7 @@ namespace Canvas.Wrapper.SmallPedigree
         {
             if (!_canvasWorkerFactory.RunCnvDetection()) return new NullSmallPedigreeCheckpoint(_logger);
 
-            CanvasSmallPedigreeWrapper wrapper = new CanvasSmallPedigreeWrapper(_workManager, _logger, _canvasWorkerFactory.GetCanvasExe(),
+            CanvasSmallPedigreeWrapper wrapper = new CanvasSmallPedigreeWrapper(_workDoer, _logger, _canvasWorkerFactory.GetCanvasExe(),
                 GetRuntimeExecutable(), _canvasWorkerFactory.GetAnnotationFileProvider(),
                 _canvasWorkerFactory.GetCanvasSingleSampleInputCommandLineBuilder(_canvasWorkerFactory.GetAnnotationFileProvider()),
                 new CanvasPloidyVcfCreator(_canvasWorkerFactory.GetPloidyCorrector()));
@@ -101,10 +101,12 @@ namespace Canvas.Wrapper.SmallPedigree
             fileMover.Move(output.CopyNumberBedgraph.TabixIndex, targetCopyNumbedBedgraph.TabixIndex);
 
             // Deprecated files:
+#pragma warning disable CS0618 // Type or member is obsolete
             fileMover.Move(output.CoverageAndVariantFrequencies, SingleSampleCallset.GetCoverageAndVariantFrequencyOutput(stub)); // Used for (non-dynamic) plotting
             fileMover.Move(output.Partitioned, SingleSampleCallset.GetPartitionedPath(stub)); // used by BSVI
             fileMover.Move(output.VariantFrequencies, SingleSampleCallset.GetVfSummaryPath(stub)); // used by BSVI
             fileMover.Move(output.VariantFrequenciesBaf, SingleSampleCallset.GetVfSummaryBafPath(stub)); // used by BSVI
+#pragma warning restore CS0618 // Type or member is obsolete
         }
 
         private IFileLocation GetRuntimeExecutable()

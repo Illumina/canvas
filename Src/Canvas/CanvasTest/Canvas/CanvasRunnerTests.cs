@@ -21,7 +21,6 @@ namespace CanvasTest.Canvas
         public void GetExecutablePath_test()
         {
             var logger = Substitute.For<ILogger>();
-            var workManager = Substitute.For<IWorkManager>();
             var workDoer = Substitute.For<IWorkDoer>();
             var checkpointRunner = Substitute.For<ICheckpointRunner>();
             Func<string, ICommandFactory> runtimePrefix = component => Substitute.For<ICommandFactory>();
@@ -32,7 +31,7 @@ namespace CanvasTest.Canvas
             int countsPerBin = 0;
             string canvasFolder = @"C:\path\to\Canvas\"; 
             var bAlleleBedGraphWriter = Substitute.For<IBAlleleBedGraphWriter>();
-            var canvasRunner = new CanvasRunner(logger, workManager, workDoer, checkpointRunner, runtimeExecutable, runtimePrefix, isSomatic, coverageMode, countsPerBin, bAlleleBedGraphWriter, null, canvasFolder);
+            var canvasRunner = new CanvasRunner(logger, workDoer, checkpointRunner, runtimeExecutable, runtimePrefix, isSomatic, coverageMode, countsPerBin, bAlleleBedGraphWriter, null, canvasFolder);
             string prefix = "something before ";
             var commandLineBuilder = new StringBuilder(prefix);
             string canvasExecutableStub = "CanvasBin";
