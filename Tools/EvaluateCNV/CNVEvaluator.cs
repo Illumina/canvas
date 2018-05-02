@@ -232,6 +232,7 @@ namespace EvaluateCNV
                     int overlapEnd = Math.Min(call.End, interval.End);
                     if (overlapStart >= overlapEnd) continue;
                     int overlapBases = overlapEnd - overlapStart;
+                    int thisCallBasesExcluded = 0;
                     // We've got an overlap interval.  Kill off some bases from this interval, if it happens
                     // to overlap with an excluded interval:
                     if (_cnvChecker.ExcludeIntervals.ContainsKey(chr))
@@ -242,12 +243,14 @@ namespace EvaluateCNV
                             int excludeOverlapEnd = Math.Min(excludeInterval.End, overlapEnd);
                             if (excludeOverlapStart >= excludeOverlapEnd) continue;
                             excludeIntervalBases += excludeOverlapEnd - excludeOverlapStart;
-                            thisIntervalBasesExcluded += excludeOverlapEnd - excludeOverlapStart;
+                            thisCallBasesExcluded += excludeOverlapEnd - excludeOverlapStart;
                             overlapBases -= excludeOverlapEnd - excludeOverlapStart;
                             // if majority of the region is in exclude intervals, don't consider any overlap
+                            // N.B.: the denominator here looks dubious -- why compare overlap bases to the excluded interval overlap size,
+                            // rather than, say, the size of the original truth interval?  Or the length of the overlap of the current CNV?
                             if (overlapBases / Math.Max(excludeOverlapEnd - excludeOverlapStart, 1) < 0.1)
                             {
-                                thisIntervalBasesExcluded += overlapBases;
+                                thisCallBasesExcluded += overlapBases;
                                 excludeIntervalBases += overlapBases;
                                 overlapBases = 0;
                                 break;
@@ -277,7 +280,8 @@ namespace EvaluateCNV
                                 thisIntervalBasesFalseNegative += overlapBases;
                         }
                         thisIntervalBasesNoCall -= overlapBases;
-                        thisIntervalBasesNoCall -= thisIntervalBasesExcluded;
+                        thisIntervalBasesNoCall -= thisCallBasesExcluded;
+                        thisIntervalBasesExcluded += thisCallBasesExcluded;
                     }
 
                     interval.BasesCovered += overlapBases;
