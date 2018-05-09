@@ -7,9 +7,9 @@ Canvas is used as the copy number caller in the Isaac Whole Genome Sequencing wo
 
 Canvas is written in C# and runs either under a recent version of Mono (e.g. 3.10.0), .NET 4.5.1 and .NET Core 1.1.
 
-For more information about Canvas and the algorithms it uses see the [software design document][SDD].
+For more information about Canvas and the algorithms it uses see the [software design description][SDD].
 
-[SDD]:SoftwareDesignDocument.pdf
+[SDD]:SoftwareDesignDescription.pdf
 
 License
 -------
