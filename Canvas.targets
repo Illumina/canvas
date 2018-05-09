@@ -1,18 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-  <Target Name="CanvasCopyTargetBuild" AfterTargets="Build">
-    <ItemGroup>
-      <CanvasAssets Include="$(MSBuildThisFileDirectory)Canvas\**\*" />
-    </ItemGroup>
 
-    <Copy SourceFiles="@(CanvasAssets)" DestinationFiles="@(CanvasAssets->'$(ProjectDir)$(PublishDir)Canvas\%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="false" />
+  <ItemGroup>
+    <CanvasAssets Include="$(MSBuildThisFileDirectory)Canvas\**\*" />
+  </ItemGroup>
+
+  <Target Name="CanvasCopyTargetBuild" AfterTargets="Build">
+    <Copy SourceFiles="@(CanvasAssets)" 
+          DestinationFiles="@(CanvasAssets->'$(TargetDir)Canvas\%(RecursiveDir)%(Filename)%(Extension)')" 
+          SkipUnchangedFiles="true" />
   </Target>
 
   <Target Name="CanvasCopyTargetPublish" AfterTargets="Publish">
-    <ItemGroup>
-      <CanvasAssets Include="$(MSBuildThisFileDirectory)Canvas\**\*" />
-    </ItemGroup>
-
-    <Copy SourceFiles="@(CanvasAssets)" DestinationFiles="@(CanvasAssets->'$(TargetDir)Canvas\%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="false" />
+    <Copy SourceFiles="@(CanvasAssets)" 
+          DestinationFiles="@(CanvasAssets->'$(PublishDir)Canvas\%(RecursiveDir)%(Filename)%(Extension)')" 
+          SkipUnchangedFiles="true" />
   </Target>
 </Project>
