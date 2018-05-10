@@ -169,6 +169,8 @@ namespace CanvasCommon
             foreach (string chr in intervalByChromosome.Keys)
                 alleleCountsByChromosome[chr] = new List<Balleles>(intervalByChromosome[chr].Select(counter => new Balleles()));
 
+            int index = 0;
+            string prevChr = "";
             while (true)
             {
                 string fileLine = variantFrequencyFileReader.ReadLine();
@@ -176,6 +178,11 @@ namespace CanvasCommon
                 if (fileLine.Length == 0 || fileLine[0] == '#') continue; // Skip headers
                 var columns = fileLine.Split('\t');
                 string chr = columns[0];
+                if (chr != prevChr)
+                {
+                    prevChr = chr;
+                    index = 0;
+                }
                 int position = int.Parse(columns[1]); // 1-based (from the input VCF to Canvas SNV)
                 int countRef = int.Parse(columns[4]);
                 int countAlt = int.Parse(columns[5]);
@@ -183,9 +190,19 @@ namespace CanvasCommon
                     continue;
 
                 if (countRef + countAlt < minCounts) continue;
-                // as both lists are sorted linear search should achieve an average O(log(n)) complexity
-                int index = intervalByChromosome[chr].FindIndex(interval => interval.Start <= position && interval.End > position);
-                if (index == -1) continue;
+
+                // search forward for the right bin
+                while (index < intervalByChromosome[chr].Count)
+                {
+                    if (intervalByChromosome[chr][index].End > position)
+                        break;
+                    ++index;
+                }
+                if (index >= intervalByChromosome[chr].Count)
+                    continue;
+                if (intervalByChromosome[chr][index].Start > position)
+                    continue;
+
                 alleleCountsByChromosome[chr][index].Add(new Ballele(position, countRef, countAlt));
             }
             return alleleCountsByChromosome;
