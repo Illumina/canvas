@@ -22,7 +22,7 @@
     </dependencies>
   </metadata>
   <files>
-    <file src="Src\Canvas\Canvas\bin\x64\$configuration$\netcoreapp1.1\publish\**" target="build/Canvas" />
+    <file src="Src\Canvas\Canvas\bin\x64\$configuration$\netcoreapp2.0\publish\**" target="build/Canvas" />
     <file src="Canvas.targets" target="build/Canvas.targets" />
     <file src="Src\Canvas\Canvas.Wrapper\bin\x64\$configuration$\netcoreapp2.0\Canvas.Wrapper.dll" target="lib\netstandard2.0" />
     <file src="Src\Canvas\Canvas.Wrapper\bin\x64\$configuration$\netcoreapp2.0\Canvas.dll" target="lib\netstandard2.0" />
