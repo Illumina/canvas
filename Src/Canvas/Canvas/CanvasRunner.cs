@@ -226,7 +226,7 @@ namespace Canvas
 
             // read bams 
             var intermediateDataPathsByBamPath = GetIntermediateBinnedFilesByBamPath(
-                callset.AnalysisDetails.GenomeMetadata, callset.SingleSampleCallset.Bam.IsPairedEnd, 
+                callset.AnalysisDetails.GenomeMetadata, callset.SingleSampleCallset.Bam.IsPairedEnd,
                 new List<string>() { callset.SingleSampleCallset.SampleName }, callset.AnalysisDetails.TempDirectory,
                 canvasReferencePath, canvasBedPath, bamPaths, callset.IsEnrichment ? callset.TempManifestPath : null);
 
@@ -243,7 +243,7 @@ namespace Canvas
             }
 
             // derive Canvas bins
-            var bamToBinned = BamToBinned(callset.SingleSampleCallset.SampleOutputFolder, callset.SingleSampleCallset.Bam.IsPairedEnd, 
+            var bamToBinned = BamToBinned(callset.SingleSampleCallset.SampleOutputFolder, callset.SingleSampleCallset.Bam.IsPairedEnd,
                 new List<string>() { callset.SingleSampleCallset.SampleName }, canvasReferencePath, canvasBedPath, bamPaths, binSize, intermediateDataPathsByBamPath);
 
             var tumorBinnedPath = bamToBinned[callset.SingleSampleCallset.Bam.BamFile]; // binned tumor sample
@@ -423,7 +423,7 @@ namespace Canvas
 
             var work = Enumerable.Range(0, bamPaths.Count).SelectWork(
                 WorkResourceRequest.CreateExact(8, 25), // CanvasBin itself is multi-threaded
-                (bamIndex, resources, jobLauncher) => 
+                (bamIndex, resources, jobLauncher) =>
                 {
                     var bamPath = bamPaths[bamIndex];
                     var binnedPath = callset.SingleSampleCallset.SampleOutputFolder.GetFileLocation($"{callset.SingleSampleCallset.SampleName}_{bamIndex}.binned");
@@ -449,7 +449,7 @@ namespace Canvas
                     return (bamPath, binnedPath);
                 }).ToList();
 
-            var bamToBinned = _workDoer.DoWork(work).Await().ToDictionary(); 
+            var bamToBinned = _workDoer.DoWork(work).Await().ToDictionary();
 
             return NormalizeCoverage(callset, bamToBinned, ploidyVcfPath);
         }
@@ -643,8 +643,8 @@ namespace Canvas
             var work = genomeMetadata.Contigs()
                 .Where(chromosome => chromosome.Type == GenomeMetadata.SequenceType.Allosome || chromosome.IsAutosome())
                 .SelectWork(
-                    WorkResourceRequest.CreateExact(1, 10), 
-                    (chromosome, resources, jobLauncher) => 
+                    WorkResourceRequest.CreateExact(1, 10),
+                    (chromosome, resources, jobLauncher) =>
                     {
                         StringBuilder commandLine = new StringBuilder();
                         var executablePath = GetExecutablePath("CanvasSNV", commandLine);
@@ -802,7 +802,7 @@ namespace Canvas
 
             var canvasSnvPath = await canvasSnvTask;
             // CanvasPartition:
-            var partitionedPath = _checkpointRunner.RunCheckpoint("CanvasPartition", () => InvokeCanvasPartition(callset, canvasCleanOutput.CleanedPath, canvasBedPath, canvasSnvPath));
+            var partitionedPath = _checkpointRunner.RunCheckpoint("CanvasPartition", () => InvokeCanvasPartition(callset, canvasCleanOutput.CleanedPath, canvasBedPath, canvasSnvPath, ploidyVcfPath));
 
             // Intersect bins with manifest
             if (callset.IsEnrichment)
@@ -922,10 +922,10 @@ namespace Canvas
                     (command, _customParameters["CanvasPartition"], true);
             }
             var job = new JobInfo(executablePath, command, partitionedPaths.First().Name);
-            return _workDoer.DoWork(WorkResourceRequest.CreateExact(1,8), job, partitionedPaths).Await();
+            return _workDoer.DoWork(WorkResourceRequest.CreateExact(1, 8), job, partitionedPaths).Await();
         }
 
-        private IFileLocation InvokeCanvasPartition(CanvasCallset callset, IFileLocation cleanedPath, string canvasBedPath, IFileLocation canvasSnvPath)
+        private IFileLocation InvokeCanvasPartition(CanvasCallset callset, IFileLocation cleanedPath, string canvasBedPath, IFileLocation canvasSnvPath, string ploidyVcfPath)
         {
             StringBuilder commandLine = new StringBuilder();
             string executablePath = GetExecutablePath("CanvasPartition", commandLine);
@@ -935,6 +935,7 @@ namespace Canvas
             var partitionedPath = callset.SingleSampleCallset.PartitionedPath;
             commandLine.AppendFormat("-o \"{0}\" ", partitionedPath);
             commandLine.Append($" -r \"{callset.AnalysisDetails.WholeGenomeFastaFolder}\" ");
+            commandLine.Append($" -p \"{ploidyVcfPath}\" ");
             if (!_isSomatic)
                 commandLine.AppendFormat(" -g");
             else
@@ -1146,7 +1147,7 @@ namespace Canvas
             }
             if (callset.SingleSampleCallset.IsDbSnpVcf) // a dbSNP VCF file is used in place of the normal VCF file
                 commandLine.AppendFormat("-d ");
-            
+
             var command = commandLine.ToString();
             if (_customParameters.ContainsKey("CanvasDiploidCaller"))
             {

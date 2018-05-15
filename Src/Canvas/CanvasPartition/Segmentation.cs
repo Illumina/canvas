@@ -89,7 +89,7 @@ namespace CanvasPartition
             if (breakpoints.Count >= 2 && segmentsLength > 10)
             {
                 if (breakpoints[0] != 0)
-                    breakpoints.Insert(0,0);
+                    breakpoints.Insert(0, 0);
                 startBreakpointsPos.Add(breakpoints[0]);
                 endBreakpointPos.Add(breakpoints[1] - 1);
                 lengthSeg.Add(breakpoints[1] - 1);
@@ -142,7 +142,7 @@ namespace CanvasPartition
                     for (int index = 0; index < CoverageInfo.StartByChr[chr].Length; index++)
                     {
                         vafByChr[chr].Add(new List<double>());
-                        intervalsByChromosome[chr].Add(new BedInterval(Convert.ToInt32(CoverageInfo.StartByChr[chr][index]), 
+                        intervalsByChromosome[chr].Add(new BedInterval(Convert.ToInt32(CoverageInfo.StartByChr[chr][index]),
                             Convert.ToInt32(CoverageInfo.EndByChr[chr][index])));
                     }
                 }
@@ -162,7 +162,7 @@ namespace CanvasPartition
                     var index = 0;
                     foreach (var bin in vafByChr[chr])
                     {
-                        if (bin.Count > 0) 
+                        if (bin.Count > 0)
                             VafByChr[chr].Add(new VafContainingBins(index, bin.Average()));
                         index++;
                     }
@@ -218,7 +218,8 @@ namespace CanvasPartition
         }
 
 
-        public void WriteCanvasPartitionResults(string outPath, SegmentationInput.GenomeSegmentationResults segmentationResults)
+        public void WriteCanvasPartitionResults(string outPath, SegmentationInput.GenomeSegmentationResults segmentationResults,
+            PloidyInfo referencePloidy)
         {
             var starts = new Dictionary<string, bool>();
             var stops = new Dictionary<string, bool>();
@@ -253,8 +254,7 @@ namespace CanvasPartition
                     {
                         uint start = CoverageInfo.StartByChr[chr][pos];
                         uint end = CoverageInfo.EndByChr[chr][pos];
-                        string key = chr + ":" + start;
-                        bool newSegment = IsNewSegment(starts, key, excludeIntervals, previousBinEnd, end, start, ref excludeIndex);
+                        bool newSegment = IsNewSegment(starts, chr, excludeIntervals, previousBinEnd, end, start, ref excludeIndex, referencePloidy);
                         if (newSegment) segmentNum++;
                         writer.WriteLine(string.Format($"{chr}\t{start}\t{end}\t{CoverageInfo.CoverageByChr[chr][pos]}\t{segmentNum}"));
                         previousBinEnd = end;
@@ -263,9 +263,10 @@ namespace CanvasPartition
             }
         }
 
-        private bool IsNewSegment(Dictionary<string, bool> starts, string key, List<SampleGenomicBin> excludeIntervals, uint previousBinEnd,
-            uint end, uint start, ref int excludeIndex)
+        private bool IsNewSegment(Dictionary<string, bool> starts, string chr, List<SampleGenomicBin> excludeIntervals, uint previousBinEnd,
+            uint end, uint start, ref int excludeIndex, PloidyInfo referencePloidy)
         {
+            string key = chr + ":" + start;
             bool newSegment = starts.ContainsKey(key);
 
             if (excludeIntervals != null)
@@ -284,6 +285,17 @@ namespace CanvasPartition
                 && !newSegment)
             {
                 newSegment = true;
+            }
+            // also start new segment if reference ploidy changes between end of last and end of this;
+            // note that Interval takes 1-based positions, so using "previousBinEnd" effectively
+            // includes the last base of the previous bin, allowing for a change at the bin boundary
+            if (!newSegment && referencePloidy != null)
+            {
+                var refIval = new ReferenceInterval(chr, new Interval(previousBinEnd > 0 ? previousBinEnd : 1, end));
+                if (!referencePloidy.IsUniformReferencePloidy(refIval))
+                {
+                    newSegment = true;
+                }
             }
             return newSegment;
         }
