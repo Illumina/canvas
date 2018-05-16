@@ -70,7 +70,6 @@ namespace Canvas.Wrapper
             return new FileLocation(_executableProcessor.GetEnvironmentExecutablePath("dotnet"));
         }
 
-        [Obsolete("ICanvasWorker needs to be refactored")]
         public ICanvasWorker<CanvasEnrichmentInput, CanvasEnrichmentOutput> GetCanvasEnrichmentWorker()
         {
             var runtimeExecutable = GetRuntimeExecutable();
@@ -91,7 +90,7 @@ namespace Canvas.Wrapper
         {
             return GetDbSnpVcfPath() != null;
         }
-        [Obsolete("ICanvasWorker needs to be refactored")]
+
         public ICanvasWorker<CanvasTumorNormalWgsInput, CanvasOutput> GetCanvasTumorNormalWorker()
         {
             var annotationProvider = GetAnnotationFileProvider();
@@ -107,7 +106,6 @@ namespace Canvas.Wrapper
             return GetCanvasWorker(canvasCnvCaller, CanvasOutput.GetFromStub);
         }
 
-        [Obsolete("ICanvasWorker needs to be refactored")]
         public ICanvasWorker<CanvasTumorNormalEnrichmentInput, CanvasOutput> GetCanvasTumorNormalEnrichmentWorker()
         {
             var annotationProvider = GetAnnotationFileProvider();
@@ -167,7 +165,6 @@ namespace Canvas.Wrapper
             }
         }
 
-        [System.Obsolete("Naming conventions are obsolete")]
         private ICanvasWorker<TCanvasInput, TCanvasOutput> GetCanvasWorker<TCanvasInput, TCanvasOutput>(ICanvasCnvCaller<TCanvasInput, TCanvasOutput> canvasCnvCaller, Func<IFileLocation, TCanvasOutput> getFromStub) where TCanvasInput : ICanvasCheckpointInput where TCanvasOutput : ICanvasOutput
         {
             if (!RunCnvDetection(_detectCnvDefault)) return new NullCanvasWorker<TCanvasInput, TCanvasOutput>();

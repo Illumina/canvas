@@ -9,14 +9,12 @@ namespace Canvas.Wrapper
 {
     public delegate IFileLocation SampleStubNamingConvention(SampleInfo sample);
 
-    [System.Obsolete("ICanvasWorker needs to be refactored")]
     public interface ICanvasWorker<TCanvasInput, TCanvasOutput> where TCanvasOutput : ICanvasOutput
     {
         SampleSet<TCanvasOutput> Run(SampleSet<TCanvasInput> inputs, SampleStubNamingConvention sampleStubNamingConvention, ICheckpointRunner checkpointRunner);
         Task<SampleSet<TCanvasOutput>> RunAsync(SampleSet<TCanvasInput> inputs, SampleStubNamingConvention sampleStubNamingConvention, ICheckpointRunner checkpointRunner);
     }
 
-    [Obsolete("ICanvasWorker needs to be refactored")]
     public class CanvasWorker<TCanvasInput, TCanvasOutput> : ICanvasWorker<TCanvasInput, TCanvasOutput> where TCanvasInput : ICanvasCheckpointInput where TCanvasOutput : ICanvasOutput
     {
         private readonly ICanvasCheckpoint<TCanvasInput, TCanvasOutput> _canvasCheckpoint;
@@ -36,7 +34,6 @@ namespace Canvas.Wrapper
         }
     }
 
-    [Obsolete("ICanvasWorker needs to be refactored")]
     public class NullCanvasWorker<TCanvasInput, TCanvasOutput> : ICanvasWorker<TCanvasInput, TCanvasOutput> where TCanvasOutput : ICanvasOutput
     {
         public Task<SampleSet<TCanvasOutput>> RunAsync(SampleSet<TCanvasInput> inputs, SampleStubNamingConvention sampleStubNamingConvention, ICheckpointRunner checkpointRunner)
