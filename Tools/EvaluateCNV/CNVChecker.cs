@@ -169,7 +169,6 @@ namespace EvaluateCNV
 
         protected static Dictionary<string, List<CNInterval>> LoadKnownCNVCF(string oracleVcfPath)
         {
-            bool stripChr = false;
             var knownCn = new Dictionary<string, List<CNInterval>>();
             // Load our "oracle" of known copy numbers:
             int count = 0;
@@ -180,62 +179,77 @@ namespace EvaluateCNV
                     string fileLine = reader.ReadLine();
                     if (fileLine == null) break;
                     if (fileLine.Length == 0 || fileLine[0] == '#') continue;
-                    string[] bits = fileLine.Split('\t');
-                    string chromosome = bits[0];
-                    if (stripChr) chromosome = chromosome.Replace("chr", "");
-                    if (!knownCn.ContainsKey(chromosome)) knownCn[chromosome] = new List<CNInterval>();
-                    CNInterval interval = new CNInterval(chromosome)
-                    {
-                        Start = int.Parse(bits[1]),
-                        Cn = -1
-                    };
-                    string[] infoBits = bits[7].Split(';');
-                    foreach (string subBit in infoBits)
-                    {
-                        if (subBit.StartsWith("CN="))
-                        {
-                            float tempCn = float.Parse(subBit.Substring(3));
-                            if (subBit.EndsWith(".5"))
-                            {
-                                interval.Cn = (int)Math.Round(tempCn + 0.1); // round X.5 up to X+1
-                            }
-                            else
-                            {
-                                interval.Cn = (int)Math.Round(tempCn); // Round off
-                            }
-                        }
-                        if (subBit.StartsWith("END="))
-                        {
-                            interval.End = int.Parse(subBit.Substring(4));
-                        }
-                    }
-                    // Parse CN from Canvas output:
-                    if (bits.Length > 8)
-                    {
-                        string[] subBits = bits[8].Split(':');
-                        string[] subBits2 = bits[9].Split(':');
-                        for (int subBitIndex = 0; subBitIndex < subBits.Length; subBitIndex++)
-                        {
-                            if (subBits[subBitIndex] == "CN")
-                            {
-                                interval.Cn = int.Parse(subBits2[subBitIndex]);
-                            }
-                        }
-                    }
-                    if (interval.End == 0 || interval.Cn < 0)
-                    {
-                        Console.WriteLine("Error - bogus record!");
-                        Console.WriteLine(fileLine);
-                    }
-                    else
-                    {
-                        knownCn[chromosome].Add(interval);
-                        count++;
-                    }
+                    var interval = ParseCnInterval(oracleVcfPath, fileLine);
+
+                    if (!knownCn.ContainsKey(interval.Chromosome)) knownCn[interval.Chromosome] = new List<CNInterval>();
+                    knownCn[interval.Chromosome].Add(interval);
+                    count++;
                 }
             }
             Console.WriteLine(">>>Loaded {0} known-CN intervals", count);
             return knownCn;
+        }
+
+        private static CNInterval ParseCnInterval(string oracleVcfPath, string fileLine)
+        {
+            try
+            {
+                return ParseCnInterval(fileLine);
+            }
+            catch (Exception e)
+            {
+                throw new ArgumentException($"Invalid VCF entry in '{oracleVcfPath}': '{fileLine}'", e);
+            }
+        }
+
+        private static CNInterval ParseCnInterval(string fileLine)
+        {
+            string[] bits = fileLine.Split('\t');
+            string chromosome = bits[0];
+            CNInterval interval = new CNInterval(chromosome)
+            {
+                Start = int.Parse(bits[1]),
+                Cn = -1
+            };
+            string[] infoBits = bits[7].Split(';');
+            foreach (string subBit in infoBits)
+            {
+                if (subBit.StartsWith("CN="))
+                {
+                    float tempCn = float.Parse(subBit.Substring(3));
+                    if (subBit.EndsWith(".5"))
+                    {
+                        interval.Cn = (int)Math.Round(tempCn + 0.1); // round X.5 up to X+1
+                    }
+                    else
+                    {
+                        interval.Cn = (int)Math.Round(tempCn); // Round off
+                    }
+                }
+                if (subBit.StartsWith("END="))
+                {
+                    interval.End = int.Parse(subBit.Substring(4));
+                }
+            }
+            // Parse CN from Canvas output:
+            if (bits.Length > 8)
+            {
+                string[] subBits = bits[8].Split(':');
+                string[] subBits2 = bits[9].Split(':');
+                for (int subBitIndex = 0; subBitIndex < subBits.Length; subBitIndex++)
+                {
+                    if (subBits[subBitIndex] == "CN")
+                    {
+                        interval.Cn = int.Parse(subBits2[subBitIndex]);
+                    }
+                }
+            }
+            if (interval.End == 0 || interval.Cn < 0)
+            {
+                throw new ArgumentException("Invalid record. End cannot be 0 and CN must be >= 0");
+            }
+
+            return interval;
         }
 
         protected void LoadRegionsOfInterest(string bedPath)
