@@ -25,8 +25,7 @@ namespace CanvasPartition
 
     class SegmentationInput
     {
-        public string CoverageMetricsFile { get; }
-        public string ReferenceFolder { get; }
+        public string EvennessMetricFile { get; }
 
 
         #region Members
@@ -47,9 +46,9 @@ namespace CanvasPartition
 
         public class GenomeSegmentationResults
         {
-            public IDictionary<string, SegmentationInput.Segment[]> SegmentByChr;
+            public IDictionary<string, Segment[]> SegmentByChr;
 
-            public GenomeSegmentationResults(IDictionary<string, SegmentationInput.Segment[]> segmentByChr)
+            public GenomeSegmentationResults(IDictionary<string, Segment[]> segmentByChr)
             {
                 this.SegmentByChr = segmentByChr;
             }
@@ -63,9 +62,9 @@ namespace CanvasPartition
         }
 
         public SegmentationInput(string inputBinPath, string inputVafPath, string forbiddenBedPath, int maxInterBinDistInSegment,
-            string referenceFolder, string coverageMetricsFile, ILogger logger, string dataType = "logratio")
+            string referenceFolder, string evennessMetricFile, ILogger logger, string dataType = "logratio")
         {
-            CoverageMetricsFile = coverageMetricsFile;
+            EvennessMetricFile = evennessMetricFile;
             _logger = logger;
             InputBinPath = inputBinPath;
             InputVafPath = inputVafPath;

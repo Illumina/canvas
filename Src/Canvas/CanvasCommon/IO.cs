@@ -1,10 +1,8 @@
 ﻿using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.IO;
 using Illumina.Common;
-using Illumina.Common.Collections;
 using Illumina.Common.FileSystem;
 using Isas.Framework.Logging;
 using Isas.SequencingFiles;
@@ -82,72 +80,44 @@ namespace CanvasCommon
             return binsByChrom;
         }
 
-        public enum CoverageMetric
+        private const string LocalSdMetricName = "localSD";
+        public static void WriteLocalSdMetricToTextFile(string filePath, double localSd)
         {
-            localSD,
-            evenness,
-        }
-        // write localSD metric
-        public static void WriteCoverageMetricToTextFile(string outfile, double coverageMetric, CoverageMetric coverageMetricType)
-        {
-            using (FileStream stream = new FileStream(outfile, FileMode.Append, FileAccess.Write))
-            using (StreamWriter writer = new StreamWriter(stream))
-            {
-                writer.Write($"#{coverageMetricType.ToString()}\t" + coverageMetric);
-                writer.WriteLine();
-            }
+            WriteCoverageMetricToTextFile(filePath, LocalSdMetricName, localSd);
         }
 
-        // read localSD metric
-        public static double ReadCoverageMetricFromTextFile(string infile, CoverageMetric coverageMetricType)
+        private const string EvennessMetricName = "evenness";
+        public static void WriteEvennessMetricToTextFile(string filePath, double evenness)
         {
-            double coverageMetric = -1.0;
-            using (FileStream stream = new FileStream(infile, FileMode.Open, FileAccess.Read))
-            using (StreamReader reader = new StreamReader(stream))
-            {
-                string row;
-
-                while ((row = reader.ReadLine()) != null)
-                {
-                    int tabs = (int)row.Count(ch => ch == '\t');
-                    if (tabs > 0)
-                    {
-                        string[] fields = row.Split('\t');
-                        string localSDstring = fields[0];
-                        if (localSDstring == $"#{coverageMetricType}")
-                            coverageMetric = Convert.ToDouble(fields[1]);
-                    }
-                }
-            }
-
-            return coverageMetric;
+            WriteCoverageMetricToTextFile(filePath, EvennessMetricName, evenness);
         }
 
-        public static Dictionary<string, string> GetChromosomeAlternativeNames(IEnumerable<string> keys)
+        private static void WriteCoverageMetricToTextFile(string filePath, string metricName, double metricValue)
         {
-            Dictionary<string, string> results = new Dictionary<string, string>();
-            foreach (string key in keys)
-            {
-                if (key.StartsWith("chr"))
-                {
-                    results[key.Replace("chr", "")] = key;
-                }
-                else
-                {
-                    results["chr" + key] = key;
-                }
-            }
-            return results;
+            File.WriteAllLines(filePath, $"#{metricName}\t{metricValue}".Yield());
         }
 
-        public static HashSet<string> LoadChromosomeNames(string referenceFolder)
+        public static double ReadLocalSdMetricFromTextFile(string filePath)
         {
-            GenomeMetadata genomeMetaData = new GenomeMetadata();
-            genomeMetaData.Deserialize(new FileLocation(Path.Combine(referenceFolder, "GenomeSize.xml")));
-            var chromosomeNames = new HashSet<string>();
-            foreach (var chromosome in genomeMetaData.Contigs())
-                chromosomeNames.Add(chromosome.Name.ToLowerInvariant());
-            return chromosomeNames;
+            return ReadCoverageMetricFromTextFile(filePath, LocalSdMetricName);
+        }
+
+        public static double ReadEvennessMetricFromTextFile(string filePath)
+        {
+            return ReadCoverageMetricFromTextFile(filePath, EvennessMetricName);
+        }
+
+        private static double ReadCoverageMetricFromTextFile(string filePath, string metricName)
+        {
+            var lines = File.ReadAllLines(filePath);
+            var metricLine = lines.Where(line => line.StartsWith($"#{metricName}")).ToList();
+            if (!metricLine.Any())
+                throw new ArgumentException($"Did not find {metricName} metric in file '{filePath}'");
+            if (metricLine.Count > 1)
+                throw new ArgumentException($"Found multiple {metricName} metrics in file '{filePath}'");
+
+            var metricValue = metricLine.Single().Split('\t')[1];
+            return double.Parse(metricValue);
         }
 
         public static Dictionary<string, List<Balleles>> ReadFrequenciesWrapper(ILogger logger,

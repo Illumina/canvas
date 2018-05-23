@@ -7,14 +7,11 @@ using System.Threading.Tasks;
 using Canvas.SmallPedigree;
 using Canvas.Visualization;
 using CanvasCommon;
-using CanvasCommon.Visualization;
 using Illumina.Common;
 using Illumina.Common.FileSystem;
-using Isas.ClassicBioinfoTools.Tabix;
 using Isas.Framework.Checkpointing;
 using Isas.Framework.Checkpointing.Legacy;
 using Isas.Framework.Logging;
-using Isas.Framework.Settings;
 using Isas.Framework.Utilities;
 using Isas.Framework.WorkManagement;
 using Isas.Framework.WorkManagement.CommandBuilding;
@@ -741,15 +738,27 @@ namespace Canvas
             }
         }
 
-        public class CanvasCleanOutput
+        private class CanvasCleanOutput
         {
-            public IFileLocation CleanedPath { get; set; }
-            public IFileLocation FfpePath { get; set; }
+            public IFileLocation CleanedPath { get; }
+            public IFileLocation LocalSdMetricFile { get; }
 
-            public CanvasCleanOutput(IFileLocation cleanedPath, IFileLocation ffpePath)
+            public CanvasCleanOutput(IFileLocation cleanedPath, IFileLocation localSdMetricFile)
             {
                 CleanedPath = cleanedPath;
-                FfpePath = ffpePath;
+                LocalSdMetricFile = localSdMetricFile;
+            }
+        }
+
+        private class CanvasPartitionOutput
+        {
+            public IFileLocation PartitionedPath { get; }
+            public IFileLocation EvennessMetricFile { get; }
+
+            public CanvasPartitionOutput(IFileLocation partitionedPath, IFileLocation evennessMetricFile)
+            {
+                PartitionedPath = partitionedPath;
+                EvennessMetricFile = evennessMetricFile;
             }
         }
 
@@ -802,13 +811,15 @@ namespace Canvas
 
             var canvasSnvPath = await canvasSnvTask;
             // CanvasPartition:
-            var partitionedPath = _checkpointRunner.RunCheckpoint("CanvasPartition", () => InvokeCanvasPartition(callset, canvasCleanOutput.CleanedPath, canvasBedPath, canvasSnvPath, ploidyVcfPath));
+            var canvasPartitionOutput = _checkpointRunner.RunCheckpoint("CanvasPartition", () => InvokeCanvasPartition(callset, canvasCleanOutput.CleanedPath, canvasBedPath, canvasSnvPath, ploidyVcfPath));
 
             // Intersect bins with manifest
             if (callset.IsEnrichment)
             {
-                partitionedPath = _checkpointRunner.RunCheckpoint("Intersect bins with manifest",
-                    () => IntersectBinsWithTargetedRegions(callset, partitionedPath));
+                var tempParititonOutput = canvasPartitionOutput;
+                var partitionedPath = _checkpointRunner.RunCheckpoint("Intersect bins with manifest",
+                    () => IntersectBinsWithTargetedRegions(callset, tempParititonOutput.PartitionedPath));
+                canvasPartitionOutput = new CanvasPartitionOutput(partitionedPath, canvasPartitionOutput.EvennessMetricFile);
             }
 
             // Variant calling
@@ -816,11 +827,11 @@ namespace Canvas
             {
                 if (_isSomatic)
                 {
-                    RunSomaticCalling(partitionedPath, callset, canvasBedPath, ploidyVcfPath, canvasCleanOutput.FfpePath, canvasSnvPath);
+                    RunSomaticCalling(canvasPartitionOutput.PartitionedPath, callset, canvasBedPath, ploidyVcfPath, canvasCleanOutput.LocalSdMetricFile, canvasPartitionOutput.EvennessMetricFile, canvasSnvPath);
                 }
                 else
                 {
-                    RunGermlineCalling(partitionedPath, callset, ploidyVcfPath, canvasSnvPath);
+                    RunGermlineCalling(canvasPartitionOutput.PartitionedPath, callset, ploidyVcfPath, canvasSnvPath);
                 }
             });
         }
@@ -925,7 +936,7 @@ namespace Canvas
             return _workDoer.DoWork(WorkResourceRequest.CreateExact(1, 8), job, partitionedPaths).Await();
         }
 
-        private IFileLocation InvokeCanvasPartition(CanvasCallset callset, IFileLocation cleanedPath, string canvasBedPath, IFileLocation canvasSnvPath, string ploidyVcfPath)
+        private CanvasPartitionOutput InvokeCanvasPartition(CanvasCallset callset, IFileLocation cleanedPath, string canvasBedPath, IFileLocation canvasSnvPath, string ploidyVcfPath)
         {
             StringBuilder commandLine = new StringBuilder();
             string executablePath = GetExecutablePath("CanvasPartition", commandLine);
@@ -936,6 +947,7 @@ namespace Canvas
             commandLine.AppendFormat("-o \"{0}\" ", partitionedPath);
             commandLine.Append($" -r \"{callset.AnalysisDetails.WholeGenomeFastaFolder}\" ");
             commandLine.Append($" -p \"{ploidyVcfPath}\" ");
+            IFileLocation evennessMetricFile = null;
             if (!_isSomatic)
                 commandLine.AppendFormat(" -g");
             else
@@ -943,20 +955,20 @@ namespace Canvas
                 if (!callset.IsEnrichment || callset.Manifest.Regions.Count > 2000)
                 {
                     var tempFolder = new DirectoryLocation(callset.SingleSampleCallset.SampleOutputFolder.FullName);
-                    var ffpePath = tempFolder.GetFileLocation("FilterRegions.txt");
-                    commandLine.AppendFormat("-f \"{0}\" ", ffpePath);
+                    evennessMetricFile = tempFolder.GetFileLocation("EvennessMetric.txt");
+                    commandLine.AppendFormat($"--{CommandLineOptions.EvennessMetricFile} \"{evennessMetricFile}\" ");
                 }
             }
 
             var command = commandLine.ToString();
             if (_customParameters.ContainsKey("CanvasPartition"))
             {
-                command = Canvas.CommandOptionsUtilities.MergeCommandLineOptions(
+                command = CommandOptionsUtilities.MergeCommandLineOptions(
                     command, _customParameters["CanvasPartition"], true);
             }
             var job = new JobInfo(executablePath, command, partitionedPath.Name);
 
-            return _workDoer.DoWork(WorkResourceRequest.CreateExact(1, 8), job, partitionedPath).Await();
+            return _workDoer.DoWork(WorkResourceRequest.CreateExact(1, 8), job, new CanvasPartitionOutput(partitionedPath, evennessMetricFile)).Await();
         }
 
         /// <summary>
@@ -992,15 +1004,15 @@ namespace Canvas
             commandLine.AppendFormat("-o \"{0}\" ", cleanedPath);
             commandLine.AppendFormat("-g");
 
-            IFileLocation ffpePath = null;
+            IFileLocation localSdMetricFile = null;
 
             // TruSight Cancer has 1,737 targeted regions. The cut-off 2000 is somewhat arbitrary.
             // TruSight One has 62,309 targeted regions.
             // Nextera Rapid Capture v1.1 has 411,513 targeted regions.
             if (!callset.IsEnrichment || callset.Manifest.Regions.Count > 2000)
             {
-                ffpePath = tempFolder.GetFileLocation("FilterRegions.txt");
-                commandLine.AppendFormat(" -s -r -f \"{0}\"", ffpePath);
+                localSdMetricFile = tempFolder.GetFileLocation("LocalSdMetric.txt");
+                commandLine.AppendFormat($" -s -r --{CommandLineOptions.LocalSdMetricFile} \"{localSdMetricFile}\"");
             }
             if (callset.IsEnrichment) // manifest
             {
@@ -1018,11 +1030,11 @@ namespace Canvas
                     command, _customParameters["CanvasClean"], true);
             }
             var job = new JobInfo(executablePath, command, cleanedPath.Name);
-            return _workDoer.DoWork(WorkResourceRequest.CreateExact(1, 8), job, new CanvasCleanOutput(cleanedPath, ffpePath)).Await();
+            return _workDoer.DoWork(WorkResourceRequest.CreateExact(1, 8), job, new CanvasCleanOutput(cleanedPath, localSdMetricFile)).Await();
         }
 
-        protected void RunSomaticCalling(IFileLocation partitionedPath, CanvasCallset callset, string canvasBedPath,
-            string ploidyVcfPath, IFileLocation ffpePath, IFileLocation canvasSnvPath)
+        private void RunSomaticCalling(IFileLocation partitionedPath, CanvasCallset callset, string canvasBedPath,
+            string ploidyVcfPath, IFileLocation localSdMetricFile, IFileLocation evennessMetricFile, IFileLocation canvasSnvPath)
         {
 
             // get somatic SNV output:
@@ -1045,17 +1057,31 @@ namespace Canvas
             if (callset.SingleSampleCallset.IsDbSnpVcf) // a dbSNP VCF file is used in place of the normal VCF file
                 commandLine.Append(" -d");
             // get localSD metric:
-            if (ffpePath != null)
+            if (localSdMetricFile != null)
             {
                 // Sanity-check: CanvasClean does not always write this file. 
                 // If it's not present, just carry on:
-                if (ffpePath.Exists)
+                if (localSdMetricFile.Exists)
                 {
-                    commandLine.Append($" -f \"{ffpePath}\"");
+                    commandLine.Append($" --{CommandLineOptions.LocalSdMetricFile} \"{localSdMetricFile}\"");
                 }
                 else
                 {
-                    Logger.Info("Note: SD file not found at '{0}'", ffpePath);
+                    Logger.Info("Note: Local SD metric file not found at '{0}'", localSdMetricFile);
+                }
+            }
+
+            if (evennessMetricFile != null)
+            {
+                // Sanity-check: CanvasClean does not always write this file. 
+                // If it's not present, just carry on:
+                if (evennessMetricFile.Exists)
+                {
+                    commandLine.Append($" --{CommandLineOptions.EvennessMetricFile} \"{evennessMetricFile}\"");
+                }
+                else
+                {
+                    Logger.Info("Note: Evenness metric file not found at '{0}'", evennessMetricFile);
                 }
             }
 

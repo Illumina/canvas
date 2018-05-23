@@ -55,8 +55,8 @@ namespace CanvasPartition
             try
             {
                 double evennessScore = segmentationInput.GetEvennessScore(windowSize);
-                if (!segmentationInput.CoverageMetricsFile.IsNullOrEmpty())
-                    CanvasIO.WriteCoverageMetricToTextFile(segmentationInput.CoverageMetricsFile, evennessScore, CanvasIO.CoverageMetric.evenness);
+                if (!segmentationInput.EvennessMetricFile.IsNullOrEmpty())
+                    CanvasIO.WriteEvennessMetricToTextFile(segmentationInput.EvennessMetricFile, evennessScore);
 
                 useVaf = evennessScore < _parameters.EvennessScoreThreshold;
                 if (useVaf)
