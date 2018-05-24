@@ -44,13 +44,24 @@ namespace CanvasCommon
         public string ToVcfString() => IsPass ? Pass : string.Join(";", FailedFilterTags);
 
 
-        public static string FormatCnvSizeWithSuffix(int size)
+        private static (int Number, string Units) GetHumanReadableCnvSizeThreshold(int size)
         {
-            if (size >= 1000000)
-                return FormatCnvSizeWithSuffix(size / 1000000) + "MB";
-            if (size >= 1000)
-                return FormatCnvSizeWithSuffix(size / 1000) + "KB";
-            return size.ToString();
+            if (size % 1000000 == 0)
+                return (size / 1000000, "Mb");
+            if (size % 1000 == 0)
+                return (size / 1000, "kb");
+            return (size, "bp");
+        }
+
+        public static string GetCnvSizeFilter(int minimumSize)
+        {
+            return GetCnvSizeFilter(minimumSize, out _);
+        }
+
+        public static string GetCnvSizeFilter(int minimumSize, out (int Number, string Units) threshold)
+        {
+            threshold = GetHumanReadableCnvSizeThreshold(minimumSize);
+            return $"L{threshold.Number}{threshold.Units}";
         }
     }
 }

@@ -1,5 +1,4 @@
-﻿using System.Collections.Generic;
-using CanvasCommon;
+﻿using CanvasCommon;
 using Xunit;
 
 namespace CanvasTest
@@ -10,24 +9,24 @@ namespace CanvasTest
         public void FormatCnvSizeWithSuffix_10kb_conversion()
         {
             const int size = 10000;
-            var formattedSize = CanvasFilter.FormatCnvSizeWithSuffix(size);
-            Assert.Equal("10KB", formattedSize);
+            var cnvSizeFilter = CanvasFilter.GetCnvSizeFilter(size);
+            Assert.Equal("L10kb", cnvSizeFilter);
         }
 
         [Fact]
         public void FormatCnvSizeWithSuffix_6mb_conversion()
         {
             const int size = 6000000;
-            var formattedSize = CanvasFilter.FormatCnvSizeWithSuffix(size);
-            Assert.Equal("6MB", formattedSize);
+            var cnvSizeFilter = CanvasFilter.GetCnvSizeFilter(size);
+            Assert.Equal("L6Mb", cnvSizeFilter);
         }
 
         [Fact]
         public void FormatCnvSizeWithSuffix_500bp_conversion()
         {
             const int size = 500;
-            var formattedSize = CanvasFilter.FormatCnvSizeWithSuffix(size);
-            Assert.Equal("500", formattedSize);
+            var cnvSizeFilter = CanvasFilter.GetCnvSizeFilter(size);
+            Assert.Equal("L500bp", cnvSizeFilter);
         }
 
         [Fact]
@@ -42,7 +41,7 @@ namespace CanvasTest
         {
             var filterTags = new[] { "First", "Second", CanvasFilter.Pass };
             var canvasFilter = CanvasFilter.Create(filterTags);
-            Assert.Equal("First;Second" , canvasFilter.ToVcfString());
+            Assert.Equal("First;Second", canvasFilter.ToVcfString());
         }
 
         [Fact]

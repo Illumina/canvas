@@ -76,8 +76,8 @@ namespace CanvasCommon
             writer.WriteLine($"##FILTER=<ID={qualityFilter},Description=\"Quality below {qualityThreshold}\">");
             if (sizeThreshold.HasValue)
             {
-                string sizeFilterValue = CanvasFilter.FormatCnvSizeWithSuffix(sizeThreshold.Value);
-                writer.WriteLine($"##FILTER=<ID=L{sizeFilterValue},Description=\"Length shorter than {sizeFilterValue}\">");
+                string sizeFilterName = CanvasFilter.GetCnvSizeFilter(sizeThreshold.Value, out var sizeFilterThreshold);
+                writer.WriteLine($"##FILTER=<ID={sizeFilterName},Description=\"Length shorter than {sizeFilterThreshold.Number} {sizeFilterThreshold.Units}\">");
             }
             writer.WriteLine("##FILTER=<ID=FailedFT,Description=\"Sample-level filter failed in all the samples\">");
             writer.WriteLine("##INFO=<ID=CIEND,Number=2,Type=Integer,Description=\"Confidence interval around END for imprecise variants\">");
@@ -202,14 +202,14 @@ namespace CanvasCommon
         }
 
         // '.' first, then in numeric order
-        private static int GenotypeToIntMapping(string genotype) =>  genotype == "." ? -1 : int.Parse(genotype);
+        private static int GenotypeToIntMapping(string genotype) => genotype == "." ? -1 : int.Parse(genotype);
 
         private static void WriteFormatAndSampleFields(BgzipOrStreamWriter writer, CanvasSegment[] segments, string[] genotypes, bool reportDQ)
         {
             const string nullValue = ".";
             string formatColumn = "GT:RC:BC:CN:MCC:MCCQ:QS:FT";
             if (reportDQ) formatColumn += ":DQ";
-            var outputFields = new List<string> {formatColumn};
+            var outputFields = new List<string> { formatColumn };
             for (int i = 0; i < segments.Length; i++)
             {
                 var segment = segments[i];
@@ -223,7 +223,7 @@ namespace CanvasCommon
                 }
                 outputFields.Add(sampleColumn);
             }
-            writer.WriteLine("\t"+string.Join("\t",outputFields));
+            writer.WriteLine("\t" + string.Join("\t", outputFields));
         }
 
 
@@ -279,7 +279,7 @@ namespace CanvasCommon
                 var genome = WriteVcfHeader(segments, diploidCoverage, wholeGenomeFastaDirectory, new List<string> { sampleName },
                     extraHeaders, writer, qualityThreshold, denovoQualityThreshold, sizeThreshold);
                 var sampleId = new SampleId(sampleName);
-                var segmentsOfAllSamples = segments.Select(x => new SampleMap<CanvasSegment> {{sampleId, x}});
+                var segmentsOfAllSamples = segments.Select(x => new SampleMap<CanvasSegment> { { sampleId, x } });
                 WriteVariants(segmentsOfAllSamples, new List<PloidyInfo> { ploidy }, genome, writer, isPedigreeInfoSupplied, denovoQualityThreshold);
             }
         }

@@ -52,14 +52,14 @@ namespace CanvasPedigreeCaller
         /// </summary>
         private void FilterExcessivelyShortSegments(ISampleMap<List<CanvasSegment>> segments)
         {
-            string lengthFailTag = "L" + CanvasFilter.FormatCnvSizeWithSuffix(CanvasFilter.SegmentSizeCutoff);
-            
+            string sizeFilter = CanvasFilter.GetCnvSizeFilter(CanvasFilter.SegmentSizeCutoff);
+
             foreach (var segmentList in segments.Values)
             {
                 foreach (var segment in segmentList)
                 {
                     if (segment.Length >= CanvasFilter.SegmentSizeCutoff) continue;
-                    segment.Filter = segment.Filter.AddFilter(lengthFailTag);
+                    segment.Filter = segment.Filter.AddFilter(sizeFilter);
                 }
             }
         }
@@ -470,7 +470,7 @@ namespace CanvasPedigreeCaller
             return -10.0 * Math.Log10(Math.Max(denovoProbability, q60));
         }
 
-        public static bool IsSharedCnv(ISampleMap<Genotype> copyNumberGenotypes, ISampleMap<CanvasSegment> canvasSegments, ISampleMap<SampleMetrics> samplesInfo, List<SampleId> parentIDs, 
+        public static bool IsSharedCnv(ISampleMap<Genotype> copyNumberGenotypes, ISampleMap<CanvasSegment> canvasSegments, ISampleMap<SampleMetrics> samplesInfo, List<SampleId> parentIDs,
             SampleId probandId, int maximumCopyNumber)
         {
             var proband = copyNumberGenotypes[probandId];
@@ -495,10 +495,10 @@ namespace CanvasPedigreeCaller
         /// <param name="probandId"></param>
         /// <param name="maximumCopyNumber"></param>
         /// <returns></returns>
-        public static bool IsSharedCnv(ISampleMap<CanvasSegment> canvasSegments, ISampleMap<SampleMetrics> samplesInfo, List<SampleId> parentIDs, 
+        public static bool IsSharedCnv(ISampleMap<CanvasSegment> canvasSegments, ISampleMap<SampleMetrics> samplesInfo, List<SampleId> parentIDs,
             SampleId probandId, int maximumCopyNumber)
         {
-            int parent1CopyNumber = Math.Min(canvasSegments[parentIDs.First()].CopyNumber, maximumCopyNumber - 1); 
+            int parent1CopyNumber = Math.Min(canvasSegments[parentIDs.First()].CopyNumber, maximumCopyNumber - 1);
             int parent2CopyNumber = Math.Min(canvasSegments[parentIDs.Last()].CopyNumber, maximumCopyNumber - 1);
             int probandCopyNumber = Math.Min(canvasSegments[probandId].CopyNumber, maximumCopyNumber - 1);
             var parent1Segment = canvasSegments[parentIDs.First()];

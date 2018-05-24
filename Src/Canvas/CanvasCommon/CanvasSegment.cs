@@ -1006,7 +1006,7 @@ namespace CanvasCommon
                 if (nextQ >= 0)
                 {
                     // segments[nextIndex] assimilates segments[segmentIndex...nextIndex - 1], in reverse order
-                    for (int tempIndex = nextIndex -1; segmentIndex <= tempIndex; tempIndex--)
+                    for (int tempIndex = nextIndex - 1; segmentIndex <= tempIndex; tempIndex--)
                     {
                         segments[nextIndex].MergeIn(segments[tempIndex]);
                     }
@@ -1067,7 +1067,7 @@ namespace CanvasCommon
         public static void SetFilterForSegments(int qualityFilterThreshold, List<CanvasSegment> segments, int segmentSizeCutoff)
         {
             string qualityFilter = $"q{qualityFilterThreshold}";
-            string sizeFilter = "L" + CanvasFilter.FormatCnvSizeWithSuffix(segmentSizeCutoff);
+            string sizeFilter = CanvasFilter.GetCnvSizeFilter(segmentSizeCutoff);
             foreach (var segment in segments)
             {
                 var filterTags = new List<string>();
