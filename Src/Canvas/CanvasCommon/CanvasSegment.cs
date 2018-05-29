@@ -717,7 +717,7 @@ namespace CanvasCommon
                                 }
                                 for (int i = 0; i < vfDistribution.Length; i++)
                                 {
-                                    vfDistribution[i] = vfDistribution[i] / (float)VF.Count * 100.0f;
+                                    vfDistribution[i] = vfDistribution[i] / VF.Count * 100.0f;
                                     writer.Write("{0:F2}\t", vfDistribution[i]);
                                 }
                             }

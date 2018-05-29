@@ -119,7 +119,7 @@ namespace CanvasCommon
         /// Outputs the copy number calls to a text file.
         /// </summary>
         private static void WriteVariants(IEnumerable<ISampleMap<CanvasSegment>> segmentsOfAllSamples, List<PloidyInfo> ploidies, GenomeMetadata genome,
-            BgzipOrStreamWriter writer, bool isPedigreeInfoSupplied = true, int? denovoQualityThreshold = null)
+            BgzipOrStreamWriter writer, int? denovoQualityThreshold = null)
         {
             var segmentsOfAllSamplesArray = segmentsOfAllSamples.ToArray(); // TODO: not necessary when chrom match logic has been updated
             int nSamples = segmentsOfAllSamplesArray.First().Values.Count();
@@ -139,12 +139,16 @@ namespace CanvasCommon
                                             .ToVcfString();
                     var referenceCopyNumbers = currentSegments.Zip(ploidies,
                         (segment, ploidy) => ploidy?.GetReferenceCopyNumber(segment) ?? 2).ToList();
+                    var isMissingRegionInSample = referenceCopyNumbers.Select(x => x == 0).ToArray();
                     var cnvTypes = new CnvType[nSamples];
                     var sampleSetAlleleCopyNumbers = new int[nSamples][];
                     for (int sampleIndex = 0; sampleIndex < nSamples; sampleIndex++)
                     {
-                        (cnvTypes[sampleIndex], sampleSetAlleleCopyNumbers[sampleIndex]) = currentSegments[sampleIndex]
+                        int[] alleleCopyNumbers;
+                        (cnvTypes[sampleIndex], alleleCopyNumbers) = currentSegments[sampleIndex]
                             .GetCnvTypeAndAlleleCopyNumbers(referenceCopyNumbers[sampleIndex]);
+                        sampleSetAlleleCopyNumbers[sampleIndex] =
+                            isMissingRegionInSample[sampleIndex] ? new []{-1} : alleleCopyNumbers;
                     }
                     var sampleSetCnvType = AssignCnvType(cnvTypes);
                     var (alternateAllele, genotypes) = GetAltAllelesAndGenotypes(sampleSetAlleleCopyNumbers);
@@ -280,7 +284,7 @@ namespace CanvasCommon
                     extraHeaders, writer, qualityThreshold, denovoQualityThreshold, sizeThreshold);
                 var sampleId = new SampleId(sampleName);
                 var segmentsOfAllSamples = segments.Select(x => new SampleMap<CanvasSegment> { { sampleId, x } });
-                WriteVariants(segmentsOfAllSamples, new List<PloidyInfo> { ploidy }, genome, writer, isPedigreeInfoSupplied, denovoQualityThreshold);
+                WriteVariants(segmentsOfAllSamples, new List<PloidyInfo> { ploidy }, genome, writer, denovoQualityThreshold);
             }
         }
 
@@ -291,7 +295,7 @@ namespace CanvasCommon
             {
                 var genome = WriteVcfHeader(segments.Values.First(), diploidCoverage.Average(), wholeGenomeFastaDirectory, sampleNames,
                     extraHeaders, writer, qualityThreshold, denovoQualityThreshold, sizeThreshold);
-                WriteVariants(segments.Zip(), ploidies, genome, writer, isPedigreeInfoSupplied, denovoQualityThreshold);
+                WriteVariants(segments.Zip(), ploidies, genome, writer, denovoQualityThreshold);
             }
         }
     }
