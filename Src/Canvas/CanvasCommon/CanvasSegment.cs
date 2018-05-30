@@ -279,6 +279,7 @@ namespace CanvasCommon
 
         public (CnvType, int[]) GetCnvTypeAndAlleleCopyNumbers(int referenceCopyNumber)
         {
+            if (referenceCopyNumber > 2) throw new ArgumentException("Reference copy number > 2 is not supported");
 
             if (CopyNumber == referenceCopyNumber)
             {

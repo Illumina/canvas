@@ -32,14 +32,16 @@ namespace CanvasTest
                 new[] {1, 1 }, // Ref
                 new[] {0, 1 }, // Loss
                 new[] {1,2}, // Gain
+                new[] {0,3}, // Gain
+                new[] {2,2}, // Gain
                 new [] {0, 2}, // LOH
                 new [] {-1, -1}, // CN=2, MCC null
                 new [] {-1 } // Ploidy == 0
             };
             var (altAlleleString, sampleGenotypes) = CanvasSegmentWriter.GetAltAllelesAndGenotypes(alleleCopyNumbers);
 
-            string[] expectedGenotypes = { "./3", "0/0", "0/1", "0/2", "1/2", "./.", "." };
-            Assert.Equal("<CN0>,<CN2>,<DUP>", altAlleleString);
+            string[] expectedGenotypes = { "./4", "0/0", "0/1", "0/2", "1/3", "2/2","1/2", "./.", "." };
+            Assert.Equal("<CN0>,<CN2>,<CN3>,<DUP>", altAlleleString);
             Assert.Equal(expectedGenotypes, sampleGenotypes);
         }
 
