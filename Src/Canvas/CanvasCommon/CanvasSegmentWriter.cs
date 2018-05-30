@@ -139,16 +139,12 @@ namespace CanvasCommon
                                             .ToVcfString();
                     var referenceCopyNumbers = currentSegments.Zip(ploidies,
                         (segment, ploidy) => ploidy?.GetReferenceCopyNumber(segment) ?? 2).ToList();
-                    var isMissingRegionInSample = referenceCopyNumbers.Select(x => x == 0).ToArray();
                     var cnvTypes = new CnvType[nSamples];
                     var sampleSetAlleleCopyNumbers = new int[nSamples][];
                     for (int sampleIndex = 0; sampleIndex < nSamples; sampleIndex++)
                     {
-                        int[] alleleCopyNumbers;
-                        (cnvTypes[sampleIndex], alleleCopyNumbers) = currentSegments[sampleIndex]
+                        (cnvTypes[sampleIndex], sampleSetAlleleCopyNumbers[sampleIndex]) = currentSegments[sampleIndex]
                             .GetCnvTypeAndAlleleCopyNumbers(referenceCopyNumbers[sampleIndex]);
-                        sampleSetAlleleCopyNumbers[sampleIndex] =
-                            isMissingRegionInSample[sampleIndex] ? new []{-1} : alleleCopyNumbers;
                     }
                     var sampleSetCnvType = AssignCnvType(cnvTypes);
                     var (alternateAllele, genotypes) = GetAltAllelesAndGenotypes(sampleSetAlleleCopyNumbers);
