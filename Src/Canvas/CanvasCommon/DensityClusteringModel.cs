@@ -71,11 +71,11 @@ namespace CanvasCommon
                     // SK: 1-based CluserId v.s. 0-based clusterID??
                     if (segment.ClusterId.HasValue && clusterId + 1 == segment.ClusterId.Value)
                     {
-                        // SK: distane between the segment and corresponding centriod
+                        // SK: distane between the segment and corresponding centroid
                         tmpDistance.Add(GetEuclideanDistance(segment.Coverage, centroidsCoverage[clusterId], segment.Maf, centroidsMafs[clusterId]));
                     }
                 }
-                clusterVariance.Add(tmpDistance.Average()); // SK: variance is the average distance?
+                clusterVariance.Add(tmpDistance.Count > 0 ? tmpDistance.Average() : 0); // SK: variance is the average distance?
             }
             return clusterVariance;
         }

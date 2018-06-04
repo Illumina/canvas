@@ -48,6 +48,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="Accord.MachineLearning" Version="3.8.0" />
     <PackageReference Include="Illumina.Common" Version="6.2.0.419" />
     <PackageReference Include="Isas.Framework" Version="9.0.2.1010" />
     <PackageReference Include="Isas.SequencingFiles" Version="7.0.1.424" />

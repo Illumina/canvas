@@ -74,7 +74,7 @@ namespace CanvasClean
             int significantIQRcounter = 0;
             for (int i = 10; i < 90; i++)
             {
-                if (globalIQR < localIQR[i] * 2f)
+                if (globalIQR * 2f < localIQR[i])
                     significantIQRcounter++;
             }
 

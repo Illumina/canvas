@@ -24,6 +24,12 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" />
 
   <ItemGroup>
+    <Content Include="..\..\..\COPYRIGHT.txt" Link="COPYRIGHT.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\CanvasBin\CanvasBin.csproj" />
     <ProjectReference Include="..\CanvasCommon\CanvasCommon.csproj" />
   </ItemGroup>

@@ -32,7 +32,8 @@ namespace CanvasCommon
     public enum CanvasSomaticClusteringMode
     {
         GaussianMixture,
-        Density
+        Density,
+        MeanShift
     }
 
     public static class Utilities

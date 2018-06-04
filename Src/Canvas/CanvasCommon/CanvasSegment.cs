@@ -54,7 +54,7 @@ namespace CanvasCommon
 
     public class Balleles
     {
-        internal List<Ballele> Range { get; private set; }
+        public List<Ballele> Range { get; private set; }
 
         public Balleles(IEnumerable<Ballele> alleles)
         {

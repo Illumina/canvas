@@ -44,7 +44,7 @@ namespace CanvasSomaticCaller
             float? userPurity = null;
             float? userPloidy = null;
             CanvasCommon.CanvasSomaticClusteringMode somaticClusteringMode =
-                CanvasCommon.CanvasSomaticClusteringMode.Density;
+                CanvasCommon.CanvasSomaticClusteringMode.MeanShift;
             string parameterconfigPath = Path.Combine(Isas.Framework.Utilities.Utilities.GetAssemblyFolder(typeof(Program)),
                 "SomaticCallerParameters.json");
             string qualityScoreConfigPath = Path.Combine(Isas.Framework.Utilities.Utilities.GetAssemblyFolder(typeof(Program)),
