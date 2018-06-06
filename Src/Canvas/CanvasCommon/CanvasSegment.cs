@@ -680,7 +680,7 @@ namespace CanvasCommon
                                     lastIndex = (int)((float)segment.Balleles.Size() * (pointEndPos - segment.Begin) / segment.Length);
                                 }
                                 VF.AddRange(segment.Balleles.Frequencies.Skip(firstIndex).Take(lastIndex - firstIndex));
-                                MAF.AddRange(segment.Balleles.MaxFrequencies.Select(Convert.ToSingle).Skip(firstIndex).Take(lastIndex - firstIndex));
+                                MAF.AddRange(segment.Balleles.MaxFrequencies.Select(maxFs => 1f - Convert.ToSingle(maxFs)).Skip(firstIndex).Take(lastIndex - firstIndex));
                             }
                         }
 
@@ -701,8 +701,7 @@ namespace CanvasCommon
                             writer.Write($"{normalizedCountString}\t");
                             if (MAF.Count >= 10)
                             {
-                                MAF.Sort();
-                                writer.Write("{0}\t", MAF[MAF.Count / 2]);
+                                writer.Write("{0}\t", Utilities.Median(MAF));
                             }
                             else
                             {
