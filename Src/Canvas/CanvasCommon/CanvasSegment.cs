@@ -333,7 +333,7 @@ namespace CanvasCommon
             }
         }
 
-        public int SizeOveralp(CanvasSegment segment)
+        public int SizeOverlap(CanvasSegment segment)
         {
             if (segment.Begin > Begin && segment.End < End)
                 return Length - segment.Length;
@@ -832,7 +832,7 @@ namespace CanvasCommon
                     continue;
                 }
                 // common segment and Canvas segment overlap
-                if (sortedCanvasSegments[canvasSegmentsIndex].SizeOveralp(sortedCommonCnvSegments[commonSegmentsIndex]) > segmentOverlapThreshold)
+                if (sortedCanvasSegments[canvasSegmentsIndex].SizeOverlap(sortedCommonCnvSegments[commonSegmentsIndex]) > segmentOverlapThreshold)
                 {
                     var newSegmentsHaplotype = SplitCanvasSegments(sortedCanvasSegments, sortedCommonCnvSegments, defaultAlleleCountThreshold,
                         ref canvasSegmentsIndex, ref commonSegmentsIndex);

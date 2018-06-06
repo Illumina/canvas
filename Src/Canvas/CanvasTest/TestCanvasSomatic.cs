@@ -36,7 +36,7 @@ namespace CanvasTest
                 }
                 segments.Add(segment);
             }
-            var usable = CanvasSomaticCaller.SomaticCaller.GetUsableSegmentsForModeling(segments, false, 50);
+            var usable = CanvasSomaticCaller.SomaticCaller.GetUsableSegmentsForModeling(segments, false, 50, null);
             Assert.Equal(50, usable.Count);
         }
     }

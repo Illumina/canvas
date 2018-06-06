@@ -27,7 +27,7 @@ namespace CanvasSomaticCaller
         private CoveragePurityModel _model;
         private Dictionary<string, List<SampleGenomicBin>> _excludedIntervals = new Dictionary<string, List<SampleGenomicBin>>();
         private readonly Dictionary<CanvasSegment, double> _heterogeneousSegmentsSignature = new Dictionary<CanvasSegment, double>();
-
+        private List<double> _logFactorial;
 
         // File paths:
         public string TruthDataPath;
@@ -64,6 +64,7 @@ namespace CanvasSomaticCaller
         public SomaticCaller(ILogger logger)
         {
             _logger = logger;
+            _logFactorial = new List<double> { 0, 0 }; // log of factorial of 0 and 1
         }
 
         public int QualityFilterThreshold { get; set; } = 10;
@@ -634,48 +635,17 @@ namespace CanvasSomaticCaller
             return modelPoints;
         }
 
+
         /// <summary>
         ///  Initialize model points given diploid purity modelInitialize model points given somatic purity model
         /// </summary>
         protected List<ModelPoint> InitializeModelPoints(List<SegmentInfo> segments, double coverage, int percentPurity, int numClusters)
         {
-            List<ModelPoint> modelPoints = new List<ModelPoint>();
             CoveragePurityModel model = new CoveragePurityModel(somaticCallerParameters.MaximumCopyNumber);
             model.DiploidCoverage = coverage;
             model.Purity = percentPurity / 100f;
 
-            double[] mu = GetProjectedMeanCoverage(model.DiploidCoverage, somaticCallerParameters.MaximumCopyNumber);
-            double diploidMAF = _allPloidies[3].MinorAlleleFrequency; /// %%% Magic number!
-
-            /////////////////////////////////////////////
-            // Update the parameters in each SegmentPloidy object, and construct corresponding SegmentInfo objects
-            foreach (SegmentPloidy ploidy in _allPloidies)
-            {
-                ModelPoint point = new ModelPoint();
-                double pureCoverage = mu[ploidy.CopyNumber];
-                point.Coverage = (model.Purity * pureCoverage) + (1 - model.Purity) * model.DiploidCoverage;
-                double pureMAF = ploidy.MinorAlleleFrequency;
-                if (ploidy.MajorChromosomeCount * 2 == ploidy.CopyNumber)
-                {
-                    point.Maf = (model.Purity * ploidy.CopyNumber * pureMAF) + ((1 - model.Purity) * 2 * diploidMAF);
-                    point.Maf /= model.Purity * ploidy.CopyNumber + (1 - model.Purity) * 2;
-                    if (double.IsNaN(point.Maf)) point.Maf = 0;
-                }
-                else
-                {
-                    point.Maf = (model.Purity * ploidy.CopyNumber * pureMAF) + ((1 - model.Purity) * 1);
-                    point.Maf /= model.Purity * ploidy.CopyNumber + (1 - model.Purity) * 2;
-                }
-                point.Ploidy = ploidy;
-                modelPoints.Add(point);
-                point.CopyNumber = ploidy.CopyNumber;
-                ploidy.MixedMinorAlleleFrequency = point.Maf;
-                ploidy.MixedCoverage = point.Coverage;
-
-                // and for regions that are reference-haploid:
-                ploidy.MixedHaploidMinorAlleleFrequency = 0;
-                ploidy.MixedHaploidCoverage = (model.Purity * pureCoverage) + (1 - model.Purity) * 0.5 * model.DiploidCoverage;
-            }
+            List<ModelPoint> modelPoints = InitializeModelPoints(model);
 
             // estimate distance between each model point and segments 
             List<double> modelPointsScore = new List<double>();
@@ -705,6 +675,44 @@ namespace CanvasSomaticCaller
             }
 
             return selectedModelPoints;
+        }
+
+        /// <summary>
+        /// Heuristically adjust theoretical MAF to compensate for our use of the smaller frequency for each site as the "MAF"
+        /// </summary>
+        /// <param name="theoreticalMAcvg">Theoretial MAF</param>
+        /// <param name="coverage">pseudo-depth-of-coverage value</param>
+        /// <returns></returns>
+        private double AdjustedMAF(double theoreticalMAcvg, double coverage)
+        {
+            if (coverage < 1.0) return 0;
+            if (theoreticalMAcvg == 0) return 0;
+
+            // two main factors account for MAF underestimation, of which the firt is the more important one:
+            // a) we choose the smaller of the observed values at each site; this is usually less than 0.5 (read count ties being unusual)
+            // b) there is a slight allele bias (overall, specifically a reference biase), which broadens the distribution away from binomial
+
+            double mean = theoreticalMAcvg / coverage;
+            double meanObs = 0.0;
+            for (int i = 0; i <= (int)coverage; i++)
+            {
+                meanObs += Math.Min(i, coverage - i) * binomP(i, (int)coverage, mean);
+            }
+            return meanObs / coverage;
+        }
+
+        private double logCombinations(int k, int n)
+        {
+            for (int i = Math.Max(2, _logFactorial.Count()); i <= n; i++)
+            {
+                _logFactorial.Add(Math.Log(i) + _logFactorial[i - 1]);
+            }
+            return _logFactorial[n] - _logFactorial[k] - _logFactorial[n - k];
+        }
+
+        private double binomP(int i, int n, double p)
+        {
+            return Math.Exp(logCombinations(i, n) + i * Math.Log(p) + (n - i) * Math.Log(1 - p));
         }
 
         // Update all model ploidies given expected mean coverage and purity values 
@@ -747,28 +755,14 @@ namespace CanvasSomaticCaller
         {
             List<ModelPoint> modelPoints = new List<ModelPoint>();
 
-            double[] mu = GetProjectedMeanCoverage(model.DiploidCoverage, somaticCallerParameters.MaximumCopyNumber);
-            double diploidMAF = _allPloidies[3].MinorAlleleFrequency; /// %%% Magic number!
-
             /////////////////////////////////////////////
             // Update the parameters in each SegmentPloidy object, and construct corresponding SegmentInfo objects
             foreach (SegmentPloidy ploidy in _allPloidies)
             {
                 ModelPoint point = new ModelPoint();
-                double pureCoverage = mu[ploidy.CopyNumber];
-                point.Coverage = (model.Purity * pureCoverage) + (1 - model.Purity) * model.DiploidCoverage;
-                double pureMAF = ploidy.MinorAlleleFrequency;
-                if (ploidy.MajorChromosomeCount * 2 == ploidy.CopyNumber)
-                {
-                    point.Maf = (model.Purity * ploidy.CopyNumber * pureMAF) + ((1 - model.Purity) * 2 * diploidMAF);
-                    point.Maf /= model.Purity * ploidy.CopyNumber + (1 - model.Purity) * 2;
-                    if (double.IsNaN(point.Maf)) point.Maf = 0;
-                }
-                else
-                {
-                    point.Maf = (model.Purity * ploidy.CopyNumber * pureMAF) + ((1 - model.Purity) * 1);
-                    point.Maf /= model.Purity * ploidy.CopyNumber + (1 - model.Purity) * 2;
-                }
+                point.Coverage = ploidy.CopyNumber * model.tumorHaploid + 2 * model.normalHaploid;
+                double theoreticalMAcvg = ((ploidy.CopyNumber - ploidy.MajorChromosomeCount) * model.tumorHaploid + model.normalHaploid);
+                point.Maf = AdjustedMAF(theoreticalMAcvg, point.Coverage);
                 point.Ploidy = ploidy;
                 modelPoints.Add(point);
                 point.CopyNumber = ploidy.CopyNumber;
@@ -777,9 +771,8 @@ namespace CanvasSomaticCaller
 
                 // and for regions that are reference-haploid:
                 ploidy.MixedHaploidMinorAlleleFrequency = 0;
-                ploidy.MixedHaploidCoverage = (model.Purity * pureCoverage) + (1 - model.Purity) * 0.5 * model.DiploidCoverage;
+                ploidy.MixedHaploidCoverage = ploidy.CopyNumber * model.tumorHaploid + model.normalHaploid;
             }
-
             return modelPoints;
         }
 
@@ -1395,6 +1388,9 @@ namespace CanvasSomaticCaller
             public double? ClusterDeviation;
             public double[] PercentCN;
 
+            public double tumorHaploid => DiploidCoverage * Purity / 2d;
+            public double normalHaploid => DiploidCoverage * (1d - Purity) / 2d;
+
             public CoveragePurityModel(int maximumCopyNumber)
             {
                 PercentCN = new double[maximumCopyNumber + 1];
@@ -1403,31 +1399,68 @@ namespace CanvasSomaticCaller
 
         }
 
-        static public List<SegmentInfo> GetUsableSegmentsForModeling(List<CanvasSegment> segments, bool IsEnrichment, int MinimumVariantFrequenciesForInformativeSegment)
+        protected class SegmentInfoWithSource
         {
-            // Get the average count everwhere.  Exclude segments whose coverage is >2x this average.
-            List<float> tempCountsList = new List<float>();
-            foreach (CanvasSegment segment in segments)
+            public SegmentInfo Info { get; }
+            public SegmentInfo Source { get; }
+
+            public SegmentInfoWithSource(SegmentInfo info, SegmentInfo source)
             {
-                if (IsEnrichment)
+                Info = info;
+                Source = source;
+            }
+        }
+
+        protected class CanvasSegmentWithSource
+        {
+            public CanvasSegment Segment { get; }
+            public SegmentInfo Source { get; }
+
+            public CanvasSegmentWithSource(CanvasSegment segment, SegmentInfo source)
+            {
+                Segment = segment;
+                Source = source;
+            }
+        }
+
+        static public List<SegmentInfo> GetUsableSegmentsForModeling(List<CanvasSegment> segments, bool IsEnrichment, int MinimumVariantFrequenciesForInformativeSegment, double? overallMediancoverage)
+        {
+            var usableSegments = GetUsableSegmentsAndSourcesForModeling(segments.Select(segment => new CanvasSegmentWithSource(segment, (SegmentInfo)null)), IsEnrichment, MinimumVariantFrequenciesForInformativeSegment, overallMediancoverage);
+            return usableSegments.Select(seg => seg.Info).ToList();
+        }
+
+        static protected List<SegmentInfoWithSource> GetUsableSegmentsAndSourcesForModeling(IEnumerable<CanvasSegmentWithSource> segments, bool IsEnrichment, int MinimumVariantFrequenciesForInformativeSegment, double? overallMedianCoverage)
+        {
+            // Exclude segments whose coverage is >2x the overall medan.
+
+            if (!overallMedianCoverage.HasValue)
+            {
+                // Get the average count everwhere.  Exclude segments whose coverage is >2x this average.
+                List<float> tempCountsList = new List<float>();
+                foreach (var segmentWithSource in segments)
                 {
-                    tempCountsList.Add(Convert.ToSingle(Utilities.Median(segment.Counts)));
-                }
-                else
-                {
-                    foreach (float value in segment.Counts)
+                    var segment = segmentWithSource.Segment;
+                    if (IsEnrichment)
                     {
-                        tempCountsList.Add(value);
+                        tempCountsList.Add(Convert.ToSingle(Utilities.Median(segment.Counts)));
+                    }
+                    else
+                    {
+                        foreach (float value in segment.Counts)
+                        {
+                            tempCountsList.Add(value);
+                        }
                     }
                 }
+
+                Tuple<float, float, float> coverageQuartiles = Utilities.Quartiles(tempCountsList);
+                overallMedianCoverage = coverageQuartiles.Item2;
             }
 
-            Tuple<float, float, float> coverageQuartiles = Utilities.Quartiles(tempCountsList);
-            float overallMedian = coverageQuartiles.Item2;
-
-            List<SegmentInfo> usableSegments = new List<SegmentInfo>();
-            foreach (CanvasSegment segment in segments)
+            var usableSegments = new List<SegmentInfoWithSource>();
+            foreach (var segmentWithSource in segments)
             {
+                var segment = segmentWithSource.Segment;
                 if (segment.Length < 5000) continue;
                 SegmentInfo info = new SegmentInfo();
                 info.Segment = segment;
@@ -1446,20 +1479,15 @@ namespace CanvasSomaticCaller
                     info.Maf = MAF[MAF.Count / 2];
                 }
                 info.Coverage = Utilities.Median(segment.Counts);
-                if (info.Coverage > overallMedian * 2) continue;
-                if (segments.Count > 100)
-                {
-                    info.Weight = segment.Length;
-                }
-                else
-                {
-                    info.Weight = segment.BinCount;
-                }
+                if (info.Coverage > overallMedianCoverage * 2) continue;
+
+                info.Weight = segment.Length;
+
                 if (segment.Balleles.Frequencies.Count < 10)
                 {
                     info.Weight *= (double)segment.Balleles.Frequencies.Count / 10;
                 }
-                usableSegments.Add(info);
+                usableSegments.Add(new SegmentInfoWithSource(info, segmentWithSource.Source));
             }
             return usableSegments;
         }
@@ -1597,7 +1625,7 @@ namespace CanvasSomaticCaller
             int validMAFCount = 0;
             while (true)
             {
-                usableSegments = GetUsableSegmentsForModeling(_segments, IsEnrichment, somaticCallerParameters.MinimumVariantFrequenciesForInformativeSegment);
+                usableSegments = GetUsableSegmentsForModeling(_segments, IsEnrichment, somaticCallerParameters.MinimumVariantFrequenciesForInformativeSegment, null);
                 validMAFCount = usableSegments.Count(x => x.Maf >= 0);
                 if (validMAFCount > Math.Min(20, _segments.Count)) break; // We have enough usable segments with nonnull MAF
                 if (somaticCallerParameters.MinimumVariantFrequenciesForInformativeSegment <= 5) break; // Give up on modeling
@@ -1608,21 +1636,28 @@ namespace CanvasSomaticCaller
             if (usableSegments.Count < 3)
                 throw new NotEnoughUsableSegementsException("Cannot model coverage/purity with less than 3 segments.");
 
-            List<SegmentInfo> windowedUsableSegments = segmentsToSegmentWindows(usableSegments, 500000);
-
             // When computing distances between model and actual points, we want to provide roughly equal weight
             // to coverage (which covers a large range) and MAF, which falls in the range (0, 0.5).  
             // If we already knew the diploid coverage, then we'd know just how to scale things (catch-22).
             // Let's assume that the median coverage is a sane thing to use for scaling:
             List<float> tempCoverageList = new List<float>();
+            List<double> tempMafList = new List<double>();
 
             // Segments clustering using Gaussian Expectation Maximisation
 
             // Step0: Prepare model parameters
-            foreach (SegmentInfo info in usableSegments) tempCoverageList.Add(Convert.ToSingle(info.Coverage));
+            foreach (SegmentInfo info in usableSegments)
+            {
+                if (ReferencePloidy != null && ReferencePloidy.GetReferenceCopyNumber(info.Segment) != 2)
+                    continue;
+                tempCoverageList.AddRange(info.Segment.GenomicBins.Select(bin => bin.Count));
+                tempMafList.AddRange(info.Segment.Balleles.Range.Select(range => 1 - range.GetMaxFrequency()));
+            }
             Tuple<float, float, float> coverageQuartiles = Utilities.Quartiles(tempCoverageList);
             int maxCoverageLevel = Convert.ToInt32(coverageQuartiles.Item3);
             int medianCoverageLevel = Convert.ToInt32(coverageQuartiles.Item2);
+            double medianMaf = Utilities.Median(tempMafList);
+
             if (evennessScore.HasValue && evennessScore.Value < somaticCallerParameters.EvennessScoreThreshold)
             {
                 if (somaticCallerParameters.CoverageWeighting <=
@@ -1642,6 +1677,8 @@ namespace CanvasSomaticCaller
             {
                 CoverageWeightingFactor = somaticCallerParameters.CoverageWeighting / medianCoverageLevel;
             }
+
+            var windowedUsableSegments = segmentsToSegmentWindows(usableSegments, 500000, medianCoverageLevel);
 
             int bestNumClusters = 0;
             List<double> centroidsMAF = new List<double>();
@@ -1687,19 +1724,20 @@ namespace CanvasSomaticCaller
 
                         double coverageDownScaleFactor = 400.0;
 
-                        double[][] input = windowSegmentsToInputs(windowedUsableSegments, coverageDownScaleFactor);
+                        double[][] input = windowSegmentsToInputs(windowedUsableSegments.Select(win => win.Info), coverageDownScaleFactor);
 
                         // Learn a data partitioning using the Mean Shift algorithm
                         int[] labels = null;
                         MeanShiftClusterCollection clustering = meanShift.LearnWithLabels(input, ref labels);
-                        for (int i = 0; i < labels.Count(); ++i)
-                        {
-                            Console.WriteLine($"Debug mean shift: {i} {input[i][0]} {input[i][1]} {labels[i]}");
-                        }
-                        for (int i = 0; i < clustering.Modes.Count(); ++i)
-                        {
-                            Console.WriteLine($"Debug modes: {i} {clustering.Modes[i][0]} {clustering.Modes[i][1]}");
-                        }
+
+                        //for (int i = 0; i < labels.Count(); ++i)
+                        //{
+                        //   Console.WriteLine($"Debug mean shift: {i} {input[i][0]} {input[i][1]} {labels[i]}");
+                        //}
+                        //for (int i = 0; i < clustering.Modes.Count(); ++i)
+                        //{
+                        //    Console.WriteLine($"Debug modes: {i} {clustering.Modes[i][0]} {clustering.Modes[i][1]}");
+                        //}
 
                         // filter outlier points/clusters and return the final cluster centers
                         HashSet<int> usedModeIds = findPrunedCenters(clustering, labels, centroidsCoverage, centroidsMAF, centroidsSize, coverageDownScaleFactor);
@@ -1713,10 +1751,20 @@ namespace CanvasSomaticCaller
 
                         double[][] segsInput = allSegmentsToInputs(usableSegments, coverageDownScaleFactor);
                         int[] segLabels = clustering.Decide(segsInput);
+                        var relabelMap = new Dictionary<int, int> { };
+                        var usedModeIdsList = usedModeIds.ToList();
+                        usedModeIdsList.Sort();
+                        int idIndex = 0;
+                        foreach (var label in usedModeIdsList)
+                        {
+                            relabelMap[label] = idIndex;
+                            idIndex++;
+                        }
                         for (int i = 0; i < segLabels.Count(); i++)
                         {
-                            usableSegments[i].FinalClusterId = usedModeIds.Contains(segLabels[i]) ? segLabels[i] + 1 : PloidyInfo.OutlierClusterFlag;
+                            usableSegments[i].FinalClusterId = usedModeIds.Contains(segLabels[i]) ? relabelMap[segLabels[i]] + 1 : PloidyInfo.OutlierClusterFlag;
                         }
+
                         break;
 
                     case CanvasSomaticClusteringMode.Density:
@@ -1834,28 +1882,29 @@ namespace CanvasSomaticCaller
                 minCoverage = maxCoverage = (int)GetDiploidCoverage(medianCoverageLevel, userPloidy.Value);
             }
 
+            bool sampleIsClearlyNotAllRef = IsSampleClearlyNotAllReferencePloidy(usableSegments, windowedUsableSegments, medianCoverageLevel, medianMaf);
+            int minimumPurityHardLimit = sampleIsClearlyNotAllRef ? 5 : 20;
+
             // find the minimum minor allele coverage; below, we use this to limit minimum purity
             int minWindows = Math.Max(1, (int)(windowedUsableSegments.Count() * 0.01)); // we need at least 1 percent of the genome to be in a cluster to use it for this calculation
             double minMinorAlleleCoverage = centroidsCoverage.Zip(centroidsMAF, (cvg, maf) => cvg * maf) // get minor allele coverage of each cluster
                 .Zip(centroidsSize, (maCvg, size) => (maCvg, size))                                      // combine with the size of the cluster
                 .Where(pair => pair.ToTuple().Item2 > minWindows)                                        // restrict to clusters with enough 'weight'
-                .Select(pair =>  pair.ToTuple().Item1)                                                   // drop the cluster size 
+                .Select(pair => pair.ToTuple().Item1)                                                   // drop the cluster size 
                 .Min();                                                                                  // and finally take the minimum
-
 
             int coverageStep = 1;
             Console.WriteLine(">>>DiploidCoverage: Consider {0}...{1} step {2}", minCoverage, maxCoverage, coverageStep);
+
             for (int coverage = minCoverage; coverage <= maxCoverage; coverage += coverageStep)
             {
                 // iterate over purity range 
                 int purityStep = 1;
-
-
                 int maxPercentPurity = 100;
                 // Limit search to purity values that can explain the data: For the given diploid coverage value (to be evaluated), 
                 // ensure that purity is high enough that the normal fraction contributes at most the observed lowest minor-allele coverage
                 // ... but apply a fudge factor ("- 10") so we do not miss by just a little
-                int minPercentPurity = (int)Math.Max(20, 100 * (1 - 2 * minMinorAlleleCoverage / coverage) - 10);
+                int minPercentPurity = (int)Math.Max(minimumPurityHardLimit, 100 * (1 - 2 * minMinorAlleleCoverage / coverage) - 10);
                 if (userPurity != null)
                 {
                     minPercentPurity = maxPercentPurity = (int)(userPurity.Value * 100);
@@ -1873,6 +1922,8 @@ namespace CanvasSomaticCaller
                     {
                         bestDeviation = model.Deviation;
                     }
+                    //Console.WriteLine($"Debug model cvg {coverage} pur {percentPurity} => dev {model.Deviation}  pldy {model.Ploidy}");
+
                     // exclude models with unrealistic genome ploidies
                     if (model.Ploidy < somaticCallerParameters.MaxAllowedPloidy && model.Ploidy > somaticCallerParameters.MinAllowedPloidy)
                     {
@@ -1958,7 +2009,7 @@ namespace CanvasSomaticCaller
                     // Transform purity into Weighting Factor to penalize abnormal ploidies at low purity: 
                     // (1.5 - 0.5) = minmax range of the new weighting scale; (1.0 - 0.2) = minmax range of the purity values 
                     // This transformation leads a maximal lowPurityWeightingFactor value of 1.5 for the lowest purity model and a minimal value of 0.75 for the highest purity model 
-                    double lowPurityWeightingFactor = 1.5 / ((1.5 - 0.5) / (1.0 - 0.2) * (model.Purity - 0.2) + 1.0);
+                    double lowPurityWeightingFactor = 1.5 / ((1.5 - 0.5) / (1.0 - minimumPurityHardLimit / 100d) * (model.Purity - minimumPurityHardLimit / 100d) + 1.0);
 
                     // Note: subtract 1 in last term of percentCN2SubScore so that low purity is truly a penalty -- previously, when model.PercentCN[2]/bestCN2 was large, 
                     // we were really giving a low purity bonus!
@@ -2003,9 +2054,6 @@ namespace CanvasSomaticCaller
                     }
                 }
             }
-            // sort list and return indices
-            var sortedScores = scores.Select((x, i) => new KeyValuePair<double, int>(x, i)).OrderBy(x => x.Key).ToList();
-            List<int> scoresIndex = sortedScores.Select(x => x.Value).ToList();
 
             // Explicitly test a model that is a deduplication of the best model, in case our grid search somehow just missed it.
             // Note that results not actually used at present, but a message is sent to the log if it looks like the deduped model is competitive.
@@ -2031,7 +2079,9 @@ namespace CanvasSomaticCaller
                 }
             }
 
-
+            // sort list and return indices
+            var sortedScores = scores.Select((x, i) => new KeyValuePair<double, int>(x, i)).OrderBy(x => -x.Key).ToList();
+            List<int> scoresIndex = sortedScores.Select(x => x.Value).ToList();
             // interModelDistance shows genome edit distance between the best model and other top models (defined by MaximumRelatedModels). 
             // The premise is that if the top models provide widely different genome baseline (leading to high interModelDistance), 
             // the overall modeling approach might be more unstable.
@@ -2064,6 +2114,98 @@ namespace CanvasSomaticCaller
 
             bestModel.InterModelDistance = interModelDistance;
             return bestModel;
+        }
+
+        /// <summary>
+        /// Determine what fraction of the genome is convincingly different in coverage, MAF, or both
+        /// from the genome-wide median values.  This is used to assess whether a low-purity model
+        /// should be allowed, as opposed to a higher-purity model that is all, or nearly all, diploid.
+        /// </summary>
+        /// <param name="usableSegments"></param>
+        /// <param name="windowedUsableSegments"></param>
+        /// <param name="medianCoverageLevel">median coverage in regions with reference ploidy == 2</param>
+        /// <param name="medianMaf">median MAF in regions with reference ploidy == 2</param>
+        /// <returns></returns>
+        private bool IsSampleClearlyNotAllReferencePloidy(List<SegmentInfo> usableSegments, List<SegmentInfoWithSource> windowedUsableSegments, int medianCoverageLevel, double medianMaf)
+        {
+            // get global measures of within-segment variability (coefficients of variability, "CVs")
+            var localCvgCV = new List<double> { };
+            var localMafCV = new List<double> { };
+            foreach (var windowWithSource in windowedUsableSegments)
+            {
+                var info = windowWithSource.Info;
+                int? refPloidy = ReferencePloidy?.GetReferenceCopyNumber(info.Segment);
+                if (refPloidy.HasValue && refPloidy == 0)
+                    continue;
+                if (info.Segment.Length < 400000)
+                    continue;
+
+                var source = windowWithSource.Source;
+                double segmentCoverage = source.Coverage;
+                localCvgCV.Add(Math.Abs(info.Coverage - segmentCoverage) / segmentCoverage);
+                double segmentMaf = source.Maf;
+                localMafCV.Add(Math.Abs(info.Maf - segmentMaf) / segmentMaf);
+            }
+            double coverageCV = Utilities.Median(localCvgCV);
+            double mafCV = Utilities.Median(localMafCV);
+
+            //Console.WriteLine($"Debug CVs: cvgCV = {coverageCV} mafCV = {mafCV} medianCvg = {medianCoverageLevel} medianMAF = {medianMaf}");
+
+            // Measure bases in segments that are strongly different from the overall medians, based on deltas to overall medians normalized by global within-segment CVs
+            double cvgZCutoff = 12;
+            double mafZCutoff = 12;
+            double jointZCutoff = 5;
+            double basesOutsideCutoffs = 0;
+            foreach (var info in usableSegments)
+            {
+                int? refPloidy = ReferencePloidy?.GetReferenceCopyNumber(info.Segment);
+                if (refPloidy.HasValue && refPloidy == 0)
+                    continue;
+                if (info.Segment.Length < 400000)
+                    continue;
+
+                double expectedCvg = medianCoverageLevel * ((!refPloidy.HasValue) ? 2.0 : (double)refPloidy) / 2.0;
+                double thisCvgZ = Math.Abs(info.Coverage - expectedCvg) / expectedCvg / coverageCV;
+
+                double thisMafZ = 0;
+                if (refPloidy.HasValue && refPloidy == 2)
+                {
+                    thisMafZ = Math.Abs(info.Maf - medianMaf) / medianMaf / mafCV;
+                }
+
+                /* DEBUG CNV SUPPORT */
+                //Console.WriteLine($"Debug usableSegments cvg {info.Coverage} maf {info.Maf} wgt {info.Weight}"
+                //    + $" normedDevCvg {thisCvgZ}"
+                //    + $" normedDevMaf {(info.Maf == -1.0 ? 0.0 : thisMafZ)}");
+
+                if (thisCvgZ > cvgZCutoff || thisMafZ > mafZCutoff || (thisCvgZ > jointZCutoff && thisMafZ > jointZCutoff))
+                {
+                    basesOutsideCutoffs += info.Weight;
+                }
+            }
+
+#if false
+            /* DEBUG CNV SUPPORT */
+            foreach (SegmentInfo info in windowedUsableSegments)
+            {
+                int? refPloidy = ReferencePloidy?.GetReferenceCopyNumber(info.Segment);
+                if (refPloidy.HasValue && refPloidy == 0)
+                    continue;
+                if (info.Segment.Length < 400000)
+                    continue;
+                double expectedCvg = medianCoverageLevel * ((!refPloidy.HasValue) ? 2.0 : (double)refPloidy) / 2.0;
+                double thisCvgZ = (info.Coverage - expectedCvg) / expectedCvg / coverageCV;
+                double thisMafZ = 0;
+                if (info.Maf != -1)
+                {
+                    thisMafZ = (info.Maf - medianMaf) / medianMaf / mafCV;
+                }
+                Console.WriteLine($"Debug window deviation from median/diploid: size = {info.Segment.GenomicBins.Count} cvg = {info.Coverage} cvgZ = {thisCvgZ} mafSize = {info.Segment.Balleles.Size()} maf = {info.Maf} mafZ = {thisMafZ}");
+            }
+#endif
+
+            int basesRequiredToInsistOnNonReferenceModel = 50000000;
+            return basesOutsideCutoffs >= basesRequiredToInsistOnNonReferenceModel;
         }
 
         /// <summary>
@@ -2116,7 +2258,7 @@ namespace CanvasSomaticCaller
         /// <param name="windowedUsableSegments"></param>
         /// <param name="coverageDownScaleFactor">scaling factor to make deviations on coverage and MAF dimensions comparable</param>
         /// <returns></returns>
-        private double[][] windowSegmentsToInputs(List<SegmentInfo> windowedUsableSegments, double coverageDownScaleFactor)
+        private double[][] windowSegmentsToInputs(IEnumerable<SegmentInfo> windowedUsableSegments, double coverageDownScaleFactor)
         {
             return windowedUsableSegments.Where(seg => seg.Maf >= 0).Select(seg => new Double[] { seg.Coverage / coverageDownScaleFactor, seg.Maf }).ToArray();
         }
@@ -2133,28 +2275,29 @@ namespace CanvasSomaticCaller
         }
 
         /// <summary>
-        /// Split segments into segment windows of size approximately v
+        /// Split segments into segment windows of size approximately windowWidth
         /// </summary>
         /// <param name="usableFullSegments">collection of segments to be split</param>
-        /// <param name="v">target window size in bp</param>
+        /// <param name="windowWidth">target window size in bp</param>
         /// <returns></returns>
-        private List<SegmentInfo> segmentsToSegmentWindows(List<SegmentInfo> usableFullSegments, int v)
+        private List<SegmentInfoWithSource> segmentsToSegmentWindows(List<SegmentInfo> usableFullSegments, int windowWidth, double overallMedianCoverage)
         {
-            var segmentWindows = new List<CanvasSegment>();
+            var segmentWindows = new List<CanvasSegmentWithSource>();
             foreach (var seg in usableFullSegments)
             {
-                segmentWindows.AddRange(oneSegmentToWindows(seg.Segment, v));
+                var windows = oneSegmentToWindows(seg.Segment, windowWidth);
+                segmentWindows.AddRange(windows.Select(win => new CanvasSegmentWithSource(win, seg)));
             }
-            return GetUsableSegmentsForModeling(segmentWindows, IsEnrichment, somaticCallerParameters.MinimumVariantFrequenciesForInformativeSegment);
+            return GetUsableSegmentsAndSourcesForModeling(segmentWindows, IsEnrichment, somaticCallerParameters.MinimumVariantFrequenciesForInformativeSegment, overallMedianCoverage);
         }
 
         /// <summary>
         /// Split a single segment into windows of size approximately v; the last window can be smaller as it runs off the end of the segment
         /// </summary>
         /// <param name="seg"></param>
-        /// <param name="v">target window size, in bp</param>
+        /// <param name="windowWidth">target window size, in bp</param>
         /// <returns></returns>
-        private IEnumerable<CanvasSegment> oneSegmentToWindows(CanvasSegment seg, int v)
+        private IEnumerable<CanvasSegment> oneSegmentToWindows(CanvasSegment seg, int windowWidth)
         {
             var windowSegments = new List<CanvasSegment>();
             int start = seg.Begin;
@@ -2165,11 +2308,12 @@ namespace CanvasSomaticCaller
             int balleleLimit = origBalleles.Count;
             int balleleIndex = 0;
 
-            for (int i = start; i < end; i += v)
+
+            for (int i = start; i < end; i += windowWidth)
             {
                 var counts = new List<SampleGenomicBin>();
                 var balleles = new Balleles();
-                int winEnd = Math.Min(i + v, end);
+                int winEnd = Math.Min(i + windowWidth, end);
                 while (countsIndex < countsLimit)
                 {
                     var bin = seg.GenomicBins[countsIndex];
@@ -2188,7 +2332,7 @@ namespace CanvasSomaticCaller
                     ++balleleIndex;
                 }
                 if (counts.Count > 0)
-                    windowSegments.Add(new CanvasSegment(seg.Chr, i, Math.Min(i + v, end), counts, balleles));
+                    windowSegments.Add(new CanvasSegment(seg.Chr, i, Math.Min(i + windowWidth, end), counts, balleles));
 
             }
             return windowSegments;
@@ -2577,8 +2721,8 @@ namespace CanvasSomaticCaller
             {
                 return double.NaN;
             }
-            double mean = Frequencies.Average();
-            double estimatedPurity = Math.Min(1, mean * 2);
+            double median = Utilities.Median(Frequencies);
+            double estimatedPurity = Math.Min(1, median * 2);
             Console.WriteLine(">>>Estimated tumor purity of {0} from somatic SNV calls", estimatedPurity);
 
             return estimatedPurity;
