@@ -11,7 +11,7 @@ namespace CanvasPartition
     class WaveletsRunner
     {
         private WaveletsRunnerParams _parameters;
-        public static readonly double DefaultMadFactor = 2.0; // default MAD factor for Wavelets
+        public static readonly double DefaultMadFactor = 5.0; // default MAD factor for Wavelets
 
         public class WaveletsRunnerParams
         {
@@ -26,7 +26,7 @@ namespace CanvasPartition
             public bool IsSmallPedegree { get; }
 
             public WaveletsRunnerParams(bool isGermline, string commonCNVs = null, double evennessScoreThreshold = 94.50,
-                double thresholdLower = 5, double thresholdLowerMaf = 0.05, double thresholdUpper = 80, double madFactor = 2, int minSize = 10,
+                double thresholdLower = 5, double thresholdLowerMaf = 0.05, double thresholdUpper = 80, double madFactor = 5, int minSize = 10,
                 int verbose = 1, bool isSmallPedegree = false)
             {
                 IsGermline = isGermline;
@@ -51,22 +51,14 @@ namespace CanvasPartition
         /// </summary>
         public Dictionary<string, SegmentationInput.Segment[]> Run(SegmentationInput segmentationInput, int windowSize)
         {
-            bool useVaf = false;
+            double? coverageCV = segmentationInput.GetCoverageVariability(windowSize);
+            var factorOfThreeCMADs = segmentationInput.FactorOfThreeCoverageVariabilities(); ;
             try
             {
+
                 double evennessScore = segmentationInput.GetEvennessScore(windowSize);
                 if (!segmentationInput.EvennessMetricFile.IsNullOrEmpty())
                     CanvasIO.WriteEvennessMetricToTextFile(segmentationInput.EvennessMetricFile, evennessScore);
-
-                useVaf = evennessScore < _parameters.EvennessScoreThreshold;
-                if (useVaf)
-                {
-                    Console.WriteLine($"Coverage evennness score {evennessScore} was below threshold of {_parameters.EvennessScoreThreshold}. Using variant allele frequencies for segmentation.");
-                }
-                else
-                {
-                    Console.WriteLine($"Coverage evennness score {evennessScore} was at or above threshold of {_parameters.EvennessScoreThreshold}. Using coverage for segmentation.");
-                }
             }
             catch (Exception)
             {
@@ -75,26 +67,9 @@ namespace CanvasPartition
 
             Dictionary<string, List<int>> adjustedBreakpoints;
 
-            if (!useVaf)
-            {
-                var breakpoints = LaunchWavelets(segmentationInput.CoverageInfo.CoverageByChr, segmentationInput.CoverageInfo.StartByChr,
-                    segmentationInput.CoverageInfo.EndByChr);
-                adjustedBreakpoints = AdjustBreakpoints(segmentationInput.CoverageInfo.CoverageByChr, breakpoints, vafContainingBinsByChr: null);
-            }
-            else
-            {
-                var vafByChr = new Dictionary<string, double[]>();
-                var vafContainingBinsByChr = new Dictionary<string, int[]>();
-
-                foreach (string chr in segmentationInput.VafByChr.Keys)
-                {
-                    var tmpVaf = segmentationInput.VafByChr[chr].Select(vafContainingBins => vafContainingBins.Vaf).ToArray();
-                    vafContainingBinsByChr[chr] = segmentationInput.VafByChr[chr].Select(coverageToVafMapper => coverageToVafMapper.Index).ToArray();
-                    vafByChr[chr] = WaveletMeanSmoother(tmpVaf);
-                }
-                var breakpoints = LaunchWavelets(vafByChr, segmentationInput.CoverageInfo.StartByChr, segmentationInput.CoverageInfo.EndByChr);
-                adjustedBreakpoints = AdjustBreakpoints(vafByChr, breakpoints, vafContainingBinsByChr);
-            }
+            var breakpoints = LaunchWavelets(segmentationInput.CoverageInfo.CoverageByChr, segmentationInput.CoverageInfo.StartByChr,
+                segmentationInput.CoverageInfo.EndByChr, coverageCV, factorOfThreeCMADs);
+            adjustedBreakpoints = AdjustBreakpoints(segmentationInput.CoverageInfo.CoverageByChr, breakpoints, vafContainingBinsByChr: null);
 
             var segments = new Dictionary<string, SegmentationInput.Segment[]>();
             foreach (string chr in segmentationInput.VafByChr.Keys)
@@ -106,7 +81,7 @@ namespace CanvasPartition
         }
 
         public Dictionary<string, List<int>> LaunchWavelets(Dictionary<string, double[]> coverageByChr, Dictionary<string, uint[]> startByChr,
-            Dictionary<string, uint[]> endByChr)
+            Dictionary<string, uint[]> endByChr, double? CV, List<double> factorOfThreeCMADs)
         {
             var inaByChr = new Dictionary<string, int[]>();
             var finiteScoresByChr = new Dictionary<string, double[]>();
@@ -146,7 +121,8 @@ namespace CanvasPartition
                 {
                     WaveletSegmentation.HaarWavelets(coverageByChr[chr], _parameters.ThresholdLower,
                         _parameters.ThresholdUpper,
-                        breakpoints, _parameters.IsGermline, madFactor: _parameters.MadFactor);
+                        breakpoints, _parameters.IsGermline, _parameters.MadFactor,
+                        CV, factorOfThreeCMADs, chr);
                 }
 
                 lock (breakpointsByChr)

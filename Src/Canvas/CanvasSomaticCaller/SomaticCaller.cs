@@ -2408,7 +2408,6 @@ namespace CanvasSomaticCaller
                     double targetCoverage = isRefHaploid ? ploidy.MixedHaploidCoverage : ploidy.MixedCoverage;
                     double targetMAF = isRefHaploid ? ploidy.MixedHaploidMinorAlleleFrequency : ploidy.MixedMinorAlleleFrequency;
                     double distance = GetModelDistance(medianCoverage, targetCoverage, medianMAF, targetMAF);
-
                     if (distance < bestDistance)
                     {
                         secondBestDistance = bestDistance;
