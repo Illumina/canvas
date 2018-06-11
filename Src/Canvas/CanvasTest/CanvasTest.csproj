@@ -26,7 +26,7 @@
     <PackageReference Include="Castle.Core" Version="4.2.1" />
     <PackageReference Include="Illumina.Common" Version="6.2.0.419" />
     <PackageReference Include="Isas.Framework.UnitTestUtilities" Version="9.0.2.1010" />
-    <PackageReference Include="Isas.SequencingFiles" Version="7.0.1.424" />
+    <PackageReference Include="Isas.SequencingFiles" Version="7.1.4.436" />
     <PackageReference Include="JetBrains.Annotations" Version="11.1.0" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="15.7.0" />
     <PackageReference Include="NSubstitute" Version="3.1.0" />

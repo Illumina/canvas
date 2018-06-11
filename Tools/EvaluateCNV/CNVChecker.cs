@@ -14,6 +14,7 @@ using Isas.Framework.Logging;
 using Isas.Framework.Settings;
 using Isas.Framework.WorkManagement;
 using Isas.Framework.WorkManagement.CommandBuilding;
+using Isas.StatisticsProcessing.SummaryMetrics;
 
 namespace EvaluateCNV
 {
@@ -531,8 +532,26 @@ namespace EvaluateCNV
                 cnvEvaluator.ComputeAccuracy(knownCn, cnvCallsPath, outputPath, includePassingOnly, options, calls);
                 if (includePassingOnly)
                     cnvEvaluator.ComputeAccuracy(knownCn, cnvCallsPath, outputPath, false, options, calls);
+                ComputeCallability(logger, calls, options, output);
                 Console.WriteLine(">>>Done - results written to {0}", outputPath);
             });
+        }
+
+        private static void ComputeCallability(ILogger logger, Dictionary<string, List<CnvCall>> calls,
+            EvaluateCnvOptions options, IDirectoryLocation output)
+        {
+            var kmerFasta = new FileLocation(options.KmerFa);
+            var canvasAnnotationDir = kmerFasta.Directory;
+            var filterBed = canvasAnnotationDir.GetFileLocation("filter13.bed");
+            if (!filterBed.Exists) throw new ArgumentException($"Missing file at {filterBed}");
+            var annotationDir = canvasAnnotationDir.Parent;
+            var buildDir = annotationDir.Parent;
+            var genome = new ReferenceGenome(buildDir).GenomeMetadata;
+            var computer = CallabilityMetricsComputer.Create(logger, genome, filterBed, options.PloidyInfo.SexPloidyInfo.PloidyY == 0);
+            var callability = computer.CalculateMetric(calls);
+            var callabilityFile = output.GetFileLocation($"{options.BaseFileName}_callability.txt");
+            File.WriteAllLines(callabilityFile.FullName, callability.GetMetrics().Select(metric => metric.ToCsv().Replace(",", "\t")));
+            logger.Info($"Callability: {callability.Callability}. Called bases: {callability.CalledBases}. Total bases: {callability.TotalBases}.");
         }
 
         private static Dictionary<string, List<CNInterval>> GetKnownCopyNumberWithReferencePloidy(ReferencePloidy referencePloidy, Dictionary<string, List<CNInterval>> knownCn)

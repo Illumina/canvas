@@ -16,7 +16,7 @@
       <dependency id="Isas.Framework" version="[9.0.2.1010,10.0.0)" />
       <dependency id="Isas.Manifests" version="[6.3.0.216,7.0.0)" />
       <dependency id="Isas.Ploidy" version="[4.0.0.98,5.0.0)" />
-      <dependency id="Isas.SequencingFiles" version="[7.0.1.424,8.0.0)" />
+      <dependency id="Isas.SequencingFiles" version="[7.1.4.436,8.0.0)" />
       <dependency id="MathNet.Numerics.Core" version="[3.17.0,4.0.0)" />
       <dependency id="protobuf-net" version="[2.3.7,3.0.0)" />
     </dependencies>

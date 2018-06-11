@@ -38,7 +38,7 @@
     <PackageReference Include="Illumina.Common" Version="6.2.0.419" />
     <PackageReference Include="Isas.Framework" Version="9.0.2.1010" />
     <PackageReference Include="Isas.Manifests" Version="6.3.0.216" />
-    <PackageReference Include="Isas.SequencingFiles" Version="7.0.1.424" />
+    <PackageReference Include="Isas.SequencingFiles" Version="7.1.4.436" />
     <PackageReference Include="protobuf-net" Version="2.3.7" />
     <PackageReference Include="System.ComponentModel.TypeConverter" Version="4.3.0" />
   </ItemGroup>

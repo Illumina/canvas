@@ -49,9 +49,9 @@
     <PackageReference Include="Illumina.Common" Version="6.2.0.419" />
     <PackageReference Include="ClassicBioinfoTools" Version="3.0.0.280" />
 	  <PackageReference Include="Isas.Framework" Version="9.0.2.1010" />
-    <PackageReference Include="Isas.SequencingFiles" Version="7.0.1.424" />
+    <PackageReference Include="Isas.SequencingFiles" Version="7.1.4.436" />
     <PackageReference Include="MathNet.Numerics.Core" Version="3.17.0" />
-    <PackageReference Include="Newtonsoft.Json" Version="11.0.2" />
+    <PackageReference Include="Newtonsoft.Json" Version="9.0.1" />
     <PackageReference Include="protobuf-net" Version="2.3.7" />
   </ItemGroup>
 
