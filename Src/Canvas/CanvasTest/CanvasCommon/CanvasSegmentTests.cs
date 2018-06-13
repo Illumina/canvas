@@ -29,7 +29,7 @@ namespace CanvasTest
             Assert.Equal(CnvType.Loss, cnvTypeCn1);
             Assert.Equal(new[] { 0, 1 }, alleleCopyNumbersCn1);
             Assert.Equal(CnvType.Reference, cnvTypeCn2);
-            Assert.Equal(new[] { 1, 1 }, alleleCopyNumbersCn2);
+            Assert.Equal(new[] { -1, -1 }, alleleCopyNumbersCn2);
             Assert.Equal(CnvType.LossOfHeterozygosity, cnvTypeCn2Mcc2);
             Assert.Equal(new[] { 0, 2 }, alleleCopyNumbersCn2Mcc2);
             Assert.Equal(CnvType.Gain, cnvTypeCn3);
@@ -53,6 +53,7 @@ namespace CanvasTest
             Assert.Equal(CnvType.Gain, cnvTypeCn2);
             Assert.Equal(new[] { 2 }, alleleCopyNumbersCn2);
         }
+
         [Fact]
         public void GetCnvTypeAndAlleleCopyNumbers_referenceCn_is_zero()
         {
@@ -64,9 +65,9 @@ namespace CanvasTest
             Assert.Equal(CnvType.Reference, cnvTypeCn0);
             Assert.Equal(new[] { -1 }, alleleCopyNumbersCn0);
             Assert.Equal(CnvType.Gain, cnvTypeCn1);
-            Assert.Equal(new[] { 1 }, alleleCopyNumbersCn1);
+            Assert.Equal(new[] { -1 }, alleleCopyNumbersCn1);
             Assert.Equal(CnvType.Gain, cnvTypeCn2);
-            Assert.Equal(new[] { 2 }, alleleCopyNumbersCn2);
+            Assert.Equal(new[] { -1 }, alleleCopyNumbersCn2);
         }
     }
 }

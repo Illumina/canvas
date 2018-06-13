@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>netcoreapp1.1</TargetFramework>
+    <TargetFramework>netcoreapp2.0</TargetFramework>
     <DefineConstants>$(DefineConstants);DotNetCore</DefineConstants>
     <AssemblyName>Canvas</AssemblyName>
     <OutputType>Exe</OutputType>
@@ -24,16 +24,22 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" />
 
   <ItemGroup>
+    <Content Include="..\..\..\COPYRIGHT.txt" Link="COPYRIGHT.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\CanvasBin\CanvasBin.csproj" />
     <ProjectReference Include="..\CanvasCommon\CanvasCommon.csproj" />
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Illumina.Common" Version="5.1.1.387" />
-    <PackageReference Include="Isas.Framework" Version="8.15.3.963" />
-    <PackageReference Include="Isas.Manifests" Version="5.3.0.179" />
-    <PackageReference Include="Isas.SequencingFiles" Version="6.2.1.416" />
-    <PackageReference Include="protobuf-net" Version="2.3.2" />
+    <PackageReference Include="Illumina.Common" Version="6.2.0.419" />
+    <PackageReference Include="Isas.Framework" Version="9.0.2.1010" />
+    <PackageReference Include="Isas.Manifests" Version="6.3.0.216" />
+    <PackageReference Include="Isas.SequencingFiles" Version="7.1.4.436" />
+    <PackageReference Include="protobuf-net" Version="2.3.7" />
     <PackageReference Include="System.ComponentModel.TypeConverter" Version="4.3.0" />
   </ItemGroup>
 

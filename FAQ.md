@@ -10,7 +10,10 @@ Canvas Somatic-WGS uses the following variant files:
 
 There are two options to generate file for --b-allele-vcf parameter 
 
-1)	One can download dbsnp.vcf file (for the relevant genome reference) from https://illumina.app.box.com/CanvasPublic/ and let Canvas calculate allelic ratios 
+1)	One can download dbsnp.vcf file for the relevant genome reference from the following links and let Canvas calculate allelic ratios: 
+    * http://canvas-cnv-public.s3.amazonaws.com/hg19/dbsnp.vcf
+    * http://canvas-cnv-public.s3.amazonaws.com/GRCh37/dbsnp.vcf
+    * http://canvas-cnv-public.s3.amazonaws.com/GRCh38/dbsnp.vcf
 
 2)	Or use germline SNV callers, such as the one available in samtools http://www.htslib.org/workflow/#mapping_to_variant - the output will need to be in vcf (or vcf.gz) format 
 

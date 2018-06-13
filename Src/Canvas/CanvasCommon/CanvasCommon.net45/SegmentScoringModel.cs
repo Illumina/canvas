@@ -46,12 +46,19 @@ namespace CanvasCommon
                     score += GetQScorePredictor(QScorePredictor.ModelDistance) * qscoreParameters.LogisticModelDistance;
                     score += GetQScorePredictor(QScorePredictor.DistanceRatio) * qscoreParameters.LogisticDistanceRatio;
                     score += GetQScorePredictor(QScorePredictor.BinCountAmpDistance);
+                    double coreScore = score;
                     score = Math.Exp(score);
                     score = score / (score + 1);
                     // Transform probability into a q-score:
                     qscore = (int) Math.Round(-10 * Math.Log10(1 - score));
                     qscore = Math.Min(60, qscore);
                     qscore = Math.Max(2, qscore);
+                    //if (CopyNumber>20)
+                    //{
+                    //    Console.WriteLine($"HiCN: {CopyNumber} from {this.MedianCount} distance {ModelDistance} next {RunnerUpModelDistance} bins {BinCount}");
+                    //    Console.WriteLine($"      Prelogit {coreScore} = intercept {qscoreParameters.LogisticIntercept} + bins { GetQScorePredictor(QScorePredictor.LogBinCount) * qscoreParameters.LogisticLogBinCount} + dist {GetQScorePredictor(QScorePredictor.ModelDistance) * qscoreParameters.LogisticModelDistance} + ratio { GetQScorePredictor(QScorePredictor.DistanceRatio) * qscoreParameters.LogisticDistanceRatio} + amp {GetQScorePredictor(QScorePredictor.BinCountAmpDistance)}");
+                    //    Console.WriteLine($"      Logit {score} --> init qscore {(int)Math.Round(-10 * Math.Log10(1 - score))} --> qscore");
+                    //}
                     return qscore;
                 case QScoreMethod.BinCountLinearFit:
                     if (this.BinCount >= 100)
@@ -142,7 +149,8 @@ namespace CanvasCommon
                     return Math.Log10(1 + GetQScorePredictor(QScorePredictor.MafCv));
 
                 case QScorePredictor.ModelDistance:
-                    return this.ModelDistance;
+                    // HACK: high copy number needs some help: higher variance and general lack of interest in exact copy number  
+                    return this.ModelDistance / Math.Max(1.0,this.CopyNumber-4.0);
 
                 case QScorePredictor.RunnerUpModelDistance:
                     return this.RunnerUpModelDistance;

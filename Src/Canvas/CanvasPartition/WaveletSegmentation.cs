@@ -16,7 +16,7 @@ namespace CanvasPartition
         /// For an input vector of length n, get_inner_prod_iter function computes inner products between the input vector and
         /// all possible n-1 Unbalanced Haar vectors of length n
         /// </summary>
-        private static void GetInnerProdIter(double[] x, double[] I_prod)
+        private static void GetInnerProdIter(double[] x, double[] I_prod, out double mean)
         {
             long n = x.Length;
             double[] I_plus = new double[n - 1];
@@ -28,7 +28,7 @@ namespace CanvasPartition
             {
                 sumX += x[i];
             }
-
+            mean = (x[0] + sumX) / n;
             I_minus[0] = (1.0 / Math.Sqrt(n * (n - 1))) * sumX;
 
             if (n > 2)
@@ -51,34 +51,25 @@ namespace CanvasPartition
         /// The function finds the Unbalanced Haar vector which yields the largest 
         /// (in absolute value) inner product with the input vector
         /// </summary>
-        private static int GetInnerProdMax(double[] x)
+        private static int GetInnerProdMax(double[] ipi)
         {
-            double[] ipi = new double[x.Length - 1];
-            GetInnerProdIter(x, ipi);
-            double max_abs_ipi = Math.Abs(ipi[0]);
-
-            for (uint i = 0; i < ipi.Length; i++)
+            double max_abs_ipi = ipi.Select(ip => Math.Abs(ip)).Max();
+            int index = 0;
+            for (; index < ipi.Length; index++)
             {
-                if (Math.Abs(ipi[i]) > max_abs_ipi)
-                {
-                    max_abs_ipi = Math.Abs(ipi[i]);
-                }
+                if (Math.Abs(ipi[index]) == max_abs_ipi)
+                    break;
             }
-            List<int> indexVector = new List<int>();
-            for (int i = 0; i < ipi.Length; i++)
-            {
-                if (Math.Abs(ipi[i]) == max_abs_ipi)
-                {
-                    indexVector.Add(i + 1);
-                }
-            }
-            return indexVector.Any() ? CanvasCommon.Utilities.Median(indexVector) : 0;
+            // this function used to return the median of best index values in case of a tie;
+            // that seems silly, especially since if there are an even number, the median will 
+            // return something between the best solutions!
+            return index + 1;
         }
 
         /// <summary>
         /// given sigma, set Unbalanced Haar wavelet coefficients to zero
         /// </summary>
-        private static void HardThresh(List<List<double>> tree, double sigma, bool isGermline)
+        private static void HardThresh(List<List<double>> tree, double sigma, bool isGermline, string chromosome)
         {
             int treeSize = tree.Count();
             List<double> thresholds = new List<double>();
@@ -114,7 +105,7 @@ namespace CanvasPartition
                 for (int k = 0; k < K; k++)
                 {
                     // threshold 2x*sigma for TN and ranges from 0.5x to 1.5x *sigma for Germline
-                    // parameters trained on CanvasRegression datasets 
+                    // parameters trained on CanvasRegression datasets                     
                     if (Math.Abs(tree[nodeIndex][k * subtreeSize + 2 - 1]) <= 2 * sigma * (thresholds[indices[nodeIndex]]) * Math.Sqrt(2 * Math.Log(n)))
                     {
                         tree[nodeIndex][k * subtreeSize + 2 - 1] = 0;
@@ -194,6 +185,53 @@ namespace CanvasPartition
         }
 
         /// <summary>
+        /// Eliminate unneeded segment boundaries, mostly coarse-grained splits due to waviness;
+        /// </summary>
+        /// <param name="prelimBreakpoints"></param>
+        /// <param name="tree"></param>
+        /// <param name="v"></param>
+        /// <returns>revised set of breakpoints with poorly-supported breakpoints removed</returns>
+        private static void GetBreakpointsAfterHealingBadSplits(List<int> breakpoints, List<int> prelimBreakpoints, double[] ratio, List<double> factorOfThreeCMADs, string chromosome)
+        {
+            // Wavelet segmentation can introduce breakpoints that are not well-supported. 
+            // This happens when something that should be segmented as 0000000001111111112222222222
+            // goes through a series of steps that chop it more like this:
+            //                 split 1                                 xxxxxxxxxxxxxxxxxxyyyyyyyyyy
+            //                 split 2                                 wwwwwxxxxxxxxxxxxxyyyyyyyyyy
+            //                 split 3                                 wwwwwzzzzxxxxxxxxxyyyyyyyyyy
+            //                                                         
+            // If split 2 scores well enough, fundamentally because 11111 != 00000, we will
+            // end up including the breakpoint between www and zzz even though the difference between
+            // them is small.  This step tests whether the medians of the implied segments are really
+            // different enough to retain the breakpoint.
+            //
+            // The process is greedy, proceeding from left to right.  It might be better to merge
+            // most-similar adjacent segments first, but this seems good enough for now.
+            int N = ratio.Length;
+            int L = prelimBreakpoints.Count();
+            breakpoints.Add(prelimBreakpoints[0]);
+            for (int i = 1; i < L; ++i)
+            {
+                var leftStart = breakpoints[breakpoints.Count() - 1];
+                var rightStart = prelimBreakpoints[i];
+                var rightEnd = (i < L - 1) ? prelimBreakpoints[i + 1] : N;
+                var leftLength = rightStart - leftStart;
+                var rightLength = rightEnd - rightStart;
+                var leftMedian = CanvasCommon.Utilities.Median(ratio.Skip(leftStart).Take(leftLength));
+                var rightMedian = CanvasCommon.Utilities.Median(ratio.Skip(rightStart).Take(rightLength));
+                double weightedMedian = (leftLength * leftMedian + rightLength * rightMedian) / (rightEnd - leftStart);
+                int smallerLength = Math.Min(leftLength,rightLength);
+                var factorOfThreeScale = Math.Min(factorOfThreeCMADs.Count() - 1, (int)Math.Ceiling(Math.Log(smallerLength) / Math.Log(3)));
+                double factorOfThreeCutoff = factorOfThreeCMADs[factorOfThreeScale];
+                //Console.WriteLine($"Healing {chromosome}: {leftStart} {rightStart} {rightEnd} {leftMedian} {rightMedian} {factorOfThreeCutoff}");
+                if (Math.Abs(leftMedian - rightMedian) > factorOfThreeCutoff * 4 * Math.Max(weightedMedian, 50d))
+                {
+                    breakpoints.Add(prelimBreakpoints[i]);
+                }
+            }
+        }
+
+        /// <summary>
         /// Refines breakpoint by maximising local medians
         /// </summary>
         private static void RefineSegments(List<int> breakpoints, IEnumerable<double> coverage)
@@ -218,10 +256,12 @@ namespace CanvasPartition
                 breakpoints[i] = bestBreakpoint;
             }
         }
+
         /// <summary>
         /// Find best Unbalanced Haar wavelets decomposition
         /// </summary>
-        private static void FindBestUnbalancedHaarDecomposition(double[] x, List<List<double>> tree, double smooth)
+        /// <returns>measure of smoothness (not used?)</returns>
+        private static double FindBestUnbalancedHaarDecomposition(double[] x, List<List<double>> tree)
         {
             ulong n = (ulong)x.Length;
             tree.Clear();
@@ -234,12 +274,13 @@ namespace CanvasPartition
 
             branch[0] = 1;
             double[] ipi = new double[x.Length - 1];
-            GetInnerProdIter(x, ipi);
-            int ind_max = GetInnerProdMax(x);
+            GetInnerProdIter(x, ipi, out double mean);
+            int ind_max = GetInnerProdMax(ipi);
             branch[2] = 1;
             branch[3] = ind_max;
             branch[4] = n;
-            branch[1] = ipi[ind_max - 1];
+            double meanscale = 200.0;
+            branch[1] = ipi[ind_max - 1] / Math.Max(0.5, mean / meanscale);
             tree.Add(new List<double>());
             for (int i = 0; i < (int)branch.Count(); i++)
             {
@@ -281,10 +322,10 @@ namespace CanvasPartition
                         Array.Copy(x, skip, subX, 0, take);
                         Array.Clear(ipi, 0, ipi.Length);
                         Array.Resize(ref ipi, subX.Length - 1);
-                        GetInnerProdIter(subX, ipi);
-                        ind_max = GetInnerProdMax(subX);
+                        GetInnerProdIter(subX, ipi, out double leftmean);
+                        ind_max = GetInnerProdMax(ipi);
 
-                        tree[j + 1][(no_child_coeffs - 1) * 5 + 2 - 1] = ipi[ind_max - 1];
+                        tree[j + 1][(no_child_coeffs - 1) * 5 + 2 - 1] = ipi[ind_max - 1] / Math.Max(0.5, leftmean / meanscale);
                         tree[j + 1][(no_child_coeffs - 1) * 5 + 3 - 1] = tree[j][i * 5 + 3 - 1];
                         tree[j + 1][(no_child_coeffs - 1) * 5 + 5 - 1] = tree[j][i * 5 + 4 - 1];
                         tree[j + 1][(no_child_coeffs - 1) * 5 + 4 - 1] = ind_max + tree[j][i * 5 + 3 - 1] - 1;
@@ -313,10 +354,10 @@ namespace CanvasPartition
                         Array.Copy(x, skip, subX, 0, take);
                         Array.Clear(ipi, 0, ipi.Length);
                         Array.Resize(ref ipi, subX.Length - 1);
-                        GetInnerProdIter(subX, ipi);
-                        ind_max = GetInnerProdMax(subX);
+                        GetInnerProdIter(subX, ipi, out double rightmean);
+                        ind_max = GetInnerProdMax(ipi);
 
-                        tree[j + 1][(no_child_coeffs - 1) * 5 + 2 - 1] = ipi[ind_max - 1];
+                        tree[j + 1][(no_child_coeffs - 1) * 5 + 2 - 1] = ipi[ind_max - 1] / Math.Max(0.5, rightmean / meanscale);
                         tree[j + 1][(no_child_coeffs - 1) * 5 + 3 - 1] = tree[j][i * 5 + 4 - 1] + 1;
                         tree[j + 1][(no_child_coeffs - 1) * 5 + 5 - 1] = tree[j][i * 5 + 5 - 1];
                         tree[j + 1][(no_child_coeffs - 1) * 5 + 4 - 1] = ind_max + tree[j][i * 5 + 4 - 1];
@@ -332,17 +373,17 @@ namespace CanvasPartition
 
             } //while 1
 
-            smooth = 0;
+            double smooth = 0;
             for (uint i = 0; i < n; i++) smooth += x[i];
-            smooth = smooth / Math.Sqrt(n);
+            return smooth / Math.Sqrt(n);
         }
 
         /// <summary>
-        /// Enrty function for performing Unbalanced Haar (UH) wavelets decomposition
+        /// Entry function for performing Unbalanced Haar (UH) wavelets decomposition
         /// for change point (breakpoint) detection
         /// </summary>
         public static void HaarWavelets(double[] ratio, double thresholdlower, double thresholdupper, List<int> breakpoints,
-            bool isGermline, double madFactor)
+            bool isGermline, double madFactor, double? coeffVariability, List<double> factorOfThreeCMADs, string chromosome = "")
         {
             // tree = A list of J matrices (list of lists in C#), where J represents the number of UH “scales”. 
             // Each matrix is of size 5 x (the number of UH coefficients at a given scale). 
@@ -353,12 +394,19 @@ namespace CanvasPartition
             // 5th component - end point of the UH vector.
 
             var tree = new List<List<double>>();
-            double smooth = 0;
-            FindBestUnbalancedHaarDecomposition(ratio, tree, smooth);
+            double smooth = FindBestUnbalancedHaarDecomposition(ratio, tree);
+
+            // Originally:
             // set threshold proportional to SD as and sample size as suggested in
             // Piotr Fryzlewicz, Journal of the American Statistical Association
             // Vol. 102, No. 480 (Dec., 2007), pp. 1318-1327
-            double threshold = CanvasCommon.Utilities.Mad(ratio) * madFactor;
+            //
+            // Now:
+            // Set threshold as the coefficient of variation times the median coverage, times the 'madFactor'
+            double median = CanvasCommon.Utilities.Median(ratio);
+            double variabilityMeasure = coeffVariability.HasValue ? median * coeffVariability.Value : CanvasCommon.Utilities.Mad(ratio);
+            double threshold = madFactor * variabilityMeasure;
+
             if (threshold < thresholdlower)
             {
                 threshold = thresholdlower;
@@ -367,10 +415,12 @@ namespace CanvasPartition
             {
                 threshold = thresholdupper;
             }
-            HardThresh(tree, threshold, isGermline);
-            Console.WriteLine("Wavelet threshold:");
-            Console.WriteLine(threshold);
-            GetSegments(tree, smooth, breakpoints);
+
+            HardThresh(tree, threshold, isGermline, chromosome);
+
+            var prelimBreakpoints = new List<int> { };
+            GetSegments(tree, smooth, prelimBreakpoints);
+            GetBreakpointsAfterHealingBadSplits(breakpoints, prelimBreakpoints, ratio, factorOfThreeCMADs, chromosome);
             if (isGermline)
                 RefineSegments(breakpoints, ratio);
         }
