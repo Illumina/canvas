@@ -13,7 +13,7 @@ namespace Canvas.Wrapper
 {
     public class CanvasWorkerFactory
     {
-        private readonly IWorkManager _workManager;
+        private readonly IWorkDoer _workDoer;
         private readonly ISettings _sampleSettings;
         private readonly ILogger _logger;
         private readonly ExecutableProcessor _executableProcessor;
@@ -28,8 +28,8 @@ namespace Canvas.Wrapper
             public static Setting<string> CanvasCoverageModeSetting => SampleSettings.CreateSetting<string>("CanvasCoverageModeSetting", "coverage mode");
             public static Setting<bool> EnableCNVDetectionSetting => SampleSettings.CreateSetting(
                 "RunCNVDetection",
-                "Enable/disable CNV Detection step", converter : DetectCnvs);
-            public static Setting<int?> QualityScoreThresholdSetting => 
+                "Enable/disable CNV Detection step", converter: DetectCnvs);
+            public static Setting<int?> QualityScoreThresholdSetting =>
                     SampleSettings
                         .CreateSetting<int?>(
                             "CanvasQualityScoreThreshold",
@@ -37,7 +37,7 @@ namespace Canvas.Wrapper
                             null,
                             nullableInt => nullableInt.HasValue && nullableInt.Value >= 1,
                             value => int.Parse(value));
-            public static Setting<int?> CountsPerBinSetting => 
+            public static Setting<int?> CountsPerBinSetting =>
                 SampleSettings
                         .CreateSetting<int?>(
                             "CanvasCountsPerBin",
@@ -47,31 +47,16 @@ namespace Canvas.Wrapper
                             value => int.Parse(value));
         }
 
-
-        [Obsolete("Pass ISettings rather than ISampleSettings")]
-        public CanvasWorkerFactory(
-            ISampleSettings sampleSettings,
-            IWorkManager workManager,
-            ILogger logger,
-            ExecutableProcessor executableProcessor,
-            DbSnpVcfProcessor dbSnpVcfProcessor,
-            bool detectCnvDefault,
-            TabixWrapper tabixWrapper, ICommandManager commandManager) : this((ISettings)sampleSettings, workManager,
-            logger, executableProcessor, dbSnpVcfProcessor, detectCnvDefault, tabixWrapper, commandManager)
-        {
-
-        }
-
         public CanvasWorkerFactory(
             ISettings sampleSettings,
-            IWorkManager workManager,
+            IWorkDoer workDoer,
             ILogger logger,
             ExecutableProcessor executableProcessor,
             DbSnpVcfProcessor dbSnpVcfProcessor,
             bool detectCnvDefault,
             TabixWrapper tabixWrapper, ICommandManager commandManager)
         {
-            _workManager = workManager;
+            _workDoer = workDoer;
             _sampleSettings = sampleSettings;
             _logger = logger;
             _executableProcessor = executableProcessor;
@@ -90,7 +75,7 @@ namespace Canvas.Wrapper
             var runtimeExecutable = GetRuntimeExecutable();
             var annotationProvider = GetAnnotationFileProvider();
             var canvasCnvCaller = new CanvasEnrichmentCnvCaller(
-                _workManager,
+                _workDoer,
                 _logger,
                 GetCanvasExe(),
                 runtimeExecutable,
@@ -105,12 +90,13 @@ namespace Canvas.Wrapper
         {
             return GetDbSnpVcfPath() != null;
         }
+
         public ICanvasWorker<CanvasTumorNormalWgsInput, CanvasOutput> GetCanvasTumorNormalWorker()
         {
             var annotationProvider = GetAnnotationFileProvider();
             var runtimeExecutable = GetRuntimeExecutable();
             var canvasCnvCaller = new CanvasTumorNormalWgsCnvCaller(
-                _workManager,
+                _workDoer,
                 _logger,
                 GetCanvasExe(),
                 runtimeExecutable,
@@ -125,7 +111,7 @@ namespace Canvas.Wrapper
             var annotationProvider = GetAnnotationFileProvider();
             var runtimeExecutable = GetRuntimeExecutable();
             var canvasCnvCaller = new CanvasTumorNormalEnrichmentCnvCaller(
-                _workManager,
+                _workDoer,
                 _logger,
                 GetCanvasExe(),
                 runtimeExecutable,
@@ -143,7 +129,7 @@ namespace Canvas.Wrapper
 
         internal PloidyCorrector GetPloidyCorrector()
         {
-            return new PloidyCorrector(_logger, _workManager, new PloidyEstimator(_logger, _workManager, _executableProcessor.GetExecutable("samtools"), false, _commandManager), _tabixWrapper, true);
+            return new PloidyCorrector(_logger, _workDoer, new PloidyEstimator(_logger, _workDoer, _executableProcessor.GetExecutableFileLocation("samtools").FullName, false, _commandManager), _tabixWrapper, true);
         }
 
         public bool RequireNormalVcf()
@@ -191,7 +177,7 @@ namespace Canvas.Wrapper
 
         internal IFileLocation GetCanvasExe()
         {
-            return new FileLocation(_executableProcessor.GetExecutable("Canvas", "Canvas"));
+            return _executableProcessor.GetExecutableFileLocation("Canvas", "Canvas");
         }
 
         internal ICanvasAnnotationFileProvider GetAnnotationFileProvider()

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using CanvasCommon;
 using Illumina.Common;
 using Illumina.Common.FileSystem;
 using Isas.Framework.Logging;
@@ -32,7 +33,8 @@ namespace CanvasSomaticCaller
             bool needHelp = false;
             string bedPath = null;
             string ploidyVcfPath = null;
-            string ffpeOutliersPath = null;
+            string localSdMetricFile = null;
+            string evennessMetricFile = null;
             bool isEnrichment = false;
             bool isDbsnpVcf = false;
             double minimumCallSize;
@@ -42,7 +44,7 @@ namespace CanvasSomaticCaller
             float? userPurity = null;
             float? userPloidy = null;
             CanvasCommon.CanvasSomaticClusteringMode somaticClusteringMode =
-                CanvasCommon.CanvasSomaticClusteringMode.Density;
+                CanvasCommon.CanvasSomaticClusteringMode.MeanShift;
             string parameterconfigPath = Path.Combine(Isas.Framework.Utilities.Utilities.GetAssemblyFolder(typeof(Program)),
                 "SomaticCallerParameters.json");
             string qualityScoreConfigPath = Path.Combine(Isas.Framework.Utilities.Utilities.GetAssemblyFolder(typeof(Program)),
@@ -73,8 +75,12 @@ namespace CanvasSomaticCaller
                     v => ploidyVcfPath = v
                 },
                 {
-                    "f|localSDFile=", "text file with localSD metric (calculate within CanvasClean) (optional)",
-                    v => ffpeOutliersPath = v
+                    $"{CommandLineOptions.LocalSdMetricFile}=", "text file with local SD metric (calculate within CanvasClean) (optional)",
+                    v => localSdMetricFile = v
+                },
+                {
+                    $"{CommandLineOptions.EvennessMetricFile}=", "text file with evenness metric (calculated within CanvasPartition) (optional)",
+                    v => evennessMetricFile = v
                 },
                 {
                     "d|dbsnpvcf", "flag indicating a dbSNP VCF file is used to generate the variant frequency file",
@@ -170,20 +176,24 @@ namespace CanvasSomaticCaller
 
             if (!string.IsNullOrEmpty(ploidyVcfPath))
             {
-                caller.LoadReferencePloidy(ploidyVcfPath); 
+                caller.LoadReferencePloidy(ploidyVcfPath);
             }
 
             double? localSDmetric = null;
-            double? evennessScore = null;
+            double? evennessMetric = null;
 
-            if (!string.IsNullOrEmpty(ffpeOutliersPath))
+            if (!string.IsNullOrEmpty(localSdMetricFile))
             {
-                localSDmetric = CanvasCommon.CanvasIO.ReadCoverageMetricFromTextFile(ffpeOutliersPath, CanvasCommon.CanvasIO.CoverageMetric.localSD);
-                evennessScore = CanvasCommon.CanvasIO.ReadCoverageMetricFromTextFile(ffpeOutliersPath, CanvasCommon.CanvasIO.CoverageMetric.evenness);
+                localSDmetric = CanvasCommon.CanvasIO.ReadLocalSdMetricFromTextFile(localSdMetricFile);
+            }
+
+            if (!string.IsNullOrEmpty(evennessMetricFile))
+            {
+                evennessMetric = CanvasCommon.CanvasIO.ReadEvennessMetricFromTextFile(evennessMetricFile);
             }
 
             caller.LoadBedFile(bedPath);
-            return caller.CallVariants(inFile, variantFrequencyFile, outFile, referenceFolder, name, localSDmetric, evennessScore, somaticClusteringMode);
+            return caller.CallVariants(inFile, variantFrequencyFile, outFile, referenceFolder, name, localSDmetric, evennessMetric, somaticClusteringMode);
         }
         private static T Deserialize<T>(IFileLocation path)
         {

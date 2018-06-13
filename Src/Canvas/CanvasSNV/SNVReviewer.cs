@@ -126,12 +126,14 @@ namespace CanvasSNV
                             continue; //no genotype - we don't know if it's a het SNV.
                         if (isSomatic)
                         {
-                            if (!HasHetSnv(variant))
+                            if (!HasHetSnv(variant, sampleIndex))
                                 continue; // somatic but not a het SNV. for tumor analysis we care about deviations from the expected 0.5 b-allele frequency in the normal
+                            if (!HasGoodGQX(variant, sampleIndex, 30))
+                                continue; // only use variants that are well-behaved in the normal
                         }
                         else
                         {
-                            if (!HasHetOrHomSnv(variant))
+                            if (!HasHetOrHomSnv(variant, sampleIndex))
                                 continue; // exclude hom ref. Only hom alt calls should be used as evidence for ROH in normal samples
                         }
                     }
@@ -147,6 +149,21 @@ namespace CanvasSNV
                 }
             }
             Console.WriteLine("Retained {0} variants, out of {1} records for {2}", this.Variants.Count, countThisChromosome, this.Chromosome);
+        }
+
+        private bool HasGoodGQX(VcfVariant variant, int sampleIndex, int cutoff)
+        {
+            // Allow no GQX field, in case we want to use another caller (e.g. Pisces) and not crash
+            if (!variant.GenotypeColumns[sampleIndex].ContainsKey("GQX"))
+                return true;
+
+            if (variant.GenotypeColumns[sampleIndex]["GQX"].Equals("."))
+                return false;
+
+            if (decimal.Parse(variant.GenotypeColumns[sampleIndex]["GQX"]) < cutoff)
+                return false;
+
+            return true;
         }
 
         /// <summary>
@@ -355,10 +372,9 @@ namespace CanvasSNV
                     );
         }
 
-        private static bool HasHetSnv(VcfVariant variant)
+        private static bool HasHetSnv(VcfVariant variant, int sampleIndex)
         {
-            string genotype = variant.GenotypeColumns[0]["GT"];
-            return genotype == "0/1" || genotype == "1/0" || genotype == "0|1" || genotype == "1|0";
+            return HasHetSnv(GetGenotype(variant, sampleIndex));
         }
 
         private static bool HasHetSnv(string genotype)
@@ -366,10 +382,9 @@ namespace CanvasSNV
             return genotype == "0/1" || genotype == "1/0" || genotype == "0|1" || genotype == "1|0";
         }
 
-        private static bool HasHetOrHomSnv(VcfVariant variant)
+        private static bool HasHetOrHomSnv(VcfVariant variant, int sampleIndex)
         {
-            string genotype = GetGenotype(variant);
-            return HasHetOrHomSnv(genotype);
+            return HasHetOrHomSnv(GetGenotype(variant, sampleIndex));
         }
 
         private static bool HasHetOrHomSnv(string genotype)
@@ -377,9 +392,9 @@ namespace CanvasSNV
             return HasHetSnv(genotype) || genotype == "1/1" || genotype == "1|1";
         }
 
-        private static string GetGenotype(VcfVariant variant)
+        private static string GetGenotype(VcfVariant variant, int sampleIndex)
         {
-            return variant.GenotypeColumns[0]["GT"];
+            return variant.GenotypeColumns[sampleIndex]["GT"];
         }
     }
 }

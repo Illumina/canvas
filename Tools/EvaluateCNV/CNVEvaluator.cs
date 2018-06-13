@@ -211,6 +211,13 @@ namespace EvaluateCNV
                 int knownCn = interval.Cn;
                 if (knownCn > MaxCn) knownCn = MaxCn;
 
+                int thisIntervalBasesTruePositive = 0;
+                int thisIntervalBasesTrueNegative = 0;
+                int thisIntervalBasesFalsePositive = 0;
+                int thisIntervalBasesFalseNegative = 0;
+                int thisIntervalBasesNoCall = interval.Length;
+                int thisIntervalBasesExcluded = 0;
+
                 foreach (CnvCall call in callsThisChromosome)
                 {
                     if (!call.RefPloidy.HasValue)
@@ -225,6 +232,7 @@ namespace EvaluateCNV
                     int overlapEnd = Math.Min(call.End, interval.End);
                     if (overlapStart >= overlapEnd) continue;
                     int overlapBases = overlapEnd - overlapStart;
+                    int thisCallBasesExcluded = 0;
                     // We've got an overlap interval.  Kill off some bases from this interval, if it happens
                     // to overlap with an excluded interval:
                     if (_cnvChecker.ExcludeIntervals.ContainsKey(chr))
@@ -235,10 +243,18 @@ namespace EvaluateCNV
                             int excludeOverlapEnd = Math.Min(excludeInterval.End, overlapEnd);
                             if (excludeOverlapStart >= excludeOverlapEnd) continue;
                             excludeIntervalBases += excludeOverlapEnd - excludeOverlapStart;
+                            thisCallBasesExcluded += excludeOverlapEnd - excludeOverlapStart;
                             overlapBases -= excludeOverlapEnd - excludeOverlapStart;
                             // if majority of the region is in exclude intervals, don't consider any overlap
+                            // N.B.: the denominator here looks dubious -- why compare overlap bases to the excluded interval overlap size,
+                            // rather than, say, the size of the original truth interval?  Or the length of the overlap of the current CNV?
                             if (overlapBases / Math.Max(excludeOverlapEnd - excludeOverlapStart, 1) < 0.1)
+                            {
+                                thisCallBasesExcluded += overlapBases;
+                                excludeIntervalBases += overlapBases;
                                 overlapBases = 0;
+                                break;
+                            }
                         }
                     }
 
@@ -248,6 +264,24 @@ namespace EvaluateCNV
                     {
                         totalOverlapBases += overlapBases;
                         baseCounter.BaseCount[knownCn, CN, refPloidy] += overlapBases;
+
+                        if (knownCn == CN)
+                        {
+                            if (CN == refPloidy)
+                                thisIntervalBasesTrueNegative += overlapBases;
+                            else
+                                thisIntervalBasesTruePositive += overlapBases;
+                        }
+                        else
+                        {
+                            if (knownCn == refPloidy)
+                                thisIntervalBasesFalsePositive += overlapBases;
+                            else
+                                thisIntervalBasesFalseNegative += overlapBases;
+                        }
+                        thisIntervalBasesNoCall -= overlapBases;
+                        thisIntervalBasesNoCall -= thisCallBasesExcluded;
+                        thisIntervalBasesExcluded += thisCallBasesExcluded;
                     }
 
                     interval.BasesCovered += overlapBases;
@@ -273,6 +307,9 @@ namespace EvaluateCNV
                         }
                     }
                 }
+
+                if (baseCounter.MinSize == 0 && baseCounter.MaxSize > 100000)
+                    Console.WriteLine($"Truth {chromosome}:{interval.Start}-{interval.End} CN={knownCn} base counts TP/TN/FP/FN/NC/EXCL {thisIntervalBasesTruePositive} {thisIntervalBasesTrueNegative} {thisIntervalBasesFalsePositive} {thisIntervalBasesFalseNegative} {thisIntervalBasesNoCall} {thisIntervalBasesExcluded}");
 
                 nonOverlapBases -= (totalOverlapBases + excludeIntervalBases);
 

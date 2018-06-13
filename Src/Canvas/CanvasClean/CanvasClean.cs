@@ -74,7 +74,7 @@ namespace CanvasClean
             int significantIQRcounter = 0;
             for (int i = 10; i < 90; i++)
             {
-                if (globalIQR < localIQR[i] * 2f)
+                if (globalIQR * 2f < localIQR[i])
                     significantIQRcounter++;
             }
 
@@ -420,7 +420,7 @@ namespace CanvasClean
             bool doGCnorm = false;
             bool doSizeFilter = false;
             bool doOutlierRemoval = false;
-            string ffpeOutliersFile = null;
+            string localSdMetricFile = null;
             string manifestFile = null;
             CanvasGCNormalizationMode gcNormalizationMode = CanvasGCNormalizationMode.MedianByGC;
             string modeDescription = String.Format("gc normalization mode. Available modes: {0}. Default: {1}",
@@ -435,7 +435,10 @@ namespace CanvasClean
                 { "g|gcnorm",         "perform GC normalization",                         v => doGCnorm = v != null },
                 { "s|filtsize",       "filter out genomically large bins",                v => doSizeFilter = v != null },
                 { "r|outliers",       "filter outlier points",                            v => doOutlierRemoval = v != null },
-                { "f|ffpeoutliers=",   "filter regions of FFPE biases",                   v => ffpeOutliersFile = v },
+                { $"{CommandLineOptions.LocalSdMetricFile}=",
+                                       "output file for local coverage standard " +
+                                       "deviation metric used to filter regions " +
+                                       "with FFPE bias",                                  v => localSdMetricFile = v },
                 { "t|manifest=",      "Nextera manifest file",                            v => manifestFile = v },
                 { "w|weightedmedian=", "Minimum number of bins per GC required to calculate weighted median", v => minNumberOfBinsPerGCForWeightedMedian = int.Parse(v) },
                 { "m|mode=",          modeDescription,                                    v => gcNormalizationMode = Utilities.ParseCanvasGCNormalizationMode(v) },
@@ -477,17 +480,17 @@ namespace CanvasClean
                 bins = RemoveBigBins(bins);
 
             // do not run FFPE outlier removal on targeted/low coverage data
-            if (ffpeOutliersFile != null && bins.Count < 50000)
+            if (localSdMetricFile != null && bins.Count < 50000)
             {
-                ffpeOutliersFile = null;
+                localSdMetricFile = null;
             }
 
             // estimate localSD metric to use in doFFPEOutlierRemoval later and write to a text file 
-            double LocalSD = -1.0;
-            if (ffpeOutliersFile != null)
+            double localSd = -1.0;
+            if (localSdMetricFile != null)
             {
-                LocalSD = GetLocalStandardDeviation(bins);
-                CanvasIO.WriteCoverageMetricToTextFile(ffpeOutliersFile, LocalSD, CanvasIO.CoverageMetric.localSD);
+                localSd = GetLocalStandardDeviation(bins);
+                CanvasIO.WriteLocalSdMetricToTextFile(localSdMetricFile, localSd);
             }
 
             if (doGCnorm)
@@ -506,7 +509,7 @@ namespace CanvasClean
                     NormalizeByGC(bins, manifest, gcNormalizationMode);
                     // Use variance normalization only on large exome panels and whole genome sequencing
                     // The treshold is set to 10% of an average number of bins on CanvasClean data
-                    if (ffpeOutliersFile != null && bins.Count > 500000)
+                    if (localSdMetricFile != null && bins.Count > 500000)
                     {
                         bool isNormalizeVarianceByGC = NormalizeVarianceByGC(bins, manifest: manifest);
                         // If normalization by variance was run (isNormalizeVarianceByGC), perform mean centering by using NormalizeByGC 
@@ -517,10 +520,10 @@ namespace CanvasClean
                 }
             }
 
-            if (ffpeOutliersFile != null)
+            if (localSdMetricFile != null)
             {
                 // threshold 20 is derived to separate FF and noisy FFPE samples (derived from a training set of approx. 40 samples)
-                List<SampleGenomicBin> LocalMadstrippedBins = RemoveBinsWithExtremeLocalSD(bins, LocalSD, 20, outFile);
+                List<SampleGenomicBin> LocalMadstrippedBins = RemoveBinsWithExtremeLocalSD(bins, localSd, 20, outFile);
                 bins = LocalMadstrippedBins;
             }
 

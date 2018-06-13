@@ -32,7 +32,8 @@ namespace CanvasCommon
     public enum CanvasSomaticClusteringMode
     {
         GaussianMixture,
-        Density
+        Density,
+        MeanShift
     }
 
     public static class Utilities
@@ -621,7 +622,7 @@ namespace CanvasCommon
 
         public static double MaxValue(double[][] matrix)
         {
-            return Enumerable.Concat(matrix.SelectMany(vector => vector), new[] {Double.MinValue}).Max();
+            return Enumerable.Concat(matrix.SelectMany(vector => vector), new[] { Double.MinValue }).Max();
         }
 
 
@@ -804,7 +805,7 @@ namespace CanvasCommon
                     string[] bits = fileLine.Split('\t');
                     string chr = bits[0];
                     if (!excludedIntervals.ContainsKey(chr)) excludedIntervals[chr] = new List<SampleGenomicBin>();
-                    
+
                     SampleGenomicBin interval = new SampleGenomicBin(chr, int.Parse(bits[1]), int.Parse(bits[2]), 0);
                     if (interval.Start < 0)
                     {

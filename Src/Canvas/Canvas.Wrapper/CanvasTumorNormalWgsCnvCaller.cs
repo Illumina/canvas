@@ -13,7 +13,7 @@ namespace Canvas.Wrapper
     /// </summary>
     public class CanvasTumorNormalWgsCnvCaller : ICanvasCnvCaller<CanvasTumorNormalWgsInput, CanvasOutput>
     {
-        private readonly IWorkManager _workManager;
+        private readonly IWorkDoer _workDoer;
         private readonly ILogger _logger;
         private readonly IFileLocation _canvasExe;
         private readonly ICanvasAnnotationFileProvider _annotationFileProvider;
@@ -22,14 +22,14 @@ namespace Canvas.Wrapper
         private readonly IFileLocation _runtimeExecutable;
 
         public CanvasTumorNormalWgsCnvCaller(
-            IWorkManager workManager,
+            IWorkDoer workDoer,
             ILogger logger,
             IFileLocation canvasExe, IFileLocation runtimeExecutable,
             ICanvasAnnotationFileProvider annotationFileProvider,
             ICanvasSingleSampleInputCommandLineBuilder singleSampleInputCommandLineBuilder,
             CanvasPloidyVcfCreator canvasPloidyVcfCreator)
         {
-            _workManager = workManager;
+            _workDoer = workDoer;
             _logger = logger;
             _canvasExe = canvasExe;
             _annotationFileProvider = annotationFileProvider;
@@ -82,8 +82,8 @@ namespace Canvas.Wrapper
                 CommandLine = _canvasExe + " " + commandLine,
                 LoggingStub = "Canvas_" + sampleId,
             };
-            _workManager.DoWorkSingleThread(singleSampleJob);
-            return GetCanvasOutput(sampleId, sampleSandbox);
+            var job = new JobInfo(_runtimeExecutable.FullName, _canvasExe + " " + commandLine, "Canvas_" + sampleId);
+            return _workDoer.DoWork(WorkResourceRequest.CreateExact(1, 8), job, GetCanvasOutput(sampleId, sampleSandbox)).Await();
         }
 
         private CanvasOutput GetCanvasOutput(string sampleId, IDirectoryLocation sampleSandbox)

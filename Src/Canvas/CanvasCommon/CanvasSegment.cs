@@ -54,7 +54,7 @@ namespace CanvasCommon
 
     public class Balleles
     {
-        internal List<Ballele> Range { get; private set; }
+        public List<Ballele> Range { get; private set; }
 
         public Balleles(IEnumerable<Ballele> alleles)
         {
@@ -279,21 +279,35 @@ namespace CanvasCommon
 
         public (CnvType, int[]) GetCnvTypeAndAlleleCopyNumbers(int referenceCopyNumber)
         {
+            if (referenceCopyNumber > 2) throw new ArgumentException("Reference copy number > 2 is not supported");
+
             if (CopyNumber == referenceCopyNumber)
             {
-                if (referenceCopyNumber == 0) return (CnvType.Reference, new[] { -1 }); // Reference is the default CNV type if no additional information given
-                if (referenceCopyNumber == 2 && MajorChromosomeCount.HasValue && MajorChromosomeCount == 2)
-                    return (CnvType.LossOfHeterozygosity, new[] { 0, 2 });
-                return (CnvType.Reference, Enumerable.Repeat(1, referenceCopyNumber).ToArray());
+                switch (referenceCopyNumber)
+                {
+                    case 1:
+                        return (CnvType.Reference, new[] { 1 });
+                    case 2 when MajorChromosomeCount.HasValue:
+                        return MajorChromosomeCount == 2 ? (CnvType.LossOfHeterozygosity, new[] { 0, referenceCopyNumber }) : (CnvType.Reference, new[] { 1, 1 });
+                    default:
+                        return (CnvType.Reference, Enumerable.Repeat(-1, Math.Max(1, referenceCopyNumber)).ToArray()); // Reference is the default CNV type if no additional information given
+                }
             }
+
             if (CopyNumber > referenceCopyNumber)
             {
-                if (referenceCopyNumber <= 1) return (CnvType.Gain, new[] { CopyNumber });
-                if (!MajorChromosomeCount.HasValue)
-                    return (CnvType.Gain, new[]
-                        {-1, Int32.MaxValue}); // use -1 for unknown allele copynum and MaxValue for <DUP> 
-                return (CnvType.Gain, new[] { CopyNumber - MajorChromosomeCount.Value, MajorChromosomeCount.Value });
+                switch (referenceCopyNumber)
+                {
+                    case 1:
+                        return (CnvType.Gain, new[] { CopyNumber });
+                    case 2:
+                        return MajorChromosomeCount.HasValue ? (CnvType.Gain, new[] { CopyNumber - MajorChromosomeCount.Value, MajorChromosomeCount.Value })
+                            : (CnvType.Gain, new[] { -1, Int32.MaxValue }); // use -1 for unknown allele copynum and MaxValue for <DUP> 
+                    default:
+                        return (CnvType.Gain, Enumerable.Repeat(-1, Math.Max(1, referenceCopyNumber)).ToArray());
+                }
             }
+
             return CopyNumber == 0 ? (CnvType.Loss, new int[referenceCopyNumber]) : (CnvType.Loss, new[] { 0, 1 });
         }
 
@@ -319,7 +333,7 @@ namespace CanvasCommon
             }
         }
 
-        public int SizeOveralp(CanvasSegment segment)
+        public int SizeOverlap(CanvasSegment segment)
         {
             if (segment.Begin > Begin && segment.End < End)
                 return Length - segment.Length;
@@ -666,7 +680,7 @@ namespace CanvasCommon
                                     lastIndex = (int)((float)segment.Balleles.Size() * (pointEndPos - segment.Begin) / segment.Length);
                                 }
                                 VF.AddRange(segment.Balleles.Frequencies.Skip(firstIndex).Take(lastIndex - firstIndex));
-                                MAF.AddRange(segment.Balleles.MaxFrequencies.Select(Convert.ToSingle).Skip(firstIndex).Take(lastIndex - firstIndex));
+                                MAF.AddRange(segment.Balleles.MaxFrequencies.Select(maxFs => 1f - Convert.ToSingle(maxFs)).Skip(firstIndex).Take(lastIndex - firstIndex));
                             }
                         }
 
@@ -687,8 +701,7 @@ namespace CanvasCommon
                             writer.Write($"{normalizedCountString}\t");
                             if (MAF.Count >= 10)
                             {
-                                MAF.Sort();
-                                writer.Write("{0}\t", MAF[MAF.Count / 2]);
+                                writer.Write("{0}\t", Utilities.Median(MAF));
                             }
                             else
                             {
@@ -717,7 +730,7 @@ namespace CanvasCommon
                                 }
                                 for (int i = 0; i < vfDistribution.Length; i++)
                                 {
-                                    vfDistribution[i] = vfDistribution[i] / (float)VF.Count * 100.0f;
+                                    vfDistribution[i] = vfDistribution[i] / VF.Count * 100.0f;
                                     writer.Write("{0:F2}\t", vfDistribution[i]);
                                 }
                             }
@@ -818,7 +831,7 @@ namespace CanvasCommon
                     continue;
                 }
                 // common segment and Canvas segment overlap
-                if (sortedCanvasSegments[canvasSegmentsIndex].SizeOveralp(sortedCommonCnvSegments[commonSegmentsIndex]) > segmentOverlapThreshold)
+                if (sortedCanvasSegments[canvasSegmentsIndex].SizeOverlap(sortedCommonCnvSegments[commonSegmentsIndex]) > segmentOverlapThreshold)
                 {
                     var newSegmentsHaplotype = SplitCanvasSegments(sortedCanvasSegments, sortedCommonCnvSegments, defaultAlleleCountThreshold,
                         ref canvasSegmentsIndex, ref commonSegmentsIndex);
@@ -1006,7 +1019,7 @@ namespace CanvasCommon
                 if (nextQ >= 0)
                 {
                     // segments[nextIndex] assimilates segments[segmentIndex...nextIndex - 1], in reverse order
-                    for (int tempIndex = nextIndex -1; segmentIndex <= tempIndex; tempIndex--)
+                    for (int tempIndex = nextIndex - 1; segmentIndex <= tempIndex; tempIndex--)
                     {
                         segments[nextIndex].MergeIn(segments[tempIndex]);
                     }
@@ -1067,7 +1080,7 @@ namespace CanvasCommon
         public static void SetFilterForSegments(int qualityFilterThreshold, List<CanvasSegment> segments, int segmentSizeCutoff)
         {
             string qualityFilter = $"q{qualityFilterThreshold}";
-            string sizeFilter = "L" + CanvasFilter.FormatCnvSizeWithSuffix(segmentSizeCutoff);
+            string sizeFilter = CanvasFilter.GetCnvSizeFilter(segmentSizeCutoff);
             foreach (var segment in segments)
             {
                 var filterTags = new List<string>();

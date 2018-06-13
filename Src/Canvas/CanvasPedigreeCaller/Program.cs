@@ -166,8 +166,6 @@ namespace CanvasPedigreeCaller
             var pedigreeCallerWorkDirectory = outputDirectory.GetDirectoryLocation("CanvasPedigreeCaller");
             WorkDoerFactory.RunWithWorkDoer(logger, settings, pedigreeCallerWorkDirectory, workDoer =>
             {
-                var workManager = WorkManagerFactory.GetWorkManager(workDoer, logger, pedigreeCallerWorkDirectory, settings);
-
                 var copyNumberLikelihoodCalculator = new CopyNumberLikelihoodCalculator(callerParameters.MaximumCopyNumber);
                 var variantCaller = callerParameters.DefaultCaller == CallerType.VariantCaller ?
                 (IVariantCaller)new VariantCaller(copyNumberLikelihoodCalculator, callerParameters, qScoreThreshold) :

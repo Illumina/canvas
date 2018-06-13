@@ -9,7 +9,7 @@ namespace CanvasPartition
     class CanvasPartitionParameters
     {
         public int MaxInterBinDistInSegment { get; set; } = 1000000;
-        public double MadFactor { get; set; } = 2.0;
+        public double MadFactor { get; set; } = 5.0;
         public double CBSalpha { get; set; } = 0.01;
         public double EvennessScoreThreshold { get; set; } = 94.5;
         public int EvennessScoreWindow { get; set; } = 100000;

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using Isas.SequencingFiles;
 using Isas.SequencingFiles.Vcf;
 
 namespace CanvasCommon
@@ -56,20 +57,7 @@ namespace CanvasCommon
         {
             if (!PloidyByChromosome.ContainsKey(segment.Chr))
                 return 2;
-            int[] baseCounts = new int[5];
-            baseCounts[2] = segment.Length;
-
-            foreach (PloidyInterval interval in PloidyByChromosome[segment.Chr])
-            {
-                if (interval.Ploidy == 2) continue;
-                int overlapStart = Math.Max(segment.Begin, interval.Start -1);
-                if (overlapStart > segment.End) continue;
-                int overlapEnd = Math.Min(segment.End, interval.End);
-                int overlapBases = overlapEnd - overlapStart;
-                if (overlapBases < 0) continue;
-                baseCounts[2] -= overlapBases;
-                baseCounts[interval.Ploidy] += overlapBases; // ASSUMPTION: Vcf file ploidy shouldn't be >4 (i.e. we wouldn't handle an XXXXXY genome):
-            }
+            int[] baseCounts = getPloidyCounts(new ReferenceInterval(segment.Chr, new Interval(segment.Begin + 1, segment.End)));
             int bestCount = 0;
             int referenceCopyNumber = 2;
             for (int copyNumber = 0; copyNumber < baseCounts.Length; copyNumber++)
@@ -81,6 +69,43 @@ namespace CanvasCommon
                 }
             }
             return referenceCopyNumber;
+        }
+
+        /// <summary>
+        /// Given a segment, return the expected copy number - normally this is 2, but based on the reference ploidy bed file, it could be something else.  
+        /// For XX samples, reference ploidy is 0 on chrY; for XY samples, reference ploidy is 1 on chrX+chrY
+        /// </summary>
+        public bool IsUniformReferencePloidy(ReferenceInterval queryIval)
+        {
+            if (!PloidyByChromosome.ContainsKey(queryIval.Chromosome))
+                return true;
+            var baseCounts = getPloidyCounts(queryIval);
+            int nonZeroCount = 0;
+            for (int copyNumber = 0; copyNumber < baseCounts.Length; copyNumber++)
+            {
+                if (baseCounts[copyNumber] > 0)
+                    nonZeroCount++;
+            }
+            return nonZeroCount < 2;
+        }
+
+        private int[] getPloidyCounts(ReferenceInterval queryIval)
+        {
+            var baseCounts = new int[5];
+            baseCounts[2] = queryIval.Interval.Length;
+
+            foreach (PloidyInterval interval in PloidyByChromosome[queryIval.Chromosome])
+            {
+                if (interval.Ploidy == 2) continue;
+                int overlapStart = Math.Max(queryIval.Interval.OneBasedStart - 1, interval.Start - 1);
+                if (overlapStart > interval.End) continue;
+                int overlapEnd = Math.Min(queryIval.Interval.OneBasedEnd, interval.End);
+                int overlapBases = overlapEnd - overlapStart;
+                if (overlapBases <= 0) continue;
+                baseCounts[2] -= overlapBases;
+                baseCounts[interval.Ploidy] += overlapBases; // ASSUMPTION: Vcf file ploidy shouldn't be >4 (i.e. we wouldn't handle an XXXXXY genome):
+            }
+            return baseCounts;
         }
 
         // Only one sample column allowed, if no sampleId provided, 

@@ -85,7 +85,7 @@ namespace CanvasPedigreeCaller
                 if (IsReferenceVariant(canvasSegments, samplesInfo, probandId))
                     continue;
                 // common variant
-                if (IsSharedCnv(canvasSegments, samplesInfo, parentIDs, probandId, _callerParameters.MaximumCopyNumber))
+                if (CanvasPedigreeCaller.IsSharedCnv(canvasSegments, samplesInfo, parentIDs, probandId, _callerParameters.MaximumCopyNumber))
                     continue;
                 // other offsprings are ALT
                 if (!offspringIDs.Except(probandId.ToEnumerable()).All(id => IsReferenceVariant(canvasSegments, samplesInfo, id)))
@@ -93,7 +93,7 @@ namespace CanvasPedigreeCaller
                 // not all q-scores are above the threshold
                 if (parentIDs.Concat(probandId).Any(id => !IsPassVariant(canvasSegments, id)))
                     continue;
-                double deNovoQualityScore = GetConditionalDeNovoQualityScore(canvasSegments, copyNumbersLikelihoods, samplesInfo, parentIDs, probandId);
+                double deNovoQualityScore = CanvasPedigreeCaller.GetConditionalDeNovoQualityScore(canvasSegments, copyNumbersLikelihoods, samplesInfo, parentIDs, probandId);
 
                 // adjustment so that denovo quality score threshold is 20 (rather than 10) to match Manta 
                 deNovoQualityScore *= 2;
@@ -104,65 +104,12 @@ namespace CanvasPedigreeCaller
             }
         }
 
-        /// <summary>
-        /// Assess likelihood of a de-novo variant for copyNumberGenotypes configuration with a Mendelian conflict 
-        /// </summary>
-        /// <param name="canvasSegments"></param>
-        /// <param name="jointLikelihoods"></param>
-        /// <param name="parentIDs"></param>
-        /// <param name="probandId"></param>
-        /// <param name="samplesInfo"></param>
-        /// <returns></returns>
-        private double GetConditionalDeNovoQualityScore(ISampleMap<CanvasSegment> canvasSegments, JointLikelihoods jointLikelihoods, ISampleMap<SampleMetrics> samplesInfo, List<SampleId> parentIDs, SampleId probandId)
-        {
-            const double q60 = 0.000001;
-            var parent1Ploidy = Genotype.Create(samplesInfo[parentIDs.First()].GetPloidy(canvasSegments[parentIDs.First()]));
-            var parent2Ploidy = Genotype.Create(samplesInfo[parentIDs.Last()].GetPloidy(canvasSegments[parentIDs.Last()]));
-            int probandPloidy = samplesInfo[probandId].GetPloidy(canvasSegments[probandId]);
-
-            double deNovoGainMarginalLikelihood = jointLikelihoods.GetMarginalGainDeNovoLikelihood(new KeyValuePair<SampleId, Genotype>(probandId, Genotype.Create(probandPloidy)),
-                    new KeyValuePair<SampleId, Genotype>(parentIDs.First(), parent1Ploidy), new KeyValuePair<SampleId, Genotype>(parentIDs.Last(), parent2Ploidy));
-            double deNovoLossMarginalLikelihood = jointLikelihoods.GetMarginalLossDeNovoLikelihood(new KeyValuePair<SampleId, Genotype>(probandId, Genotype.Create(probandPloidy)),
-                    new KeyValuePair<SampleId, Genotype>(parentIDs.First(), parent1Ploidy), new KeyValuePair<SampleId, Genotype>(parentIDs.Last(), parent2Ploidy));
-            double denovoProbability = canvasSegments[probandId].CopyNumber > probandPloidy ?
-                1 - deNovoGainMarginalLikelihood / (jointLikelihoods.TotalMarginalLikelihood - deNovoLossMarginalLikelihood) :
-                1 - deNovoLossMarginalLikelihood / (jointLikelihoods.TotalMarginalLikelihood - deNovoGainMarginalLikelihood);
-            // likelihood of proband genotype != ALT given "copyNumberGenotypes" configuration in pedigree with Mendelian conflict 
-            return -10.0 * Math.Log10(Math.Max(denovoProbability, q60));
-        }
-
 
         private bool IsPassVariant(ISampleMap<CanvasSegment> canvasSegments, SampleId sampleId)
         {
             return canvasSegments[sampleId].QScore >= _qualityFilterThreshold;
         }
 
-        /// <summary>
-        /// identify common variants using total CN calls within a pedigree obtained with coverage information only 
-        /// </summary>
-        /// <param name="canvasSegments"></param>
-        /// <param name="samplesInfo"></param>
-        /// <param name="parentIDs"></param>
-        /// <param name="probandId"></param>
-        /// <param name="maximumCopyNumber"></param>
-        /// <returns></returns>
-        public static bool IsSharedCnv(ISampleMap<CanvasSegment> canvasSegments, ISampleMap<SampleMetrics> samplesInfo, List<SampleId> parentIDs, SampleId probandId, int maximumCopyNumber)
-        {
-            int parent1CopyNumber = GetCnState(canvasSegments, parentIDs.First(), maximumCopyNumber);
-            int parent2CopyNumber = GetCnState(canvasSegments, parentIDs.Last(), maximumCopyNumber);
-            int probandCopyNumber = GetCnState(canvasSegments, probandId, maximumCopyNumber);
-            var parent1Segment = canvasSegments[parentIDs.First()];
-            var parent2Segment = canvasSegments[parentIDs.Last()];
-            var probandSegment = canvasSegments[probandId];
-            int parent1Ploidy = samplesInfo[parentIDs.First()].GetPloidy(parent1Segment);
-            int parent2Ploidy = samplesInfo[parentIDs.Last()].GetPloidy(parent2Segment);
-            int probandPloidy = samplesInfo[probandId].GetPloidy(probandSegment);
-            // Use the following logic: if the proband has fewer copies than expected (from ploidy) but both parents have at least the expected number of copies OR the 
-            // proband has more copies than expected but both parents have no more than the expected number of copies, 
-            // then it is not a 'common CNV' (i.e.it could be de novo); otherwise, it is common
-            return !(parent1CopyNumber <= parent1Ploidy && parent2CopyNumber <= parent2Ploidy && probandCopyNumber > probandPloidy ||
-                parent1CopyNumber >= parent1Ploidy && parent2CopyNumber >= parent2Ploidy && probandCopyNumber < probandPloidy);
-        }
 
         private bool IsReferenceVariant(ISampleMap<CanvasSegment> canvasSegments, ISampleMap<SampleMetrics> samplesInfo, SampleId sampleId)
         {

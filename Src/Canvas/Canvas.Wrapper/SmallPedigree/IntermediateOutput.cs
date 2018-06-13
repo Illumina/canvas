@@ -9,10 +9,12 @@ namespace Canvas.Wrapper.SmallPedigree
             IFileLocation partitioned, IFileLocation coverageBigwig, BgzfFile bAlleleBedgraph, BgzfFile copyNumberBedgraph)
         {
             CnvVcf = cnvVcf;
+#pragma warning disable CS0618 // Type or member is obsolete
             CoverageAndVariantFrequencies = coverageAndVariantFrequencies;
             VariantFrequencies = variantFrequencies;
             VariantFrequenciesBaf = variantFrequenciesBaf;
             Partitioned = partitioned;
+#pragma warning restore CS0618 // Type or member is obsolete
             CoverageBigwig = coverageBigwig;
             BAlleleBedgraph = bAlleleBedgraph;
             CopyNumberBedgraph = copyNumberBedgraph;

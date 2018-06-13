@@ -14,6 +14,7 @@ using Isas.Framework.Logging;
 using Isas.Framework.Settings;
 using Isas.Framework.WorkManagement;
 using Isas.Framework.WorkManagement.CommandBuilding;
+using Isas.StatisticsProcessing.SummaryMetrics;
 
 namespace EvaluateCNV
 {
@@ -169,7 +170,6 @@ namespace EvaluateCNV
 
         protected static Dictionary<string, List<CNInterval>> LoadKnownCNVCF(string oracleVcfPath)
         {
-            bool stripChr = false;
             var knownCn = new Dictionary<string, List<CNInterval>>();
             // Load our "oracle" of known copy numbers:
             int count = 0;
@@ -180,62 +180,77 @@ namespace EvaluateCNV
                     string fileLine = reader.ReadLine();
                     if (fileLine == null) break;
                     if (fileLine.Length == 0 || fileLine[0] == '#') continue;
-                    string[] bits = fileLine.Split('\t');
-                    string chromosome = bits[0];
-                    if (stripChr) chromosome = chromosome.Replace("chr", "");
-                    if (!knownCn.ContainsKey(chromosome)) knownCn[chromosome] = new List<CNInterval>();
-                    CNInterval interval = new CNInterval(chromosome)
-                    {
-                        Start = int.Parse(bits[1]),
-                        Cn = -1
-                    };
-                    string[] infoBits = bits[7].Split(';');
-                    foreach (string subBit in infoBits)
-                    {
-                        if (subBit.StartsWith("CN="))
-                        {
-                            float tempCn = float.Parse(subBit.Substring(3));
-                            if (subBit.EndsWith(".5"))
-                            {
-                                interval.Cn = (int)Math.Round(tempCn + 0.1); // round X.5 up to X+1
-                            }
-                            else
-                            {
-                                interval.Cn = (int)Math.Round(tempCn); // Round off
-                            }
-                        }
-                        if (subBit.StartsWith("END="))
-                        {
-                            interval.End = int.Parse(subBit.Substring(4));
-                        }
-                    }
-                    // Parse CN from Canvas output:
-                    if (bits.Length > 8)
-                    {
-                        string[] subBits = bits[8].Split(':');
-                        string[] subBits2 = bits[9].Split(':');
-                        for (int subBitIndex = 0; subBitIndex < subBits.Length; subBitIndex++)
-                        {
-                            if (subBits[subBitIndex] == "CN")
-                            {
-                                interval.Cn = int.Parse(subBits2[subBitIndex]);
-                            }
-                        }
-                    }
-                    if (interval.End == 0 || interval.Cn < 0)
-                    {
-                        Console.WriteLine("Error - bogus record!");
-                        Console.WriteLine(fileLine);
-                    }
-                    else
-                    {
-                        knownCn[chromosome].Add(interval);
-                        count++;
-                    }
+                    var interval = ParseCnInterval(oracleVcfPath, fileLine);
+
+                    if (!knownCn.ContainsKey(interval.Chromosome)) knownCn[interval.Chromosome] = new List<CNInterval>();
+                    knownCn[interval.Chromosome].Add(interval);
+                    count++;
                 }
             }
             Console.WriteLine(">>>Loaded {0} known-CN intervals", count);
             return knownCn;
+        }
+
+        private static CNInterval ParseCnInterval(string oracleVcfPath, string fileLine)
+        {
+            try
+            {
+                return ParseCnInterval(fileLine);
+            }
+            catch (Exception e)
+            {
+                throw new ArgumentException($"Invalid VCF entry in '{oracleVcfPath}': '{fileLine}'", e);
+            }
+        }
+
+        private static CNInterval ParseCnInterval(string fileLine)
+        {
+            string[] bits = fileLine.Split('\t');
+            string chromosome = bits[0];
+            CNInterval interval = new CNInterval(chromosome)
+            {
+                Start = int.Parse(bits[1]),
+                Cn = -1
+            };
+            string[] infoBits = bits[7].Split(';');
+            foreach (string subBit in infoBits)
+            {
+                if (subBit.StartsWith("CN="))
+                {
+                    float tempCn = float.Parse(subBit.Substring(3));
+                    if (subBit.EndsWith(".5"))
+                    {
+                        interval.Cn = (int)Math.Round(tempCn + 0.1); // round X.5 up to X+1
+                    }
+                    else
+                    {
+                        interval.Cn = (int)Math.Round(tempCn); // Round off
+                    }
+                }
+                if (subBit.StartsWith("END="))
+                {
+                    interval.End = int.Parse(subBit.Substring(4));
+                }
+            }
+            // Parse CN from Canvas output:
+            if (bits.Length > 8)
+            {
+                string[] subBits = bits[8].Split(':');
+                string[] subBits2 = bits[9].Split(':');
+                for (int subBitIndex = 0; subBitIndex < subBits.Length; subBitIndex++)
+                {
+                    if (subBits[subBitIndex] == "CN")
+                    {
+                        interval.Cn = int.Parse(subBits2[subBitIndex]);
+                    }
+                }
+            }
+            if (interval.End == 0 || interval.Cn < 0)
+            {
+                throw new ArgumentException("Invalid record. End cannot be 0 and CN must be >= 0");
+            }
+
+            return interval;
         }
 
         protected void LoadRegionsOfInterest(string bedPath)
@@ -517,8 +532,26 @@ namespace EvaluateCNV
                 cnvEvaluator.ComputeAccuracy(knownCn, cnvCallsPath, outputPath, includePassingOnly, options, calls);
                 if (includePassingOnly)
                     cnvEvaluator.ComputeAccuracy(knownCn, cnvCallsPath, outputPath, false, options, calls);
+                ComputeCallability(logger, calls, options, output);
                 Console.WriteLine(">>>Done - results written to {0}", outputPath);
             });
+        }
+
+        private static void ComputeCallability(ILogger logger, Dictionary<string, List<CnvCall>> calls,
+            EvaluateCnvOptions options, IDirectoryLocation output)
+        {
+            var kmerFasta = new FileLocation(options.KmerFa);
+            var canvasAnnotationDir = kmerFasta.Directory;
+            var filterBed = canvasAnnotationDir.GetFileLocation("filter13.bed");
+            if (!filterBed.Exists) throw new ArgumentException($"Missing file at {filterBed}");
+            var annotationDir = canvasAnnotationDir.Parent;
+            var buildDir = annotationDir.Parent;
+            var genome = new ReferenceGenome(buildDir).GenomeMetadata;
+            var computer = CallabilityMetricsComputer.Create(logger, genome, filterBed, options.PloidyInfo.SexPloidyInfo.PloidyY == 0);
+            var callability = computer.CalculateMetric(calls);
+            var callabilityFile = output.GetFileLocation($"{options.BaseFileName}_callability.txt");
+            File.WriteAllLines(callabilityFile.FullName, callability.GetMetrics().Select(metric => metric.ToCsv().Replace(",", "\t")));
+            logger.Info($"Callability: {callability.Callability}. Called bases: {callability.CalledBases}. Total bases: {callability.TotalBases}.");
         }
 
         private static Dictionary<string, List<CNInterval>> GetKnownCopyNumberWithReferencePloidy(ReferencePloidy referencePloidy, Dictionary<string, List<CNInterval>> knownCn)
@@ -609,8 +642,11 @@ namespace EvaluateCNV
                 int overlapEnd = Math.Min(call.End, currentPloidyRegion.End);
                 int overlap = overlapEnd - overlapStart;
                 if (overlap <= 0) continue;
-                Console.Error.WriteLine(
-                    $"call '{call}' partially overlaps reference ploidy {currentPloidyRegion.Ploidy} region '{currentPloidyRegion}'. The reference ploidy region with majority base overlap will be used.");
+                if (overlap < call.Length)
+                {
+                    Console.Error.WriteLine(
+                        $"call '{call}' partially overlaps reference ploidy {currentPloidyRegion.Ploidy} region '{currentPloidyRegion}'. The reference ploidy region with majority base overlap will be used.");
+                }
                 totalOverlap += overlap;
                 if (overlap > maxOverlap)
                 {
@@ -622,8 +658,11 @@ namespace EvaluateCNV
             var diploidOverlap = call.Length - totalOverlap;
             if (diploidOverlap > maxOverlap)
             {
-                Console.Error.WriteLine(
-                    $"call '{call}' has majority overlap with reference ploidy 2 region.");
+                if (maxOverlap > 0)
+                {
+                    Console.Error.WriteLine(
+                        $"call '{call}' has majority overlap with reference ploidy 2 region.");
+                }
                 ploidyRegion = null;
                 return false;
             }

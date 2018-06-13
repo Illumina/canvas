@@ -19,7 +19,7 @@ namespace CanvasSomaticCaller
         public int DeviationIndexCutoff { get; set; } = 18;
         public double CoverageWeighting { get; set; } = 0.4;
         public float MinAllowedPloidy { get; set; } = 0.5f;
-        public float MaxAllowedPloidy { get; set; } = 5.0f;
+        public float MaxAllowedPloidy { get; set; } = 6.0f;
         public float UpperCoverageLevelWeightingFactor { get; set; } = 2.5f;
         public float LowerCoverageLevelWeightingFactor { get; set; } = 2.5f;
         public int CoverageLevelWeightingFactorLevels{ get; set; } = 80;
