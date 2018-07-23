@@ -6,6 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Isas.SequencingFiles;
 using CanvasCommon;
+using Illumina.Common.Collections;
 using Illumina.Common.FileSystem;
 using Isas.Framework.Logging;
 
@@ -40,8 +41,15 @@ namespace CanvasPartition
 
         public class Segment
         {
-            public uint start; // Genomic start location
-            public uint end; // Genomic end location (inclusive)
+            /// <summary>
+            /// Genomic start location (zero-based inclusive)
+            /// </summary>
+            public uint start;
+
+            /// <summary>
+            /// Genomic end location (zero-based exclusive or one-based inclusive)
+            /// </summary>
+            public uint end;
         }
 
         public class GenomeSegmentationResults
@@ -52,13 +60,53 @@ namespace CanvasPartition
             {
                 this.SegmentByChr = segmentByChr;
             }
+
+            public static GenomeSegmentationResults SplitOverlappingSegments(
+                List<GenomeSegmentationResults> sampleSegmentationResults)
+            {
+                if (sampleSegmentationResults.Count == 1) return sampleSegmentationResults.Single();
+
+                var result = new ConcurrentDictionary<string, Segment[]>();
+                Parallel.ForEach(sampleSegmentationResults.First().SegmentByChr.Keys, chr =>
+                {
+                    result[chr] = SplitOverlappingSegments(sampleSegmentationResults
+                        .Select(segmentation => segmentation.SegmentByChr[chr]).ToList()).ToArray();
+                });
+                return new GenomeSegmentationResults(result);
+            }
+
+            private static IEnumerable<Segment> SplitOverlappingSegments(List<Segment[]> sampleSegments)
+            {
+                var starts = MergeEnumerator.Merge(sampleSegments.Select(segments => segments.Select(segment => segment.start)));
+                var ends = MergeEnumerator.Merge(sampleSegments.Select(segments => segments.Select(segment => segment.end)));
+
+                var partitions = MergeEnumerator.Merge(new[]
+                {
+                starts.Select(start => (Position: start, IsStart: true)),
+                ends.Select(end => (Position: end, IsStart: false))
+            }, (position1, position2) => position1.CompareTo(position2));
+
+                var numberOverlappingSegments = 0;
+                uint currentPosition = 0;
+                foreach (var (position, isStart) in partitions)
+                {
+                    if (numberOverlappingSegments > 0 && currentPosition != position)
+                    {
+                        yield return new Segment { start = currentPosition, end = position };
+                    }
+
+                    currentPosition = position;
+                    numberOverlappingSegments += isStart ? 1 : -1;
+                }
+            }
         }
 
         public enum SegmentationMethod
         {
             Wavelets,
             CBS,
-            HMM
+            HMM,
+            PerSampleHMM
         }
 
         public SegmentationInput(string inputBinPath, string inputVafPath, string forbiddenBedPath, int maxInterBinDistInSegment,
@@ -218,7 +266,7 @@ namespace CanvasPartition
         }
 
 
-        public void WriteCanvasPartitionResults(string outPath, SegmentationInput.GenomeSegmentationResults segmentationResults,
+        public void WriteCanvasPartitionResults(string outPath, GenomeSegmentationResults segmentationResults,
             PloidyInfo referencePloidy)
         {
             var starts = new Dictionary<string, bool>();
@@ -354,7 +402,7 @@ namespace CanvasPartition
         /// </summary>
         /// <param name="windowSize"></param>
         /// <returns>Typical variability of a large region of consistent copy number</returns>
-        public static double? GetCoverageVariability(int windowSize, Dictionary<string,double[]> dataByChr)
+        public static double? GetCoverageVariability(int windowSize, Dictionary<string, double[]> dataByChr)
         {
             if (dataByChr.Select(coverage => coverage.Value.Count()).Sum() < 10 * windowSize)
                 return null;
@@ -378,7 +426,7 @@ namespace CanvasPartition
         /// Computes MAD for each window of bin coverages and normalizes by window median value, yielding quasi-CV
         /// </summary>
         /// <returns></returns>
-        private static List<float> reportVariabilityByWindow(int windowSize, Dictionary<string,double[]> dataByChr)
+        private static List<float> reportVariabilityByWindow(int windowSize, Dictionary<string, double[]> dataByChr)
         {
             var regionalVariability = new ConcurrentBag<double>();
             var tasks = dataByChr.Select(coverage => new ThreadStart(() =>
@@ -409,7 +457,7 @@ namespace CanvasPartition
         /// <param name="dataByChr"></param>
         /// <param name="maxExponent"></param>
         /// <returns></returns>
-        public static List<double> FactorOfThreeCoverageVariabilities(Dictionary<string,double[]> dataByChr, int maxExponent = 8)
+        public static List<double> FactorOfThreeCoverageVariabilities(Dictionary<string, double[]> dataByChr, int maxExponent = 8)
         {
             // Conceptual description:
             //

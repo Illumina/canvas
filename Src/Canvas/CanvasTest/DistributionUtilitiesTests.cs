@@ -16,6 +16,7 @@ namespace CanvasTest
 
             Assert.Equal(new List<List<int>>
             {
+                new []{ 1, 1 }.ToList(),
                 new []{ 1, 2}.ToList(),
                 new []{ 2, 1}.ToList(),
             }, result);

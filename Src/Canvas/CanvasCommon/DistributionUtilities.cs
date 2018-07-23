@@ -19,9 +19,16 @@ namespace CanvasCommon
                 numberOfStates = maxNumberOfStates;
             }
 
+            if (currentState == diploidState)
+            {
+                var combos = new List<List<int>>();
+                combos.Add(Enumerable.Repeat(diploidState, numberOfStates).ToList());
+                return combos;
+            }
+
             double upperSetBound = SpecialFunctions.Factorial(numberOfStates) * SpecialFunctions.Factorial(numberOfStates / 2);
             var allCombinations = new List<List<int>>(Convert.ToInt32(upperSetBound));
-            for (int numberOfDiploidStates = 1; numberOfDiploidStates < numberOfStates; numberOfDiploidStates++)
+            for (int numberOfDiploidStates = 0; numberOfDiploidStates < numberOfStates; numberOfDiploidStates++)
             {
                 var states = Enumerable.Repeat(currentState, numberOfStates - numberOfDiploidStates)
                     .Concat(Enumerable.Repeat(diploidState, numberOfDiploidStates));
