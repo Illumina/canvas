@@ -176,15 +176,16 @@ namespace CanvasPedigreeCaller
                 var genomeMetadata = referenceGenome.GenomeMetadata;
 
                 var coverageBigWigWriterFactory =
-                    new CoverageBigWigWriterFactory(logger, workDoer, commandManager, genomeMetadata);
+                    new CoverageVisualizationWriterFactory(logger, workDoer, commandManager, genomeMetadata);
                 var roundingBedGraphWriter = new RoundingBedGraphWriter(new BedGraphWriterFacade(), 4);
-                var coverageBigWigWriter = coverageBigWigWriterFactory.Create(roundingBedGraphWriter);
+                var coverageBigWigWriter = coverageBigWigWriterFactory.CreateBinCoverageBigWigWriter(roundingBedGraphWriter);
+                var segmentCoverageBedGraphWriter = coverageBigWigWriterFactory.CreateSegmentBedGraphWriter(roundingBedGraphWriter);
 
                 var tabixWrapper = TabixWrapperFactory.GetTabixWrapper(logger, workDoer, commandManager);
                 var bgzfBedGraphWriter = new BgzfBedGraphWriter(new BedGraphWriterFacade(), tabixWrapper);
                 var copyNumberBedGraphWriter = new CopyNumberBedGraphWriter(bgzfBedGraphWriter, new CopyNumberBedGraphCalculator());
 
-                var caller = new CanvasPedigreeCaller(logger, qScoreThreshold, dqScoreThreshold, callerParameters, copyNumberLikelihoodCalculator, variantCaller, coverageBigWigWriter, copyNumberModelFactory, copyNumberBedGraphWriter);
+                var caller = new CanvasPedigreeCaller(logger, qScoreThreshold, dqScoreThreshold, callerParameters, copyNumberLikelihoodCalculator, variantCaller, coverageBigWigWriter, copyNumberModelFactory, copyNumberBedGraphWriter, segmentCoverageBedGraphWriter);
 
                 var outVcf = outputDirectory.GetFileLocation("CNV.vcf.gz");
                 result = caller.CallVariants(variantFrequencyFiles, segmentFiles, outVcf, ploidyBedPath, referenceFolder, sampleNames, commonCnvsBedPath, sampleTypesEnum);

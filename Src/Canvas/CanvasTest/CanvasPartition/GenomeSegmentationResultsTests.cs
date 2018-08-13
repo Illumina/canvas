@@ -3,7 +3,7 @@ using System.Linq;
 using Illumina.Common;
 using JetBrains.Annotations;
 using Xunit;
-using GenomeSegmentationResults = CanvasPartition.SegmentationInput.GenomeSegmentationResults;
+using GenomeSegmentationResults = CanvasPartition.GenomeSegmentationResults;
 using Segment = CanvasPartition.SegmentationInput.Segment;
 
 namespace CanvasTest.CanvasPartition

@@ -8,18 +8,18 @@ namespace CanvasPedigreeCaller.Visualization
     public class CoverageBedGraphWriter
     {
         private readonly IBedGraphWriter _writer;
-        private readonly NormalizedCoverageCalculator _bedGraphCalculator;
+        private readonly BaseNormalizedCoverageCalculator _bedGraphCalculator;
 
-        public CoverageBedGraphWriter(IBedGraphWriter writer, NormalizedCoverageCalculator bedGraphCalculator)
+        public CoverageBedGraphWriter(IBedGraphWriter writer, BaseNormalizedCoverageCalculator bedGraphCalculator)
         {
             _writer = writer;
             _bedGraphCalculator = bedGraphCalculator;
         }
 
-        public void Write(IReadOnlyList<CanvasSegment> segments, IFileLocation location)
+        public void Write(IReadOnlyList<CanvasSegment> segments, IFileLocation location, double normalizationFactor, string header = null)
         {
-            var entries = _bedGraphCalculator.Calculate(segments);
-            _writer.Write(entries, location);
+            var entries = _bedGraphCalculator.Calculate(segments, normalizationFactor);
+            _writer.Write(entries, location, header);
         }
     }
 }

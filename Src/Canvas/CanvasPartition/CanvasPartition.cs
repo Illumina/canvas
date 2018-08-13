@@ -7,7 +7,6 @@ using Illumina.Common;
 using Illumina.Common.FileSystem;
 using Isas.Framework.Logging;
 using Newtonsoft.Json;
-using GenomeSegmentationResults = CanvasPartition.SegmentationInput.GenomeSegmentationResults;
 
 namespace CanvasPartition
 {
@@ -104,26 +103,31 @@ namespace CanvasPartition
             var canvasPartitionParameters = Deserialize<CanvasPartitionParameters>(parameterconfigFile);
 
             ILogger logger = new Logger(Console.Out.ToEnumerable(), Console.Error.ToEnumerable());
+            var processor = new SegmentationResultsProcessor(canvasPartitionParameters.MaxInterBinDistInSegment);
+
             var segmentationInputs = vafFiles.Count > 0 && vafFiles.Count == cleanedFiles.Count ?
                 cleanedFiles.Zip(vafFiles, (inFile, vafFile) => new SegmentationInput(inFile, vafFile, filterBedFile,
-                canvasPartitionParameters.MaxInterBinDistInSegment, referenceFolder, evennessMetricFile, logger)).ToList() :
-                cleanedFiles.Select(inFile => new SegmentationInput(inFile, null, filterBedFile, canvasPartitionParameters.MaxInterBinDistInSegment,
-                referenceFolder, evennessMetricFile, logger)).ToList();
+                referenceFolder, evennessMetricFile, logger, processor)).ToList() :
+                cleanedFiles.Select(inFile => new SegmentationInput(inFile, null, filterBedFile,
+                referenceFolder, evennessMetricFile, logger, processor)).ToList();
             GenomeSegmentationResults segmentationResults;
             PloidyInfo referencePloidy = ploidyVcfPath != null ? PloidyInfo.LoadPloidyFromVcfFileNoSampleId(ploidyVcfPath) : null;
 
             switch (partitionMethod)
             {
-                default:// use Wavelets if CBS is not selected       
+                default: // use Wavelets if CBS is not selected       
                     Console.WriteLine("{0} Running Wavelet Partitioning", DateTime.Now);
-                    var waveletsRunner = new WaveletsRunner(new WaveletsRunner.WaveletsRunnerParams(isGermline, commonCNVsbedPath, madFactor:
-                        canvasPartitionParameters.MadFactor, thresholdLowerMaf: canvasPartitionParameters.ThresholdLowerMaf,
+                    var waveletsRunner = new WaveletsRunner(new WaveletsRunner.WaveletsRunnerParams(isGermline,
+                        commonCNVsbedPath, madFactor:
+                        canvasPartitionParameters.MadFactor,
+                        thresholdLowerMaf: canvasPartitionParameters.ThresholdLowerMaf,
                         evennessScoreThreshold: canvasPartitionParameters.EvennessScoreThreshold, verbose: 2));
                     segmentationResults = new GenomeSegmentationResults(waveletsRunner.Run(segmentationInputs.Single(),
                         canvasPartitionParameters.EvennessScoreWindow));
-                    segmentationInputs.Single().WriteCanvasPartitionResults(outPartitionedFiles.Single(), segmentationResults, referencePloidy);
+
+                    PostProcessAndWriteResults(segmentationInputs.Single(), outPartitionedFiles.Single(), referencePloidy, segmentationResults);
                     break;
-                case SegmentationInput.SegmentationMethod.CBS:
+            case SegmentationInput.SegmentationMethod.CBS:
                     {
                         Console.WriteLine("{0} Running CBS Partitioning", DateTime.Now);
                         var cbsRunner = new CBSRunner(canvasPartitionParameters.MaxInterBinDistInSegment, undoMethod,
@@ -138,8 +142,7 @@ namespace CanvasPartition
                         segmentationResults = GenomeSegmentationResults.SplitOverlappingSegments(sampleSegmentations);
                         foreach (var (segmentationInput, outPartitionedFile) in segmentationInputs.Zip(outPartitionedFiles))
                         {
-                            segmentationInput.WriteCanvasPartitionResults(outPartitionedFile, segmentationResults,
-                                referencePloidy);
+                            PostProcessAndWriteResults(segmentationInput, outPartitionedFile, referencePloidy, segmentationResults);
                         }
                         break;
                     }
@@ -151,8 +154,9 @@ namespace CanvasPartition
                         segmentationResults =
                             new GenomeSegmentationResults(hiddenMarkovModelsRunner.Run(segmentationInputs,isPerSample));
                         for (int i = 0; i < segmentationInputs.Count; i++)
-                            segmentationInputs[i].WriteCanvasPartitionResults(outPartitionedFiles[i], segmentationResults,
-                                referencePloidy);
+                        {
+                            PostProcessAndWriteResults(segmentationInputs[i], outPartitionedFiles[i], referencePloidy, segmentationResults);
+                        }
                         break;
                     }
                 case SegmentationInput.SegmentationMethod.PerSampleHMM:
@@ -172,8 +176,8 @@ namespace CanvasPartition
                         segmentationResults = GenomeSegmentationResults.SplitOverlappingSegments(sampleSegmentations);
                         foreach (var (segmentationInput, outPartitionedFile) in segmentationInputs.Zip(outPartitionedFiles))
                         {
-                            segmentationInput.WriteCanvasPartitionResults(outPartitionedFile, segmentationResults,
-                                referencePloidy);
+                            PostProcessAndWriteResults(segmentationInput, outPartitionedFile, referencePloidy,
+                                segmentationResults);
                         }
                         break;
                     }
@@ -181,6 +185,14 @@ namespace CanvasPartition
             Console.WriteLine("{0} CanvasPartition results written out", DateTime.Now);
             return 0;
         }
+
+        private static void PostProcessAndWriteResults(SegmentationInput segmentationInput, string outPartitionedFile,
+            PloidyInfo referencePloidy, GenomeSegmentationResults segmentationResults)
+        {
+            var segments = segmentationInput.PostProcessSegments(segmentationResults, referencePloidy);
+            segmentationInput.WriteCanvasPartitionResults(outPartitionedFile, segments);
+        }
+
         private static T Deserialize<T>(IFileLocation path)
         {
             using (StreamReader reader = path.OpenText())
