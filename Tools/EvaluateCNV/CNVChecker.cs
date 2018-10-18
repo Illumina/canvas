@@ -537,7 +537,7 @@ namespace EvaluateCNV
             });
         }
 
-        private static void ComputeCallability(ILogger logger, Dictionary<string, List<CnvCall>> calls,
+        private static void ComputeCallability(ILogger logger, Dictionary<string, List<CnvCall>> callsByContig,
             EvaluateCnvOptions options, IDirectoryLocation output)
         {
             var kmerFasta = new FileLocation(options.KmerFa);
@@ -548,7 +548,7 @@ namespace EvaluateCNV
             var buildDir = annotationDir.Parent;
             var genome = new ReferenceGenome(buildDir).GenomeMetadata;
             var computer = CallabilityMetricsComputer.Create(logger, genome, filterBed, options.PloidyInfo.SexPloidyInfo.PloidyY == 0);
-            var callability = computer.CalculateMetric(calls);
+            var callability = computer.CalculateMetric(callsByContig.SelectValues(calls => calls.Where(call => call.PassFilter).ToList()));
             var callabilityFile = output.GetFileLocation($"{options.BaseFileName}_callability.txt");
             File.WriteAllLines(callabilityFile.FullName, callability.GetMetrics().Select(metric => metric.ToCsv().Replace(",", "\t")));
             logger.Info($"Callability: {callability.Callability}. Called bases: {callability.CalledBases}. Total bases: {callability.TotalBases}.");

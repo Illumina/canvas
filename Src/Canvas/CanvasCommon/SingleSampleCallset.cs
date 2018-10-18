@@ -113,6 +113,16 @@ namespace CanvasCommon
             return stub.AppendName(".coverage.bigWig");
         }
 
+        public static IFileLocation GetPartitionBedGraph(IDirectoryLocation analysisOutputFolder, string sampleName)
+        {
+            return GetSampleOutputFolder(analysisOutputFolder, sampleName).GetFileLocation("partition.bedgraph.gz");
+        }
+
+        public static BgzfFile GetPartitionBedGraph(IFileLocation stub)
+        {
+            return new BgzfFile(stub.AppendName(".partition.bedgraph.gz"));
+        }
+
         public static BgzfFile GetCopyNumberBedGraph(IDirectoryLocation analysisOutputFolder, string sampleName)
         {
             return new BgzfFile(GetSampleOutputFolder(analysisOutputFolder, sampleName).GetFileLocation("copynumber.bedgraph.gz"));

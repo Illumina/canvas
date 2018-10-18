@@ -6,7 +6,7 @@ using Isas.SequencingFiles.Bed;
 
 namespace CanvasCommon.Visualization
 {
-
+   
     public class RoundingBedGraphWriter : IBedGraphWriter
     {
         private readonly IBedGraphWriter _bedGraphWriter;
@@ -18,10 +18,10 @@ namespace CanvasCommon.Visualization
             _fractionalDigits = fractionalDigits;
         }
 
-        public void Write(IEnumerable<BedGraphEntry> bedGraphEntries, IFileLocation location)
+        public void Write(IEnumerable<BedGraphEntry> bedGraphEntries, IFileLocation location, string header=null)
         {
             var roundedEntries = bedGraphEntries.Select(GetRoundedBedGraphEntry);
-            _bedGraphWriter.Write(roundedEntries, location);
+            _bedGraphWriter.Write(roundedEntries, location, header);
         }
 
         private BedGraphEntry GetRoundedBedGraphEntry(BedGraphEntry entry)

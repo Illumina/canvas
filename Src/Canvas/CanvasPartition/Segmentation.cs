@@ -6,6 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Isas.SequencingFiles;
 using CanvasCommon;
+using CanvasPartition.Models;
 using Illumina.Common.FileSystem;
 using Isas.Framework.Logging;
 
@@ -33,43 +34,42 @@ namespace CanvasPartition
         private string InputVafPath;
         public Dictionary<string, List<VafContainingBins>> VafByChr = new Dictionary<string, List<VafContainingBins>>();
         public string ForbiddenIntervalBedPath = null;
-        public int MaxInterBinDistInSegment;
         public CoverageInfo CoverageInfo = new CoverageInfo();
         private readonly ILogger _logger;
+        private readonly ISegmentationResultsProcessor _processor;
+
         #endregion
 
         public class Segment
         {
-            public uint start; // Genomic start location
-            public uint end; // Genomic end location (inclusive)
-        }
+            /// <summary>
+            /// Genomic start location (zero-based inclusive)
+            /// </summary>
+            public uint start;
 
-        public class GenomeSegmentationResults
-        {
-            public IDictionary<string, Segment[]> SegmentByChr;
-
-            public GenomeSegmentationResults(IDictionary<string, Segment[]> segmentByChr)
-            {
-                this.SegmentByChr = segmentByChr;
-            }
+            /// <summary>
+            /// Genomic end location (zero-based exclusive or one-based inclusive)
+            /// </summary>
+            public uint end;
         }
 
         public enum SegmentationMethod
         {
             Wavelets,
             CBS,
-            HMM
+            HMM,
+            PerSampleHMM
         }
 
-        public SegmentationInput(string inputBinPath, string inputVafPath, string forbiddenBedPath, int maxInterBinDistInSegment,
-            string referenceFolder, string evennessMetricFile, ILogger logger, string dataType = "logratio")
+        public SegmentationInput(string inputBinPath, string inputVafPath, string forbiddenBedPath, 
+            string referenceFolder, string evennessMetricFile, ILogger logger, ISegmentationResultsProcessor processor, string dataType = "logratio")
         {
             EvennessMetricFile = evennessMetricFile;
             _logger = logger;
+            _processor = processor;
             InputBinPath = inputBinPath;
             InputVafPath = inputVafPath;
             ForbiddenIntervalBedPath = forbiddenBedPath;
-            MaxInterBinDistInSegment = maxInterBinDistInSegment;
             ReadInputFiles(referenceFolder);
         }
 
@@ -218,87 +218,39 @@ namespace CanvasPartition
         }
 
 
-        public void WriteCanvasPartitionResults(string outPath, SegmentationInput.GenomeSegmentationResults segmentationResults,
+        public Dictionary<string, List<SegmentWithBins>> PostProcessSegments(
+            GenomeSegmentationResults segmentationResults,
             PloidyInfo referencePloidy)
         {
-            var starts = new Dictionary<string, bool>();
-            var stops = new Dictionary<string, bool>();
-
-            foreach (string chr in segmentationResults.SegmentByChr.Keys)
-            {
-                for (int segmentIndex = 0; segmentIndex < segmentationResults.SegmentByChr[chr].Length; segmentIndex++)
-                {
-                    var segment = segmentationResults.SegmentByChr[chr][segmentIndex];
-                    starts[chr + ":" + segment.start] = true;
-                    stops[chr + ":" + segment.end] = true;
-                }
-            }
-
             var excludedIntervals = new Dictionary<string, List<SampleGenomicBin>>();
             if (!string.IsNullOrEmpty(ForbiddenIntervalBedPath))
             {
                 excludedIntervals = CanvasCommon.Utilities.LoadBedFile(ForbiddenIntervalBedPath);
             }
 
+            return _processor.PostProcessSegments(segmentationResults, referencePloidy, excludedIntervals,
+                CoverageInfo);
+        }
+
+        public void WriteCanvasPartitionResults(string outPath, Dictionary<string, List<SegmentWithBins>> segmentsByChromosome)
+        {
             using (var writer = new GzipWriter(outPath))
             {
-                int segmentNum = -1;
-
-                foreach (string chr in CoverageInfo.StartByChr.Keys)
+                foreach (var chr in segmentsByChromosome.Keys)
                 {
-                    List<SampleGenomicBin> excludeIntervals = null;
-                    if (excludedIntervals.ContainsKey(chr)) excludeIntervals = excludedIntervals[chr];
-                    var excludeIndex = 0; // Points to the first interval which *doesn't* end before our current position
-                    uint previousBinEnd = 0;
-                    for (int pos = 0; pos < CoverageInfo.StartByChr[chr].Length; pos++)
+                    var segments = segmentsByChromosome[chr];
+
+                    foreach (var segment in segments)
                     {
-                        uint start = CoverageInfo.StartByChr[chr][pos];
-                        uint end = CoverageInfo.EndByChr[chr][pos];
-                        bool newSegment = IsNewSegment(starts, chr, excludeIntervals, previousBinEnd, end, start, ref excludeIndex, referencePloidy);
-                        if (newSegment) segmentNum++;
-                        writer.WriteLine(string.Format($"{chr}\t{start}\t{end}\t{CoverageInfo.CoverageByChr[chr][pos]}\t{segmentNum}"));
-                        previousBinEnd = end;
+                        foreach (var bin in segment.Bins)
+                        {
+                            writer.WriteLine(string.Format($"{chr}\t{bin.Start}\t{bin.End}\t{bin.Coverage}\t{segment.Identifier}"));
+                        }
                     }
                 }
             }
         }
 
-        private bool IsNewSegment(Dictionary<string, bool> starts, string chr, List<SampleGenomicBin> excludeIntervals, uint previousBinEnd,
-            uint end, uint start, ref int excludeIndex, PloidyInfo referencePloidy)
-        {
-            string key = chr + ":" + start;
-            bool newSegment = starts.ContainsKey(key);
-
-            if (excludeIntervals != null)
-            {
-                while (excludeIndex < excludeIntervals.Count && excludeIntervals[excludeIndex].Stop < previousBinEnd)
-                    excludeIndex++;
-                if (excludeIndex < excludeIntervals.Count)
-                {
-                    // Note: forbiddenZoneMid should never fall inside a bin, becuase these intervals were already excluded 
-                    // from consideration during the call to CanvasBin.
-                    int forbiddenZoneMid = (excludeIntervals[excludeIndex].Start + excludeIntervals[excludeIndex].Stop) / 2;
-                    if (previousBinEnd < forbiddenZoneMid && end >= forbiddenZoneMid) newSegment = true;
-                }
-            }
-            if (previousBinEnd > 0 && MaxInterBinDistInSegment >= 0 && previousBinEnd + MaxInterBinDistInSegment < start
-                && !newSegment)
-            {
-                newSegment = true;
-            }
-            // also start new segment if reference ploidy changes between end of last and end of this;
-            // note that Interval takes 1-based positions, so using "previousBinEnd" effectively
-            // includes the last base of the previous bin, allowing for a change at the bin boundary
-            if (!newSegment && referencePloidy != null)
-            {
-                var refIval = new ReferenceInterval(chr, new Interval(previousBinEnd > 0 ? previousBinEnd : 1, end));
-                if (!referencePloidy.IsUniformReferencePloidy(refIval))
-                {
-                    newSegment = true;
-                }
-            }
-            return newSegment;
-        }
 
         /// <summary>
         /// Measures evenness of coverage, attempting to not be thrown off by changes due to CNVs.
@@ -354,7 +306,7 @@ namespace CanvasPartition
         /// </summary>
         /// <param name="windowSize"></param>
         /// <returns>Typical variability of a large region of consistent copy number</returns>
-        public static double? GetCoverageVariability(int windowSize, Dictionary<string,double[]> dataByChr)
+        public static double? GetCoverageVariability(int windowSize, Dictionary<string, double[]> dataByChr)
         {
             if (dataByChr.Select(coverage => coverage.Value.Count()).Sum() < 10 * windowSize)
                 return null;
@@ -378,7 +330,7 @@ namespace CanvasPartition
         /// Computes MAD for each window of bin coverages and normalizes by window median value, yielding quasi-CV
         /// </summary>
         /// <returns></returns>
-        private static List<float> reportVariabilityByWindow(int windowSize, Dictionary<string,double[]> dataByChr)
+        private static List<float> reportVariabilityByWindow(int windowSize, Dictionary<string, double[]> dataByChr)
         {
             var regionalVariability = new ConcurrentBag<double>();
             var tasks = dataByChr.Select(coverage => new ThreadStart(() =>
@@ -409,7 +361,7 @@ namespace CanvasPartition
         /// <param name="dataByChr"></param>
         /// <param name="maxExponent"></param>
         /// <returns></returns>
-        public static List<double> FactorOfThreeCoverageVariabilities(Dictionary<string,double[]> dataByChr, int maxExponent = 8)
+        public static List<double> FactorOfThreeCoverageVariabilities(Dictionary<string, double[]> dataByChr, int maxExponent = 8)
         {
             // Conceptual description:
             //

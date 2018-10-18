@@ -924,7 +924,7 @@ namespace Canvas
                 commandLine.AppendFormat("-o \"{0}\" ", partitionedPath);
             }
             commandLine.AppendFormat("-r \"{0}\" ", callsets.AnalysisDetails.WholeGenomeFastaFolder);
-            commandLine.AppendFormat("-m HMM");
+            commandLine.AppendFormat("-m PerSampleHMM");
 
             var command = commandLine.ToString();
             if (_customParameters.ContainsKey("CanvasPartition"))
