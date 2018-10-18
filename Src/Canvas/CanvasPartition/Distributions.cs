@@ -58,7 +58,7 @@ namespace CanvasPartition
                 NegativeBinomials[dimension] = DistributionUtilities.NegativeBinomialWrapper(newMeans, variance[dimension], maxValue);
             }
         }
-                
+
         public override double EstimateLikelihood(List<double> x)
         {
             var m = this.GetDimensions();
@@ -175,7 +175,7 @@ namespace CanvasPartition
     public abstract class MixtureDistibution
     {
         public abstract double EstimateLikelihood(List<double> x, int state);
-        public abstract void WriteMeans();
+        public abstract void WriteMeans(string comment);
         public abstract void UpdateMeans(double[][] gamma, List<List<double>> x, List<List<double>> variance = null);
         public abstract void UpdateCovariances(double[][] gamma, List<List<double>> x);
         public abstract double EstimateViterbiLikelihood(List<double> x, int currentCnState, List<double> haploidMeans, double[] transition);
@@ -189,10 +189,10 @@ namespace CanvasPartition
             if (numberOfDimensions <= 0)
                 throw new ArgumentOutOfRangeException(nameof(numberOfDimensions));
             const int diploidState = 2;
-            const int numbnerOfStates = 2;
-            var upperSetBound = Math.Pow(numbnerOfStates, numberOfDimensions);
+            const int numberOfStates = 2;
+            var upperSetBound = Math.Pow(numberOfStates, numberOfDimensions);
             var allCombinations = new List<List<int>>(Convert.ToInt32(upperSetBound));
-            for (int numberOfDiploidStates = 1; numberOfDiploidStates < numberOfDimensions; numberOfDiploidStates++)
+            for (int numberOfDiploidStates = 0; numberOfDiploidStates < numberOfDimensions; numberOfDiploidStates++)
             {
                 var states = Enumerable.Repeat(currentState, numberOfDimensions - numberOfDiploidStates)
                     .Concat(Enumerable.Repeat(diploidState, numberOfDiploidStates));
@@ -206,13 +206,13 @@ namespace CanvasPartition
         public static List<double> NegativeBinomialWrapper(double mean, double variance, int maxValue)
         {
             var density = Enumerable.Repeat(0.0, maxValue).ToList();
-            double r = Math.Pow(Math.Max(mean, 0.1), 2) / (Math.Max(variance, mean*1.2) - mean);
+            double r = Math.Pow(Math.Max(mean, 0.1), 2) / (Math.Max(variance, mean * 1.2) - mean);
             for (int x = 0; x < maxValue; x++)
             {
-                var tmpDensity = Math.Exp(Math.Log(Math.Pow(1 + mean / r, -r)) + Math.Log(Math.Pow(mean / (mean + r), x)) +  SpecialFunctions.GammaLn(r + x) - 
+                var tmpDensity = Math.Exp(Math.Log(Math.Pow(1 + mean / r, -r)) + Math.Log(Math.Pow(mean / (mean + r), x)) + SpecialFunctions.GammaLn(r + x) -
                              SpecialFunctions.FactorialLn(x) - SpecialFunctions.GammaLn(r));
                 density[x] = Double.IsNaN(tmpDensity) || Double.IsInfinity(tmpDensity) ? 0 : tmpDensity;
-            }              
+            }
             return density;
         }
     }
@@ -223,7 +223,9 @@ namespace CanvasPartition
         public Dictionary<int, List<List<int>>> GenotypePermutations { get; }
         public override void UpdateCovariances(double[][] gamma, List<List<double>> x) { }
 
-        public NegativeBinomialMixture(List<MultivariateNegativeBinomial> negativeBinomialDistributions, List<double> haploidMeans)
+        private bool _useAllStates;
+
+        public NegativeBinomialMixture(List<MultivariateNegativeBinomial> negativeBinomialDistributions, List<double> haploidMeans, bool useAllStates = false)
         {
             _negativeBinomialDistributions = negativeBinomialDistributions;
             GenotypePermutations = new Dictionary<int, List<List<int>>>();
@@ -233,6 +235,7 @@ namespace CanvasPartition
                 int nDimensions = _negativeBinomialDistributions[cnState].GetDimensions();
                 GenotypePermutations[cnState] = DistributionUtilities.GetGenotypeCombinations(nDimensions, cnState);
             }
+            _useAllStates = useAllStates;
         }
 
         public override void UpdateMeans(double[][] gamma, List<List<double>> x, List<List<double>> variance)
@@ -266,14 +269,22 @@ namespace CanvasPartition
                 foreach (int cnGenotype in currentGenotypePermutations)
                 {
                     var pointCoverage = Convert.ToInt32(data[cnState]);
-                    if (cnGenotype == 0 | cnGenotype == 1)
-                        emissionLikelihood *= Math.Max(_negativeBinomialDistributions[0].Probability(cnState, pointCoverage),
-                                _negativeBinomialDistributions[1].Probability(cnState, pointCoverage));
-                    else if (cnGenotype == 3 | cnGenotype == 4)
-                        emissionLikelihood *= Math.Max(_negativeBinomialDistributions[3].Probability(cnState, pointCoverage),
-                                _negativeBinomialDistributions[4].Probability(cnState, pointCoverage));
-                    else
+                    if (_useAllStates)
+                    {
                         emissionLikelihood *= _negativeBinomialDistributions[cnGenotype].Probability(cnState, pointCoverage);
+                    }
+                    else
+                    {
+                        if (cnGenotype == 0 | cnGenotype == 1)
+                            emissionLikelihood *= Math.Max(_negativeBinomialDistributions[0].Probability(cnState, pointCoverage),
+                                    _negativeBinomialDistributions[1].Probability(cnState, pointCoverage));
+                        else if (cnGenotype == 3 | cnGenotype == 4)
+                            emissionLikelihood *= Math.Max(_negativeBinomialDistributions[3].Probability(cnState, pointCoverage),
+                                    _negativeBinomialDistributions[4].Probability(cnState, pointCoverage));
+                        else
+                            emissionLikelihood *= _negativeBinomialDistributions[cnGenotype].Probability(cnState, pointCoverage);
+                    }
+
                     cnState++;
                 }
                 if (Double.IsNaN(emissionLikelihood) || Double.IsInfinity(emissionLikelihood))
@@ -282,18 +293,41 @@ namespace CanvasPartition
                 {
                     bestState = currentGenotypePermutations;
                     maxLikelyhood = emissionLikelihood;
-
                 }
             }
-            return Math.Log(maxLikelyhood) + Math.Log(bestState.Select(state => transition[state]).Average());
+            double transitionLikelihood = 1d;
+            bool transitionFromDiploid = transition.Max() == transition[2];
+            if (transitionFromDiploid)
+            {
+                // if we are coming from diploid, then we charge for the worst state in bestState;
+                // if current cnState is diploid, this will be almost free, but otherwise it
+                // will be the diploid-to-nondiploid cost
+                transitionLikelihood = bestState.Select(state => transition[state]).Min();
+            }
+            else
+            {
+                // if we are coming from non-diploid ...
+                if (currentCnState == 2)
+                {
+                    // ... and current state is diploid, charge the cost of transitioning to diploid
+                    transitionLikelihood = transition[2];
+                }
+                else
+                {
+                    // ... and the current state is non-diploid, charge the cost of going from where we were to where we are
+                    transitionLikelihood = bestState.Where(x => x != 2).Select(x => transition[x]).Min();
+                }
+            }
+
+            return Math.Log(maxLikelyhood) + Math.Log(transitionLikelihood);
         }
 
 
-        public override void WriteMeans()
+        public override void WriteMeans(string comment = "")
         {
             foreach (MultivariateNegativeBinomial negativeBinomial in _negativeBinomialDistributions)
-                for (int i = 0; i < negativeBinomial.Mean().Count; i++) 
-                    Console.WriteLine($"Negative Binomial mean/variance for state {i} = {negativeBinomial.Means[i]} : {negativeBinomial.Variances[i]}");
+                for (int i = 0; i < negativeBinomial.Mean().Count; i++)
+                    Console.WriteLine($"{comment}Negative Binomial mean/variance for state {i} = {negativeBinomial.Means[i]} : {negativeBinomial.Variances[i]}");
         }
     }
 
@@ -371,11 +405,11 @@ namespace CanvasPartition
         }
 
 
-        public override void WriteMeans()
+        public override void WriteMeans(string comment = "")
         {
             foreach (MultivariatePoissonDistribution gaussianDistribution in _poissonDistributions)
                 for (int i = 0; i < gaussianDistribution.Mean().Count; i++)
-                    Console.WriteLine($"Poisson mean for state {i} = {gaussianDistribution.Mean()[i]}");
+                    Console.WriteLine($"{comment}Poisson mean for state {i} = {gaussianDistribution.Mean()[i]}");
         }
     }
 
@@ -399,11 +433,11 @@ namespace CanvasPartition
                 gaussianDistribution.UpdateMean(gamma[stateCounter], x);
             }
         }
-        public override void WriteMeans()
+        public override void WriteMeans(string comment = "")
         {
             foreach (MultivariateGaussianDistribution gaussianDistribution in _gaussianDistributions)
                 for (int i = 0; i < gaussianDistribution.Mean().Count; i++)
-                    Console.WriteLine($"Gaussian mean for state {i} = {gaussianDistribution.Mean()[i]}");
+                    Console.WriteLine($"{comment}Gaussian mean for state {i} = {gaussianDistribution.Mean()[i]}");
         }
         public override void UpdateCovariances(double[][] gamma, List<List<double>> x)
         {

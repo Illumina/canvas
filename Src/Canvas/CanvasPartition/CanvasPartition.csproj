@@ -52,5 +52,8 @@
     <PackageReference Include="MathNet.Numerics.Core" Version="3.17.0" />
     <PackageReference Include="protobuf-net" Version="2.3.7" />
   </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Visualization\" />
+  </ItemGroup>
 
 </Project>

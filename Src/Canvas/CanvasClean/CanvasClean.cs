@@ -473,11 +473,11 @@ namespace CanvasClean
 
             List<SampleGenomicBin> bins = CanvasIO.ReadFromTextFile(inFile);
 
-            if (doOutlierRemoval)
-                bins = RemoveOutliers(bins);
-
             if (doSizeFilter)
                 bins = RemoveBigBins(bins);
+
+            if (doOutlierRemoval)
+                bins = RemoveOutliers(bins);
 
             // do not run FFPE outlier removal on targeted/low coverage data
             if (localSdMetricFile != null && bins.Count < 50000)

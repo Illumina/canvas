@@ -6,6 +6,6 @@ namespace CanvasCommon.Visualization
 {
     public interface IBgzfBedGraphWriter
     {
-        void Write(IEnumerable<BedGraphEntry> bedGraphEntries, BgzfFile location);
+        void Write(IEnumerable<BedGraphEntry> bedGraphEntries, BgzfFile location, string header = null);
     }
 }

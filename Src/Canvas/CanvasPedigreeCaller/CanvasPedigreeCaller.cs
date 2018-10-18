@@ -11,6 +11,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using CanvasCommon.Visualization;
 using CanvasPedigreeCaller.Visualization;
 using Isas.Framework.DataTypes.Maps;
 using Genotype = CanvasCommon.Genotype;
@@ -31,10 +32,15 @@ namespace CanvasPedigreeCaller
         private readonly ICoverageBigWigWriter _coverageBigWigWriter;
         private readonly ICopyNumberModelFactory _copyNumberModelFactory;
         private readonly ICopyNumberBedGraphWriter _copyNumberBedGraphWriter;
+        private readonly CoverageBedGraphWriter _partitionCoverageBedGraphWriter;
 
         #endregion
 
-        public CanvasPedigreeCaller(ILogger logger, int qualityFilterThreshold, int deNovoQualityFilterThreshold, PedigreeCallerParameters callerParameters, CopyNumberLikelihoodCalculator copyNumberLikelihoodCalculator, IVariantCaller variantCaller, ICoverageBigWigWriter coverageBigWigWriter, ICopyNumberModelFactory copyNumberModelFactory, ICopyNumberBedGraphWriter copyNumberBedGraphWriter)
+        public CanvasPedigreeCaller(ILogger logger, int qualityFilterThreshold, int deNovoQualityFilterThreshold,
+            PedigreeCallerParameters callerParameters, CopyNumberLikelihoodCalculator copyNumberLikelihoodCalculator,
+            IVariantCaller variantCaller, ICoverageBigWigWriter coverageBigWigWriter,
+            ICopyNumberModelFactory copyNumberModelFactory, ICopyNumberBedGraphWriter copyNumberBedGraphWriter,
+            CoverageBedGraphWriter partitionCoverageBedGraphWriter)
         {
             _logger = logger;
             _qualityFilterThreshold = qualityFilterThreshold;
@@ -45,6 +51,7 @@ namespace CanvasPedigreeCaller
             _coverageBigWigWriter = coverageBigWigWriter;
             _copyNumberModelFactory = copyNumberModelFactory;
             _copyNumberBedGraphWriter = copyNumberBedGraphWriter;
+            _partitionCoverageBedGraphWriter = partitionCoverageBedGraphWriter;
         }
 
         /// <summary>
@@ -137,10 +144,15 @@ namespace CanvasPedigreeCaller
                     sampleMetrics.Ploidy, _qualityFilterThreshold, isPedigreeInfoSupplied, denovoQualityThreshold, null);
 
                 var visualizationTemp = outputFolder.CreateSubdirectory($"VisualizationTemp{sampleId}");
-                var bigWig = _coverageBigWigWriter.Write(segments, visualizationTemp);
+                var normalizationFactor = NormalizationCalculator.ComputeNormalizationFactor(segments);
+                var bigWig = _coverageBigWigWriter.Write(segments, visualizationTemp, normalizationFactor);
                 bigWig?.MoveTo(SingleSampleCallset.GetCoverageBigWig(outputFolder, sampleId.ToString()));
                 var copyNumberBedGraph = SingleSampleCallset.GetCopyNumberBedGraph(outputFolder, sampleId.ToString());
                 _copyNumberBedGraphWriter.Write(segments, sampleMetrics.Ploidy, copyNumberBedGraph);
+
+                var partitionBedgraphHeader = "track type=bedGraph visibility=full autoScale=on graphType=points";
+                var originalSegments = sampleSegments[sampleId];
+                _partitionCoverageBedGraphWriter.Write(originalSegments.AllSegments, SingleSampleCallset.GetPartitionBedGraph(outputFolder, sampleId.ToString()), normalizationFactor, partitionBedgraphHeader);
             }
             return 0;
         }

@@ -23,12 +23,13 @@ namespace CanvasPedigreeCaller.Visualization
             _genome = genome;
         }
 
-        public IFileLocation Write(IReadOnlyList<CanvasSegment> segments, IDirectoryLocation output)
+        public IFileLocation Write(IReadOnlyList<CanvasSegment> segments, IDirectoryLocation output,
+            double normalizationFactor)
         {
             _logger.Info($"Begin writing bedgraph file at '{output}'");
             var benchmark = new Benchmark();
             var bedGraph = output.GetFileLocation("coverage.bedgraph");
-            _writer.Write(segments, bedGraph);
+            _writer.Write(segments, bedGraph, normalizationFactor);
             _logger.Info($"Finished writing bedgraph file at '{bedGraph}'. Elapsed time: {benchmark.GetElapsedTime()}");
             _logger.Info($"Begin conversion of '{bedGraph}' to bigwig file");
             benchmark = new Benchmark();

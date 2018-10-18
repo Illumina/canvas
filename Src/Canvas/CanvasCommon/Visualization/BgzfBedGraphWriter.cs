@@ -15,9 +15,9 @@ namespace CanvasCommon.Visualization
             _bedGraphWriter = bedGraphWriter;
             _tabixWrapper = tabixWrapper;
         }
-        public void Write(IEnumerable<BedGraphEntry> bedGraphEntries, BgzfFile location)
+        public void Write(IEnumerable<BedGraphEntry> bedGraphEntries, BgzfFile location, string header = null)
         {
-            _bedGraphWriter.Write(bedGraphEntries, location.FileLocation);
+            _bedGraphWriter.Write(bedGraphEntries, location.FileLocation, header);
             _tabixWrapper.BuildTabixIndex(location, TabixFileType.Bed);
         }
     }
