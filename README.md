@@ -35,21 +35,15 @@ It is recommended to start from one of the [binary distributions on the Canvas r
 ### Source code organization:
 Canvas consists of several projects all built from one solution file (Src/Canvas/Canvas/Canvas.sln).  The main Canvas project is a command line tool for launching the various workflows. Additionally, there are projects for each Canvas module - e.g. CanvasBin counts coverage for each bin, CanvasSomaticCaller makes CNV calls for tumor/normal data - as well as some shared libraries with utility functions (math functions, file I/O for various formats, etc.)  
 
-### Compiling from source
-Open the solution file (Canvas.sln) using Visual Studio 2013 and above, and build the main solution configuration (x64 + Release).  The managed code can be run on a Windows system or on a Linux system using Mono or .NET Core.  The FileCompression library (unmanaged c++ code) can be rebuilt from source under Linux, or the prebuilt binary libFileCompression.so can be used.
-
-### Operating System Guidelines
 
 #### Linux
-Canvas was tested under the following Linux distributions:
-- CentOS 5, 6 (Mono 3.10.0, Mono 4.0.2, .NET Core 1.1)
-- Ubuntu 14.04 (Mono 4.0.2, .NET Core 1.1)
-- Ubuntu 16.04.4 (Mono 4.2.3, .NET Core 1.1)
+Canvas was tested under Linux using .Net core 2.1 
 
-Other Linux distributions and other recent Mono versions are likely to work as well but have not been explicitly tested.
+See https://github.com/Illumina/canvas/issues/99
+
 
 #### Windows
-Canvas is known to run on Windows 7 or Windows 8 systems using .NET 4.5.1
+Canvas is known to run on Windows 7 or Windows 8 systems using .NET core 2.0
 
 Run instructions
 ------------------
@@ -80,32 +74,7 @@ When using a custom reference genome the equivalent files need to be created. Us
 ## Installation
 The easiest way to install Canvas is to use the latest pre-copiled binaries from [releases]:https://github.com/Illumina/canvas/releases (just download and uncopress). 
 ### .Net Core 
-To install .NET Core follow the instructions at https://www.microsoft.com/net/core#linuxubuntu
-The .Net core runtime can be download here:
-https://www.microsoft.com/net/download/core#/runtime
-### Mono
-Exact installation of mono environment depends on OS, below is an installation example for Ubuntu:
-#### Compiling mono from source
-```
-mkdir mono-4.0.2_source
-wget http://download.mono-project.com/sources/mono/mono-4.0.2.5.tar.bz2
-tar xf mono-4.0.2.5.tar.bz2
-cd mono-4.0.2
-mkdir /home/ubuntu/mono-4.0.2
-./configure --prefix=/home/ubuntu/mono-4.0.2
-sudo apt-get update
-sudo apt-get install gcc
-sudo apt-get install g++
-sudo apt-get install gettext
-sudo apt-get install automake
-sudo apt-get install libtool
-./autogen.sh --prefix=/home/ubuntu/mono-4.0.2 --with-large-heap=yes --enable-parallel-mark --with-sgen=yes
-```
-#### Installing binaries
-```
-sudo apt-get install mono-runtime
-sudo apt-get install mono-complete
-```
+See https://github.com/Illumina/canvas/issues/99
 
 ## DEMO (SmallPedigree-WGS workflow) 
 Here we provide an example on how to run Canvas SPW (Small Pedigree Workflow) on a simulated trio (bam files of 60x coverage) and then using EvaluateCNV (under Tools) to estimate performance metrics. This demo will work with the *Canvas release v1.25* and above. Amazon AWS m4.4xlarge instance was used to create this demo. It is recommended that the amount of RAM per core is 4G. More information on input options and output formats can be found on the [canvas wiki][wiki] and [software design document][SDD].
@@ -113,7 +82,8 @@ Here we provide an example on how to run Canvas SPW (Small Pedigree Workflow) on
 [wiki]:https://github.com/Illumina/canvas/wiki
 
 #### Data and binaries
-1. Install .Net Core https://www.microsoft.com/net/core#linuxubuntu and download Canvas binary (CanvasDIR)
+1. Install .Net Core
+and download Canvas binary (CanvasDIR)
 2. Add BaseSpace project https://basespace.illumina.com/s/f1ganFhSPsBo with simulation bams to your account (you might need to register first). 
 3. Install BaseMount and load the canvas-spw project 
 ```
@@ -188,7 +158,7 @@ Download hg19 genome reference files from S3 (http://canvas-cnv-public.s3.amazon
 #### Running demo
 With all files copied and installed, we are now ready to run Canvas. This demo will use Tumor-normal-enrichment workflow that runs on Nextera exome data.  Execute the command below. 
 ```
-/home/ubuntu/mono-4.0.2/bin/mono $WORKDIR/canvas/canvas-1.3.4_x64/Canvas.exe Tumor-normal-enrichment -b $WORKDIR/testing/files/HCC2218C_S1.bam --normal-bam=$WORKDIR/testing/files/HCC2218BL_S1.bam --reference=$WORKDIR/testing/hg19/kmer.fa --manifest=$WORKDIR/testing/files/NexteraRapidCapture_Exome_TargetedRegions_v1.2Used.txt -g $WORKDIR/testing/hg19/ -n HCC2218C -f $WORKDIR/testing/hg19/filter13.bed -o $WORKDIR/testing/HCC2218_v2 --b-allele-vcf=$WORKDIR/testing/files/HCC2218BL_S1.vcf --custom-parameters=CanvasBin,-m=TruncatedDynamicRange
+dotnet Canvas.exe Tumor-normal-enrichment -b $WORKDIR/testing/files/HCC2218C_S1.bam --normal-bam=$WORKDIR/testing/files/HCC2218BL_S1.bam --reference=$WORKDIR/testing/hg19/kmer.fa --manifest=$WORKDIR/testing/files/NexteraRapidCapture_Exome_TargetedRegions_v1.2Used.txt -g $WORKDIR/testing/hg19/ -n HCC2218C -f $WORKDIR/testing/hg19/filter13.bed -o $WORKDIR/testing/HCC2218_v2 --b-allele-vcf=$WORKDIR/testing/files/HCC2218BL_S1.vcf --custom-parameters=CanvasBin,-m=TruncatedDynamicRange
 ```
 CNV.vcf.gz files will be saved to HCC2218_v2 output directory. Depending on the number of available CPUs, the demo will take from few minutes to under an hour to complete.
 
