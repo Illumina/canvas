@@ -358,7 +358,7 @@ namespace CanvasPedigreeCaller
             }
             foreach (var canvasSegment in canvasSegments)
             {
-                var copyNumbersLikelihoods = _copyNumberLikelihoodCalculator.GetCopyNumbersLikelihoods(canvasSegment, samplesInfo, copyNumberModel);
+                var copyNumbersLikelihoods = _copyNumberLikelihoodCalculator.GetCopyNumbersLikelihoods(canvasSegment, samplesInfo, copyNumberModel, _callerParameters.NumberOfTrimmedBins);
                 var (_, likelihoods) = GetCopyNumbersNoPedigreeInfo(canvasSegment, copyNumbersLikelihoods);
                 segmentSetLogLikelihood += likelihoods.MaximalLogLikelihood;
             }
