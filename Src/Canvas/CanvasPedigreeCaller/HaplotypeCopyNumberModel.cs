@@ -29,6 +29,18 @@ namespace CanvasPedigreeCaller
                 _logFactorial.Add(Math.Log(i) + _logFactorial.Last());
         }
 
+        public int GetCoverageBound()
+        {
+            // _maxAlleleCounts is twice the first value for which _cnDistribution is undefined
+            // see HaplotypeCopyNumberModelFactory::CreateModel() for details
+            return _maxAlleleCounts / 2;
+        }
+
+        public int GetMaxCopyNumber()
+        {
+            return _cnDistribution.Count - 1;
+        }
+
         public double GetTotalCopyNumberLikelihoods(double segmentMedianBinCoverage, Genotype totalCopyNumberGenotype)
         {
             return _cnDistribution.Select(x => x[Convert.ToInt32(segmentMedianBinCoverage)]).ElementAt(totalCopyNumberGenotype.TotalCopyNumber);

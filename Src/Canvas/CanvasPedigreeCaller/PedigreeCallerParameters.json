@@ -9,7 +9,7 @@
   "MaxNumOffspringGenotypes": 500,
   "DeNovoRate": 0.00001,
   "MinimumCallSize": 2000,
-  "NumberOfTrimmedBins": 2,
+  "NumberOfTrimmedBins": 5,
   "MaxCoreNumber": 30,
   "DefaultCaller": "VariantCaller"
 }

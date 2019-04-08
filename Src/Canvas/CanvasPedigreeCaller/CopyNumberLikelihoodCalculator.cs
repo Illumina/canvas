@@ -20,9 +20,8 @@ namespace CanvasPedigreeCaller
         /// Use likelihoods as only median point estimator is used
         /// </summary>
         public ISampleMap<Dictionary<Genotype, double>> GetCopyNumbersLikelihoods(ISampleMap<CanvasSegment> canvasSegments, ISampleMap<SampleMetrics> samplesInfo,
-            ISampleMap<ICopyNumberModel> copyNumberModel)
+            ISampleMap<ICopyNumberModel> copyNumberModel, int numberOfTrimmedBins)
         {
-            const int bins2Remove = 5;
             var genotypes = Enumerable.Range(0, _maximumCopyNumber).Select(Genotype.Create).ToList();
             const double maxCoverageMultiplier = 3.0;
             var singleSampleLikelihoods = new SampleMap<Dictionary<Genotype, double>>();
@@ -33,10 +32,27 @@ namespace CanvasPedigreeCaller
 
                 foreach (var genotypeCopyNumber in genotypes)
                 {
+                    double cvg = Math.Min(canvasSegments[sampleId].TruncatedMedianCount(numberOfTrimmedBins),
+                                samplesInfo[sampleId].MeanCoverage * maxCoverageMultiplier);
+                    // In case we run into out-of-range trouble again (CANV-694), print details
+                    {
+                        int intcvg = Convert.ToInt32(cvg);
+                        int coverageBound = copyNumberModel[sampleId].GetCoverageBound();
+                        double truncatedDepth = canvasSegments[sampleId].TruncatedMedianCount(numberOfTrimmedBins);
+                        double meanTimesThree = samplesInfo[sampleId].MeanCoverage * maxCoverageMultiplier;
+                        int maxAllowedCN = copyNumberModel[sampleId].GetMaxCopyNumber();
+                        if ( intcvg >= coverageBound || genotypeCopyNumber.TotalCopyNumber > maxAllowedCN)
+                        {
+                            throw new ArgumentException(
+                                $"Tried to look up bad depth or CN for {sampleId}: depth {intcvg} CN {genotypeCopyNumber.TotalCopyNumber}" +
+                                $" where max handled values are {coverageBound} and {maxAllowedCN} respectively;" +
+                                $" original depth was {truncatedDepth}, mean * 3 was {meanTimesThree};" +
+                                $" segment {canvasSegments[sampleId].Chr}:{canvasSegments[sampleId].Begin}-{canvasSegments[sampleId].End}");
+
+                        }
+                    }
                     double currentLikelihood =
-                        copyNumberModel[sampleId].GetTotalCopyNumberLikelihoods(
-                            Math.Min(canvasSegments[sampleId].TruncatedMedianCount(bins2Remove),
-                                samplesInfo[sampleId].MeanCoverage * maxCoverageMultiplier), genotypeCopyNumber);
+                        copyNumberModel[sampleId].GetTotalCopyNumberLikelihoods(cvg, genotypeCopyNumber);
                     currentLikelihood = Double.IsNaN(currentLikelihood) || Double.IsInfinity(currentLikelihood)
                         ? 0
                         : currentLikelihood;
