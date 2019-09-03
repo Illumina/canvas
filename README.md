@@ -11,6 +11,22 @@ For more information about Canvas and the algorithms it uses see the [software d
 
 [SDD]:SoftwareDesignDescription.pdf
 
+Note: Germline-WGS mode has been deprecated. Use SmallPedigree-WGS even for a single sample analysis.
+
+Publications
+-------
+
+Canvas was first described in the publication Canvas: versatile and scalable detection of copy number variants in the journal OUP Bioinformatics:
+
+Publication: http://dx.doi.org/10.1093/bioinformatics/btw163
+Preprint: https://doi.org/10.1101/036194
+ 
+
+The Canvas Small Pedigree Workflow was published in the journal OUP Bioinformatics: Canvas SPW: calling de novo copy number variants in pedigrees
+
+Publication: https://doi.org/10.1093/bioinformatics/btx618
+Preprint: https://doi.org/10.1101/121939
+
 License
 -------
 
