@@ -1,7 +1,7 @@
 Canvas Copy Number Variant Caller
 =================================
 
-Canvs is licensed under [PolyForm Strict License 1.0.0](https://github.com/Illumina/canvas/blob/master/LICENSE)
+
 
 Canvas is a tool for calling copy number variants (CNVs) from human DNA sequencing data.  It can work either with germline data, or paired tumor/normal samples.  Its primary input is aligned reads (in .bam format), and its primary output is a report (in a .vcf file) giving the copy number status of the genome.  
 
@@ -34,9 +34,8 @@ License
 
 Copyright (c) 2013-2017 Illumina, Inc. All rights reserved.
 
-This software is provided under the terms and conditions of the GNU GENERAL PUBLIC LICENSE Version 3
+Canvas is licensed under [PolyForm Strict License 1.0.0](https://github.com/Illumina/canvas/blob/master/LICENSE)
 
-You should have received a copy of the GNU GENERAL PUBLIC LICENSE Version 3 along with this program. If not, see https://github.com/illumina/licenses/.
 
 Canvas includes several third party packages provided under other open source licenses, please see [COPYRIGHT.txt](COPYRIGHT.txt) for additional details.
 
